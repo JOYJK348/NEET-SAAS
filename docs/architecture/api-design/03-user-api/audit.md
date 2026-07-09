@@ -1,0 +1,60 @@
+# Audit API Specification (03-user-api/audit.md)
+
+This document defines query contracts for pulling compliance audit trails and session logs for staff profiles.
+
+---
+
+## GET /api/v1/staff/{id}/audit
+
+### Purpose
+Retrieves action audit trails for the staff member.
+
+### Permission
+`staff:audit:read`
+
+### Security Notes
+*   Authentication Required: Yes
+*   Required RBAC Permission: `staff:audit:read`
+*   Tenant Isolation: Enforced
+*   Branch Isolation: Not Applicable
+*   RLS Validation: Enforced
+*   Sensitive Fields Masked: Yes (hides old/new values of passwords).
+
+### Request Parameters
+*   `cursor`: String (Cursor offset for paging).
+*   `limit`: Integer.
+
+### Response DTO
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "logId": "l89a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
+      "entityType": "staff_profiles",
+      "action": "UPDATE",
+      "ipAddress": "192.168.1.1",
+      "createdAt": "2026-07-09T01:20:00.000Z"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "pageSize": 50,
+      "nextCursor": "eyJjcmVhdGVkX2F0IjoiMjAyNi0wNy0wOVQyMjozMDowMC4wMDBaIiwiaWQiOiJmNzhhMmUx..."
+    },
+    "timestamp": "2026-07-09T03:00:00.000Z",
+    "correlationId": "f78a2e1d-c0aa-43d9-a41a-7b3b4b5e6f7a"
+  },
+  "errors": null
+}
+```
+
+---
+
+## GET /api/v1/staff/{id}/login-history
+
+### Purpose
+Retrieves login histories logs for the employee.
+
+### Permission
+`staff:audit:read`
