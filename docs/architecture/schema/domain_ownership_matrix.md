@@ -1,6 +1,6 @@
 # Domain Ownership Matrix
 
-This document defines the strict architectural boundaries, ownership structures, and cross-domain relational references for the NEET coaching platform database schemas.
+This document defines the strict architectural boundaries, ownership structures, and cross-domain relational references for the coaching platform database schemas.
 
 ---
 

@@ -7,7 +7,7 @@
 ---
 
 ## 1. Purpose
-This document establishes the master database governance, multi-tenant schemas isolation boundaries, key strategies, auditing guidelines, and performance standards for the NEET Coaching Management Platform.
+This document establishes the master database governance, multi-tenant schemas isolation boundaries, key strategies, auditing guidelines, and performance standards for the Coaching Management Platform.
 
 ---
 

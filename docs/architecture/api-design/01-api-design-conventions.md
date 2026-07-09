@@ -15,7 +15,7 @@
 ---
 
 ## 1. Purpose
-This document establishes the master API design conventions, lifecycle governance, and payload schemas for the entire NEET Coaching Management Platform. It serves as a strict technical contract ensuring semantic consistency, security alignment, and operational stability across all microservices and frontend clients.
+This document establishes the master API design conventions, lifecycle governance, and payload schemas for the entire Coaching Management Platform. It serves as a strict technical contract ensuring semantic consistency, security alignment, and operational stability across all microservices and frontend clients.
 
 ---
 
