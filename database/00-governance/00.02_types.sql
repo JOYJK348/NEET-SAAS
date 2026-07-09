@@ -125,6 +125,16 @@ BEGIN
 END $$;
 COMMENT ON TYPE user_status_type IS 'Profile lifecycle states classifications for users profile';
 
+-- 13. Role assignment origin tracking configurations
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_assignment_source') THEN
+        CREATE TYPE role_assignment_source AS ENUM ('MANUAL', 'SYSTEM', 'MIGRATION', 'API', 'IMPORT');
+    END IF;
+END $$;
+COMMENT ON TYPE role_assignment_source IS 'Origin system method identifier of user roles associations';
+
+
 
 
 
