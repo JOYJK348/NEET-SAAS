@@ -89,4 +89,34 @@ BEGIN
 END $$;
 COMMENT ON TYPE branch_type IS 'Operational classification for branch nodes';
 
+-- 9. Attendance delivery mode configurations
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_mode_type') THEN
+        CREATE TYPE attendance_mode_type AS ENUM ('CLASSROOM', 'ONLINE', 'HYBRID');
+    END IF;
+END $$;
+COMMENT ON TYPE attendance_mode_type IS 'Attendance tracking delivery mode (e.g. CLASSROOM, ONLINE, HYBRID)';
+
+-- 10. Batch lifecycle lifecycle status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'batch_status_type') THEN
+        CREATE TYPE batch_status_type AS ENUM ('PLANNED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE batch_status_type IS 'Operational lifecycle status classifications for batch records';
+
+-- 11. User classification groups configurations
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_type_enum') THEN
+        CREATE TYPE user_type_enum AS ENUM ('STAFF', 'STUDENT', 'PARENT', 'TUTOR', 'SYSTEM');
+    END IF;
+END $$;
+COMMENT ON TYPE user_type_enum IS 'Global classification group classification for users profile';
+
+
+
+
 
