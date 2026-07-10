@@ -715,3 +715,69 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE fee_audit_event_type_enum IS 'Operational audit events classification for billing collections';
+
+-- 77. Notification channel type category parameters
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_channel_type_enum') THEN
+        CREATE TYPE notification_channel_type_enum AS ENUM ('SMS', 'EMAIL', 'WHATSAPP', 'PUSH', 'IN_APP');
+    END IF;
+END $$;
+COMMENT ON TYPE notification_channel_type_enum IS 'Supported communication carrier channels classification';
+
+-- 78. Campaign execution lifecycle status values
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'campaign_status_enum') THEN
+        CREATE TYPE campaign_status_enum AS ENUM ('DRAFT', 'SCHEDULED', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED');
+    END IF;
+END $$;
+COMMENT ON TYPE campaign_status_enum IS 'Outbound announcement and marketing campaigns execution states';
+
+-- 79. Message queuing transaction status parameter states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'queue_status_enum') THEN
+        CREATE TYPE queue_status_enum AS ENUM ('PENDING', 'PROCESSING', 'SENT', 'FAILED', 'RETRY_PENDING');
+    END IF;
+END $$;
+COMMENT ON TYPE queue_status_enum IS 'Dispatch lifecycle queuing states';
+
+-- 80. Actual message delivery metrics telemetry classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'delivery_status_enum') THEN
+        CREATE TYPE delivery_status_enum AS ENUM ('PENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED', 'BOUNCED', 'SPAM');
+    END IF;
+END $$;
+COMMENT ON TYPE delivery_status_enum IS 'Outbound delivery receipt tracing status parameters';
+
+-- 81. Target client device operating system platforms classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'device_platform_enum') THEN
+        CREATE TYPE device_platform_enum AS ENUM ('ANDROID', 'IOS', 'WEB');
+    END IF;
+END $$;
+COMMENT ON TYPE device_platform_enum IS 'Client device hardware environment categorization';
+
+-- 82. Portal announcements type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'announcement_type_enum') THEN
+        CREATE TYPE announcement_type_enum AS ENUM ('GENERAL', 'HOLIDAY', 'EXAM_CIRCULAR', 'FEE_CIRCULAR', 'PLACEMENT');
+    END IF;
+END $$;
+COMMENT ON TYPE announcement_type_enum IS 'Announcements importance categories';
+
+-- 83. Communication configuration audit trail categories
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'communication_audit_event_type_enum') THEN
+        CREATE TYPE communication_audit_event_type_enum AS ENUM (
+            'TEMPLATE_CREATED', 'TEMPLATE_UPDATED', 'VERSION_ARCHIVED', 'CAMPAIGN_LAUNCHED', 
+            'PREFERENCE_UPDATED', 'DEVICE_REGISTERED', 'PROVIDER_TOGGLED', 'FAILOVER_TRIGGERED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE communication_audit_event_type_enum IS 'Communication auditing events classification mappings';
