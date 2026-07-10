@@ -237,3 +237,111 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE leave_category_enum IS 'Category classification for leave request types';
+
+-- 25. Exam type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_type_enum') THEN
+        CREATE TYPE exam_type_enum AS ENUM ('WEEKLY', 'MONTHLY', 'GRAND', 'FULL_SYLLABUS', 'CHAPTER', 'UNIT', 'REVISION', 'PRACTICE', 'SCHOLARSHIP');
+    END IF;
+END $$;
+COMMENT ON TYPE exam_type_enum IS 'Classification categories for exam types';
+
+-- 26. Exam delivery modes
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_mode_enum') THEN
+        CREATE TYPE exam_mode_enum AS ENUM ('ONLINE', 'OFFLINE', 'HYBRID');
+    END IF;
+END $$;
+COMMENT ON TYPE exam_mode_enum IS 'Delivery mode for exam conduction';
+
+-- 27. Exam publish lifecycle statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_publish_status_enum') THEN
+        CREATE TYPE exam_publish_status_enum AS ENUM ('DRAFT', 'SCHEDULED', 'PUBLISHED', 'ARCHIVED', 'CANCELLED');
+    END IF;
+END $$;
+COMMENT ON TYPE exam_publish_status_enum IS 'Lifecycle states for exam publish workflow';
+
+-- 28. Exam record statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'exam_status_enum') THEN
+        CREATE TYPE exam_status_enum AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE exam_status_enum IS 'Operational status for exam records';
+
+-- 29. Exam attempt lifecycle statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attempt_status_enum') THEN
+        CREATE TYPE attempt_status_enum AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'AUTO_SUBMITTED', 'ABANDONED', 'DISQUALIFIED');
+    END IF;
+END $$;
+COMMENT ON TYPE attempt_status_enum IS 'Lifecycle states for student exam attempts';
+
+-- 30. Exam result statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'result_status_enum') THEN
+        CREATE TYPE result_status_enum AS ENUM ('PENDING', 'EVALUATING', 'PUBLISHED', 'WITHHELD', 'RE_EVALUATED');
+    END IF;
+END $$;
+COMMENT ON TYPE result_status_enum IS 'Lifecycle states for exam result computation and publishing';
+
+-- 31. Question difficulty ratings
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'question_difficulty_enum') THEN
+        CREATE TYPE question_difficulty_enum AS ENUM ('VERY_EASY', 'EASY', 'MEDIUM', 'HARD', 'VERY_HARD');
+    END IF;
+END $$;
+COMMENT ON TYPE question_difficulty_enum IS 'Difficulty classification for questions in analytics';
+
+-- 32. Answer evaluation statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'answer_status_enum') THEN
+        CREATE TYPE answer_status_enum AS ENUM ('CORRECT', 'INCORRECT', 'PARTIAL', 'UNATTEMPTED', 'FLAGGED');
+    END IF;
+END $$;
+COMMENT ON TYPE answer_status_enum IS 'Classification of individual student answer correctness';
+
+-- 33. Evaluation workflow statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'evaluation_status_enum') THEN
+        CREATE TYPE evaluation_status_enum AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'RE_EVALUATION');
+    END IF;
+END $$;
+COMMENT ON TYPE evaluation_status_enum IS 'Workflow states for answer evaluation processing';
+
+-- 34. Exam registration statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'registration_status_enum') THEN
+        CREATE TYPE registration_status_enum AS ENUM ('REGISTERED', 'CONFIRMED', 'CANCELLED', 'ABSENT');
+    END IF;
+END $$;
+COMMENT ON TYPE registration_status_enum IS 'Lifecycle states for student exam registration';
+
+-- 35. Exam fee payment statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fee_status_enum') THEN
+        CREATE TYPE fee_status_enum AS ENUM ('PAID', 'UNPAID', 'PARTIAL', 'WAIVED', 'NOT_APPLICABLE');
+    END IF;
+END $$;
+COMMENT ON TYPE fee_status_enum IS 'Fee payment status tracking for exam registrations';
+
+-- 36. Exam document category classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'document_category_enum') THEN
+        CREATE TYPE document_category_enum AS ENUM ('QUESTION_PAPER', 'ANSWER_KEY', 'OMR_SCAN', 'SOLUTION_PDF', 'ADMIT_CARD', 'HALL_TICKET', 'RESULT_SHEET', 'OTHER');
+    END IF;
+END $$;
+COMMENT ON TYPE document_category_enum IS 'Classification categories for exam-related documents';

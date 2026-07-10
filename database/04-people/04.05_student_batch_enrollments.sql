@@ -56,8 +56,13 @@ CREATE TABLE IF NOT EXISTS public.student_batch_enrollments (
         REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE SET NULL,
         
     CONSTRAINT chk_sbe_duration CHECK (left_at IS NULL OR left_at >= joined_at),
-    CONSTRAINT chk_sbe_version CHECK (version > 0)
+    CONSTRAINT chk_sbe_version CHECK (version > 0),
+    CONSTRAINT uq_sbe_tenant_id UNIQUE (tenant_id, id)
 );
+
+-- 1.1 Composite Uniqueness Constraint (enables composite foreign key verification from downstream exam tables)
+ALTER TABLE public.student_batch_enrollments DROP CONSTRAINT IF EXISTS uq_sbe_tenant_id CASCADE;
+ALTER TABLE public.student_batch_enrollments ADD CONSTRAINT uq_sbe_tenant_id UNIQUE (tenant_id, id);
 
 -- 2. Indexes for fast mapping resolution
 CREATE INDEX IF NOT EXISTS idx_sbe_student_lookup ON public.student_batch_enrollments(student_profile_id, status) WHERE deleted_at IS NULL;
