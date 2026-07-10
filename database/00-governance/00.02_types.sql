@@ -489,3 +489,125 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE admission_status_enum IS 'Lifecycle states for student admissions';
+
+-- 53. Live class type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'live_class_type_enum') THEN
+        CREATE TYPE live_class_type_enum AS ENUM ('LIVE', 'RECORDED', 'HYBRID', 'DOUBT_SESSION', 'REVISION', 'CRASH_COURSE', 'TEST_DISCUSSION');
+    END IF;
+END $$;
+COMMENT ON TYPE live_class_type_enum IS 'Core instructional format classifications for live classes';
+
+-- 54. Live class lifecycle status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'live_class_status_enum') THEN
+        CREATE TYPE live_class_status_enum AS ENUM ('DRAFT', 'PUBLISHED', 'SCHEDULED', 'WAITING', 'LIVE', 'PAUSED', 'ENDED', 'CANCELLED', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE live_class_status_enum IS 'Publishing and execution status lifecycle for live class catalog entries';
+
+-- 55. Meeting providers classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'meeting_provider_enum') THEN
+        CREATE TYPE meeting_provider_enum AS ENUM ('ZOOM', 'GOOGLE_MEET', 'TEAMS', 'LMS_INTERNAL', 'OTHER');
+    END IF;
+END $$;
+COMMENT ON TYPE meeting_provider_enum IS 'Supported external third-party teleconferencing platforms';
+
+-- 56. Live class participant roles classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'participant_role_enum') THEN
+        CREATE TYPE participant_role_enum AS ENUM ('HOST', 'CO_HOST', 'MODERATOR', 'GUEST', 'OBSERVER');
+    END IF;
+END $$;
+COMMENT ON TYPE participant_role_enum IS 'Privilege authorization levels for live class sessions participants';
+
+-- 57. Video and Audio recordings processing status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'recording_status_enum') THEN
+        CREATE TYPE recording_status_enum AS ENUM ('PROCESSING', 'COMPLETED', 'FAILED', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE recording_status_enum IS 'Post-production assembly states for class stream recordings';
+
+-- 58. Live class poll execution lifecycle states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'poll_status_enum') THEN
+        CREATE TYPE poll_status_enum AS ENUM ('DRAFT', 'ACTIVE', 'CLOSED');
+    END IF;
+END $$;
+COMMENT ON TYPE poll_status_enum IS 'Lifecycle execution states of interactive class polls';
+
+-- 59. Live class poll response layout classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'poll_type_enum') THEN
+        CREATE TYPE poll_type_enum AS ENUM ('MCQ', 'MULTI_CORRECT', 'YES_NO');
+    END IF;
+END $$;
+COMMENT ON TYPE poll_type_enum IS 'Layout format choices for teacher polls';
+
+-- 60. Instant chat channels message classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'chat_message_type_enum') THEN
+        CREATE TYPE chat_message_type_enum AS ENUM ('TEXT', 'IMAGE', 'FILE', 'LINK', 'SYSTEM');
+    END IF;
+END $$;
+COMMENT ON TYPE chat_message_type_enum IS 'Formats classification of instant messaging content payload';
+
+-- 61. Live class downloadable resource files classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'resource_type_enum') THEN
+        CREATE TYPE resource_type_enum AS ENUM ('PDF', 'PPT', 'WORKSHEET', 'IMAGE', 'VIDEO', 'LINK');
+    END IF;
+END $$;
+COMMENT ON TYPE resource_type_enum IS 'Material types classification for downloadable reference materials';
+
+-- 62. Telephony session closure cause classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'session_end_reason_enum') THEN
+        CREATE TYPE session_end_reason_enum AS ENUM ('COMPLETED', 'HOST_LEFT', 'CRASHED', 'TIMEOUT', 'FORCE_CLOSED');
+    END IF;
+END $$;
+COMMENT ON TYPE session_end_reason_enum IS 'Root causes categorization for session ending';
+
+-- 63. Session active lifecycle states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'session_status_enum') THEN
+        CREATE TYPE session_status_enum AS ENUM ('CREATED', 'WAITING', 'STARTED', 'PAUSED', 'RESUMED', 'ENDED', 'FAILED');
+    END IF;
+END $$;
+COMMENT ON TYPE session_status_enum IS 'Individual meeting connection lifecycle states';
+
+-- 64. Hand raising attention request statuses classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'raise_hand_status_enum') THEN
+        CREATE TYPE raise_hand_status_enum AS ENUM ('PENDING', 'ACCEPTED', 'REJECTED', 'RESOLVED');
+    END IF;
+END $$;
+COMMENT ON TYPE raise_hand_status_enum IS 'Doubt queue request status states';
+
+-- 65. Live class timeline events trace categories
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'live_class_event_type_enum') THEN
+        CREATE TYPE live_class_event_type_enum AS ENUM (
+            'HOST_JOINED', 'HOST_LEFT', 'STUDENT_JOINED', 'STUDENT_LEFT', 
+            'RECORDING_STARTED', 'RECORDING_STOPPED', 'POLL_CREATED', 'POLL_CLOSED', 
+            'BREAKOUT_STARTED', 'BREAKOUT_ENDED', 'SCREEN_SHARE_STARTED', 'WHITEBOARD_OPENED', 
+            'CHAT_DISABLED', 'MIC_DISABLED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE live_class_event_type_enum IS 'Detailed timelines and interactions event trace classification';
