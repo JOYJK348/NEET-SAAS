@@ -859,3 +859,24 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE ai_audit_event_enum IS 'AI model settings and templates audit trails events codes';
+
+-- 92. Platform background job execution status parameters
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'background_job_status_enum') THEN
+        CREATE TYPE background_job_status_enum AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED');
+    END IF;
+END $$;
+COMMENT ON TYPE background_job_status_enum IS 'Platform background task queues status values';
+
+-- 93. Platform infrastructure configuration change event codes
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'platform_audit_event_enum') THEN
+        CREATE TYPE platform_audit_event_enum AS ENUM (
+            'SETTING_MUTATED', 'FLAG_TOGGLED', 'API_KEY_ROTATED', 
+            'JOB_SCHEDULED', 'HEALTH_HEALTHY', 'ERROR_LOGGED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE platform_audit_event_enum IS 'Infrastructure level system audit action trace codes';
