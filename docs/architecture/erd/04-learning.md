@@ -20,12 +20,16 @@ The domain focuses on knowledge delivery, self-learning, revision, and continuou
 
 ## ✅ Included Entities
 
-- 📄 Study Material
-- 📚 Learning Resource
-- 📝 Assignment
-- 📥 Assignment Submission
-- 📈 Learning Progress
-- 🗂️ Resource Category
+- 📄 Learning Material (Study Material, Notes, Worksheets)
+- 🗂️ Material Attachment (files linked to materials)
+- 📚 Learning Path (curated sequences of materials)
+- 🔗 Learning Path Material (bridge: path → materials)
+- 📝 Assignment (material with submission requirement)
+- 📥 Assignment Submission (student submissions)
+- 📈 Learning Progress (per-admission progress tracking)
+- 🔖 Bookmark (student bookmarks)
+- 📝 Note (student personal notes)
+- 💬 Discussion (threaded comments on materials)
 
 ---
 
@@ -36,10 +40,8 @@ The following entities belong to other domains but are referenced by the Learnin
 - 📖 Subject *(Academic Domain)*
 - 📑 Chapter *(Academic Domain)*
 - 👥 Batch *(Academic Domain)*
-- 🎥 Live Class *(Academic Domain)*
-- 🎬 Recorded Class *(Academic Domain)*
 - 👨‍🏫 Tutor *(User Domain)*
-- 👨‍🎓 Student *(User Domain)*
+- 👨‍🎓 Student Admission *(Student Domain)* — all learning activity is scoped to `student_admission_id`
 
 ---
 
@@ -51,31 +53,26 @@ Subject
     ▼
 Chapter
     │
-    ├────────► Study Material ◄──────── Resource Category
+    ├────────► Learning Material ◄── Material Attachment (files)
     │               │
-    │               ├────────► Batch
-    │               │              │
-    │               │              ▼
-    │               │          Student
-    │               │
-    │               └────────► Tutor
+    │               ├────────► Batch (via material_assignments)
+    │               ├────────► Learning Path (curated sequence)
+    │               └────────► Tutor (creator)
     │
-    ├────────► Assignment
+    ├────────► Assignment (a material with submission requirement)
     │               │
-    │               ├────────► Batch
-    │               │              │
-    │               │              ▼
-    │               │          Student
-    │               │              │
-    │               │              ▼
-    │               │   Assignment Submission
+    │               ├────────► Batch (via material_assignments)
     │               │
-    │               └────────► Tutor
+    │               └────────► Student Admission
+    │                              │
+    │                              ▼
+    │                       Assignment Submission
+    │                              │
+    │                              └── (scoped to student_admission_id)
     │
-    └────────► Live Class
-                    │
-                    ▼
-             Recorded Class
+    └────────► Learning Progress (scoped to student_admission_id)
+                      │
+                      └── tracks: materials viewed, assignments completed
 ```
 
 ---
@@ -88,92 +85,84 @@ flowchart TD
     SUB["📖 Subject"]
     CH["📑 Chapter"]
 
-    SM["📄 Study Material"]
-    RC["🗂️ Resource Category"]
+    LM["📄 Learning Material"]
+    ATTACH["🗂️ Material Attachment"]
+    LPATH["📚 Learning Path"]
+    LPATHM["🔗 LP → Material"]
 
-    ASSIGN["📝 Assignment"]
+    ASSIGN["📝 Assignment (Material)"]
     SUBMISSION["📥 Assignment Submission"]
 
-    LP["📈 Learning Progress"]
+    LPROG["📈 Learning Progress"]
 
     BATCH["👥 Batch"]
-    STUDENT["👨‍🎓 Student"]
+    ADMISSION["📋 Student Admission"]
     TUTOR["👨‍🏫 Tutor"]
-
-    LIVE["🎥 Live Class"]
-    RECORD["🎬 Recorded Class"]
 
     SUB --> CH
 
-    CH --> SM
+    CH --> LM
     CH --> ASSIGN
-    CH --> LIVE
 
-    RC --> SM
+    LM --> ATTACH
+    LM --> LPATHM
+    LPATH --> LPATHM
 
-    SM --> BATCH
-    SM --> TUTOR
+    LM --> BATCH
+    LM --> TUTOR
 
     ASSIGN --> BATCH
     ASSIGN --> TUTOR
     ASSIGN --> SUBMISSION
 
-    BATCH --> STUDENT
-
-    STUDENT --> LP
-    SUBMISSION --> LP
-
-    LIVE --> RECORD
+    ADMISSION --> LPROG
+    ADMISSION --> SUBMISSION
+    ADMISSION --> LM
 ```
 
 ---
 
 # 🔗 Relationship Summary
 
-| Parent Entity | Child Entity | Cardinality |
-|---------------|--------------|-------------|
-| Subject | Chapter | One-to-Many (1:N) |
-| Chapter | Study Material | One-to-Many (1:N) |
-| Chapter | Assignment | One-to-Many (1:N) |
-| Chapter | Live Class | One-to-Many (1:N) |
-| Resource Category | Study Material | One-to-Many (1:N) |
-| Study Material | Batch | Many-to-Many (M:N) |
-| Study Material | Tutor | Many-to-One (N:1) |
-| Assignment | Batch | Many-to-Many (M:N) |
-| Assignment | Tutor | Many-to-One (N:1) |
-| Assignment | Assignment Submission | One-to-Many (1:N) |
-| Batch | Student | One-to-Many (1:N) |
-| Student | Learning Progress | One-to-One (1:1) |
-| Assignment Submission | Learning Progress | Many-to-One (N:1) |
-| Live Class | Recorded Class | Zero-or-One (1:0..1) |
+| Parent Entity | Child Entity | Cardinality | Notes |
+|---|---|---|---|---|
+| Subject | Chapter | 1:N | — |
+| Chapter | Learning Material | 1:N | Materials are organized under chapters |
+| Chapter | Assignment | 1:N | Assignments are a type of material |
+| Learning Material | Material Attachment | 1:N | Files attached to a material |
+| Learning Material | Batch | M:N | Via `material_assignments` bridge |
+| Learning Material | Learning Path | M:N | Via `learning_path_materials` bridge |
+| Learning Path | Learning Path Material | 1:N | Ordered sequence of materials |
+| Assignment | Assignment Submission | 1:N | Students submit via their admission record |
+| **Student Admission** | **Learning Progress** | **1:N** | **Progress tracked per admission** |
+| Student Admission | Assignment Submission | 1:N | Submissions scoped to admission |
+| Student Admission | Bookmark | 1:N | Student bookmarks per admission |
+| Student Admission | Note | 1:N | Student notes per admission |
 
 ---
 
 # 📌 Business Rules
 
-- Every Study Material belongs to one Subject and one Chapter.
-- Every Assignment belongs to one Subject and one Chapter.
-- Every Study Material must belong to at least one Resource Category.
-- Study Materials and Assignments may be assigned to one or more Batches.
+- Every Learning Material belongs to one Subject and one Chapter.
+- Every Assignment is a type of Learning Material with submission configuration.
+- Learning Materials may be assigned to one or more Batches via `material_assignments`.
 - Students may access only resources assigned to their Batch.
-- Tutors may create Study Materials and Assignments only for their assigned academic responsibilities.
-- Every Assignment Submission belongs to one Assignment and one Student.
+- Tutors may create Learning Materials only for their assigned academic responsibilities.
+- Every Assignment Submission belongs to one Assignment and one Student Admission (`student_admission_id`).
+- Learning Progress is tracked per `student_admission_id` — scoped to the admission's course + academic year context.
 - Learning Progress should continuously reflect student learning activities.
-- Every Recorded Class originates from a Live Class.
-- Recorded Classes are referenced from the Academic Domain and are not owned by the Learning Domain.
 
 ---
 
 # 💡 Design Principles
 
-- Learning resources are always organized under the academic curriculum.
+- Learning resources are always organized under the academic curriculum (Subject → Chapter).
 - Subject and Chapter provide the academic structure for all learning content.
-- Resource Categories improve discoverability without changing academic hierarchy.
 - Tutors are responsible for creating and maintaining learning content.
-- Students consume only authorized learning resources.
+- Students consume only authorized learning resources assigned to their batches.
+- All learning activity (progress, submissions, bookmarks, notes) is scoped to `student_admission_id`.
 - Assignment Submissions provide measurable evidence of learning progress.
 - Learning Progress aggregates student engagement across learning activities.
-- Recorded Classes are reused from the Academic Domain to avoid duplicate ownership.
 - Cross-domain entities are intentionally referenced rather than redefined.
 
 ---

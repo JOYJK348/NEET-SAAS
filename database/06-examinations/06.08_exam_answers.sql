@@ -161,18 +161,18 @@ CREATE POLICY policy_exam_answers_select
             )
             OR EXISTS (
                 SELECT 1 FROM public.exam_attempts ea
-                JOIN public.student_batch_enrollments sbe ON sbe.id = ea.student_enrollment_id
+                JOIN public.student_admissions sa ON sa.id = ea.student_admission_id
                 WHERE ea.id = exam_answers.attempt_id
-                  AND sbe.student_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                  AND sa.student_profile_id = auth.uid()
+                  AND sa.deleted_at IS NULL
             )
             OR EXISTS (
                 SELECT 1 FROM public.exam_attempts ea
-                JOIN public.student_batch_enrollments sbe ON sbe.id = ea.student_enrollment_id
-                JOIN public.student_parents sp ON sp.student_profile_id = sbe.student_profile_id
+                JOIN public.student_admissions sa ON sa.id = ea.student_admission_id
+                JOIN public.student_parents sp ON sp.student_profile_id = sa.student_profile_id
                 WHERE ea.id = exam_answers.attempt_id
                   AND sp.parent_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                  AND sa.deleted_at IS NULL
             )
         )
     );

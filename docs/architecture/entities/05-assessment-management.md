@@ -83,34 +83,89 @@ Represents the examination paper prepared for an assessment.
 
 ---
 
-## Question Bank
+## Question Paper
 
 ### Purpose
 
-Represents the centralized repository of academic questions used for assessments.
+Represents a reusable template that compiles questions for an assessment.
 
-Question Bank is reusable across multiple Assessments. Questions once created can be used in any number of question papers without duplication.
+A Question Paper can be used by multiple assessments (e.g., weekly tests sharing the same paper).
 
 ### Business Responsibilities
 
-- Maintain reusable questions.
-- Organize questions by subject and chapter.
-- Improve assessment quality.
-- Support multiple assessment types.
+- Group questions into an exam template.
+- Support section-level organization (e.g., Physics, Chemistry).
+- Enable paper reuse across assessments.
 
 ---
 
-## Student Response
+## Question Paper Question
 
 ### Purpose
 
-Represents answers submitted by students during an assessment.
+Junction table linking questions to a question paper with section, marks override, and display order.
 
 ### Business Responsibilities
 
-- Collect responses.
-- Maintain submission history.
-- Support evaluation.
+- Assign questions to papers.
+- Override marks per paper instance.
+- Control question sequencing.
+
+---
+
+## Exam Registration
+
+### Purpose
+
+Links a Student Admission to an Assessment — one registration per admission per exam.
+
+### Business Responsibilities
+
+- Register students for exams.
+- Prevent duplicate registrations.
+- Track registration status.
+
+---
+
+## Exam Attempt
+
+### Purpose
+
+Records a student's actual attempt at a registered exam. Supports re-attempts via attempt_number.
+
+### Business Responsibilities
+
+- Track attempt timing (started_at, submitted_at).
+- Support multiple attempts per registration.
+- Record attempt status.
+
+---
+
+## Exam Answer
+
+### Purpose
+
+Stores per-question responses within an exam attempt.
+
+### Business Responsibilities
+
+- Record student answers.
+- Store marks awarded per question.
+- Maintain response history.
+
+---
+
+## Exam Result
+
+### Purpose
+
+Official published outcome of an evaluated exam attempt.
+
+### Business Responsibilities
+
+- Publish marks.
+- Maintain assessment history.
+- Support academic reporting.
 
 ---
 
@@ -193,31 +248,35 @@ Represents analytical insights generated from assessment results.
 
 # Assessment Lifecycle
 
-Assessment Planning
+Assessment Planning (Exam definition)
 
 ↓
 
-Question Preparation
+Question Preparation (standalone)
 
 ↓
 
-Assessment Scheduling
+Question Paper Compilation (select questions into a paper)
 
 ↓
 
-Assessment Conduct
+Assessment Scheduling (assign to batches, open registration)
 
 ↓
 
-Response Collection
+Exam Registration (students register via their admission)
 
 ↓
 
-Evaluation
+Exam Conduct (students attempt)
 
 ↓
 
-Result Publication
+Answer Collection (per-question responses captured)
+
+↓
+
+Evaluation + Result Publication
 
 ↓
 
@@ -249,14 +308,14 @@ Academic Improvement Planning
 
 ## Included
 
-- Assessment
-- Mock Test
+- Assessment (Exam)
+- Question
 - Question Paper
-- Question Bank
-- Student Response
-- OMR Sheet
-- Evaluation
-- Result
+- Question Paper Question
+- Exam Registration
+- Exam Attempt
+- Exam Answer
+- Exam Result
 - Ranking
 - Performance Analysis
 

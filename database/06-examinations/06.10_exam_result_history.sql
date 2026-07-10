@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.exam_result_history (
         REFERENCES public.exams(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
     CONSTRAINT fk_exam_result_history_enrollment FOREIGN KEY (tenant_id, student_enrollment_id)
-        REFERENCES public.student_batch_enrollments(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+        REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
     CONSTRAINT fk_exam_result_history_changed_by FOREIGN KEY (changed_by)
         REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE RESTRICT,

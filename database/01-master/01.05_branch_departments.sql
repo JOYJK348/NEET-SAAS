@@ -60,7 +60,11 @@ CREATE INDEX IF NOT EXISTS idx_bd_tenant_dept_lookup
     ON public.branch_departments(tenant_id, department_id) 
     WHERE deleted_at IS NULL;
 
--- 2.1 Partial Unique Index for Soft Deletes (prevents duplicate mappings within the branch)
+-- 2.1 Composite Uniqueness Constraints (enables composite foreign key verification in downstream staff_departments table)
+ALTER TABLE public.branch_departments DROP CONSTRAINT IF EXISTS uq_branch_departments_tenant_branch_dept;
+ALTER TABLE public.branch_departments ADD CONSTRAINT uq_branch_departments_tenant_branch_dept UNIQUE (tenant_id, branch_id, department_id);
+
+-- 2.2 Partial Unique Index for Soft Deletes (prevents duplicate mappings within the branch)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_part_bd_branch_dept 
     ON public.branch_departments(branch_id, department_id) 
     WHERE deleted_at IS NULL;

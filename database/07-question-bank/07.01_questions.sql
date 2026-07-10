@@ -226,3 +226,13 @@ COMMENT ON COLUMN public.questions.published_version IS 'Current published versi
 COMMENT ON COLUMN public.questions.ai_metadata IS 'JSONB: reserved for ML predictions, difficulty scoring, topic classification';
 COMMENT ON COLUMN public.questions.embedding_metadata IS 'JSONB: vector embedding metadata for AI similarity search';
 COMMENT ON COLUMN public.questions.version IS 'Optimistic concurrency control version stamp';
+
+-- FK from question_paper_questions → questions (deferred because 06.05 runs before this file)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_qpq_question') THEN
+        ALTER TABLE public.question_paper_questions ADD CONSTRAINT fk_qpq_question
+            FOREIGN KEY (tenant_id, question_id)
+            REFERENCES public.questions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+    END IF;
+END $$;

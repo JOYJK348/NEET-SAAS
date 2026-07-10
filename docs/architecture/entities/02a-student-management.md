@@ -78,18 +78,32 @@ Represents the complete academic and personal profile of a student.
 
 ---
 
-## Student Enrollment
+## Student Admission
 
 ### Purpose
 
-Represents the assignment of students to academic programs.
+Represents the formal admission entry — the root entity that links a student to a Course + Academic Year.
 
 ### Business Responsibilities
 
-- Enroll students into courses.
-- Assign students to batches.
+- Register students into courses.
+- Lock fee structure at admission time.
+- Maintain admission academic context (course, year, branch).
+- Serve as the scope anchor for attendance, exams, and learning progress.
+
+---
+
+## Student Batch Enrollment
+
+### Purpose
+
+Represents the assignment of an admitted student to a specific batch (child of Student Admission).
+
+### Business Responsibilities
+
+- Allocate students to batches.
 - Maintain enrollment history.
-- Support multiple enrollments (Future).
+- Support multiple batch enrollments per admission (e.g., main batch + crash course).
 
 ---
 
@@ -189,7 +203,7 @@ Student Enquiry
 
 ↓
 
-Admission
+Admission (StudentAdmission — locks course + academic year + fee structure)
 
 ↓
 
@@ -197,27 +211,15 @@ Profile Creation
 
 ↓
 
-Course Enrollment
+Batch Allocation (StudentBatchEnrollment — child of admission)
 
 ↓
 
-Batch Allocation
+Learning Activities (scoped to student_admission_id)
 
 ↓
 
-Learning Activities
-
-↓
-
-Attendance
-
-↓
-
-Assessments
-
-↓
-
-Performance Tracking
+Attendance, Exams, Progress (all scoped to student_admission_id)
 
 ↓
 

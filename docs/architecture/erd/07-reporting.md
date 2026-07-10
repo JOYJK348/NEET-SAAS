@@ -181,10 +181,9 @@ SELECT
     2
   ) AS attendance_pct
 FROM attendance_records ar
-JOIN student_enrollments se ON ar.student_enrollment_id = se.id
-JOIN students s              ON se.student_id = s.id
-WHERE ar.institute_id = $instituteId
-  AND se.batch_id     = $batchId
+JOIN student_admissions sa ON ar.student_admission_id = sa.id
+JOIN students s            ON sa.student_id = s.id
+WHERE ar.tenant_id = $tenantId
   AND ar.session_date BETWEEN $startDate AND $endDate
 GROUP BY s.id, s.first_name, s.last_name
 ORDER BY attendance_pct ASC;

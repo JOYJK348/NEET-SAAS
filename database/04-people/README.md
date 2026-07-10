@@ -14,7 +14,8 @@ erDiagram
     student_profiles ||--o{ student_parents : "parent association"
     parent_profiles ||--o{ student_parents : "child association"
     
-    student_profiles ||--o{ student_batch_enrollments : "enrollments history"
+    student_profiles ||--o{ student_admissions : "admission records"
+    student_admissions ||--o{ student_batch_enrollments : "batch allocations"
     student_profiles ||--o{ guardian_contacts : "emergency fallback details"
     student_profiles ||--o{ student_documents : "identity uploads mapping"
     
@@ -32,12 +33,13 @@ Files must be deployed in the exact order listed below to prevent foreign key er
 2.  `04.02_student_profiles.sql` (extending student admission parameters)
 3.  `04.03_parent_profiles.sql` (extending parent demographics)
 4.  `04.04_student_parents.sql` (mapping student-parent links)
-5.  `04.05_student_batch_enrollments.sql` (active cohort allocations)
-6.  `04.06_staff_departments.sql` (employee home department records)
-7.  `04.07_staff_subjects.sql` (certified topics index)
-8.  `04.08_student_documents.sql` (verification uploads maps)
-9.  `04.09_guardian_contacts.sql` (emergency contacts index)
-10. `04.10_staff_employment_history.sql` (career status lifecycle log)
+5.  `04.05_student_admissions.sql` (root admission entity — course + academic year)
+6.  `04.06_student_batch_enrollments.sql` (batch allocations child of admission)
+7.  `04.07_staff_departments.sql` (employee home department records)
+8.  `04.08_staff_subjects.sql` (certified topics index)
+9.  `04.09_student_documents.sql` (verification uploads maps)
+10. `04.10_guardian_contacts.sql` (emergency contacts index)
+11. `04.11_staff_employment_history.sql` (career status lifecycle log)
 
 ---
 

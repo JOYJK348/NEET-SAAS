@@ -22,17 +22,16 @@ The domain ensures a transparent, scalable, and structured assessment ecosystem 
 
 | Entity | Purpose |
 |---|---|
-| 📝 **Assessment** | Root entity for every examination event |
-| 📄 **Question Paper** | The compiled paper for a specific assessment |
-| 📚 **Question Bank** | Named pool/collection that organises reusable questions |
-| ❓ **Question** | Atomic unit — a single MCQ or Subjective question *(new)* |
+| 📝 **Assessment (Exam)** | Root entity for every examination event |
+| 📄 **Question Paper** | Reusable template compiling questions for an assessment |
+| ❓ **Question** | Atomic unit — a single MCQ, Numeric, or Subjective question |
 | 🔗 **Question Paper Question** | Junction: which Questions are selected for which Paper |
-| ✍️ **Student Response** | Student's submitted answers for an assessment |
-| 📑 **OMR Sheet** | Scanned OMR record for offline assessments only |
-| ✅ **Evaluation** | Tutor marks a student response |
-| 📊 **Result** | Official academic outcome after evaluation |
+| 📋 **Exam Registration** | Student admission → assessment registration |
+| ✍️ **Exam Attempt** | Student's attempt at a registered assessment |
+| 📝 **Exam Answer** | Per-question response within an attempt |
+| 📊 **Exam Result** | Published outcome of an evaluated attempt |
 | 🏆 **Ranking** | Student rank within batch/course/institute for a result |
-| 📈 **Performance Analysis** | Aggregated long-term metrics per subject/student |
+| 📈 **Performance Analysis** | Aggregated long-term metrics per subject/admission |
 
 ---
 
@@ -43,7 +42,7 @@ The following entities belong to other domains but are referenced by the Assessm
 - 📖 Subject *(Academic Domain)*
 - 📑 Chapter *(Academic Domain)*
 - 👥 Batch *(Academic Domain)*
-- 👨‍🎓 Student *(User Domain)*
+- 👨‍🎓 Student Admission *(Student Domain)*
 - 👨‍🏫 Tutor *(User Domain)*
 - 👨‍👩‍👦 Parent *(User Domain)*
 - 🔔 Notification *(Communication Domain)*
@@ -53,44 +52,50 @@ The following entities belong to other domains but are referenced by the Assessm
 # 🗂️ Assessment Hierarchy
 
 ```text
-Assessment
+Assessment (Exam)
     │
-    ├──► Course           (reference — which course this test covers)
-    ├──► Subject          (reference — which subject, optional for full-syllabus tests)
-    │
-    ├──► Assessment ↔ Batch   (M:N — assigned to one or more batches)
-    │         │
-    │         └──► StudentEnrollment → Student
-    │                       │
-    │                       └──► Student Response  (one per student per assessment)
-    │                                   │
-    │                                   └──► Evaluation  (tutor marks the response)
-    │                                               │
-    │                                               └──► Result
-    │                                                       │
-    │                                         ┌────────────┼──────────────┐
-    │                                         ▼            ▼              ▼
-    │                                      Ranking   Performance     Notification
-    │                                               Analysis     (cross-domain)
-    │
-    ├──► Question Paper   (1:1 per assessment)
+    ├──► Course           (FK — which course this test belongs to)
+    ├──► Subject          (FK — optional, null for full-syllabus tests)
+    ├──► Question Paper   (FK — the compiled paper for this exam)
     │         │
     │         └──► question_paper_questions  (M:N junction)
     │                       │
-    │                       └──► Question    ◄── ATOMIC UNIT (MCQ / Subjective)
+    │                       └──► Question    ◄── ATOMIC UNIT
     │                                 │
-    │                                 └──► Question Bank  (named pool this question belongs to)
-    │                                 └──► Subject        (which subject this question tests)
-    │                                 └──► Chapter        (optional — which chapter)
+    │                                 └──► Subject
+    │                                 └──► Chapter (optional)
     │
-    └──► OMR Sheet        (nullable — offline assessments only)
+    ├──► Batch (M:N — exam_batches junction)
+    │
+    └──► Question paper can be reused across multiple exams
+                        │
+                        ▼
+              Student Admission
+                  │
+                  ├──► Exam Registration  (one per admission per exam)
+                  │         │
+                  │         └──► Exam Attempt  (one per registration)
+                  │                   │
+                  │                   ├──► Exam Answer  (per question)
+                  │                   │
+                  │                   └──► Exam Result  (published outcome)
+                  │                              │
+                  │                     ┌────────┼──────────┐
+                  │                     ▼        ▼          ▼
+                  │                  Ranking  Performance  Notification
+                  │                           Analysis    (cross-domain)
+                  │
+                  └──► (Attendance, Progress, etc. in other domains)
 ```
 
-> **Key clarification:**
-> `Question Bank` is a **named pool** (e.g., "Science 2026 Bank", "Mock Question Bank").
-> `Question` is the **atomic unit** — one MCQ or one Subjective question living inside a Bank.
-> `Question Paper` **selects** Questions from one or more Banks via the `question_paper_questions` junction.
-> The same Question can appear in multiple Papers. Banks are reusable across assessments and academic years.
+> **Key clarifications:**
+> - `Question` is the **atomic unit** — one MCQ / Numeric / Subjective / True-False.
+> - There is **no separate `question_banks` table** — questions are organized by subject/chapter directly.
+> - `Question Paper` **selects** Questions via the `question_paper_questions` junction.
+> - A Question Paper is a **reusable template** — can be used by multiple assessments.
+> - `Exam Registration` links a `student_admission` to an exam.
+> - `Exam Attempt` records the actual attempt per registration.
+> - `Exam Answers` stores per-question responses.
 
 ---
 
@@ -99,26 +104,23 @@ Assessment
 ```mermaid
 erDiagram
 
-    ASSESSMENT ||--|| QUESTION_PAPER : "has"
-    ASSESSMENT ||--o{ ASSESSMENT_BATCH : "assigned to"
-    ASSESSMENT_BATCH }o--|| BATCH : "references"
+    ASSESSMENT ||--|| QUESTION_PAPER : "uses"
+    ASSESSMENT ||--o{ EXAM_BATCH : "assigned to"
+    EXAM_BATCH }o--|| BATCH : "references"
 
     QUESTION_PAPER ||--o{ QUESTION_PAPER_QUESTION : "selects via"
     QUESTION_PAPER_QUESTION }o--|| QUESTION : "includes"
-    QUESTION }o--|| QUESTION_BANK : "belongs to"
     QUESTION }o--|| SUBJECT : "tests"
     QUESTION }o--o| CHAPTER : "covers (optional)"
 
-    STUDENT_ENROLLMENT ||--o{ STUDENT_RESPONSE : "submits"
-    STUDENT_RESPONSE }o--|| ASSESSMENT : "for"
-    STUDENT_RESPONSE ||--|| EVALUATION : "evaluated by"
-    EVALUATION }o--|| TUTOR : "performed by"
-    EVALUATION ||--o| RESULT : "produces"
+    STUDENT_ADMISSION ||--o{ EXAM_REGISTRATION : "registers for"
+    EXAM_REGISTRATION }o--|| ASSESSMENT : "for"
+    EXAM_REGISTRATION ||--o{ EXAM_ATTEMPT : "attempts"
+    EXAM_ATTEMPT ||--o{ EXAM_ANSWER : "answers"
+    EXAM_ATTEMPT ||--o| EXAM_RESULT : "produces"
 
-    RESULT ||--o{ RANKING : "generates"
-    RESULT ||--o| PERFORMANCE_ANALYSIS : "feeds into"
-
-    ASSESSMENT }o--o| OMR_SHEET : "has (offline only)"
+    EXAM_RESULT ||--o{ RANKING : "generates"
+    EXAM_RESULT ||--o| PERFORMANCE_ANALYSIS : "feeds into"
 ```
 
 ---
@@ -126,22 +128,20 @@ erDiagram
 # 🔗 Relationship Summary
 
 | Parent Entity | Child / Reference | Cardinality | Notes |
-|---|---|---|---|
-| Assessment | Question Paper | 1:1 | One paper per assessment |
-| Assessment | Batch | M:N | Via `assessment_batches` junction |
+|---|---|---|---|---|
+| Assessment | Question Paper | N:1 | A question paper can be reused across assessments |
+| Assessment | Batch | M:N | Via `exam_batches` junction |
 | Assessment | Subject | N:1 | Optional — null for full-syllabus tests |
-| Assessment | Course | N:1 | Every test belongs to a course |
-| Assessment | OMR Sheet | 1:0..1 | Null for online assessments |
-| **Question Paper** | **Question** | **M:N** | **Via `question_paper_questions` junction** |
-| **Question** | **Question Bank** | **N:1** | **Every question lives in exactly one bank** |
-| **Question** | **Subject** | **N:1** | **Which subject this question tests** |
-| **Question** | **Chapter** | **N:0..1** | **Optional — chapter-level tagging** |
-| **Question Bank** | **Tutor** | **N:1** | **Created by a specific Tutor** |
-| StudentEnrollment | Student Response | 1:N | One response per assessment per student |
-| Student Response | Assessment | N:1 | Scoped to assessment |
-| Student Response | Evaluation | 1:1 | Each response has exactly one evaluation |
-| Evaluation | Tutor | N:1 | Evaluated by authorized tutor |
-| Evaluation | Result | N:1 | Evaluation produces the result record |
+| Assessment | Course | N:1 | Every exam belongs to a course |
+| Question Paper | Question | M:N | Via `question_paper_questions` junction |
+| Question | Subject | N:1 | Which subject this question tests |
+| Question | Chapter | N:0..1 | Optional — chapter-level tagging |
+| Question | Created by | N:1 | FK to `users.id` (tutor who created it) |
+| **Student Admission** | **Exam Registration** | **1:N** | **One registration per admission per exam** |
+| Exam Registration | Assessment | N:1 | Scoped to assessment |
+| Exam Registration | Exam Attempt | 1:N | One attempt per registration (with attempt_number) |
+| Exam Attempt | Exam Answer | 1:N | Per-question response within attempt |
+| Exam Attempt | Exam Result | 1:0..1 | Published result after evaluation |
 | Result | Ranking | 1:N | Per batch, course, institute |
 | Result | Performance Analysis | N:1 | Aggregated analytics |
 
@@ -149,74 +149,75 @@ erDiagram
 
 # 📌 Business Rules
 
-- Every Assessment belongs to one Course.
-- Every Assessment may be scoped to one Subject (null = full-syllabus assessment).
-- Every Assessment must be assigned to one or more Batches via `assessment_batches`.
-- Every Assessment must have exactly one Question Paper.
-- **A Question Bank is a named pool of reusable Questions** — not an assessment itself.
-- **A Question is the atomic unit** — it belongs to exactly one Question Bank, one Subject, and optionally one Chapter.
-- **Question types are MCQ or SUBJECTIVE** — stored as a `question_type` enum on the Question entity.
-- **Questions are created by Tutors** — `created_by_tutor_id` is a required FK on Question.
-- A Question Paper selects Questions from one or more Banks via `question_paper_questions` (M:N junction).
-- The same Question can be reused across multiple Question Papers and assessments.
-- Students may attempt only Assessments assigned to their enrolled Batch.
-- Every Student Response must have exactly one Evaluation.
-- Every Evaluation is performed by an authorized Tutor (scoped to their assignment).
-- Results are published only after all Evaluations are complete.
+- Every Assessment (Exam) belongs to one Course.
+- Every Assessment may be scoped to one Subject (null = full-syllabus exam).
+- Every Assessment must be assigned to one or more Batches.
+- Every Assessment may optionally reference a Question Paper (reusable).
+- **There is no separate `question_banks` table.** Questions are standalone entities grouped by subject/chapter.
+- **A Question is the atomic unit** — MCQ, Multi-Select, True/False, Numeric, Matching, or Descriptive.
+- **Questions are created by Users (tutors)** — `created_by` FK on the Question entity.
+- A Question Paper selects Questions via `question_paper_questions` (M:N junction with display order + marks override).
+- The same Question can be reused across multiple Question Papers and Assessments.
+- **Exam Registrations** link a Student Admission to an Assessment — one registration per admission per exam.
+- **Exam Attempts** record the actual attempt per registration (supports re-attempts via `attempt_number`).
+- **Exam Answers** store per-question responses within an attempt.
+- **Exam Results** are the published outcome of an evaluated attempt.
 - Rankings are calculated only from published Results.
-- OMR Sheets are used exclusively for offline assessments; null for online.
 - Result notifications are dispatched by the Communication Domain — referenced, not owned here.
 
 ---
 
 ---
 
-## 🧱 Question & Question Bank — Entity Field Reference
-
-### Question Bank
-
-```sql
-question_banks (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  institute_id     UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
-  name             TEXT NOT NULL,          -- e.g. "Science 2026 Bank", "Mock Question Bank"
-  subject_id       UUID NOT NULL REFERENCES subjects(id),
-  description      TEXT,
-  created_by       UUID NOT NULL REFERENCES tutors(id),   -- Tutor who owns this bank
-  is_active        BOOLEAN DEFAULT TRUE,
-  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at       TIMESTAMP,
-
-  UNIQUE (institute_id, name, subject_id)
-);
-```
+## 🧱 Assessment — Entity Field Reference
 
 ### Question (Atomic Unit)
 
 ```sql
 questions (
-  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  institute_id     UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
-  question_bank_id UUID NOT NULL REFERENCES question_banks(id) ON DELETE RESTRICT,
-  subject_id       UUID NOT NULL REFERENCES subjects(id),
-  chapter_id       UUID REFERENCES chapters(id),           -- optional chapter tagging
-  question_type    TEXT NOT NULL CHECK (question_type IN ('MCQ', 'SUBJECTIVE')),
+  id               UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id        UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
+  subject_id       UUID NOT NULL REFERENCES subjects(tenant_id, id),
+  chapter_id       UUID REFERENCES chapters(tenant_id, id),
+  question_type    VARCHAR(50) NOT NULL,
   question_text    TEXT NOT NULL,
-  -- MCQ fields (null for SUBJECTIVE)
-  option_a         TEXT,
-  option_b         TEXT,
-  option_c         TEXT,
-  option_d         TEXT,
-  correct_option   TEXT CHECK (correct_option IN ('A','B','C','D')),  -- null for SUBJECTIVE
-  -- Common fields
   marks            NUMERIC(5,2) NOT NULL,
   negative_marks   NUMERIC(5,2) DEFAULT 0,
-  difficulty       TEXT CHECK (difficulty IN ('EASY','MEDIUM','HARD')),
-  explanation      TEXT,                   -- shown to student after result publication
-  created_by       UUID NOT NULL REFERENCES tutors(id),
+  difficulty       VARCHAR(20),
+  explanation      TEXT,
+  created_by       UUID NOT NULL REFERENCES users(id),
   is_active        BOOLEAN DEFAULT TRUE,
-  created_at       TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at       TIMESTAMP
+  version          INTEGER NOT NULL DEFAULT 1,
+  created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  deleted_at       TIMESTAMP WITH TIME ZONE,
+  deleted_by       UUID REFERENCES users(id),
+
+  UNIQUE (tenant_id, id)
+);
+```
+
+**Question Types:** MCQ, MULTI_SELECT, TRUE_FALSE, MATCHING, NUMERICAL, DESCRIPTIVE
+
+### Question Paper
+
+```sql
+question_papers (
+  id                UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id         UUID NOT NULL REFERENCES institutes(id),
+  paper_code        VARCHAR(50) NOT NULL,
+  title             VARCHAR(255) NOT NULL,
+  course_id         UUID NOT NULL REFERENCES courses(tenant_id, id),
+  subject_id        UUID REFERENCES subjects(tenant_id, id),
+  total_marks       NUMERIC(10,2) NOT NULL DEFAULT 0,
+  duration_minutes  INTEGER,
+  instructions      TEXT,
+  status            VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  version           INTEGER NOT NULL DEFAULT 1,
+  published_version INTEGER,
+
+  UNIQUE (tenant_id, id),
+  UNIQUE (tenant_id, paper_code)
 );
 ```
 
@@ -224,20 +225,70 @@ questions (
 
 ```sql
 question_paper_questions (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  institute_id      UUID NOT NULL REFERENCES institutes(id),
-  question_paper_id UUID NOT NULL REFERENCES question_papers(id) ON DELETE CASCADE,
-  question_id       UUID NOT NULL REFERENCES questions(id) ON DELETE RESTRICT,
-  sequence_no       INTEGER NOT NULL,      -- display order in the paper
-  marks_override    NUMERIC(5,2),          -- override question's default marks if needed
-  created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+  id                UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id         UUID NOT NULL REFERENCES institutes(id),
+  paper_id          UUID NOT NULL REFERENCES question_papers(tenant_id, id) ON DELETE CASCADE,
+  question_id       UUID NOT NULL REFERENCES questions(tenant_id, id),
+  section           VARCHAR(100),
+  marks             NUMERIC(5,2) NOT NULL DEFAULT 4.00,
+  negative_marks    NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+  display_order     INTEGER NOT NULL DEFAULT 1,
 
-  UNIQUE (question_paper_id, question_id),     -- same question cannot appear twice in a paper
-  UNIQUE (question_paper_id, sequence_no)      -- no two questions share a position
+  UNIQUE (tenant_id, id),
+  UNIQUE (paper_id, question_id),
+  UNIQUE (paper_id, display_order)
 );
 ```
 
-> **Why `marks_override`?** A question might be worth 2 marks in a chapter test but 4 marks in a grand test. Overriding at the paper level avoids duplicating the question record.
+### Exam Registration
+
+```sql
+exam_registrations (
+  id                   UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id            UUID NOT NULL REFERENCES institutes(id),
+  exam_id              UUID NOT NULL REFERENCES exams(tenant_id, id),
+  student_admission_id UUID NOT NULL REFERENCES student_admissions(tenant_id, id),
+  status               VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  registered_at        TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+
+  UNIQUE (tenant_id, id),
+  UNIQUE (exam_id, student_admission_id)
+);
+```
+
+### Exam Attempt
+
+```sql
+exam_attempts (
+  id                   UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id            UUID NOT NULL REFERENCES institutes(id),
+  exam_registration_id UUID NOT NULL REFERENCES exam_registrations(id),
+  student_admission_id UUID NOT NULL REFERENCES student_admissions(tenant_id, id),
+  attempt_number       INTEGER NOT NULL DEFAULT 1,
+  started_at           TIMESTAMP WITH TIME ZONE,
+  submitted_at         TIMESTAMP WITH TIME ZONE,
+  status               VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+
+  UNIQUE (tenant_id, id)
+);
+```
+
+### Exam Result
+
+```sql
+exam_results (
+  id                   UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id            UUID NOT NULL REFERENCES institutes(id),
+  exam_attempt_id      UUID NOT NULL REFERENCES exam_attempts(id),
+  student_admission_id UUID NOT NULL REFERENCES student_admissions(tenant_id, id),
+  total_marks          NUMERIC(10,2),
+  percentage           NUMERIC(5,2),
+  rank                 INTEGER,
+  is_published         BOOLEAN NOT NULL DEFAULT FALSE,
+
+  UNIQUE (tenant_id, id)
+);
+```
 
 ---
 
@@ -245,14 +296,16 @@ question_paper_questions (
 
 - Assessment serves as the root entity for all examination activities.
 - Assessment types are configuration-driven rather than separate entities.
-- Question Bank enables reusable and standardized question management.
-- Student Responses preserve examination evidence.
-- Evaluation provides transparent and auditable marking.
-- Results act as the official academic outcome.
+- Exam Registration links a Student Admission to an Assessment.
+- Exam Attempt records the actual attempt per registration (supports re-attempts).
+- Exam Answers store per-question responses within an attempt.
+- Exam Results are the published outcome of an evaluated attempt.
 - Ranking supports Batch, Course, and Institute-level comparison.
 - Performance Analysis provides long-term academic insights.
 - Cross-domain entities are referenced rather than duplicated.
 - Communication responsibilities remain within the Communication Domain.
+- A Question Paper is a **reusable template** — can be used across multiple assessments.
+- There is **no `question_banks` table** — questions are organized by subject/chapter directly.
 
 ---
 

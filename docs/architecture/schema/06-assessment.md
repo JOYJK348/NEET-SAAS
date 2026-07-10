@@ -68,7 +68,7 @@ graph TD
         Assessment -- "Resolves branch and active academic year boundaries" --> Institute
         Assessment -- "Validates examiner and supervisor user_id context" --> Users
         Assessment -- "Maps exams to courses, subjects, and batches" --> Academics
-        Assessment -- "Tracks student profiles and attempts" --> Students
+        Assessment -- "Tracks student admissions and attempts" --> Students
         Assessment -- "Feeds performance analytics to the central log engine" --> System
     end
 ```
@@ -182,7 +182,7 @@ graph TD
 |---|---|---|---|
 | Question Bank | Curriculum, Assessments | Subject | QuestionVersion, StudentResponse |
 | Assessment Session | Scheduler, Dashboard | Batch, Branch, AssessmentPaper | StudentAttempt, AssessmentResult |
-| Student Attempt | Student Portal, Evaluation Engine | StudentProfile, Session | StudentResponse, Result |
+| Student Attempt | Student Portal, Evaluation Engine | StudentAdmission, Session | StudentResponse, Result |
 
 ---
 
@@ -242,7 +242,7 @@ graph TD
 |---|---|
 | **Screen** | Student Report Portal |
 | **Purpose** | Get detailed marks, negative markings, batch ranks, and percentiles for a completed exam |
-| **Input** | `student_profile_id`, `assessment_session_id` |
+| **Input** | `student_admission_id`, `assessment_session_id` |
 | **Output** | Score, Max Score, Batch Rank, Percentile, Section-wise breakdowns |
 | **Cardinality** | 1:1 lookup |
 | **Pagination** | None |
@@ -250,7 +250,7 @@ graph TD
 | **Expected Rows** | 1 |
 | **Latency Target** | P95 < 35ms |
 | **Cache?** | Yes — Redis, 24 hours TTL |
-| **Index Used** | `idx_assessment_results_student_session` |
+| **Index Used** | `idx_assessment_results_admission_session` |
 
 ---
 
@@ -278,7 +278,7 @@ graph TD
 |---|---|
 | **Screen** | AI Personalized Dashboard |
 | **Purpose** | Scan student response metrics to identify subjects/chapters with low success rates |
-| **Input** | `student_profile_id` |
+| **Input** | `student_admission_id` |
 | **Output** | Chapter tags, success percentages, and question counts |
 | **Cardinality** | Aggregated List |
 | **Pagination** | None |
@@ -624,7 +624,7 @@ graph TD
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
 | `assessment_session_id`| UUID | No | - | FK → `assessment_sessions.id` |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `status` | VARCHAR(50) | No | `'STARTED'` | Attempt status |
 | `autosave_count` | INT | No | `0` | Number of auto-saves executed |
 | `last_autosave_at` | TIMESTAMPTZ | Yes | - | Timestamp of last auto-save |
@@ -675,7 +675,7 @@ graph TD
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
 | `assessment_session_id`| UUID | No | - | FK → `assessment_sessions.id` |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `scanned_image_url` | TEXT | No | - | Image file stored in bucket |
 | `processed_payload` | JSONB | No | - | Raw digitized bubble selections |
 | `status` | `OMRProcessingStatus`| No | `'UPLOADED'` | Scanner matching workflow state |
@@ -693,7 +693,7 @@ graph TD
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
 | `assessment_session_id`| UUID | No | - | FK → `assessment_sessions.id` |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `correct_answers` | INT | No | - | Evaluation metrics breakdown |
 | `wrong_answers` | INT | No | - | Evaluation metrics breakdown |
 | `skipped_answers` | INT | No | - | Evaluation metrics breakdown |
@@ -802,7 +802,7 @@ graph TD
 | Constraint Name | Type | Table | Columns | Business Rule |
 |---|---|---|---|---|
 | `uq_question_version` | Unique | `question_versions` | `(question_id, version_number)` | Question versions incremental unique keys |
-| `uq_student_assessment_attempt` | Unique | `student_assessment_attempts` | `(assessment_session_id, student_profile_id)` | One attempt per student per session |
+| `uq_student_assessment_attempt` | Unique | `student_assessment_attempts` | `(assessment_session_id, student_admission_id)` | One attempt per student per session |
 | `uq_assessment_paper_questions` | Unique | `assessment_paper_questions` | `(assessment_paper_id, question_version_id)` | Question mapping uniqueness |
 | `uq_assessment_result_subjects_mapping` | Unique | `assessment_result_subjects` | `(assessment_result_id, subject_id)` | Single record mapping constraint |
 | `chk_student_attempts_chronology` | Check | `student_assessment_attempts` | `submitted_at >= started_at` | Attempt chronology verification |
@@ -819,12 +819,12 @@ graph TD
 
 | Index Name | Table | Columns | Include (Covering) | Supports Query | Type | Justification |
 |---|---|---|---|---|---|---|
-| `idx_assessment_results_student_session` | `assessment_results` | `(student_profile_id, assessment_session_id)` | `(score_obtained, batch_rank, percentile)` | Q1 | B-tree | Report card load |
-| `idx_assessment_results_batch_rank` | `assessment_results` | `(assessment_session_id, batch_rank)` | `(student_profile_id, score_obtained)` | Q2 | B-tree | Leaderboard lookup |
+| `idx_assessment_results_admission_session` | `assessment_results` | `(student_admission_id, assessment_session_id)` | `(score_obtained, batch_rank, percentile)` | Q1 | B-tree | Report card load |
+| `idx_assessment_results_batch_rank` | `assessment_results` | `(assessment_session_id, batch_rank)` | `(student_admission_id, score_obtained)` | Q2 | B-tree | Leaderboard lookup |
 | `idx_student_responses_attempt_question` | `student_responses` | `(student_assessment_attempt_id, question_version_id)` | `(is_correct, marks_obtained)` | CBT performance scan | B-tree | Fast attempt evaluation scanner |
 | `idx_sessions_batch_status` | `assessment_sessions` | `(batch_id, status)` | `(id, start_time)` | Today's exams | B-tree | Schedule checking |
 | `idx_question_versions_subject_chapter` | `questions` | `(subject_id, topic_id)` | `(id, difficulty_index)` | AI recommendation generator | B-tree | Chapter tag scanners |
-| `idx_student_attempts_status_sub` | `student_assessment_attempts` | `(status, submitted_at)` | `(student_profile_id, id)` | Attempt queues | B-tree | Evaluators check lists |
+| `idx_student_attempts_status_admission` | `student_assessment_attempts` | `(status, submitted_at)` | `(student_admission_id, id)` | Attempt queues | B-tree | Evaluators check lists |
 | `idx_question_options_version` | `question_options` | `(question_version_id)` | `(option_text, is_correct)` | Rendering choices | B-tree | Exam choices scan |
 | `idx_questions_tags_junction` | `question_tags` | `(tag_id)` | `(question_id)` | Tag search | B-tree | Tag queries scanner |
 | `idx_questions_text_search` | `question_versions` | `to_tsvector('english', question_text)` | - | Full text question search | GIN | Enables trigram / partial search queries across question bank |

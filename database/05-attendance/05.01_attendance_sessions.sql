@@ -185,17 +185,22 @@ CREATE POLICY policy_attendance_sessions_select
                 )
             )
             -- Student: sessions from their active batch
+            -- student_batch_enrollments uses student_admission_id (not student_profile_id)
+            -- join through student_admissions to match auth.uid() against student_profile_id
             OR EXISTS (
                 SELECT 1 FROM public.student_batch_enrollments sbe
+                JOIN public.student_admissions sa ON sa.id = sbe.student_admission_id AND sa.deleted_at IS NULL
                 WHERE sbe.batch_id = attendance_sessions.batch_id
-                  AND sbe.student_profile_id = auth.uid()
+                  AND sa.student_profile_id = auth.uid()
                   AND sbe.status = 'ACTIVE'
                   AND sbe.deleted_at IS NULL
             )
             -- Parent: sessions for their linked child's batch
+            -- parent -> student_parents -> student_admissions -> student_batch_enrollments -> batch
             OR EXISTS (
                 SELECT 1 FROM public.student_parents sp
-                JOIN public.student_batch_enrollments sbe ON sbe.student_profile_id = sp.student_profile_id
+                JOIN public.student_admissions sa ON sa.student_profile_id = sp.student_profile_id AND sa.deleted_at IS NULL
+                JOIN public.student_batch_enrollments sbe ON sbe.student_admission_id = sa.id
                 WHERE sp.parent_profile_id = auth.uid()
                   AND sbe.batch_id = attendance_sessions.batch_id
                   AND sbe.status = 'ACTIVE'

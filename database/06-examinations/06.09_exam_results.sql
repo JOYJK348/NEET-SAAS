@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.exam_results (
     -- Result Context
     exam_id UUID NOT NULL,
     attempt_id UUID NOT NULL,
-    student_enrollment_id UUID NOT NULL,
+    student_admission_id UUID NOT NULL,
 
     -- Result Status
     result_status result_status_enum NOT NULL DEFAULT 'PENDING',
@@ -80,8 +80,8 @@ CREATE TABLE IF NOT EXISTS public.exam_results (
     CONSTRAINT fk_exam_results_attempt FOREIGN KEY (tenant_id, attempt_id)
         REFERENCES public.exam_attempts(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
-    CONSTRAINT fk_exam_results_enrollment FOREIGN KEY (tenant_id, student_enrollment_id)
-        REFERENCES public.student_batch_enrollments(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT fk_exam_results_enrollment FOREIGN KEY (tenant_id, student_admission_id)
+        REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
     CONSTRAINT fk_exam_results_published_by FOREIGN KEY (published_by)
         REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE SET NULL,
@@ -127,7 +127,7 @@ END $$;
 
 -- 3. Indexes
 CREATE INDEX IF NOT EXISTS idx_exam_results_exam ON public.exam_results(exam_id, result_status) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_exam_results_enrollment ON public.exam_results(student_enrollment_id, exam_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_exam_results_enrollment ON public.exam_results(student_admission_id, exam_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_exam_results_rank ON public.exam_results(exam_id, rank) WHERE rank IS NOT NULL AND deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_exam_results_tenant ON public.exam_results(tenant_id, exam_id, result_status) WHERE deleted_at IS NULL;
 
@@ -150,10 +150,10 @@ BEGIN
     FROM public.exam_attempts WHERE id = NEW.attempt_id AND deleted_at IS NULL;
 
     SELECT tenant_id INTO STRICT enrollment_tenant
-    FROM public.student_batch_enrollments WHERE id = NEW.student_enrollment_id AND deleted_at IS NULL;
+    FROM public.student_admissions WHERE id = NEW.student_admission_id AND deleted_at IS NULL;
 
     IF exam_tenant <> NEW.tenant_id OR attempt_tenant <> NEW.tenant_id OR enrollment_tenant <> NEW.tenant_id THEN
-        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, attempt, enrollment, and result';
+        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, attempt, admission, and result';
     END IF;
 
     RETURN NEW;
@@ -198,17 +198,17 @@ CREATE POLICY policy_exam_results_select
                 )
             )
             OR EXISTS (
-                SELECT 1 FROM public.student_batch_enrollments sbe
-                WHERE sbe.id = exam_results.student_enrollment_id
-                  AND sbe.student_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                SELECT 1 FROM public.student_admissions sa
+                WHERE sa.id = exam_results.student_admission_id
+                  AND sa.student_profile_id = auth.uid()
+                  AND sa.deleted_at IS NULL
             )
             OR EXISTS (
-                SELECT 1 FROM public.student_batch_enrollments sbe
-                JOIN public.student_parents sp ON sp.student_profile_id = sbe.student_profile_id
-                WHERE sbe.id = exam_results.student_enrollment_id
+                SELECT 1 FROM public.student_admissions sa
+                JOIN public.student_parents sp ON sp.student_profile_id = sa.student_profile_id
+                WHERE sa.id = exam_results.student_admission_id
                   AND sp.parent_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                  AND sa.deleted_at IS NULL
             )
         )
     );

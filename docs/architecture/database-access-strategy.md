@@ -396,7 +396,7 @@ ORDER BY updated_at DESC;
 
 | Table Type | Max Indexes | Examples |
 |---|---|---|
-| 🔥 Hot Write | ≤ 3 | PK + `(institute_id, session_date)` + `(institute_id, student_enrollment_id)` |
+| 🔥 Hot Write | ≤ 3 | PK + `(tenant_id, session_date)` + `(tenant_id, student_admission_id)` |
 | 🟡 Warm | 3–6 | PK + tenant composite + search + sort |
 | 🧊 Cold | 1–2 | PK + `(institute_id)` only |
 

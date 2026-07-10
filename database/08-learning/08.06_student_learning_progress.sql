@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.student_learning_progress (
     id UUID PRIMARY KEY DEFAULT generate_primary_key(),
     tenant_id UUID NOT NULL,
 
-    student_id UUID NOT NULL,
+    student_admission_id UUID NOT NULL,
     material_id UUID NOT NULL,
 
     started_at TIMESTAMP WITH TIME ZONE,
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS public.student_learning_progress (
     CONSTRAINT fk_slp_tenant FOREIGN KEY (tenant_id)
         REFERENCES public.institutes(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
-    CONSTRAINT fk_slp_student FOREIGN KEY (student_id)
-        REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT fk_slp_student FOREIGN KEY (tenant_id, student_admission_id)
+        REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE CASCADE,
 
     CONSTRAINT fk_slp_material FOREIGN KEY (tenant_id, material_id)
         REFERENCES public.learning_materials(tenant_id, id) ON UPDATE RESTRICT ON DELETE CASCADE,
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS public.student_learning_progress (
     CONSTRAINT chk_slp_last_position CHECK (last_position IS NULL OR last_position >= 0),
     CONSTRAINT chk_slp_version CHECK (version > 0),
 
-    -- One progress record per student per material
-    CONSTRAINT uq_slp_student_material UNIQUE (student_id, material_id)
+    -- One progress record per admission per material
+    CONSTRAINT uq_slp_student_material UNIQUE (student_admission_id, material_id)
 );
 
 -- Idempotent backup
@@ -80,9 +80,9 @@ BEGIN
 END $$;
 
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_slp_student ON public.student_learning_progress(student_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_slp_student ON public.student_learning_progress(student_admission_id, status) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_slp_material ON public.student_learning_progress(material_id, status) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_slp_tenant ON public.student_learning_progress(tenant_id, student_id, material_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_slp_tenant ON public.student_learning_progress(tenant_id, student_admission_id, material_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_slp_progress ON public.student_learning_progress(tenant_id, progress_percentage) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_slp_completed ON public.student_learning_progress(tenant_id, completed_at) WHERE completed_at IS NOT NULL AND deleted_at IS NULL;
 
@@ -105,7 +105,12 @@ CREATE POLICY policy_slp_select
             current_user_is_super_admin()
             OR (tenant_id = current_tenant_id())
             AND (
-                student_id = auth.uid()
+                EXISTS (
+                    SELECT 1 FROM public.student_admissions
+                    WHERE id = student_learning_progress.student_admission_id
+                      AND student_profile_id = auth.uid()
+                      AND deleted_at IS NULL
+                )
                 OR EXISTS (
                     SELECT 1 FROM public.users
                     WHERE id = auth.uid()

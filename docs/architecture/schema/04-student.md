@@ -18,7 +18,7 @@
 - Student Profile (Business characteristics of a student user)
 - Guardian Profile (Parent/emergency contact details)
 - Student Guardian Mapping (Relationships, priority hooks, and permissions)
-- Batch Enrollment (Student batch placements with audit snapshots & status controls)
+- Student Batch Enrollment (Student batch placements with audit snapshots & status controls linked to `student_admission_id`)
 - Batch Transfer Log (Auditable batch migrations)
 
 **Domain Type:** 🟡 Warm — Student and guardian profiles are relatively stable, but admissions, active enrollments, and batch transfer workflows are frequently mapped, updated, and verified.
@@ -61,7 +61,7 @@ graph TD
     subgraph Core Dependency Links
         Students -- "Requires active branch_id and admission_year_id validation" --> Institute
         Students -- "Requires core user_id mapping" --> Users
-        Students -- "Validates batch_id limits, snapshots, and calendar timelines" --> Academics
+        Students -- "Validates student_admission_id limits, batch snapshots, and calendar timelines" --> Academics
         Students -- "Feeds student contexts for logs" --> Attendance
         Students -- "Maps student records to assessments" --> Assessments
         Students -- "Triggers fee templates based on enrollment" --> Fees
@@ -74,13 +74,13 @@ graph TD
 
 > Core architectural constraints enforced at database and application layers.
 
-1. **Unique Student-User Link**: A `user_id` can be linked to at most one active `student_profiles` record.
-2. **Batch Capacity Compliance**: An enrollment transaction must fail if the batch's `max_students` limit is exceeded.
-3. **One Active Enrollment**: Within a single time window, a student can have at most one active (`ACTIVE`) enrollment per academic year.
-4. **Admissions Date Bounds**: A student's enrollment `effective_from` date cannot occur prior to the batch's `start_date`.
+1. **Unique Student-User Link**: A `user_id` can be linked to at most one active `student_admissions` record.
+2. **Batch Capacity Compliance**: An admission transaction must fail if the batch's `max_students` limit is exceeded.
+3. **One Active Admission**: Within a single time window, a student can have at most one active (`ACTIVE`) admission per academic year.
+4. **Admissions Date Bounds**: A student's admission `effective_from` date cannot occur prior to the batch's `start_date`.
 5. **Guardian Priority**: Every student profile must link to at least one primary emergency guardian contact (`is_primary = true`).
 6. **Immutable Transfer Logs**: Once written, `batch_transfer_logs` are read-only to preserve a clear audit trail.
-7. **Branch ID Context**: `student_profiles.branch_id` represents the student's *current operational home branch* for physical billing and portal routing. Historical branch assignments are retrieved strictly from `batch_enrollments.branch_name_snapshot`.
+7. **Branch ID Context**: `student_profiles.branch_id` represents the student's *current operational home branch* for physical billing and portal routing. Historical branch assignments are retrieved strictly from `student_batch_enrollments.branch_name_snapshot`.
 
 ---
 
@@ -165,7 +165,7 @@ graph TD
 | Student Profile | 85% | 5% | 10% | 0% | Warm | Operations Team |
 | Guardian Profile | 90% | 5% | 5% | 0% | Read-heavy | Operations Team |
 | Student Guardian | 95% | 3% | 2% | 0% | Read-heavy | Operations Team |
-| Batch Enrollment | 80% | 10% | 10% | 0% | Warm | Operations Team |
+| Student Batch Enrollment | 80% | 10% | 10% | 0% | Warm | Operations Team |
 | Batch Transfer Log | 10% | 90% | 0% | 0% | Write-heavy | Operations Team |
 
 ### 4.2 CRUD Authorization Matrix
@@ -175,7 +175,7 @@ graph TD
 | Student Profile | Admissions Admin | Staff, Parent, Student (Self) | Admissions Admin | Nobody (Status → ARCHIVED/GRADUATED/DROPPED_OUT) |
 | Guardian Profile | Admissions Admin | Staff, Parent (Self), Student | Admissions Admin | Nobody (Status → ARCHIVED) |
 | Student Guardian | Admissions Admin | Staff, Parent, Student | Admissions Admin | Admissions Admin |
-| Batch Enrollment | Admissions Admin | Staff, Parent, Student | Admissions Admin | Admissions Admin (Status changes) |
+| Student Batch Enrollment | Admissions Admin | Staff, Parent, Student | Admissions Admin | Admissions Admin (Status changes) |
 | Batch Transfer Log | Admissions Admin | Staff, Parent, Student | None (Insert-only) | None |
 
 ### 4.3 API Dependency Map
@@ -183,7 +183,7 @@ graph TD
 | Entity | Used By Modules | Upstream Dependencies | Downstream Dependents |
 |---|---|---|---|
 | Student Profile | Admissions, Attendance, Fees, Assessments, LMS | User, Institute (Branch), Academic Year | BatchEnrollment, Parent Links |
-| Batch Enrollment | Attendance, Marksheets, Billing, LMS | Batch, StudentProfile | Attendance logs, Invoices |
+| Student Batch Enrollment | Attendance, Marksheets, Billing, LMS | Batch, StudentAdmission | Attendance logs, Invoices |
 
 ---
 
@@ -196,7 +196,7 @@ graph TD
 | Student Profile | 15,000 | 450,000 | Exponential (Coaching centers scale) |
 | Guardian Profile | 12,000 | 360,000 | Linear with Students |
 | Student Guardian | 15,000 | 450,000 | 1:1 mapping |
-| Batch Enrollment | 18,000 | 540,000 | Multiple years of enrollment history |
+| Student Batch Enrollment | 18,000 | 540,000 | Multiple years of admission history |
 | Batch Transfer Log | 1,500 | 45,000 | Slow (Exceptions only) |
 
 ### 5.2 Row Size Estimation
@@ -206,7 +206,7 @@ graph TD
 | Student Profile | ~600 bytes | ~9.0 MB | ~270 MB | No |
 | Guardian Profile | ~400 bytes | ~4.8 MB | ~144 MB | No |
 | Student Guardian | ~120 bytes | ~1.8 MB | ~54 MB | No |
-| Batch Enrollment | ~380 bytes | ~6.8 MB | ~205 MB | No |
+| Student Batch Enrollment | ~380 bytes | ~6.8 MB | ~205 MB | No |
 | Batch Transfer Log | ~450 bytes | ~675 KB | ~20.25 MB | No |
 
 **Total Domain Storage (Year 3):** ~693 MB. Indexing configurations keep queries fast without custom partitioning.
@@ -215,7 +215,7 @@ graph TD
 
 | Entity | Normal TPS | Peak Scenario | Peak Write TPS | Peak Read TPS |
 |---|---|---|---|---|
-| Batch Enrollment | 0.5 | Start of academic term registrations | 35 | 120 |
+| Student Batch Enrollment | 0.5 | Start of academic term registrations | 35 | 120 |
 | Batch Transfer Log | < 0.1 | Mid-term realignment days | 5 | 80 |
 
 ---
@@ -251,7 +251,7 @@ graph TD
 | **Expected Rows** | 1 |
 | **Latency Target** | P95 < 10ms |
 | **Cache?** | Yes — Redis, 15 minutes TTL |
-| **Index Used** | `idx_batch_enrollments_student_active` |
+| **Index Used** | `idx_student_batch_enrollments_student_active` |
 
 ---
 
@@ -269,7 +269,7 @@ graph TD
 | **Expected Rows** | 1 |
 | **Latency Target** | P95 < 12ms |
 | **Cache?** | Yes — Redis counter, invalidated on enrollment/withdrawal |
-| **Index Used** | `idx_batch_enrollments_batch_status` |
+| **Index Used** | `idx_student_batch_enrollments_batch_status` |
 
 ---
 
@@ -478,7 +478,7 @@ graph TD
 
 ---
 
-### 9.4 `batch_enrollments`
+### 9.4 `student_batch_enrollments`
 
 **Purpose:** Tracks active and historical batch enrollment windows.
 **RLS Scope:** Tenant/Branch Isolated.
@@ -488,7 +488,7 @@ graph TD
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `batch_id` | UUID | No | - | FK → `batches.id` (From Academic Domain) |
 | `status` | `EnrollmentStatus` | No | `'ENROLLED'` | Active state |
 | `effective_from` | DATE | No | - | Enrollment start date |
@@ -522,7 +522,7 @@ graph TD
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `source_batch_id` | UUID | No | - | FK → `batches.id` (From Batch) |
 | `destination_batch_id` | UUID | No | - | FK → `batches.id` (To Batch) |
 | `effective_date` | DATE | No | - | Date schedule shift starts |
@@ -566,11 +566,11 @@ graph TD
 |---|---|---|---|---|---|---|
 | `student_profile_id` | `student_profiles.id` | Cascade | Cascade | Yes | No | No (Immediate) |
 
-### `batch_enrollments` Foreign Keys
+### `student_batch_enrollments` Foreign Keys
 
 | FK Column | References | On Delete | On Update | Indexed? | Tenant Scoped? | Deferrable? |
 |---|---|---|---|---|---|---|
-| `student_profile_id` | `student_profiles.id` | Restrict | Cascade | Yes | Yes | No |
+| `student_admission_id` | `student_admissions.id` | Restrict | Cascade | Yes | Yes | No |
 | `batch_id` | `batches.id` | Restrict | Cascade | Yes | Yes | No |
 
 ---
@@ -584,16 +584,16 @@ graph TD
 | `uq_student_profiles_user` | Unique | `student_profiles` | `(user_id)` | Unique User profile link constraint |
 | `uq_student_profiles_admission` | Unique | `student_profiles` | `(institute_id, branch_id, admission_number)` | Admission roll must be unique inside tenant branch |
 | `uq_student_guardians_mapping` | Unique | `student_guardians` | `(student_profile_id, guardian_profile_id)` | Duplicate parent mapping links forbidden |
-| `uq_batch_enrollment_unique` | Unique | `batch_enrollments` | `(student_profile_id, batch_id)` | Single record mapping constraint |
-| `chk_batch_enrollments_dates` | Check | `batch_enrollments` | `effective_from <= effective_to` | Valid dates range checks |
+| `uq_student_batch_enrollment_unique` | Unique | `student_batch_enrollments` | `(student_admission_id, batch_id)` | Single record mapping constraint |
+| `chk_student_batch_enrollments_dates` | Check | `student_batch_enrollments` | `effective_from <= effective_to` | Valid dates range checks |
 | `chk_emergency_contacts_order`| Check | `student_emergency_contacts`| `display_order >= 1` | Correct index order validation |
 
 ### Application-Enforced Constraints
 
 | Rule | Table | Logic | Reason Not in DB |
 |---|---|---|---|
-| Batch capacity limit | `batch_enrollments` | Check current active counts before registration checkouts | Requires counts updates validation |
-| Dual Active Enrollments block | `batch_enrollments` | Enforce max 1 active enrollment check per student/academic year | Requires year ranges mapping matches |
+| Batch capacity limit | `student_batch_enrollments` | Check current active counts before registration checkouts | Requires counts updates validation |
+| Dual Active Enrollments block | `student_batch_enrollments` | Enforce max 1 active enrollment check per student/academic year | Requires year ranges mapping matches |
 
 **Supabase DB partial index constraint:**
 * Ensures exactly one primary guardian per student mapping configuration:
@@ -607,8 +607,8 @@ CREATE UNIQUE INDEX uq_primary_guardian ON student_guardians (student_profile_id
 
 | Index Name | Table | Columns | Include (Covering) | Supports Query | Type | Justification |
 |---|---|---|---|---|---|---|
-| `idx_batch_enrollments_student_active` | `batch_enrollments` | `(student_profile_id, status)` | `(batch_id, effective_from)` | Q1 | B-tree | Active profile batch checks |
-| `idx_batch_enrollments_batch_status` | `batch_enrollments` | `(batch_id, status)` | `(student_profile_id)` | Q2 | B-tree | Count optimization seat scanner |
+| `idx_student_batch_enrollments_student_active` | `student_batch_enrollments` | `(student_admission_id, status)` | `(batch_id, effective_from)` | Q1 | B-tree | Active admission batch checks |
+| `idx_student_batch_enrollments_batch_status` | `student_batch_enrollments` | `(batch_id, status)` | `(student_admission_id)` | Q2 | B-tree | Count optimization seat scanner |
 | `idx_student_profiles_branch_status` | `student_profiles` | `(branch_id, status)` | `(id, admission_number)` | Q3 | B-tree | Branch search listing optimization |
 | `idx_student_profiles_user` | `student_profiles` | `(user_id)` | `(id, status)` | Auth mappings | B-tree | Resolves core student context from identity mapping |
 | `idx_student_profiles_search` | `student_profiles` | `(admission_number)` | `(id, status)` | Q3 search | B-tree | Quick staff search scanner filters |
@@ -632,8 +632,8 @@ CREATE UNIQUE INDEX uq_primary_guardian ON student_guardians (student_profile_id
 **Trigger:** Coordinator triggers a student transfer between batches.
 
 **Steps (in order):**
-1. Set status of current active row in `batch_enrollments` to `TRANSFERRED`, marking the `effective_to` date, and write withdrawal reason.
-2. Insert new record in `batch_enrollments` with target `batch_id` as status `ACTIVE`, copying course/batch name & code snapshots.
+1. Set status of current active row in `student_batch_enrollments` to `TRANSFERRED`, marking the `effective_to` date, and write withdrawal reason.
+2. Insert new record in `student_batch_enrollments` with target `batch_id` as status `ACTIVE`, copying course/batch name & code snapshots.
 3. Log transfer action record inside `batch_transfer_logs`.
 4. Invalidate student active batch cache key in Redis.
 5. Publish `StudentTransferCompleted` event.
@@ -665,7 +665,7 @@ CREATE UNIQUE INDEX uq_primary_guardian ON student_guardians (student_profile_id
 
 | Consumer Domain | Data Provided | Access Method | Freshness | Contract |
 |---|---|---|---|---|
-| Attendance Domain | `student_profile_id` contexts | FK validation | Real-time | Attendance logging depends on students |
+| Attendance Domain | `student_admission_id` contexts | FK validation | Real-time | Attendance logging depends on student admissions |
 
 ---
 
@@ -710,6 +710,6 @@ CREATE UNIQUE INDEX uq_primary_guardian ON student_guardians (student_profile_id
 ## Appendix: Domain Notes
 
 ### Naming Conventions
-- Tables: `student_profiles`, `guardian_profiles`, `student_guardians`, `student_emergency_contacts`, `student_medical_profiles`, `batch_enrollments`, `batch_transfer_logs`.
+- Tables: `student_profiles`, `guardian_profiles`, `student_guardians`, `student_emergency_contacts`, `student_medical_profiles`, `student_batch_enrollments`, `batch_transfer_logs`.
 
 *Last updated: July 8, 2026*

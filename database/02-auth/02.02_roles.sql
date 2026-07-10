@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.roles (
     CONSTRAINT chk_roles_display_order CHECK (display_order BETWEEN 1 AND 999),
     CONSTRAINT chk_roles_version CHECK (version > 0),
     CONSTRAINT uq_roles_tenant_code UNIQUE (tenant_id, code), -- Constraint matching tenant scopes mapping conflict targets
-    CONSTRAINT uq_roles_global_code UNIQUE (code) DEFERRABLE INITIALLY DEFERRED -- Global unique constraint mapped to platform-level roles
+    CONSTRAINT uq_roles_global_code UNIQUE (code) -- Global unique constraint mapped to platform-level roles
 );
 
 
@@ -83,6 +83,10 @@ CREATE INDEX IF NOT EXISTS idx_roles_tenant_name_search
 -- 2.1 Composite Uniqueness Constraints (enables composite foreign key verification in downstream user_roles tables)
 ALTER TABLE public.roles DROP CONSTRAINT IF EXISTS uq_roles_tenant_id;
 ALTER TABLE public.roles ADD CONSTRAINT uq_roles_tenant_id UNIQUE (tenant_id, id);
+
+-- Fix: remove DEFERRABLE from uq_roles_global_code if it exists (prevents ON CONFLICT usage)
+ALTER TABLE public.roles DROP CONSTRAINT IF EXISTS uq_roles_global_code;
+ALTER TABLE public.roles ADD CONSTRAINT uq_roles_global_code UNIQUE (code);
 
 -- 2.2 Partial Unique Indexes for Soft Deletes (prevents duplicate codes/names within the same tenant)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_part_roles_tenant_code 

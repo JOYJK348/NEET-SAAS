@@ -2,7 +2,7 @@
 -- SQL File: 06.05_exam_attempts.sql
 -- Domain: Exam Attempts (One row per student per exam)
 -- Principal PostgreSQL Database Architect Design Decisions:
--- 1. One attempt per student per exam — UNIQUE (exam_id, student_enrollment_id).
+-- 1. One attempt per student per exam — UNIQUE (exam_id, student_admission_id).
 -- 2. submitted_by_system flag distinguishes AUTO_SUBMITTED from manual submit.
 -- 3. time_taken_seconds is stored for pause-resume scenarios; otherwise derived from timestamps.
 -- 4. Device info split into searchable columns (device_type, browser_name, os_name) + device_metadata JSONB for extras.
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
 
     -- Attempt Context
     exam_id UUID NOT NULL,
-    student_enrollment_id UUID NOT NULL,
+    student_admission_id UUID NOT NULL,
 
     -- Timing
     started_at TIMESTAMP WITH TIME ZONE,
@@ -73,8 +73,8 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
     CONSTRAINT fk_exam_attempts_exam FOREIGN KEY (tenant_id, exam_id)
         REFERENCES public.exams(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
-    CONSTRAINT fk_exam_attempts_enrollment FOREIGN KEY (tenant_id, student_enrollment_id)
-        REFERENCES public.student_batch_enrollments(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT fk_exam_attempts_enrollment FOREIGN KEY (tenant_id, student_admission_id)
+        REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
     CONSTRAINT fk_exam_attempts_created_by FOREIGN KEY (created_by)
         REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE SET NULL,
@@ -104,8 +104,13 @@ CREATE TABLE IF NOT EXISTS public.exam_attempts (
     CONSTRAINT chk_attempt_version CHECK (version > 0),
 
     -- Unique: One attempt per student per exam
-    CONSTRAINT uq_exam_attempt UNIQUE (exam_id, student_enrollment_id)
+    CONSTRAINT uq_exam_attempt UNIQUE (exam_id, student_admission_id)
 );
+
+-- 1.1 Force Constraint Update (Enforce student_admissions mapping references)
+ALTER TABLE public.exam_attempts DROP CONSTRAINT IF EXISTS fk_exam_attempts_enrollment CASCADE;
+ALTER TABLE public.exam_attempts ADD CONSTRAINT fk_exam_attempts_enrollment FOREIGN KEY (tenant_id, student_admission_id)
+    REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 -- 2. Idempotent backup: ensures UNIQUE exists even if CREATE TABLE IF NOT EXISTS skipped
 DO $$
@@ -117,7 +122,7 @@ END $$;
 
 -- 3. Indexes
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_exam ON public.exam_attempts(exam_id, status) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_exam_attempts_enrollment ON public.exam_attempts(student_enrollment_id, exam_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_exam_attempts_enrollment ON public.exam_attempts(student_admission_id, exam_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_status ON public.exam_attempts(tenant_id, status, started_at) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_omr ON public.exam_attempts(omr_sheet_id) WHERE omr_sheet_id IS NOT NULL AND deleted_at IS NULL;
 -- 4. Trigger: validate tenant alignment
@@ -136,10 +141,10 @@ BEGIN
     FROM public.exams WHERE id = NEW.exam_id AND deleted_at IS NULL;
 
     SELECT tenant_id INTO STRICT enrollment_tenant
-    FROM public.student_batch_enrollments WHERE id = NEW.student_enrollment_id AND deleted_at IS NULL;
+    FROM public.student_admissions WHERE id = NEW.student_admission_id AND deleted_at IS NULL;
 
     IF exam_tenant <> NEW.tenant_id OR enrollment_tenant <> NEW.tenant_id THEN
-        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, enrollment, and attempt';
+        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, admission, and attempt';
     END IF;
 
     RETURN NEW;
@@ -184,17 +189,17 @@ CREATE POLICY policy_exam_attempts_select
                 )
             )
             OR EXISTS (
-                SELECT 1 FROM public.student_batch_enrollments sbe
-                WHERE sbe.id = exam_attempts.student_enrollment_id
-                  AND sbe.student_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                SELECT 1 FROM public.student_admissions sa
+                WHERE sa.id = exam_attempts.student_admission_id
+                  AND sa.student_profile_id = auth.uid()
+                  AND sa.deleted_at IS NULL
             )
             OR EXISTS (
-                SELECT 1 FROM public.student_batch_enrollments sbe
-                JOIN public.student_parents sp ON sp.student_profile_id = sbe.student_profile_id
-                WHERE sbe.id = exam_attempts.student_enrollment_id
+                SELECT 1 FROM public.student_admissions sa
+                JOIN public.student_parents sp ON sp.student_profile_id = sa.student_profile_id
+                WHERE sa.id = exam_attempts.student_admission_id
                   AND sp.parent_profile_id = auth.uid()
-                  AND sbe.deleted_at IS NULL
+                  AND sa.deleted_at IS NULL
             )
         )
     );

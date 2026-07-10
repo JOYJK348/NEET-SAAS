@@ -20,34 +20,37 @@ All future database changes, Prisma schema files, and SQL migration files **MUST
 PostgreSQL is case-insensitive by default and wraps camelCase in double quotes, leading to messy raw SQL queries. To prevent this, we enforce a strict separation between database-level names and application-level code names.
 
 ### 1.1 Database-Level (PostgreSQL)
-*   **Tables:** Plural and `snake_case` (e.g., `student_enrollments`, `question_banks`).
-*   **Columns:** Singular and `snake_case` (e.g., `enrolled_at`, `institute_id`).
-*   **Foreign Keys:** End with `_id` suffix (e.g., `student_id`, `batch_id`).
-*   **Indexes:** Prefixed with `idx_` followed by table name and indexed columns (e.g., `idx_enrollments_institute_student`).
-*   **Unique Constraints:** Prefixed with `uq_` followed by table and columns (e.g., `uq_enrollments_student_course_batch`).
+*   **Tables:** Plural and `snake_case` (e.g., `student_admissions`, `student_batch_enrollments`).
+*   **Columns:** Singular and `snake_case` (e.g., `admission_number`, `tenant_id`).
+*   **Foreign Keys:** End with `_id` suffix (e.g., `student_admission_id`, `batch_id`).
+*   **Indexes:** Prefixed with `idx_` followed by table name and indexed columns (e.g., `idx_student_admissions_tenant_course`).
+*   **Unique Constraints:** Prefixed with `uq_` followed by table and columns (e.g., `uq_student_admissions_tenant_id`).
 
 ### 1.2 Application-Level (Prisma Schema)
-*   **Models:** Singular and `PascalCase` (e.g., `StudentEnrollment`).
-*   **Relations:** Singular/Plural `camelCase` depending on cardinality (e.g., `studentEnrollment`, `attendanceRecords`).
+*   **Models:** Singular and `PascalCase` (e.g., `StudentAdmission`).
+*   **Relations:** Singular/Plural `camelCase` depending on cardinality (e.g., `studentAdmission`, `attendanceRecords`).
 *   **Directives:** Model names must explicitly map to snake_case tables using `@@map("table_name")`. Columns must map via `@map("column_name")` if they differ from camelCase fields.
 
 #### Example Model Definition:
 ```prisma
-model StudentEnrollment {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  instituteId     String   @map("institute_id") @db.Uuid
+model StudentAdmission {
+  id              String   @id @default(dbgenerated("generate_primary_key()")) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
   studentId       String   @map("student_id") @db.Uuid
+  admissionNumber String   @map("admission_number") @db.VarChar(50)
   courseId        String   @map("course_id") @db.Uuid
-  batchId         String   @map("batch_id") @db.Uuid
-  enrolledAt      DateTime @default(now()) @map("enrolled_at") @db.Timestamptz(6)
+  academicYearId  String   @map("academic_year_id") @db.Uuid
+  branchId        String?  @map("branch_id") @db.Uuid
+  feeStructureId  String?  @map("fee_structure_id") @db.Uuid
   
   // Relations
-  institute       Institute @relation(fields: [instituteId], references: [id], onDelete: Restrict)
+  institute       Institute @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   student         Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
-  @@map("student_enrollments") // ← MANDATORY snake_case mapping
-  @@index([instituteId, studentId], name: "idx_enrollments_inst_student")
-  @@unique([instituteId, studentId, courseId, batchId], name: "uq_enrollments_student_course_batch")
+  @@map("student_admissions") // ← MANDATORY snake_case mapping
+  @@index([tenantId, courseId], name: "idx_student_admissions_tenant_course")
+  @@unique([tenantId, id], name: "uq_student_admissions_tenant_id")
+  @@unique([tenantId, admissionNumber], name: "uq_student_admissions_tenant_code")
 }
 ```
 

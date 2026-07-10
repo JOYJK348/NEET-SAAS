@@ -217,7 +217,7 @@ graph TD
 |---|---|
 | **Screen** | Student Portal / Parent App |
 | **Purpose** | Get monthly breakdown of present vs absent counts for dashboards |
-| **Input** | `student_profile_id`, `start_date`, `end_date` |
+| **Input** | `student_admission_id`, `start_date`, `end_date` |
 | **Output** | Count of PRESENT, ABSENT, LATE, EXCUSED records |
 | **Cardinality** | Aggregate (Group by status) |
 | **Pagination** | None |
@@ -225,7 +225,7 @@ graph TD
 | **Expected Rows** | 5 rows |
 | **Latency Target** | P95 < 25ms |
 | **Cache?** | Yes — Redis, 1 hour TTL |
-| **Index Used** | `idx_attendance_records_student_date` |
+| **Index Used** | `idx_attendance_records_admission_date` |
 
 ---
 
@@ -458,7 +458,7 @@ graph TD
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
 | `institute_id` | UUID | No | - | FK → `institutes.id` |
 | `attendance_session_id` | UUID | No | - | FK → `attendance_sessions.id` |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `status` | `AttendanceStatus` | No | `'ABSENT'` | Current status |
 | `check_in_at` | TIMESTAMPTZ | Yes | - | Verified entrance timestamp |
 | `check_out_at` | TIMESTAMPTZ | Yes | - | Verified departure timestamp |
@@ -589,7 +589,7 @@ graph TD
 | FK Column | References | On Delete | On Update | Indexed? | Tenant Scoped? | Deferrable? |
 |---|---|---|---|---|---|---|
 | `attendance_session_id` | `attendance_sessions.id` | Restrict | Cascade | Yes | Yes | No |
-| `student_profile_id` | `student_profiles.id` | Restrict | Cascade | Yes | Yes | No |
+| `student_admission_id` | `student_admissions.id` | Restrict | Cascade | Yes | Yes | No |
 
 ---
 
@@ -601,7 +601,7 @@ graph TD
 |---|---|---|---|---|
 | `uq_device_key` | Unique | `attendance_devices` | `(device_key)` | Device keys must be unique |
 | `uq_session_batch_date_slot` | Unique | `attendance_sessions` | `(batch_id, session_date, timetable_slot_id)` | Duplicate sessions forbidden |
-| `uq_attendance_record_session_student` | Unique | `attendance_records` | `(attendance_session_id, student_profile_id)` | One record per student per session |
+| `uq_attendance_record_session_student` | Unique | `attendance_records` | `(attendance_session_id, student_admission_id)` | One record per student per session |
 | `chk_session_times` | Check | `attendance_sessions` | `start_time < end_time` | End time must be after start time |
 | `chk_leave_dates` | Check | `leave_requests` | `start_date <= end_date` | End date must be after start date |
 | `chk_attendance_record_chronology` | Check | `attendance_records` | `check_in_at <= check_out_at` | Departure cannot precede arrival |
@@ -614,10 +614,10 @@ graph TD
 
 | Index Name | Table | Columns | Include (Covering) | Supports Query | Type | Justification |
 |---|---|---|---|---|---|---|
-| `idx_attendance_records_student_date` | `attendance_records` | `(student_profile_id, status)` | `(attendance_session_id, check_in_at)` | Q1 | B-tree | Profile status summaries |
-| `idx_attendance_records_session_status` | `attendance_records` | `(attendance_session_id, status)` | `(student_profile_id, verification_method)` | Q3 | B-tree | Classroom dashboard listings |
-| `idx_attendance_records_verified_at` | `attendance_records` | `(check_in_at)` | `(student_profile_id, status)` | Reports | B-tree | Time-series query filters |
-| `idx_attendance_records_method` | `attendance_records` | `(verification_method)` | `(student_profile_id, anomaly_score)` | Q2 / Fraud | B-tree | Fraud analysis scan optimization |
+| `idx_attendance_records_admission_date` | `attendance_records` | `(student_admission_id, status)` | `(attendance_session_id, check_in_at)` | Q1 | B-tree | Admission status summaries |
+| `idx_attendance_records_session_status` | `attendance_records` | `(attendance_session_id, status)` | `(student_admission_id, verification_method)` | Q3 | B-tree | Classroom dashboard listings |
+| `idx_attendance_records_verified_at` | `attendance_records` | `(check_in_at)` | `(student_admission_id, status)` | Reports | B-tree | Time-series query filters |
+| `idx_attendance_records_method` | `attendance_records` | `(verification_method)` | `(student_admission_id, anomaly_score)` | Q2 / Fraud | B-tree | Fraud analysis scan optimization |
 | `idx_leave_requests_user_status` | `leave_requests` | `(user_id, status)` | `(start_date, end_date)` | Q3 check | B-tree | Overlap leave checks |
 | `idx_sessions_date_batch` | `attendance_sessions` | `(session_date, batch_id)` | `(id, start_time, end_time)` | Q4 / Today | B-tree | Today's active classes scanner |
 | `idx_sessions_staff_date` | `attendance_sessions` | `(staff_profile_id, session_date)`| `(id, start_time, end_time)` | Q6 / Faculty | B-tree | Teacher class registers |

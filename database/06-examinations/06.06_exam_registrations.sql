@@ -2,7 +2,7 @@
 -- SQL File: 06.04_exam_registrations.sql
 -- Domain: Exam Registrations (Eligibility, Admit Cards, Hall Tickets)
 -- Principal PostgreSQL Database Architect Design Decisions:
--- 1. One registration per student per exam — enforced by UNIQUE (exam_id, student_enrollment_id).
+-- 1. One registration per student per exam — enforced by UNIQUE (exam_id, student_admission_id).
 -- 2. Hall ticket and roll number are tenant-scoped unique.
 -- 3. Fee tracking supports paid/unpaid/waived scholarship exams.
 -- 4. Seating info for offline exam room assignment.
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.exam_registrations (
 
     -- Registration Context
     exam_id UUID NOT NULL,
-    student_enrollment_id UUID NOT NULL,
+    student_admission_id UUID NOT NULL,
 
     -- Registration Details
     registration_number VARCHAR(100),
@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS public.exam_registrations (
     CONSTRAINT fk_exam_registrations_exam FOREIGN KEY (tenant_id, exam_id)
         REFERENCES public.exams(tenant_id, id) ON UPDATE RESTRICT ON DELETE CASCADE,
 
-    CONSTRAINT fk_exam_registrations_enrollment FOREIGN KEY (tenant_id, student_enrollment_id)
-        REFERENCES public.student_batch_enrollments(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT fk_exam_registrations_admission FOREIGN KEY (tenant_id, student_admission_id)
+        REFERENCES public.student_admissions(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
     CONSTRAINT fk_exam_registrations_created_by FOREIGN KEY (created_by)
         REFERENCES public.users(id) ON UPDATE RESTRICT ON DELETE SET NULL,
@@ -85,12 +85,12 @@ CREATE TABLE IF NOT EXISTS public.exam_registrations (
     CONSTRAINT chk_registration_version CHECK (version > 0),
 
     -- Unique: One registration per student per exam
-    CONSTRAINT uq_exam_registration UNIQUE (exam_id, student_enrollment_id)
+    CONSTRAINT uq_exam_registration UNIQUE (exam_id, student_admission_id)
 );
 
 -- 2. Indexes
 CREATE INDEX IF NOT EXISTS idx_exam_registrations_exam ON public.exam_registrations(exam_id, registration_status) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_exam_registrations_enrollment ON public.exam_registrations(student_enrollment_id, exam_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_exam_registrations_enrollment ON public.exam_registrations(student_admission_id, exam_id) WHERE deleted_at IS NULL;
 
 -- 2.1 Unique indexes for tenant-scoped roll number and hall ticket
 CREATE UNIQUE INDEX IF NOT EXISTS uq_part_exam_reg_tenant_roll
@@ -116,10 +116,10 @@ BEGIN
     FROM public.exams WHERE id = NEW.exam_id AND deleted_at IS NULL;
 
     SELECT tenant_id INTO STRICT enrollment_tenant
-    FROM public.student_batch_enrollments WHERE id = NEW.student_enrollment_id AND deleted_at IS NULL;
+    FROM public.student_admissions WHERE id = NEW.student_admission_id AND deleted_at IS NULL;
 
     IF exam_tenant <> NEW.tenant_id OR enrollment_tenant <> NEW.tenant_id THEN
-        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, enrollment, and registration';
+        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across exam, admission, and registration';
     END IF;
 
     RETURN NEW;
@@ -165,14 +165,16 @@ CREATE POLICY policy_exam_registrations_select
             )
             OR EXISTS (
                 SELECT 1 FROM public.student_batch_enrollments sbe
-                WHERE sbe.id = exam_registrations.student_enrollment_id
-                  AND sbe.student_profile_id = auth.uid()
+                JOIN public.student_admissions sa ON sa.id = sbe.student_admission_id AND sa.deleted_at IS NULL
+                WHERE sbe.student_admission_id = exam_registrations.student_admission_id
+                  AND sa.student_profile_id = auth.uid()
                   AND sbe.deleted_at IS NULL
             )
             OR EXISTS (
                 SELECT 1 FROM public.student_batch_enrollments sbe
-                JOIN public.student_parents sp ON sp.student_profile_id = sbe.student_profile_id
-                WHERE sbe.id = exam_registrations.student_enrollment_id
+                JOIN public.student_admissions sa ON sa.id = sbe.student_admission_id AND sa.deleted_at IS NULL
+                JOIN public.student_parents sp ON sp.student_profile_id = sa.student_profile_id
+                WHERE sbe.student_admission_id = exam_registrations.student_admission_id
                   AND sp.parent_profile_id = auth.uid()
                   AND sbe.deleted_at IS NULL
             )
@@ -188,9 +190,10 @@ CREATE POLICY policy_exams_student_select
         deleted_at IS NULL
         AND EXISTS (
             SELECT 1 FROM public.exam_registrations er
-            JOIN public.student_batch_enrollments sbe ON sbe.student_profile_id = auth.uid()
+            JOIN public.student_batch_enrollments sbe ON sbe.student_admission_id = er.student_admission_id
+            JOIN public.student_admissions sa ON sa.id = sbe.student_admission_id AND sa.deleted_at IS NULL
             WHERE er.exam_id = exams.id
-              AND er.student_enrollment_id = sbe.id
+              AND sa.student_profile_id = auth.uid()
               AND er.deleted_at IS NULL
         )
     );

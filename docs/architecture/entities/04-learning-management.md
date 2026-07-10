@@ -112,25 +112,44 @@ Represents a student's progress while consuming learning resources.
 
 ---
 
-## Resource Category
+## Learning Path
 
 ### Purpose
 
-Represents logical grouping of learning resources.
-
-### Examples
-
-- Notes
-- Videos
-- Assignments
-- Practice Materials
-- Previous Year Questions
+Represents a curated sequence of learning materials (e.g., "NEET Physics Revision Path").
 
 ### Business Responsibilities
 
-- Organize resources.
-- Simplify navigation.
-- Improve discoverability.
+- Curate ordered material sequences.
+- Support structured revision plans.
+- Track completion progress.
+
+---
+
+## Learning Path Material
+
+### Purpose
+
+Bridge table linking a learning path to individual materials with display order.
+
+### Business Responsibilities
+
+- Order materials within a path.
+- Allow material reuse across paths.
+
+---
+
+## Material Attachment
+
+### Purpose
+
+Represents files attached to learning materials (PDFs, images, videos).
+
+### Business Responsibilities
+
+- Store file metadata.
+- Support multiple file types.
+- Track file versioning.
 
 ---
 
@@ -152,15 +171,11 @@ Prepare Learning Content
 
 ↓
 
-Organize Resources
+Organize Resources (tag by subject/chapter)
 
 ↓
 
-Assign Course
-
-↓
-
-Assign Batch
+Assign to Batches (via material_assignments)
 
 ↓
 
@@ -168,11 +183,11 @@ Publish Resources
 
 ↓
 
-Student Access
+Student Access (scoped to student_admission_id)
 
 ↓
 
-Assignment Completion
+Assignment Submission (scoped to student_admission_id)
 
 ↓
 
@@ -180,7 +195,7 @@ Tutor Review
 
 ↓
 
-Learning Progress Tracking
+Learning Progress Tracking (scoped to student_admission_id)
 
 ↓
 
@@ -190,11 +205,11 @@ Continuous Revision
 
 # Business Principles
 
-- Every learning resource should belong to an academic structure.
+- Every learning resource should belong to an academic structure (Subject → Chapter).
 - Students should access only assigned resources.
 - Tutors should manage only their assigned learning resources.
-- Recorded classes should remain available for future revision.
 - Assignment completion should contribute to academic progress.
+- All learning activity (progress, submissions, bookmarks, notes) is scoped to `student_admission_id`.
 - Learning history should remain available throughout the course.
 - Learning resources should support the institute syllabus.
 
@@ -204,12 +219,16 @@ Continuous Revision
 
 ## Included
 
-- Study Material
-- Learning Resource
-- Assignment
+- Learning Material
+- Material Attachment
+- Learning Path
+- Learning Path Material
+- Assignment (Material with submission config)
 - Assignment Submission
 - Learning Progress
-- Resource Category
+- Bookmark
+- Note
+- Discussion
 
 ---
 
@@ -231,12 +250,17 @@ Continuous Revision
 
 ## Completed
 
-- Study Material
-- Learning Resources
-- Assignments
-- Assignment Submission
-- Learning Progress
-- Resource Categories
+- Learning Material (08.01)
+- Material Attachment (08.02)
+- Learning Path (08.03)
+- Learning Path Material (08.04)
+- Assignment (08.05 — material with submission config)
+- Assignment Submission (08.11)
+- Learning Progress (08.06 — scoped to student_admission_id)
+- Bookmark (08.07)
+- Note (08.08)
+- Discussion (08.09)
+- Material Assignments (08.10)
 
 ---
 

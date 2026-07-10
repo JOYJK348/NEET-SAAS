@@ -480,3 +480,12 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE learning_attachment_type_enum IS 'File attachment type classifications for learning material assets';
+
+-- 52. Student admission lifecycle statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'admission_status_enum') THEN
+        CREATE TYPE admission_status_enum AS ENUM ('ENQUIRY', 'ACTIVE', 'ON_HOLD', 'DROPPED', 'COMPLETED', 'ALUMNI');
+    END IF;
+END $$;
+COMMENT ON TYPE admission_status_enum IS 'Lifecycle states for student admissions';

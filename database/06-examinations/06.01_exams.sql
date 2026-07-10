@@ -19,9 +19,11 @@ CREATE TABLE IF NOT EXISTS public.exams (
     tenant_id UUID NOT NULL,
 
     -- Academic Context
-    batch_id UUID NOT NULL,
+    course_id UUID NOT NULL,
+    batch_id UUID,
     subject_id UUID,
     academic_year_id UUID NOT NULL,
+    question_paper_id UUID,
 
     -- Exam Details
     title VARCHAR(255) NOT NULL,
@@ -80,11 +82,16 @@ CREATE TABLE IF NOT EXISTS public.exams (
     CONSTRAINT fk_exams_tenant FOREIGN KEY (tenant_id)
         REFERENCES public.institutes(id) ON UPDATE RESTRICT ON DELETE RESTRICT,
 
+    CONSTRAINT fk_exams_course FOREIGN KEY (tenant_id, course_id)
+        REFERENCES public.courses(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+
     CONSTRAINT fk_exams_batch FOREIGN KEY (tenant_id, batch_id)
-        REFERENCES public.batches(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
+        REFERENCES public.batches(tenant_id, id) ON UPDATE RESTRICT ON DELETE SET NULL,
 
     CONSTRAINT fk_exams_subject FOREIGN KEY (tenant_id, subject_id)
         REFERENCES public.subjects(tenant_id, id) ON UPDATE RESTRICT ON DELETE SET NULL,
+
+    -- FK fk_exams_question_papers added via ALTER TABLE in 06.04_question_papers.sql after question_papers exists
 
     CONSTRAINT fk_exams_academic_year FOREIGN KEY (tenant_id, academic_year_id)
         REFERENCES public.academic_years(tenant_id, id) ON UPDATE RESTRICT ON DELETE RESTRICT,
@@ -152,12 +159,27 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+    course_tenant UUID;
     batch_tenant UUID;
     subject_tenant UUID;
     ay_tenant UUID;
+    qp_tenant UUID;
 BEGIN
-    SELECT tenant_id INTO STRICT batch_tenant
-    FROM public.batches WHERE id = NEW.batch_id AND deleted_at IS NULL;
+    SELECT tenant_id INTO STRICT course_tenant
+    FROM public.courses WHERE id = NEW.course_id AND deleted_at IS NULL;
+
+    IF course_tenant <> NEW.tenant_id THEN
+        RAISE EXCEPTION 'Referential integrity violation: course tenant_id mismatch with exam';
+    END IF;
+
+    IF NEW.batch_id IS NOT NULL THEN
+        SELECT tenant_id INTO STRICT batch_tenant
+        FROM public.batches WHERE id = NEW.batch_id AND deleted_at IS NULL;
+
+        IF batch_tenant <> NEW.tenant_id THEN
+            RAISE EXCEPTION 'Referential integrity violation: batch tenant_id mismatch with exam';
+        END IF;
+    END IF;
 
     IF NEW.subject_id IS NOT NULL THEN
         SELECT tenant_id INTO STRICT subject_tenant
@@ -171,14 +193,23 @@ BEGIN
     SELECT tenant_id INTO STRICT ay_tenant
     FROM public.academic_years WHERE id = NEW.academic_year_id AND deleted_at IS NULL;
 
-    IF batch_tenant <> NEW.tenant_id OR ay_tenant <> NEW.tenant_id THEN
-        RAISE EXCEPTION 'Referential integrity violation: tenant_id mismatch across batch, academic_year, and exam';
+    IF ay_tenant <> NEW.tenant_id THEN
+        RAISE EXCEPTION 'Referential integrity violation: academic_year tenant_id mismatch with exam';
+    END IF;
+
+    IF NEW.question_paper_id IS NOT NULL THEN
+        SELECT tenant_id INTO STRICT qp_tenant
+        FROM public.question_papers WHERE id = NEW.question_paper_id AND deleted_at IS NULL;
+
+        IF qp_tenant <> NEW.tenant_id THEN
+            RAISE EXCEPTION 'Referential integrity violation: question_paper tenant_id mismatch with exam';
+        END IF;
     END IF;
 
     RETURN NEW;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        RAISE EXCEPTION 'Referential integrity violation: Associated batch, subject, or academic year does not exist or is soft-deleted';
+        RAISE EXCEPTION 'Referential integrity violation: Associated course, batch, subject, academic year, or question paper does not exist or is soft-deleted';
     WHEN TOO_MANY_ROWS THEN
         RAISE EXCEPTION 'Database state error: Duplicate lookup matched';
 END;

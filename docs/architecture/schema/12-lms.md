@@ -220,8 +220,8 @@
 ### 5.6 `study_material_views`
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` (PK) |
-| `study_material_id` | UUID | No | - | FK → `study_materials.id` (PK) |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
+| `study_material_id` | UUID | No | - | FK → `study_materials.id` |
 | `view_count` | INT | No | `1` | Total click count counter |
 | `last_viewed_at` | TIMESTAMPTZ | No | `now()` | Last viewed timestamp |
 
@@ -286,7 +286,7 @@
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` (Student PK) |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `live_session_id` | UUID | No | - | FK → `live_sessions.id` (Session PK) |
 | `joined_at` | TIMESTAMPTZ | No | `now()` | Entry timestamp |
 | `left_at` | TIMESTAMPTZ | Yes | - | Exit timestamp |
@@ -351,7 +351,7 @@
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
 | `assignment_id` | UUID | No | - | FK → `assignments.id` |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` (Student link) |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `submission_status` | `AttemptStatus`| No | `'IN_PROGRESS'`| Attempt status tracking |
 | `attempts_used` | INT | No | `1` | Active attempt count counter |
 | `max_attempts` | INT | No | `3` | Maximum allowed attempts |
@@ -387,7 +387,7 @@
 ### 5.16 `student_topic_progress`
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` (PK) |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `topic_id` | UUID | No | - | FK → `topics.id` (PK) |
 | `started_at` | TIMESTAMPTZ | No | `now()` | Progression start date |
 | `completed_at` | TIMESTAMPTZ | Yes | - | Progression end date |
@@ -408,7 +408,7 @@
 | Column | Type | Nullable | Default | Business Purpose |
 |---|---|---|---|---|
 | `id` | UUID | No | `gen_random_uuid()` | Primary Key |
-| `student_profile_id` | UUID | No | - | FK → `student_profiles.id` |
+| `student_admission_id` | UUID | No | - | FK → `student_admissions.id` |
 | `resource_type` | `HistoryAction` | No | - | Action tag (e.g. PLAY, CLOSE) |
 | `study_material_id` | UUID | Yes | - | FK → `study_materials.id` (Nullable check) |
 | `assignment_id` | UUID | Yes | - | FK → `assignments.id` (Nullable check) |
@@ -463,7 +463,7 @@
 | Constraint Name | Type | Table | Columns | Business Rule |
 |---|---|---|---|---|
 | `uq_chapters_code` | Unique | `chapters` | `(subject_id, code)` | Unique chapter code per subject |
-| `uq_study_material_views` | Unique | `study_material_views` | `(student_profile_id, study_material_id)`| Single view aggregation row |
+| `uq_study_material_views` | Unique | `study_material_views` | `(student_admission_id, study_material_id)`| Single view aggregation row |
 | `chk_materials_read_time` | Check | `study_materials` | `estimated_read_time >= 0` | Cannot be negative |
 | `chk_live_sessions_dates` | Check | `live_sessions` | `scheduled_start < scheduled_end` | Start before end |
 | `chk_live_sessions_actual` | Check | `live_sessions` | `actual_start < actual_end` | Start before end |
@@ -491,10 +491,10 @@ ALTER TABLE student_learning_history ADD CONSTRAINT chk_learning_history_fk CHEC
 | `idx_topics_chapter` | `topics` | `(chapter_id)` | `(id, display_order)` | Syllabus query | B-tree | Ordered topics retrieval |
 | `idx_study_materials_topic`| `study_materials` | `(topic_id, publish_status)` | `(id, file_version_id, material_type)` | Content query | B-tree | Active materials list |
 | `idx_live_sessions_batch` | `live_sessions` | `(batch_id, status)` | `(id, scheduled_start, scheduled_end)` | Stream lookup | B-tree | Class schedule checks |
-| `idx_assignment_submissions_std`| `assignment_submissions`| `(student_profile_id, assignment_id)`| `(submission_status)` | Submissions list | B-tree | Student dashboard queries |
+| `idx_assignment_submissions_admission`| `assignment_submissions`| `(student_admission_id, assignment_id)`| `(submission_status)` | Submissions list | B-tree | Student dashboard queries |
 | `idx_submission_attempts_sub`| `submission_attempts` | `(assignment_submission_id)`| `(attempt_number, score_obtained)` | Grades checklist | B-tree | Evaluator markings runs |
-| `idx_topic_progress_student`| `student_topic_progress` | `(student_profile_id)` | `(topic_id, is_completed)` | Progress tracking | B-tree | Student profile progress checks |
-| `idx_learning_history_logs`| `student_learning_history`| `(student_profile_id, created_at)`| `(resource_type, duration_watched_sec)` | Telemetry dump | B-tree | Append-only event telemetry scans |
+| `idx_topic_progress_admission`| `student_topic_progress` | `(student_admission_id)` | `(topic_id, is_completed)` | Progress tracking | B-tree | Student admission progress checks |
+| `idx_learning_history_admission_logs`| `student_learning_history`| `(student_admission_id, created_at)`| `(resource_type, duration_watched_sec)` | Telemetry dump | B-tree | Append-only event telemetry scans |
 
 ---
 
@@ -502,5 +502,5 @@ ALTER TABLE student_learning_history ADD CONSTRAINT chk_learning_history_fk CHEC
 
 - **Supabase RLS**:
   * Read access is permitted for any authenticated user belonging to the batch context defined in the User Domain mappings.
-  * Homework submissions writes are permitted only for active students whose profile matches `student_profile_id`.
+  * Homework submissions writes are permitted only for active students whose admission matches `student_admission_id`.
   * Chapter/Topic curriculum edits, materials upload setups, and grading runs require coordinator credentials resolved via custom claims in JWT context.

@@ -60,11 +60,11 @@ Academic Year
                    │
                    ├──────► Recorded Class
                    │
-                   └──────► Attendance Record  ◄── NEW (per session per student)
-                                 │
-                                 ├── student_enrollment_id (Student Domain)
-                                 ├── tutor_id (Tutor Domain)
-                                 └── status: PRESENT | ABSENT | LATE | EXCUSED
+                  └──────► Attendance Record  ◄── (per session per student)
+                                │
+                                ├── student_admission_id (Student Domain)
+                                ├── tutor_id (Tutor Domain)
+                                └── status: PRESENT | ABSENT | LATE | EXCUSED
 
 Tutor Assignment ──► (Course + Batch + Subject + Tutor)
 ```
@@ -136,7 +136,7 @@ flowchart TD
 | Tutor Assignment | Course | N:1 | — |
 | Tutor Assignment | Batch | N:1 | — |
 | Tutor Assignment | Subject | N:1 | — |
-| Attendance Record | Student Enrollment | N:1 | FK to Student Domain (not raw `student_id`) |
+| Attendance Record | Student Admission | N:1 | FK to Student Domain (`student_admission_id`) |
 | Attendance Record | Tutor | N:1 | FK to Tutor Domain (who marked it) |
 
 ---
@@ -153,7 +153,7 @@ flowchart TD
 - Tutor Assignments define teaching responsibilities for Courses, Batches, and Subjects.
 - **Attendance must be recorded for every conducted Live Class session.**
 - **One Attendance Record is created per student per Live Class session** — never per day or per batch globally.
-- Attendance is scoped to `student_enrollment_id`, NOT raw `student_id` — this correctly handles a student enrolled in multiple batches.
+- Attendance is scoped to `student_admission_id`, NOT raw `student_id` — the admission owns the course/academic-year context.
 - Low attendance (< institute-configured threshold) triggers a Notification to the parent (cross-domain).
 - Attendance records are **immutable after 24 hours** — corrections require a separate adjustment record.
 
@@ -165,12 +165,10 @@ This is the formal definition of `attendance_records`. It was previously referen
 
 ```sql
 attendance_records (
-  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  institute_id         UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
+  id                   UUID PRIMARY KEY DEFAULT generate_primary_key(),
+  tenant_id            UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
   live_class_id        UUID NOT NULL REFERENCES live_classes(id) ON DELETE RESTRICT,
-  student_enrollment_id UUID NOT NULL REFERENCES student_enrollments(id) ON DELETE RESTRICT,
-  student_id           UUID NOT NULL REFERENCES students(id),       -- denormalized for query speed
-  batch_id             UUID NOT NULL REFERENCES batches(id),        -- denormalized for reporting
+  student_admission_id UUID NOT NULL REFERENCES student_admissions(id) ON DELETE RESTRICT,
   tutor_id             UUID NOT NULL REFERENCES tutors(id),         -- who marked it
   session_date         DATE NOT NULL,
   status               TEXT NOT NULL CHECK (status IN ('PRESENT','ABSENT','LATE','EXCUSED')),
@@ -181,19 +179,20 @@ attendance_records (
   adjusted_at          TIMESTAMP,
   created_at           TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at           TIMESTAMP,
+  version              INTEGER NOT NULL DEFAULT 1,
 
   -- A student can only have ONE attendance record per class session
-  UNIQUE (institute_id, live_class_id, student_enrollment_id)
+  UNIQUE (tenant_id, live_class_id, student_admission_id)
 );
 
 -- Indexes
-CREATE INDEX idx_attendance_institute_student ON attendance_records (institute_id, student_id);
-CREATE INDEX idx_attendance_institute_batch   ON attendance_records (institute_id, batch_id);
-CREATE INDEX idx_attendance_institute_date    ON attendance_records (institute_id, session_date);
+CREATE INDEX idx_attendance_institute_session ON attendance_records (tenant_id, live_class_id);
+CREATE INDEX idx_attendance_institute_admission ON attendance_records (tenant_id, student_admission_id);
+CREATE INDEX idx_attendance_institute_date    ON attendance_records (tenant_id, session_date);
 ```
 
-> **Why `student_enrollment_id` not `student_id`?**
-> A student can be enrolled in multiple batches simultaneously (e.g., main batch + crash course). Using `student_id` alone cannot distinguish which batch's class they attended. `student_enrollment_id` carries both the student identity AND the specific batch context.
+> **Why `student_admission_id` not `student_id`?**
+> The admission owns the course + academic-year context. Using `student_admission_id` correctly scopes attendance to the student's academic context without needing to denormalize batch or course information.
 
 ---
 

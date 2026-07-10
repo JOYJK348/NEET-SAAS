@@ -28,12 +28,12 @@ Individual domain ERDs contain per-entity field schemas and business rules. This
 |---|---|---|---|---|
 | 01 | 🏢 **Institute Management** | [01-institute.md](01-institute.md) | 🟡 In Progress | Institute, Branch, Academic Year, Subscription, License, Holiday, Announcement |
 | 02 | 👤 **User Management** | [02-user.md](02-user.md) | 🟢 Completed | User, Platform Admin, Tenant Admin, Role, Permission, Login Session, Activity Log |
-| 02a | 👨‍🎓 **Student Management** | [02a-student.md](02a-student.md) | 🟢 Completed | Student, Student Admission, Student Profile, **Student Enrollment**, Student Document, Attendance Record, Student Progress, Student Performance |
+| 02a | 👨‍🎓 **Student Management** | [02a-student.md](02a-student.md) | 🟢 Completed | Student, Student Admission (root), Student Profile, **Student Batch Enrollment**, Student Document, Attendance Record, Student Progress, Student Performance |
 | 02b | 👨‍🏫 **Tutor Management** | [02b-tutor.md](02b-tutor.md) | 🟢 Completed | Tutor, Tutor Profile, **Tutor Assignment**, Tutor Document, Tutor Leave |
 | 02c | 👨‍👩‍👧 **Parent Management** | [02c-parent.md](02c-parent.md) | 🟢 Completed | Parent, Parent Profile, **Student Parent Link**, Parent Meeting |
 | 03 | 📚 **Academic Management** | [03-academic.md](03-academic.md) | 🟢 Completed | Academic Year, Course, Batch, Subject, Chapter, Timetable, Live Class, Recorded Class, **Attendance Record** |
-| 04 | 📖 **Learning Management** | [04-learning.md](04-learning.md) | 🟢 Completed | Study Material, Resource Category, Assignment, Assignment Submission, Learning Progress |
-| 05 | 📝 **Assessment Management** | [05-assessment.md](05-assessment.md) | 🟢 Completed | Assessment, Question Paper, **Question Bank**, **Question**, Question Paper Question, Student Response, OMR Sheet, Evaluation, Result, Ranking, Performance Analysis |
+| 04 | 📖 **Learning Management** | [04-learning.md](04-learning.md) | 🟢 Completed | Learning Material, Material Attachment, Learning Path, Assignment, Assignment Submission, Learning Progress |
+| 05 | 📝 **Assessment Management** | [05-assessment.md](05-assessment.md) | 🟢 Completed | Assessment (Exam), Question, Question Paper, Question Paper Question, Exam Registration, Exam Attempt, Exam Answer, Exam Result, Ranking, Performance Analysis |
 | 06 | 💬 **Communication Management** | [06-communication.md](06-communication.md) | 🟢 Completed | Announcement, Notification, Reminder, Recipient Group, Communication Channel, Communication History |
 | 07 | 📊 **Reporting & Analytics** | [07-reporting.md](07-reporting.md) | 🟢 Completed | Dashboard Config, Report Snapshot, Analytics Event |
 | 08 | ⚙️ **System Management** | [08-system.md](08-system.md) | 🟢 Completed | System Configuration, Subscription, License, Feature Flag, Audit Log, System Notification, Backup, Storage |
@@ -91,7 +91,8 @@ flowchart TD
     ACM --> INST
 
     %% People ↔ Academic (core teaching relationships)
-    STU -- "StudentEnrollment\n(course_id + batch_id)" --> ACM
+    STU -- "StudentAdmission\n(owns course + academic_year)" --> ACM
+    STU -- "StudentBatchEnrollment\n(child of admission, links batch)" --> ACM
     TUT -- "TutorAssignment\n(course+batch+subject)" --> ACM
 
     %% Parent reads Student (view only)
@@ -108,11 +109,11 @@ flowchart TD
     STU -- "submits responses" --> ASM
 
     %% Attendance is Academic event + Student identity
-    ACM -- "Attendance Record\n(live_class_id + enrollment_id)" --> STU
+    ACM -- "Attendance Record\n(live_class_id + student_admission_id)" --> STU
 
     %% Fee hangs off Academic + Student
     FEE -- "fee_structure → Course" --> ACM
-    FEE -- "student_fee_record → StudentEnrollment" --> STU
+    FEE -- "student_fee_record → StudentAdmission" --> STU
 
     %% Communication is consumed by everyone
     COM --> STU
@@ -155,7 +156,7 @@ This is the master list of every **foreign key that crosses a domain boundary**.
 | `live_classes` | `chapter_id` | `chapters.id` | Within domain |
 | `live_classes` | `tutor_id` | `tutors.id` | Cross: **Tutor Domain** |
 | `attendance_records` | `live_class_id` | `live_classes.id` | Within domain |
-| `attendance_records` | `student_enrollment_id` | `student_enrollments.id` | Cross: **Student Domain** |
+| `attendance_records` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
 | `attendance_records` | `tutor_id` | `tutors.id` | Cross: **Tutor Domain** |
 
 ---
@@ -166,12 +167,13 @@ This is the master list of every **foreign key that crosses a domain boundary**.
 |---|---|---|---|
 | `students` | `user_id` | `users.id` | Cross: **User Domain** |
 | `students` | `institute_id` | `institutes.id` | Tenant scoping |
-| `student_enrollments` | `student_id` | `students.id` | Within domain |
-| `student_enrollments` | `course_id` | `courses.id` | Cross: **Academic Domain** |
-| `student_enrollments` | `batch_id` | `batches.id` | Cross: **Academic Domain** |
-| `student_enrollments` | `fee_structure_id` | `fee_structures.id` | Cross: **Fee Domain** |
-| `student_progress` | `subject_id` | `subjects.id` | Cross: **Academic Domain** |
-| `student_performance` | `subject_id` | `subjects.id` | Cross: **Academic Domain** |
+| `student_admissions` | `student_id` | `students.id` | Within domain |
+| `student_admissions` | `academic_year_id` | `academic_years.id` | Cross: **Academic Domain** |
+| `student_admissions` | `course_id` | `courses.id` | Cross: **Academic Domain** |
+| `student_admissions` | `branch_id` | `branches.id` | Cross: **Institute Domain** |
+| `student_admissions` | `fee_structure_id` | `fee_structures.id` | Cross: **Fee Domain** |
+| `student_batch_enrollments` | `student_admission_id` | `student_admissions.id` | Within domain |
+| `student_batch_enrollments` | `batch_id` | `batches.id` | Cross: **Academic Domain** |
 
 ---
 
@@ -212,7 +214,7 @@ This is the master list of every **foreign key that crosses a domain boundary**.
 | `assignments` | `tutor_id` | `tutors.id` | Cross: **Tutor Domain** |
 | `assignments` | `batch_id` | `batches.id` | Cross: **Academic Domain** |
 | `assignment_submissions` | `assignment_id` | `assignments.id` | Within domain |
-| `assignment_submissions` | `student_enrollment_id` | `student_enrollments.id` | Cross: **Student Domain** |
+| `assignment_submissions` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
 
 ---
 
@@ -224,18 +226,18 @@ This is the master list of every **foreign key that crosses a domain boundary**.
 | `assessments` | `subject_id` | `subjects.id` | Cross: **Academic Domain** (nullable) |
 | `assessment_batches` | `assessment_id` | `assessments.id` | Within domain |
 | `assessment_batches` | `batch_id` | `batches.id` | Cross: **Academic Domain** |
-| `question_banks` | `subject_id` | `subjects.id` | Cross: **Academic Domain** |
-| `question_banks` | `created_by` | `tutors.id` | Cross: **Tutor Domain** |
-| `questions` | `question_bank_id` | `question_banks.id` | Within domain |
+| `question_papers` | `course_id` | `courses.id` | Cross: **Academic Domain** |
+| `question_papers` | `subject_id` | `subjects.id` | Cross: **Academic Domain** (nullable) |
 | `questions` | `subject_id` | `subjects.id` | Cross: **Academic Domain** |
 | `questions` | `chapter_id` | `chapters.id` | Cross: **Academic Domain** (nullable) |
 | `questions` | `created_by` | `tutors.id` | Cross: **Tutor Domain** |
-| `student_responses` | `assessment_id` | `assessments.id` | Within domain |
-| `student_responses` | `student_enrollment_id` | `student_enrollments.id` | Cross: **Student Domain** |
-| `evaluations` | `student_response_id` | `student_responses.id` | Within domain |
-| `evaluations` | `tutor_id` | `tutors.id` | Cross: **Tutor Domain** |
-| `results` | `student_enrollment_id` | `student_enrollments.id` | Cross: **Student Domain** |
-| `results` | `assessment_id` | `assessments.id` | Within domain |
+| `exam_registrations` | `assessment_id` | `assessments.id` | Within domain |
+| `exam_registrations` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
+| `exam_attempts` | `exam_registration_id` | `exam_registrations.id` | Within domain |
+| `exam_attempts` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
+| `exam_answers` | `exam_attempt_id` | `exam_attempts.id` | Within domain |
+| `exam_results` | `exam_attempt_id` | `exam_attempts.id` | Within domain |
+| `exam_results` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
 
 ---
 
@@ -244,7 +246,7 @@ This is the master list of every **foreign key that crosses a domain boundary**.
 | Table | FK Column | References | Notes |
 |---|---|---|---|
 | `fee_structures` | `course_id` | `courses.id` | Cross: **Academic Domain** — fee is Course-scoped |
-| `student_fee_records` | `student_enrollment_id` | `student_enrollments.id` | Cross: **Student Domain** |
+| `student_fee_records` | `student_admission_id` | `student_admissions.id` | Cross: **Student Domain** |
 | `student_fee_records` | `fee_structure_id` | `fee_structures.id` | Within domain |
 | `student_fee_records` | `fee_discount_id` | `fee_discounts.id` | Within domain (nullable) |
 | `payments` | `fee_installment_id` | `fee_installments.id` | Within domain |
@@ -368,13 +370,23 @@ erDiagram
     }
 
     %% ── STUDENT DOMAIN ───────────────────────────────────────────────
-    STUDENT_ENROLLMENT {
+    STUDENT_ADMISSION {
         uuid id PK
         uuid institute_id FK
         uuid student_id FK
+        uuid academic_year_id FK
         uuid course_id FK
-        uuid batch_id FK
+        uuid branch_id FK
         uuid fee_structure_id FK
+        string admission_number UK
+        string status
+    }
+
+    STUDENT_BATCH_ENROLLMENT {
+        uuid id PK
+        uuid institute_id FK
+        uuid student_admission_id FK
+        uuid batch_id FK
         string status
         timestamp enrolled_at
     }
@@ -383,7 +395,7 @@ erDiagram
         uuid id PK
         uuid institute_id FK
         uuid live_class_id FK
-        uuid student_enrollment_id FK
+        uuid student_admission_id FK
         uuid tutor_id FK
         date session_date
         string status
@@ -399,18 +411,29 @@ erDiagram
         timestamp scheduled_at
     }
 
-    QUESTION_BANK {
+    QUESTION_PAPER {
         uuid id PK
         uuid institute_id FK
+        uuid course_id FK
         uuid subject_id FK
-        uuid created_by FK
-        string name
+        string paper_code UK
+        string title
+        numeric total_marks
+        string status
+    }
+
+    QUESTION_PAPER_QUESTION {
+        uuid id PK
+        uuid question_paper_id FK
+        uuid question_id FK
+        string section
+        numeric marks
+        int display_order
     }
 
     QUESTION {
         uuid id PK
         uuid institute_id FK
-        uuid question_bank_id FK
         uuid subject_id FK
         uuid chapter_id FK
         string question_type
@@ -418,27 +441,34 @@ erDiagram
         uuid created_by FK
     }
 
-    STUDENT_RESPONSE {
+    EXAM_REGISTRATION {
         uuid id PK
         uuid institute_id FK
         uuid assessment_id FK
-        uuid student_enrollment_id FK
-        string submission_mode
-    }
-
-    EVALUATION {
-        uuid id PK
-        uuid student_response_id FK
-        uuid tutor_id FK
-        numeric marks_awarded
+        uuid student_admission_id FK
         string status
     }
 
-    RESULT {
+    EXAM_ATTEMPT {
         uuid id PK
         uuid institute_id FK
-        uuid assessment_id FK
-        uuid student_enrollment_id FK
+        uuid exam_registration_id FK
+        uuid student_admission_id FK
+        timestamp started_at
+    }
+
+    EXAM_ANSWER {
+        uuid id PK
+        uuid exam_attempt_id FK
+        uuid question_id FK
+        string response
+        numeric marks_awarded
+    }
+
+    EXAM_RESULT {
+        uuid id PK
+        uuid exam_attempt_id FK
+        uuid student_admission_id FK
         numeric total_marks
         numeric percentage
         int rank
@@ -457,7 +487,7 @@ erDiagram
     STUDENT_FEE_RECORD {
         uuid id PK
         uuid institute_id FK
-        uuid student_enrollment_id FK
+        uuid student_admission_id FK
         uuid fee_structure_id FK
         uuid fee_discount_id FK
         numeric net_amount
@@ -482,7 +512,7 @@ erDiagram
     USER ||--o| TUTOR : "identity"
     USER ||--o| PARENT : "identity"
 
-    STUDENT ||--o{ STUDENT_ENROLLMENT : "enrolled via"
+    STUDENT ||--o{ STUDENT_ADMISSION : "admitted via"
     STUDENT ||--o{ STUDENT_PARENT_LINK : "linked"
     PARENT ||--o{ STUDENT_PARENT_LINK : "linked"
 
@@ -492,9 +522,11 @@ erDiagram
 
     SUBJECT ||--o{ CHAPTER : "has"
 
-    STUDENT_ENROLLMENT }o--|| COURSE : "enrolled in"
-    STUDENT_ENROLLMENT }o--|| BATCH : "attends"
-    STUDENT_ENROLLMENT }o--|| FEE_STRUCTURE : "locked at"
+    STUDENT_ADMISSION }o--|| COURSE : "enrolled in"
+    STUDENT_ADMISSION }o--|| ACADEMIC_YEAR : "academic year"
+
+    STUDENT_ADMISSION ||--o{ STUDENT_BATCH_ENROLLMENT : "has"
+    STUDENT_BATCH_ENROLLMENT }o--|| BATCH : "attends"
 
     TUTOR ||--o{ TUTOR_ASSIGNMENT : "assigned via"
     TUTOR_ASSIGNMENT }o--|| COURSE : "scoped to"
@@ -506,21 +538,21 @@ erDiagram
     LIVE_CLASS }o--|| SUBJECT : "covers"
 
     LIVE_CLASS ||--o{ ATTENDANCE_RECORD : "generates"
-    ATTENDANCE_RECORD }o--|| STUDENT_ENROLLMENT : "for"
+    ATTENDANCE_RECORD }o--|| STUDENT_ADMISSION : "for"
     ATTENDANCE_RECORD }o--|| TUTOR : "marked by"
 
-    ASSESSMENT }o--|| COURSE : "belongs to"
-    ASSESSMENT ||--o{ STUDENT_RESPONSE : "has"
-    STUDENT_RESPONSE }o--|| STUDENT_ENROLLMENT : "submitted by"
-    STUDENT_RESPONSE ||--o| EVALUATION : "evaluated via"
-    EVALUATION }o--|| TUTOR : "by"
-    EVALUATION ||--o| RESULT : "produces"
-
-    QUESTION_BANK }o--|| SUBJECT : "for"
-    QUESTION }o--|| QUESTION_BANK : "belongs to"
+    ASSESSMENT }o--|| QUESTION_PAPER : "uses"
+    QUESTION_PAPER ||--o{ QUESTION_PAPER_QUESTION : "selects"
+    QUESTION_PAPER_QUESTION }o--|| QUESTION : "includes"
     QUESTION }o--|| SUBJECT : "tests"
 
-    STUDENT_FEE_RECORD }o--|| STUDENT_ENROLLMENT : "for"
+    STUDENT_ADMISSION ||--o{ EXAM_REGISTRATION : "registers for"
+    EXAM_REGISTRATION }o--|| ASSESSMENT : "for"
+    EXAM_REGISTRATION ||--o{ EXAM_ATTEMPT : "attempts"
+    EXAM_ATTEMPT ||--o{ EXAM_ANSWER : "answers"
+    EXAM_ATTEMPT ||--o| EXAM_RESULT : "produces"
+
+    STUDENT_FEE_RECORD }o--|| STUDENT_ADMISSION : "for"
     STUDENT_FEE_RECORD }o--|| FEE_STRUCTURE : "priced by"
     STUDENT_FEE_RECORD ||--o{ PAYMENT : "receives"
 ```
@@ -563,8 +595,9 @@ These live above the tenant layer:
 These are the **M:N bridge tables** that are most commonly needed when writing queries. Always scope them by `institute_id`.
 
 | Junction Table | Connects | Purpose |
-|---|---|---|
-| `student_enrollments` | Student ↔ Course + Batch | **The core enrollment record — carries both course and batch FKs** |
+|---|---|---|---|
+| `student_admissions` | Student ↔ Course + Academic Year | **The core admission record — root entity owning course + academic year** |
+| `student_batch_enrollments` | Student Admission ↔ Batch | **Batch allocation child of admission — links admission to a batch** |
 | `tutor_assignments` | Tutor ↔ Course + Batch + Subject | **The teaching responsibility record** |
 | `student_parent_links` | Student ↔ Parent | Guardian relationship with `is_primary` flag |
 | `assessment_batches` | Assessment ↔ Batch | Which batches a test is assigned to |
@@ -578,31 +611,33 @@ These are the **M:N bridge tables** that are most commonly needed when writing q
 
 These decisions are **locked**. Do not revisit them during implementation.
 
-### 1. StudentEnrollment owns both `course_id` AND `batch_id`
-> Fee is Course-scoped (fee_structure lives on Course).
-> Academic delivery is Batch-scoped (timetable, classes, attendance live on Batch).
-> The `student_enrollments` table is the single junction that links both.
-> See full rationale: [02a-student.md](02a-student.md)
+### 1. StudentAdmission is the root — BatchEnrollment is its child
+> `student_admissions` is the root entity: it owns `course_id` + `academic_year_id` + `branch_id` + `fee_structure_id`.
+> `student_batch_enrollments` is a child of admission: it links the admission to a specific batch.
+> This decouples "what a student enrolled in (course, academic year)" from "which batch they attend."
+> A single admission can have multiple batch enrollments (e.g., main batch + crash course batch).
 
 ### 2. Subject belongs to Course, NOT to Batch
 > Subjects are curriculum content — they belong to a Course's academic design.
 > A Batch delivers a Course's subjects to students via TutorAssignment.
 > Subject ≠ Batch-specific. The connection is: Course → Subject + Batch → TutorAssignment → (Course + Batch + Subject).
 
-### 3. Attendance is scoped to `student_enrollment_id`, NOT raw `student_id`
-> A student enrolled in two batches simultaneously has two enrollment records.
-> Attendance for Batch A's Science class must be linked to the Batch A enrollment, not globally to the student.
-> Using raw `student_id` would corrupt multi-batch attendance tracking.
+### 3. Attendance is scoped to `student_admission_id`, NOT raw `student_id`
+> A student's attendance is tracked per admission (which owns the course context).
+> The batch is determined by the live class being attended, not by the attendance record itself.
+> Using `student_admission_id` correctly scopes attendance to the academic context (course + academic year).
 
-### 4. `fee_structure_id` is locked at enrollment time
+### 4. `fee_structure_id` is locked at admission time
 > Fee pricing captured at admission. Price revisions later do NOT affect existing students.
 > This is immutable billing — standard pattern for subscription/course-based billing.
 
-### 5. Question is the atomic unit inside Question Bank
-> A `question_bank` is a named pool (e.g., "Science 2026").
-> A `question` is a single MCQ or Subjective item inside a bank.
+### 5. Question is the atomic unit (no separate Question Bank table)
+> We chose NOT to have a separate `question_banks` table. Questions are organized directly by subject/chapter.
 > A `question_paper` selects questions via the `question_paper_questions` junction.
-> The same question can appear in multiple papers. Banks are reusable across academic years.
+> This avoids an unnecessary abstraction layer while preserving reusability.
+
+### 6. ORM is Prisma, Job Queue is pg-boss, Cache is in-memory
+> See [03-decisions.md](../03-decisions.md) for full rationale.
 
 ### 6. ORM is Prisma, Job Queue is pg-boss, Cache is in-memory
 > See [03-decisions.md](../03-decisions.md) for full rationale.

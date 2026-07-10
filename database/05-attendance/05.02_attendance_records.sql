@@ -15,7 +15,7 @@ SET search_path = public;
 CREATE TABLE IF NOT EXISTS public.attendance_records (
     id UUID PRIMARY KEY DEFAULT generate_primary_key(),
     attendance_session_id UUID NOT NULL,
-    student_profile_id UUID NOT NULL,
+    student_admission_id UUID NOT NULL,
     tenant_id UUID NOT NULL, -- Denormalized for RLS performance. Validated by trigger.
 
     attendance_status attendance_status_enum NOT NULL DEFAULT 'ABSENT',
@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
     CONSTRAINT fk_ar_session FOREIGN KEY (attendance_session_id)
         REFERENCES public.attendance_sessions(id) ON DELETE RESTRICT,
 
-    CONSTRAINT fk_ar_student FOREIGN KEY (student_profile_id)
-        REFERENCES public.student_profiles(user_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ar_student FOREIGN KEY (tenant_id, student_admission_id)
+        REFERENCES public.student_admissions(tenant_id, id) ON DELETE RESTRICT,
 
     CONSTRAINT fk_ar_tenant FOREIGN KEY (tenant_id)
         REFERENCES public.institutes(id) ON DELETE RESTRICT,
@@ -65,11 +65,11 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
 
 -- 2. Unique: one record per student per session
 CREATE UNIQUE INDEX IF NOT EXISTS uq_part_ar_session_student
-    ON public.attendance_records(attendance_session_id, student_profile_id)
+    ON public.attendance_records(attendance_session_id, student_admission_id)
     WHERE deleted_at IS NULL;
 
 -- 2.1 Indexes
-CREATE INDEX IF NOT EXISTS idx_ar_student ON public.attendance_records(student_profile_id, attendance_session_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_ar_student ON public.attendance_records(student_admission_id, attendance_session_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_ar_session ON public.attendance_records(attendance_session_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_ar_status ON public.attendance_records(attendance_status) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_ar_tenant ON public.attendance_records(tenant_id) WHERE deleted_at IS NULL;
@@ -86,7 +86,7 @@ DECLARE
     enrolled BOOLEAN;
 BEGIN
     -- Resolve session details
-    SELECT tenant_id, batch_id, session_status INTO STRICT session_rec
+    SELECT tenant_id, batch_id, session_status, attendance_date INTO STRICT session_rec
     FROM public.attendance_sessions
     WHERE id = NEW.attendance_session_id AND deleted_at IS NULL;
 
@@ -98,11 +98,11 @@ BEGIN
         RAISE EXCEPTION 'Cannot mark attendance: session is still in DRAFT status';
     END IF;
 
-    -- Validate student was enrolled in this batch ON the attendance date
+    -- Validate admission was enrolled in this batch ON the attendance date
     -- joined_at <= attendance_date AND (left_at IS NULL OR left_at >= attendance_date)
     SELECT EXISTS (
         SELECT 1 FROM public.student_batch_enrollments
-        WHERE student_profile_id = NEW.student_profile_id
+        WHERE student_admission_id = NEW.student_admission_id
           AND batch_id = session_rec.batch_id
           AND status = 'ACTIVE'
           AND joined_at <= session_rec.attendance_date
@@ -187,13 +187,19 @@ CREATE POLICY policy_attendance_records_select
                     AND user_type = 'STAFF'::user_type_enum AND deleted_at IS NULL
                 )
             )
-            -- Student: own records only
-            OR (student_profile_id = auth.uid())
+            -- Student: own records only (via admission → student_profile)
+            OR EXISTS (
+                SELECT 1 FROM public.student_admissions
+                WHERE id = attendance_records.student_admission_id
+                  AND student_profile_id = auth.uid()
+                  AND deleted_at IS NULL
+            )
             -- Parent: linked child's records
             OR EXISTS (
-                SELECT 1 FROM public.student_parents sp
-                WHERE sp.parent_profile_id = auth.uid()
-                  AND sp.student_profile_id = attendance_records.student_profile_id
+                SELECT 1 FROM public.student_admissions sa
+                JOIN public.student_parents sp ON sp.student_profile_id = sa.student_profile_id
+                WHERE sa.id = attendance_records.student_admission_id
+                  AND sp.parent_profile_id = auth.uid()
             )
         )
     );
