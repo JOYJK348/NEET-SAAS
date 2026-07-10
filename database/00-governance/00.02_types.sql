@@ -345,3 +345,75 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE document_category_enum IS 'Classification categories for exam-related documents';
+
+-- 37. Question type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'question_type_enum') THEN
+        CREATE TYPE question_type_enum AS ENUM ('MCQ', 'MULTI_CORRECT', 'ASSERTION_REASON', 'TRUE_FALSE', 'MATCHING', 'NUMERICAL', 'DESCRIPTIVE');
+    END IF;
+END $$;
+COMMENT ON TYPE question_type_enum IS 'Question format classifications for question bank';
+
+-- 38. Question workflow statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'question_status_enum') THEN
+        CREATE TYPE question_status_enum AS ENUM ('DRAFT', 'REVIEW_PENDING', 'APPROVED', 'PUBLISHED', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE question_status_enum IS 'Lifecycle states for question bank questions';
+
+-- 39. Question source origins
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'question_source_enum') THEN
+        CREATE TYPE question_source_enum AS ENUM ('MANUAL', 'AI_GENERATED', 'IMPORT', 'BULK_UPLOAD', 'OCR', 'SCANNED');
+    END IF;
+END $$;
+COMMENT ON TYPE question_source_enum IS 'Origin source of question creation';
+
+-- 40. Bloom's taxonomy levels
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'blooms_level_enum') THEN
+        CREATE TYPE blooms_level_enum AS ENUM ('REMEMBER', 'UNDERSTAND', 'APPLY', 'ANALYZE', 'EVALUATE', 'CREATE');
+    END IF;
+END $$;
+COMMENT ON TYPE blooms_level_enum IS 'Bloom''s taxonomy cognitive level classification';
+
+-- 41. Question attachment types
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attachment_type_enum') THEN
+        CREATE TYPE attachment_type_enum AS ENUM ('IMAGE', 'DIAGRAM', 'PDF', 'AUDIO', 'VIDEO', 'FORMULA');
+    END IF;
+END $$;
+COMMENT ON TYPE attachment_type_enum IS 'File attachment type classification for question assets';
+
+-- 42. Question review workflow statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'review_status_enum') THEN
+        CREATE TYPE review_status_enum AS ENUM ('PENDING', 'IN_REVIEW', 'CHANGES_REQUESTED', 'APPROVED', 'REJECTED');
+    END IF;
+END $$;
+COMMENT ON TYPE review_status_enum IS 'Academic review workflow states for question approval';
+
+-- 43. Bulk import job statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'import_status_enum') THEN
+        CREATE TYPE import_status_enum AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'PARTIAL');
+    END IF;
+END $$;
+COMMENT ON TYPE import_status_enum IS 'Bulk question import job lifecycle states';
+
+-- 44. Question tag type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tag_type_enum') THEN
+        CREATE TYPE tag_type_enum AS ENUM ('TOPIC', 'CHAPTER', 'DIFFICULTY', 'EXAM_TYPE', 'FREQUENCY', 'SOURCE', 'CUSTOM');
+    END IF;
+END $$;
+COMMENT ON TYPE tag_type_enum IS 'Classification categories for question tags';
