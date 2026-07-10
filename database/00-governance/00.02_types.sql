@@ -611,3 +611,107 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE live_class_event_type_enum IS 'Detailed timelines and interactions event trace classification';
+
+-- 66. Fee structure lifecycle statuses classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fee_structure_status_enum') THEN
+        CREATE TYPE fee_structure_status_enum AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE fee_structure_status_enum IS 'Lifecycle statuses for catalog fee structures';
+
+-- 67. Student fee installment states classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'installment_status_enum') THEN
+        CREATE TYPE installment_status_enum AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'WAIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE installment_status_enum IS 'Active payment state parameters for individual student installments';
+
+-- 68. Payment dispatch method categories
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method_enum') THEN
+        CREATE TYPE payment_method_enum AS ENUM ('CASH', 'CARD', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'ONLINE_GATEWAY');
+    END IF;
+END $$;
+COMMENT ON TYPE payment_method_enum IS 'Supported payment methods categories';
+
+-- 69. Gateway transaction execution state parameters
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'transaction_status_enum') THEN
+        CREATE TYPE transaction_status_enum AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'REVERSED', 'REFUNDED');
+    END IF;
+END $$;
+COMMENT ON TYPE transaction_status_enum IS 'External gateway transaction states mapping';
+
+-- 70. Payment refunds approval lifecycle states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'refund_status_enum') THEN
+        CREATE TYPE refund_status_enum AS ENUM ('REQUESTED', 'APPROVED', 'PROCESSED', 'REJECTED');
+    END IF;
+END $$;
+COMMENT ON TYPE refund_status_enum IS 'Lifecycle processing states of cash or gateway refunds';
+
+-- 71. Double-entry bank reconciliation match classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reconciliation_status_enum') THEN
+        CREATE TYPE reconciliation_status_enum AS ENUM ('RECONCILED', 'UNMATCHED', 'DISCREPANCY');
+    END IF;
+END $$;
+COMMENT ON TYPE reconciliation_status_enum IS 'Reconciliation match result statuses';
+
+-- 72. Outbound reminders carrier options
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fee_notification_channel_enum') THEN
+        CREATE TYPE fee_notification_channel_enum AS ENUM ('SMS', 'WHATSAPP', 'EMAIL');
+    END IF;
+END $$;
+COMMENT ON TYPE fee_notification_channel_enum IS 'Carrier delivery channels for billing and collection reminders';
+
+-- 73. Reminders dispatch execution states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fee_notification_status_enum') THEN
+        CREATE TYPE fee_notification_status_enum AS ENUM ('PENDING', 'SENT', 'FAILED');
+    END IF;
+END $$;
+COMMENT ON TYPE fee_notification_status_enum IS 'Outbound delivery states classification for invoice reminders';
+
+-- 74. Financial ledger administrative adjustments classification
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'adjustment_type_enum') THEN
+        CREATE TYPE adjustment_type_enum AS ENUM ('CREDIT', 'DEBIT');
+    END IF;
+END $$;
+COMMENT ON TYPE adjustment_type_enum IS 'Transactional correction categories mapping ledger offsets';
+
+-- 75. Daily cash drawer session closure statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'closure_status_enum') THEN
+        CREATE TYPE closure_status_enum AS ENUM ('OPEN', 'CLOSED', 'RECONCILED');
+    END IF;
+END $$;
+COMMENT ON TYPE closure_status_enum IS 'Daily session states mapping for cashiers collections';
+
+-- 76. Audited events classification code categories
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fee_audit_event_type_enum') THEN
+        CREATE TYPE fee_audit_event_type_enum AS ENUM (
+            'STRUCTURE_CREATED', 'STRUCTURE_UPDATED', 'FEE_ASSIGNED', 'DISCOUNT_APPLIED', 
+            'INSTALLMENT_OVERRIDDEN', 'PENALTY_ADDED', 'PAYMENT_RECEIVED', 'PAYMENT_FAILED', 
+            'REFUND_PROCESSED', 'FEE_WAIVED', 'RECONCILIATION_MATCHED', 'ADJUSTMENT_APPLIED', 
+            'CLOSURE_COMPLETED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE fee_audit_event_type_enum IS 'Operational audit events classification for billing collections';
