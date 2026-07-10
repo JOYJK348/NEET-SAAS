@@ -134,6 +134,17 @@ BEGIN
 END $$;
 COMMENT ON TYPE role_assignment_source IS 'Origin system method identifier of user roles associations';
 
+-- 14. Menu UI Node structural classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'menu_node_type') THEN
+        CREATE TYPE menu_node_type AS ENUM ('MODULE', 'GROUP', 'MENU');
+    END IF;
+END $$;
+COMMENT ON TYPE menu_node_type IS 'Structural type classifications for menu navigation nodes';
+
+
+
 
 
 
