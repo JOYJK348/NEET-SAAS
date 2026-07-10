@@ -56,7 +56,7 @@ CREATE INDEX IF NOT EXISTS idx_departments_tenant_name
     WHERE deleted_at IS NULL;
 
 -- 2.1 Composite Uniqueness Constraints (enables composite foreign key verification in join tables)
-ALTER TABLE public.departments DROP CONSTRAINT IF EXISTS uq_departments_tenant_id;
+ALTER TABLE public.departments DROP CONSTRAINT IF EXISTS uq_departments_tenant_id CASCADE;
 ALTER TABLE public.departments ADD CONSTRAINT uq_departments_tenant_id UNIQUE (tenant_id, id);
 
 -- 2.2 Partial Unique Indexes for Soft Deletes (prevents duplicate codes/names within the same tenant)

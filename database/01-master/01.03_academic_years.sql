@@ -84,6 +84,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_part_ay_tenant_current
     ON public.academic_years(tenant_id) 
     WHERE is_current = true AND deleted_at IS NULL;
 
+-- 2.2 Composite Uniqueness Constraint (enables composite foreign key verification in batches table)
+ALTER TABLE public.academic_years DROP CONSTRAINT IF EXISTS uq_academic_years_tenant_id CASCADE;
+ALTER TABLE public.academic_years ADD CONSTRAINT uq_academic_years_tenant_id UNIQUE (tenant_id, id);
+
 -- 3. Triggers configuration for timestamp and user context tracking
 DROP TRIGGER IF EXISTS trg_biu_academic_years_touch_audit ON public.academic_years;
 CREATE TRIGGER trg_biu_academic_years_touch_audit

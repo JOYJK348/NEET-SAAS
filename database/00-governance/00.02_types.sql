@@ -166,12 +166,38 @@ BEGIN
 END $$;
 COMMENT ON TYPE auth_event_type IS 'Classification codes for authentication and security audits logs';
 
+-- 17. Staff contract employment classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'employment_type_enum') THEN
+        CREATE TYPE employment_type_enum AS ENUM ('FULL_TIME', 'PART_TIME', 'CONTRACT', 'VISITING');
+    END IF;
+END $$;
+COMMENT ON TYPE employment_type_enum IS 'Contractual classification categories for workforce employees';
 
+-- 18. Staff status lifecycle classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'employment_status_enum') THEN
+        CREATE TYPE employment_status_enum AS ENUM ('ACTIVE', 'ON_NOTICE', 'RESIGNED', 'TERMINATED', 'SUSPENDED');
+    END IF;
+END $$;
+COMMENT ON TYPE employment_status_enum IS 'Status states mapping active employee track record';
 
+-- 19. Student academic status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'academic_status_enum') THEN
+        CREATE TYPE academic_status_enum AS ENUM ('ACTIVE', 'SUSPENDED', 'WITHDRAWN', 'ALUMNI');
+    END IF;
+END $$;
+COMMENT ON TYPE academic_status_enum IS 'Status states mapping active student enrollment track';
 
-
-
-
-
-
-
+-- 20. Parent to student relationship classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'parent_relationship_type_enum') THEN
+        CREATE TYPE parent_relationship_type_enum AS ENUM ('FATHER', 'MOTHER', 'GUARDIAN', 'OTHER');
+    END IF;
+END $$;
+COMMENT ON TYPE parent_relationship_type_enum IS 'Demographic relationship categories mapping parents to students profiles';

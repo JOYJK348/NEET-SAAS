@@ -91,7 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_batches_tenant_name_search
     WHERE deleted_at IS NULL;
 
 -- 2.1 Composite Uniqueness Constraints (enables composite foreign key verification in downstream student/attendance tables)
-ALTER TABLE public.batches DROP CONSTRAINT IF EXISTS uq_batches_tenant_id;
+ALTER TABLE public.batches DROP CONSTRAINT IF EXISTS uq_batches_tenant_id CASCADE;
 ALTER TABLE public.batches ADD CONSTRAINT uq_batches_tenant_id UNIQUE (tenant_id, id);
 
 -- 2.2 Partial Unique Indexes for Soft Deletes (prevents duplicate codes/names within the same tenant)

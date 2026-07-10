@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_courses_tenant_search_name
     WHERE deleted_at IS NULL;
 
 -- 2.1 Composite Uniqueness Constraints (enables composite foreign key verification in mapping tables)
-ALTER TABLE public.courses DROP CONSTRAINT IF EXISTS uq_courses_tenant_id;
+ALTER TABLE public.courses DROP CONSTRAINT IF EXISTS uq_courses_tenant_id CASCADE;
 ALTER TABLE public.courses ADD CONSTRAINT uq_courses_tenant_id UNIQUE (tenant_id, id);
 
 -- 2.2 Partial Unique Indexes for Soft Deletes (prevents duplicate codes/names within the same tenant)
