@@ -201,3 +201,39 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE parent_relationship_type_enum IS 'Demographic relationship categories mapping parents to students profiles';
+
+-- 21. Attendance session lifecycle status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_session_status_enum') THEN
+        CREATE TYPE attendance_session_status_enum AS ENUM ('DRAFT', 'OPEN', 'PUBLISHED', 'LOCKED');
+    END IF;
+END $$;
+COMMENT ON TYPE attendance_session_status_enum IS 'Lifecycle status of an attendance-taking session header';
+
+-- 22. Individual student attendance check-in status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'attendance_status_enum') THEN
+        CREATE TYPE attendance_status_enum AS ENUM ('PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'EXCUSED');
+    END IF;
+END $$;
+COMMENT ON TYPE attendance_status_enum IS 'Check-in status for individual student attendance records';
+
+-- 23. Leave request approval workflow status classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'leave_status_enum') THEN
+        CREATE TYPE leave_status_enum AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED');
+    END IF;
+END $$;
+COMMENT ON TYPE leave_status_enum IS 'Approval workflow state for student and staff leave requests';
+
+-- 24. Leave request category classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'leave_category_enum') THEN
+        CREATE TYPE leave_category_enum AS ENUM ('SICK', 'CASUAL', 'EMERGENCY', 'DUTY', 'OTHER');
+    END IF;
+END $$;
+COMMENT ON TYPE leave_category_enum IS 'Category classification for leave request types';
