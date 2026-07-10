@@ -417,3 +417,66 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE tag_type_enum IS 'Classification categories for question tags';
+
+-- 45. Learning material type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'learning_material_type_enum') THEN
+        CREATE TYPE learning_material_type_enum AS ENUM ('NOTES', 'VIDEO', 'PDF', 'DOC', 'PPT', 'ZIP', 'IMAGE', 'SVG', 'AUDIO', 'REVISION_SHEET', 'MIND_MAP', 'LAB_MANUAL', 'FLASH_CARDS', 'PRESENTATION', 'SLIDE', 'SUBTITLE', 'THUMBNAIL', 'QUIZ', 'ASSIGNMENT');
+    END IF;
+END $$;
+COMMENT ON TYPE learning_material_type_enum IS 'Content format classifications for learning materials';
+
+-- 46. Learning material lifecycle statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'learning_material_status_enum') THEN
+        CREATE TYPE learning_material_status_enum AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE learning_material_status_enum IS 'Lifecycle states for learning materials';
+
+-- 47. Material visibility levels
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'material_visibility_enum') THEN
+        CREATE TYPE material_visibility_enum AS ENUM ('PUBLIC', 'COURSE_ONLY', 'BATCH_ONLY', 'PRIVATE');
+    END IF;
+END $$;
+COMMENT ON TYPE material_visibility_enum IS 'Access visibility levels for learning materials';
+
+-- 48. Learning progress statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'progress_status_enum') THEN
+        CREATE TYPE progress_status_enum AS ENUM ('NOT_STARTED', 'IN_PROGRESS', 'COMPLETED');
+    END IF;
+END $$;
+COMMENT ON TYPE progress_status_enum IS 'Student learning progress lifecycle states';
+
+-- 49. Learning path statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'learning_path_status_enum') THEN
+        CREATE TYPE learning_path_status_enum AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
+    END IF;
+END $$;
+COMMENT ON TYPE learning_path_status_enum IS 'Lifecycle states for structured learning paths';
+
+-- 50. Discussion statuses
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'discussion_status_enum') THEN
+        CREATE TYPE discussion_status_enum AS ENUM ('OPEN', 'RESOLVED', 'CLOSED');
+    END IF;
+END $$;
+COMMENT ON TYPE discussion_status_enum IS 'Status states for material discussion threads';
+
+-- 51. Learning attachment type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'learning_attachment_type_enum') THEN
+        CREATE TYPE learning_attachment_type_enum AS ENUM ('VIDEO', 'PDF', 'DOC', 'PPT', 'ZIP', 'IMAGE', 'SVG', 'AUDIO', 'SUBTITLE', 'THUMBNAIL', 'SLIDE', 'DIAGRAM', 'FORMULA');
+    END IF;
+END $$;
+COMMENT ON TYPE learning_attachment_type_enum IS 'File attachment type classifications for learning material assets';
