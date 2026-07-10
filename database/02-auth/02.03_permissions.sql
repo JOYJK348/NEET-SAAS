@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS public.permissions (
     
     version INTEGER NOT NULL DEFAULT 1,
 
-    -- Inline constraints & validations
     CONSTRAINT chk_permissions_name_length CHECK (length(trim(name)) > 0),
     -- Code prefix format logic: enforces resource.action structure
     CONSTRAINT chk_permissions_code_format CHECK (code ~ '^[a-z0-9_-]+(\.[a-z0-9_-]+)+$'),
@@ -45,8 +44,10 @@ CREATE TABLE IF NOT EXISTS public.permissions (
     CONSTRAINT chk_permissions_description CHECK (description IS NULL OR (length(trim(description)) > 0 AND length(description) <= 1000)),
     CONSTRAINT chk_permissions_display_order CHECK (display_order BETWEEN 1 AND 999),
     CONSTRAINT chk_permissions_system_lock CHECK (is_system = true), -- Enforces application metadata immutability
-    CONSTRAINT chk_permissions_version CHECK (version > 0)
+    CONSTRAINT chk_permissions_version CHECK (version > 0),
+    CONSTRAINT uq_permissions_code UNIQUE (code) -- Physical constraint supporting ON CONFLICT targets
 );
+
 
 -- 2. Indexes for fast search and display ordering
 CREATE INDEX IF NOT EXISTS idx_permissions_active_display 

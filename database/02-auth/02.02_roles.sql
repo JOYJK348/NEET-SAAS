@@ -60,8 +60,11 @@ CREATE TABLE IF NOT EXISTS public.roles (
     ),
     CONSTRAINT chk_roles_description CHECK (description IS NULL OR (length(trim(description)) > 0 AND length(description) <= 1000)),
     CONSTRAINT chk_roles_display_order CHECK (display_order BETWEEN 1 AND 999),
-    CONSTRAINT chk_roles_version CHECK (version > 0)
+    CONSTRAINT chk_roles_version CHECK (version > 0),
+    CONSTRAINT uq_roles_tenant_code UNIQUE (tenant_id, code), -- Constraint matching tenant scopes mapping conflict targets
+    CONSTRAINT uq_roles_global_code UNIQUE (code) DEFERRABLE INITIALLY DEFERRED -- Global unique constraint mapped to platform-level roles
 );
+
 
 -- 2. Indexes for fast tenant search and active listings (Tenant Scoped)
 CREATE INDEX IF NOT EXISTS idx_roles_tenant_active 

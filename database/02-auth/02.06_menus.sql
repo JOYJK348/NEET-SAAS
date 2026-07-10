@@ -55,8 +55,10 @@ CREATE TABLE IF NOT EXISTS public.menus (
     CONSTRAINT chk_menus_icon_key CHECK (icon_key IS NULL OR icon_key ~ '^[a-zA-Z0-9_-]+$'),
     CONSTRAINT chk_menus_display_order CHECK (display_order BETWEEN 1 AND 999),
     CONSTRAINT chk_menus_system_lock CHECK (is_system = true),
-    CONSTRAINT chk_menus_version CHECK (version > 0)
+    CONSTRAINT chk_menus_version CHECK (version > 0),
+    CONSTRAINT uq_menus_code UNIQUE (code) -- Physical constraint supporting ON CONFLICT targets
 );
+
 
 -- 2. Indexes for fast hierarchical rendering and order lookups
 CREATE INDEX IF NOT EXISTS idx_menus_parent_display ON public.menus(parent_id, display_order) WHERE deleted_at IS NULL AND is_active = true;
