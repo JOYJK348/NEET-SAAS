@@ -143,6 +143,30 @@ BEGIN
 END $$;
 COMMENT ON TYPE menu_node_type IS 'Structural type classifications for menu navigation nodes';
 
+-- 15. User session state classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'session_status_type') THEN
+        CREATE TYPE session_status_type AS ENUM ('ACTIVE', 'EXPIRED', 'REVOKED', 'LOGGED_OUT');
+    END IF;
+END $$;
+COMMENT ON TYPE session_status_type IS 'State tracker parameters for user sessions';
+
+-- 16. Security audit event classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'auth_event_type') THEN
+        CREATE TYPE auth_event_type AS ENUM (
+            'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 
+            'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_SUCCESS',
+            'MFA_CHALLENGE', 'MFA_SUCCESS', 'MFA_FAILED',
+            'SESSION_REVOKED', 'ACCOUNT_LOCKED', 'ACCOUNT_UNLOCKED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE auth_event_type IS 'Classification codes for authentication and security audits logs';
+
+
 
 
 
