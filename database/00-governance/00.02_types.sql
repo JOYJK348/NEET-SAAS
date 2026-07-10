@@ -829,3 +829,33 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE analytics_audit_event_enum IS 'Analytical audit actions trace codes';
+
+-- 89. Outbound AI request execution status parameters
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ai_request_status_enum') THEN
+        CREATE TYPE ai_request_status_enum AS ENUM ('SUCCESS', 'FAILED', 'TIMEOUT');
+    END IF;
+END $$;
+COMMENT ON TYPE ai_request_status_enum IS 'Outbound model prompt executions state parameters';
+
+-- 90. Chat message user/bot role classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'chat_message_role_enum') THEN
+        CREATE TYPE chat_message_role_enum AS ENUM ('SYSTEM', 'USER', 'ASSISTANT');
+    END IF;
+END $$;
+COMMENT ON TYPE chat_message_role_enum IS 'Conversational thread messages role classifications';
+
+-- 91. AI administrative audit action codes
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ai_audit_event_enum') THEN
+        CREATE TYPE ai_audit_event_enum AS ENUM (
+            'PROVIDER_REGISTERED', 'MODEL_TOGGLED', 'PROMPT_UPDATED', 
+            'CONVERSATION_ARCHIVED', 'REQUEST_LOGGED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE ai_audit_event_enum IS 'AI model settings and templates audit trails events codes';
