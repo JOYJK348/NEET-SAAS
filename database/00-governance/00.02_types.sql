@@ -781,3 +781,51 @@ BEGIN
     END IF;
 END $$;
 COMMENT ON TYPE communication_audit_event_type_enum IS 'Communication auditing events classification mappings';
+
+-- 84. Dashboard target viewer roles classification enums
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'dashboard_viewer_role_enum') THEN
+        CREATE TYPE dashboard_viewer_role_enum AS ENUM ('PRINCIPAL', 'FACULTY', 'STUDENT', 'PARENT', 'FINANCE');
+    END IF;
+END $$;
+COMMENT ON TYPE dashboard_viewer_role_enum IS 'Authorized roles mapping dashboard layouts';
+
+-- 85. Dashboard display widget type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'widget_type_enum') THEN
+        CREATE TYPE widget_type_enum AS ENUM ('KPI_CARD', 'BAR_CHART', 'LINE_CHART', 'PIE_CHART', 'DATA_TABLE');
+    END IF;
+END $$;
+COMMENT ON TYPE widget_type_enum IS 'Dashboard graphics and card widget formats';
+
+-- 86. Generated analytical report document file formats
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'report_format_enum') THEN
+        CREATE TYPE report_format_enum AS ENUM ('PDF', 'CSV', 'XLSX');
+    END IF;
+END $$;
+COMMENT ON TYPE report_format_enum IS 'Report download formats classification';
+
+-- 87. Materialized analytical stats refresh jobs execution status parameters
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'refresh_job_status_enum') THEN
+        CREATE TYPE refresh_job_status_enum AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED');
+    END IF;
+END $$;
+COMMENT ON TYPE refresh_job_status_enum IS 'Execution states of analytics data pipeline rebuild jobs';
+
+-- 88. Analytics and metric calculations audit trail event codes
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'analytics_audit_event_enum') THEN
+        CREATE TYPE analytics_audit_event_enum AS ENUM (
+            'DASHBOARD_CREATED', 'WIDGET_CONFIGURED', 'REPORT_EXECUTED', 'KPI_REBUILT', 
+            'STUDENT_ANALYTICS_MUTATED'
+        );
+    END IF;
+END $$;
+COMMENT ON TYPE analytics_audit_event_enum IS 'Analytical audit actions trace codes';
