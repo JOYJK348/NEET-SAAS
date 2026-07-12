@@ -33,6 +33,7 @@ CREATE TABLE workflow_notifications (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at TIMESTAMPTZ,
     deleted_at TIMESTAMPTZ,
+    deleted_by UUID,
     
     version INT NOT NULL DEFAULT 1,
     metadata JSONB,
@@ -45,11 +46,6 @@ CREATE TABLE workflow_notifications (
     CONSTRAINT chk_workflow_notifications_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object'),
     CONSTRAINT chk_workflow_notifications_version CHECK (version > 0)
 );
-
--- 2. Indexes
-CREATE INDEX idx_workflow_notifications_status_retry
-    ON workflow_notifications (tenant_id, status, retry_count)
-    WHERE deleted_at IS NULL;
 
 -- 3. Comments
 COMMENT ON TABLE workflow_notifications IS 'Notification queue outbox table mapped to workflow state transitions for asynchronous workers consumption.';

@@ -23,6 +23,9 @@ CREATE TABLE system_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_by UUID,
 
+    deleted_at TIMESTAMPTZ,
+    deleted_by UUID,
+
     version INT NOT NULL DEFAULT 1,
     metadata JSONB,
 

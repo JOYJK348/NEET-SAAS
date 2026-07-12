@@ -44,11 +44,6 @@ CREATE TABLE workflow_delegations (
     CONSTRAINT chk_workflow_delegations_version CHECK (version > 0)
 );
 
--- 2. Indexes
-CREATE INDEX idx_workflow_delegations_lookup 
-    ON workflow_delegations (tenant_id, original_user_id, is_active) 
-    WHERE deleted_at IS NULL;
-
 -- 3. Comments
 COMMENT ON TABLE workflow_delegations IS 'Reviewers delegation configuration settings mapping approvals to delegates during leaves.';
 COMMENT ON COLUMN workflow_delegations.original_user_id IS 'Standard reviewer user profile UUID.';

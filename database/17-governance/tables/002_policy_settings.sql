@@ -12,7 +12,7 @@ DROP TABLE IF EXISTS policy_settings CASCADE;
 CREATE TABLE policy_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID,
-    category_code VARCHAR(50) NOT NULL REFERENCES policy_categories(code) ON UPDATE CASCADE,
+    category_code VARCHAR(50) NOT NULL REFERENCES policy_categories(code) ON UPDATE CASCADE ON DELETE RESTRICT,
 
     policy_key VARCHAR(100) NOT NULL,
     value JSONB NOT NULL,

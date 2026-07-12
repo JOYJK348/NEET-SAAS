@@ -41,11 +41,6 @@ CREATE TABLE workflow_comments (
     CONSTRAINT chk_workflow_comments_version CHECK (version > 0)
 );
 
--- 2. Indexes
-CREATE INDEX idx_workflow_comments_lookup 
-    ON workflow_comments (tenant_id, request_id, created_at DESC) 
-    WHERE deleted_at IS NULL;
-
 -- 3. Comments
 COMMENT ON TABLE workflow_comments IS 'Reviewer comments and correction feedback records logs.';
 COMMENT ON COLUMN workflow_comments.comment_text IS 'HTML/Markdown supported feedback comment content.';

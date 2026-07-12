@@ -62,11 +62,6 @@ ALTER TABLE workflow_steps
     ADD CONSTRAINT fk_workflow_steps_escalation FOREIGN KEY (escalation_step_id) 
     REFERENCES workflow_steps (id) ON DELETE SET NULL;
 
--- 2. Indexes
-CREATE INDEX idx_workflow_steps_workflow_step 
-    ON workflow_steps (tenant_id, workflow_id, step_order) 
-    WHERE deleted_at IS NULL;
-
 -- 3. Comments
 COMMENT ON TABLE workflow_steps IS 'Configured pipelines steps defining specific required permission scopes and assignments criteria.';
 COMMENT ON COLUMN workflow_steps.step_order IS 'Sequential order check execution steps ranking.';

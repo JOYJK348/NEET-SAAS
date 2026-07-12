@@ -47,11 +47,6 @@ CREATE TABLE workflow_escalations (
     CONSTRAINT chk_workflow_escalations_version CHECK (version > 0)
 );
 
--- 2. Indexes
-CREATE INDEX idx_workflow_escalations_lookup 
-    ON workflow_escalations (tenant_id, request_id) 
-    WHERE deleted_at IS NULL;
-
 -- 3. Comments
 COMMENT ON TABLE workflow_escalations IS 'SLA timeout auto-escalation logs mapping requests forwarded to authorities.';
 COMMENT ON COLUMN workflow_escalations.escalation_level IS 'The nesting depth count of escalation steps.';

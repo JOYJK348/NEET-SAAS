@@ -33,9 +33,6 @@ CREATE TABLE workflow_notification_dead_letters (
     CONSTRAINT chk_dlq_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object')
 );
 
-CREATE INDEX idx_dlq_notifications_tenant
-    ON workflow_notification_dead_letters (tenant_id, dead_at DESC);
-
 COMMENT ON TABLE workflow_notification_dead_letters IS 'Dead letter queue capturing notifications that exhausted all retry attempts for manual inspection and remediation.';
 COMMENT ON COLUMN workflow_notification_dead_letters.original_notification_id IS 'References the original notification record that was moved to DLQ.';
 COMMENT ON COLUMN workflow_notification_dead_letters.dead_at IS 'Timestamp when the notification was moved to dead letter queue.';

@@ -30,11 +30,6 @@ CREATE TABLE audit_logs (
     CONSTRAINT chk_audit_logs_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object')
 );
 
-CREATE INDEX idx_audit_logs_entity ON audit_logs (entity_type, entity_id, created_at DESC);
-CREATE INDEX idx_audit_logs_tenant ON audit_logs (tenant_id, created_at DESC);
-CREATE INDEX idx_audit_logs_performer ON audit_logs (performed_by, created_at DESC);
-CREATE INDEX idx_audit_logs_correlation ON audit_logs (correlation_id) WHERE correlation_id IS NOT NULL;
-
 COMMENT ON TABLE audit_logs IS 'Append-only central audit trail for compliance and debugging. No UPDATE or DELETE allowed.';
 COMMENT ON COLUMN audit_logs.old_value IS 'Snapshot of the record before the change (NULL for INSERT).';
 COMMENT ON COLUMN audit_logs.new_value IS 'Snapshot of the record after the change (NULL for DELETE).';

@@ -24,7 +24,7 @@ CREATE TABLE workflow_requests (
     entity_snapshot JSONB,
     
     current_step_id UUID REFERENCES workflow_steps(id) ON DELETE RESTRICT,
-    status VARCHAR(30) NOT NULL DEFAULT 'PENDING' REFERENCES workflow_states(code) ON UPDATE CASCADE,
+    status VARCHAR(30) NOT NULL DEFAULT 'PENDING' REFERENCES workflow_states(code) ON UPDATE CASCADE ON DELETE RESTRICT,
     priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
     
     initiator_id UUID NOT NULL,

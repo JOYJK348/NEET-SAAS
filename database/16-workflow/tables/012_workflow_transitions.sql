@@ -16,9 +16,9 @@ CREATE TABLE workflow_transitions (
     tenant_id UUID NOT NULL,
     workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
     
-    from_status VARCHAR(30) NOT NULL REFERENCES workflow_states(code) ON UPDATE CASCADE,
-    to_status VARCHAR(30) NOT NULL REFERENCES workflow_states(code) ON UPDATE CASCADE,
-    action_code VARCHAR(30) NOT NULL REFERENCES workflow_actions(code) ON UPDATE CASCADE,
+    from_status VARCHAR(30) NOT NULL REFERENCES workflow_states(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+    to_status VARCHAR(30) NOT NULL REFERENCES workflow_states(code) ON UPDATE CASCADE ON DELETE RESTRICT,
+    action_code VARCHAR(30) NOT NULL REFERENCES workflow_actions(code) ON UPDATE CASCADE ON DELETE RESTRICT,
     
     requires_comment BOOLEAN NOT NULL DEFAULT false,
     condition_expression TEXT,
@@ -43,11 +43,6 @@ CREATE TABLE workflow_transitions (
     CONSTRAINT chk_workflow_transitions_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object'),
     CONSTRAINT chk_workflow_transitions_version CHECK (version > 0)
 );
-
--- 2. Indexes
-CREATE INDEX idx_workflow_transitions_lookup 
-    ON workflow_transitions (tenant_id, workflow_id) 
-    WHERE deleted_at IS NULL;
 
 -- 3. Comments
 COMMENT ON TABLE workflow_transitions IS 'Allowed state machine transition configuration paths mapper catalog.';
