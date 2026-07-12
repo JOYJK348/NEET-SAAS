@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: NEET Coaching Management SaaS API
+  description: Complete RESTful API contract catalog for Multi-Tenant Academics, Billing, and AI Tutor integrations.
+  version: 1.0.0
+servers:
+  - url: https://api.neetplatform.com/api/v1
+    description: Production environment gateway
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate user logins
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Access tokens payload generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+  /billing/payments/checkout:
+    post:
+      summary: Initialize payments checkout transaction
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentFeeInstallmentId:
+                  type: string
+                  format: uuid
+                gatewayName:
+                  type: string
+              required:
+                - studentFeeInstallmentId
+                - gatewayName
+      responses:
+        '200':
+          description: Order keys payload generated
+  /ai/conversations:
+    post:
+      summary: Start conversation thread with AI Tutor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+              required:
+                - title
+      responses:
+        '201':
+          description: Conversation generated

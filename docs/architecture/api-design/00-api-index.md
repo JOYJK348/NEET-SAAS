@@ -28,8 +28,11 @@ This document serves as the master register cataloging all planned API endpoints
 | **10** | Communications (`comms`) | Notifications queue, SMS alerts, templates | 20 | Planned | [10-communication-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/10-communication-api.md) |
 | **11** | System Infrastructure (`sys`)| Transcoding, pre-signed upload URLs, health | 25 | Planned | [11-system-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/11-system-api.md) |
 | **12** | Analytics Read-Model (`stats`)| CQRS dashboards, aggregations sync triggers | 15 | Planned | [12-analytics-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/12-analytics-api.md) |
+| **13** | AI Administration (`ai-admin`)| Providers setup, prompts management, token audits | 12 | Planned | [13-ai-admin-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/13-ai-admin-api.md) |
+| **14** | Platform Infrastructure (`sys`)| Pre-signed URLs, flags, background jobs, logs | 25 | Planned | [14-platform-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/14-platform-api.md) |
+| **15** | Internal Workers (`workers`)  | Job executors, notifications polling, cron runs  | 8  | Planned | [15-internal-worker-api.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/15-internal-worker-api.md) |
 
-**Total Estimated Endpoints**: 317
+**Total Estimated Endpoints**: 362
 
 ---
 

@@ -93,10 +93,33 @@ Define payload body schemas, parameter limits, and standard header specification
     *   `X-Branch-ID`: Optional target active branch ID filter.
     *   `X-Request-ID`: Unique string for tracing a single HTTP call to the gateway.
     *   `X-Correlation-ID`: Trace identifier for tracing operations across multiple systems.
+    *   `Idempotency-Key`: Required UUID string for critical POST requests (e.g. creating invoice checkouts, processing payments, executing refunds). Used by gateway filters to prevent duplicate actions.
+    *   `If-Match`: Required HTTP Header for critical updates (e.g. patching student files, altering attendance, updating fee balances). Must contain the expected integer `version` value from the database to enforce optimistic locking.
 *   Standard response headers returned by the gateway include:
     *   `API-Version`: Semantic schema release tag version (e.g., `1.0`).
     *   `X-Request-ID`: Returns the matching caller request ID context for debug tracing.
 *   Request body payloads must use `camelCase` for JSON keys.
+
+### 6.1 Idempotency Rules
+*   Every critical write action (`POST` to payments, closures, refunds) must check the `Idempotency-Key` header.
+*   If the key already exists inside the active redis/database store, returning the cached response from the previous transaction is mandatory.
+
+### 6.2 Optimistic Locking Rules
+*   For high-concurrency tables (`student_admissions`, `attendance_records`, `fee_payments`), concurrent updates must send the target record's current `version` in the `If-Match` header.
+*   The update statement must execute: `UPDATE ... SET version = version + 1 WHERE id = :id AND version = :if_match_version`.
+*   If 0 rows are affected, return `409 Conflict` (specifically `RECORD_LOCKED` or `DUPLICATE_ENTRY`).
+
+### 6.3 Webhook Signatures Verification
+*   All inbound webhooks (e.g. Razorpay, Stripe, third-party Comms status webhooks) must sign payloads using HMAC SHA256.
+*   The gateway must verify the signature header against the tenant's configured vault secret before processing the event. Unsigned or invalid requests must be rejected immediately with `400 Bad Request`.
+
+### 6.4 Rate Limiting Rules
+*   Rate limiting tiers are enforced at the API gateway layer to protect platform resources:
+    *   **Auth Actions** (`/api/v1/auth/login`): Max 10 requests per minute per IP address.
+    *   **OTP Verification** (`/api/v1/auth/otp/send`): Max 3 requests per minute per user/phone number.
+    *   **AI Queries** (`/api/v1/ai/*`): Max 50 requests per day per student token.
+    *   **Global Public APIs**: Max 100 requests per minute per IP.
+    *   Exceeding limits triggers `429 Too Many Requests` status codes.
 
 ### Examples
 ```http
