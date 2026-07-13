@@ -1,8 +1,13 @@
-# Multi-Tenant Coaching Management Platform (CMP)
+# Education Management Platform (CMP)
 
-Welcome to the architectural specifications and documentation repository for the Multi-Tenant Coaching Management Platform (CMP).
+Welcome to the architectural specifications and documentation repository for the **Education Management Platform (CMP)**.
 
-This project is a multi-tenant Software-as-a-Service (SaaS) solution designed from the ground up to manage academic operations, student profiles, study materials, assessments, communication, and financial operations for diverse coaching institutes, training centers, and academies (e.g. preparatory academies, language labs, tuition centers).
+This is a multi-tenant Software-as-a-Service (SaaS) **Education Core Platform** designed to power any educational institution — NEET coaching, JEE training, UPSC academies, schools, colleges, tuition centers, and corporate training institutes.
+
+**Target Profile (V1):** NEET Coaching Center  
+**Long-term Vision:** Generic education platform where business-specific behavior = configuration, not schema changes.
+
+The platform manages academic operations, student profiles, study materials, assessments, communication, and financial operations through a unified, role-based architecture.
 
 ---
 
@@ -33,27 +38,50 @@ All fundamental architectural decisions, safety guards, and system scoping detai
 - 📈 **[Sprint Roadmap & Planning](docs/04-sprint-plan.md):** Sprint goals and deliverables index.
 - 🏛️ **[Database Access Strategy](docs/architecture/database-access-strategy.md):** The global database constitution rules.
 - 🗄️ **[Partition & Archive Strategy](docs/architecture/partition-archive-strategy.md):** Lifecycle rules for high-volume database tables.
+- 🎯 **[V1 Scope Freeze](docs/v1-scope-freeze.md):** Complete V1 MVP specification and sprint plan.
+- 🧩 **[Profile System](docs/architecture/13-profile-system.md):** Generic platform configuration for any educational vertical.
 
 ---
 
 ## 📂 Domain Architectural Breakdown
 
-The system is split into **12 distinct logical domains** based on Domain-Driven Design (DDD) boundaries. Each domain defines its entities, relationships, and ERD structures:
+The system is built as a **generic Education Core Platform** with configuration-driven profiles. The domain breakdown:
 
-| Domain | Entity Specs | Entity Relationships | ERD Models |
-| :--- | :--- | :--- | :--- |
-| **01. Institute** | [Institute Specs](docs/architecture/entities/01-institute-management.md) | [Institute Relations](docs/architecture/relationships/01-institute-relationships.md) | [Institute ERD](docs/architecture/erd/01-institute.md) |
-| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md) | [User Relations](docs/architecture/relationships/02-user-relationships.md) | [User ERD](docs/architecture/erd/02-user.md) |
-| **02a. Student** | [Student Specs](docs/architecture/entities/02a-student-management.md) | [Student Relations](docs/architecture/relationships/02a-student-relationships.md) | [Student ERD](docs/architecture/erd/02a-student.md) |
-| **02b. Tutor** | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md) | [Tutor Relations](docs/architecture/relationships/02b-tutor-relationships.md) | [Tutor ERD](docs/architecture/erd/02b-tutor.md) |
-| **02c. Parent** | [Parent Specs](docs/architecture/entities/02c-parent-management.md) | [Parent Relations](docs/architecture/relationships/02c-parent-relationships.md) | [Parent ERD](docs/architecture/erd/02c-parent.md) |
-| **03. Academic** | [Academic Specs](docs/architecture/entities/03-academic-management.md) | [Academic Relations](docs/architecture/relationships/03-academic-relationships.md) | [Academic ERD](docs/architecture/erd/03-academic.md) |
-| **04. Learning** | [Learning Specs](docs/architecture/entities/04-learning-management.md) | [Learning Relations](docs/architecture/relationships/04-learning-relationships.md) | [Learning ERD](docs/architecture/erd/04-learning.md) |
-| **05. Assessment** | [Assessment Specs](docs/architecture/entities/05-assessment-management.md) | [Assessment Relations](docs/architecture/relationships/05-assessment-relationships.md) | [Assessment ERD](docs/architecture/erd/05-assessment.md) |
-| **06. Communication** | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication Relations](docs/architecture/relationships/06-communication-relationships.md) | [Communication ERD](docs/architecture/erd/06-communication.md) |
-| **07. Reporting** | [Reporting Specs](docs/architecture/entities/07-reporting-management.md) | [Reporting Relations](docs/architecture/relationships/07-reporting-relationships.md) | [Reporting ERD](docs/architecture/erd/07-reporting.md) |
-| **08. System** | [System Specs](docs/architecture/entities/08-system-management.md) | [System Relations](docs/architecture/relationships/08-system-relationships.md) | [System ERD](docs/architecture/erd/08-system.md) |
-| **09. Fee Management** | [Fee Specs](docs/architecture/entities/09-fee-management.md) | [Fee Relations](docs/architecture/relationships/09-fee-management-relationships.md) | [Fee ERD](docs/architecture/erd/09-fee-management.md) |
+```
+Education Core Platform
+├── Institute (multi-tenant root)
+├── People (Person → User → Role — unified identity)
+├── Master (Courses, Subjects, Chapters, Topics, Batches)
+├── Attendance (Sessions, Records, Leave)
+├── Learning (Materials, Videos, Assignments)
+├── Exams (Question Bank, Tests, Evaluations, Results)
+├── Fees (Structures, Payments, Receipts, Discounts)
+├── Communication (Notifications, Templates, Reminders)
+├── AI Service (Capabilities: Doubt Solver, MCQ Explain, ...)
+├── Digital Store (Products, Purchases, Access)
+├── Calendar (Events, Participants)
+├── Platform (Settings, Feature Flags, Storage)
+│
+└── Profile Layer (tenant configuration)
+      └── NEET Coaching V1 (first implementation)
+```
+
+Each domain defines its entities, relationships, and ERD structures:
+
+| Domain | Entity Specs | ERD Models |
+| :--- | :--- | :--- |
+| **01. Institute** | [Institute Specs](docs/architecture/entities/01-institute-management.md) | [Institute ERD](docs/architecture/erd/01-institute.md) |
+| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md) | [User ERD](docs/architecture/erd/02-user.md) |
+| **02a. Student** | [Student Specs](docs/architecture/entities/02a-student-management.md) | [Student ERD](docs/architecture/erd/02a-student.md) |
+| **02b. Tutor** | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md) | [Tutor ERD](docs/architecture/erd/02b-tutor.md) |
+| **02c. Parent** | [Parent Specs](docs/architecture/entities/02c-parent-management.md) | [Parent ERD](docs/architecture/erd/02c-parent.md) |
+| **03. Academic** | [Academic Specs](docs/architecture/entities/03-academic-management.md) | [Academic ERD](docs/architecture/erd/03-academic.md) |
+| **04. Learning** | [Learning Specs](docs/architecture/entities/04-learning-management.md) | [Learning ERD](docs/architecture/erd/04-learning.md) |
+| **05. Assessment** | [Assessment Specs](docs/architecture/entities/05-assessment-management.md) | [Assessment ERD](docs/architecture/erd/05-assessment.md) |
+| **06. Communication** | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication ERD](docs/architecture/erd/06-communication.md) |
+| **07. Reporting** | [Reporting Specs](docs/architecture/entities/07-reporting-management.md) | [Reporting ERD](docs/architecture/erd/07-reporting.md) |
+| **08. System** | [System Specs](docs/architecture/entities/08-system-management.md) | [System ERD](docs/architecture/erd/08-system.md) |
+| **09. Fee Management** | [Fee Specs](docs/architecture/entities/09-fee-management.md) | [Fee ERD](docs/architecture/erd/09-fee-management.md) |
 
 ---
 

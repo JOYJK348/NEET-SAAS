@@ -1,8 +1,16 @@
-# Project Overview: Multi-Tenant Coaching Management Platform (CMP)
+# Project Overview: Education Management Platform (CMP)
 
-The **Multi-Tenant Coaching Management Platform (CMP)** is a software-as-a-service (SaaS) solution designed to run administrative, academic, learning, and financial workflows for premium coaching institutes and training centers.
+The **Education Management Platform (CMP)** is a multi-tenant software-as-a-service (SaaS) **Education Core Platform** designed to run administrative, academic, learning, and financial workflows for any educational institution.
+
+**Target Profile (V1):** NEET Coaching Center  
+**Long-term:** Generic platform powering JEE, UPSC, TNPSC, SSC, Banking, School, College, Tuition, and Corporate Training institutes — all from the same codebase, differentiated only by configuration.
 
 The platform focuses on operational efficiency for administrators, curriculum mastery for tutors, transparent progress tracking for parents, and robust, adaptive learning tools for students.
+
+> **Related Documents**
+> - [V1 Scope Freeze](v1-scope-freeze.md)
+> - [13-Profile-System.md](architecture/13-profile-system.md)
+> - [14-Shared-Kernel.md](architecture/14-shared-kernel.md)
 
 ---
 
@@ -12,7 +20,7 @@ The core objective of this project is to move institutes away from disjointed so
 
 ### Key Goals
 - **Operational Excellence:** Complete scheduling, attendance, faculty workload, and fee tracking under a single console.
-- **Accurate Mock Evaluator:** Standardized mock tests supporting physical paper evaluations (OMR uploads and tutor grading) with instant performance-analysis reports.
+- **Accurate Mock Evaluator:** Standardized mock tests supporting MCQ auto-evaluation and manual evaluation workflows, with future support for OMR-assisted processing.
 - **Learning Continuity:** Interactive live class schedules backed by auto-archived recordings and tagged study materials.
 - **Tenant Isolation:** Absolute security boundaries matching high-grade compliance so that no institute's data ever leaks to another.
 
@@ -37,17 +45,20 @@ The platform coordinates system layers across three primary operational views:
                                   (Manages)            (Assigns)
                                           │            │
                                           ▼            ▼
-                            ┌───────────────┐        ┌───────────────┐
-                            │    Students   │        │    Tutors     │
-                            └───────┬───────┘        └───────────────┘
-                                    │
-                               (Monitored by)
-                                    │
-                                    ▼
-                            ┌───────────────┐
-                            │    Parents    │
-                            └───────────────┘
+                             ┌───────────────┐        ┌───────────────┐
+                             │   Learners    │        │  Instructors  │
+                             └───────┬───────┘        └───────────────┘
+                                     │
+                                (Monitored by)
+                                     │
+                                     ▼
+                             ┌───────────────┐
+                             │  Associated   │
+                             │   Contacts    │
+                             └───────────────┘
 ```
+
+> **NEET Profile Mapping:** Learner → Student, Instructor → Tutor, Associated Contact → Parent
 
 ---
 
@@ -76,15 +87,32 @@ The Platform organizes functional specifications across these main interfaces:
 
 ---
 
+## 🏛️ Architecture Philosophy
+
+```text
+Education Core Platform
+│
+├── Generic Tables (courses, subjects, exams, fees, etc.)
+├── Role-Based Access (Person → User → Role)
+├── Configuration-Driven Behavior
+│
+└── Tenant Profile Layer
+      └── NEET-specific values live in config, not schema
+```
+
+**Golden Rule:** Business-specific behavior belongs in configuration, not in the database schema. NEET's +4/-1 marking, 720 marks, syllabus structure — all stored as tenant settings, not hardcoded.
+
 ## 🛡️ Critical Architectural Standards
 
 The implementation matches these baseline engineering decisions:
 
-1. **Stateless Authentication with Revocable Session State:**
+1. **Shared Kernel backbone.** Every module depends on [14-shared-kernel.md](docs/architecture/14-shared-kernel.md) cross-cutting services (Audit, Events, Number Generator, Storage, Notifications, Scheduler, Search) — never duplicates them.
+
+2. **Stateless Authentication with Revocable Session State:**
    Using **JWT + Supabase Auth** carrying `institute_id` context. Access tokens are transient (15-min lifetimes, client in-memory storage only). Silent refreshes are run via **HttpOnly Secure SameSite=Strict cookies** using a rotating Refresh Token schema.
-2. **Row-Level Tenancy Security:**
+3. **Row-Level Tenancy Security:**
    Using a single, cost-effective Supabase PostgreSQL instance with **Row-Level Security (RLS)** and Prisma middlewares automatically injecting `institute_id` into all queries. 
-3. **Curriculum Topology:**
+4. **Curriculum Topology:**
    Subjects are Course-scoped, never Batch-scoped. This guarantees database reusability across multiple batches. Batch delivery is established exclusively through a `TutorAssignment` bridge model.
 
 ---
@@ -97,7 +125,8 @@ gantt
     dateFormat  YYYY-MM-DD
     section Core Infrastructure
     Auth & Multi-Tenancy Design      :done,    des1, 2026-07-06, 2026-07-08
-    Database Schema & Migration      :active,  des2, 2026-07-09, 3d
+    Database Layer (Completed)       :done,  des2, 2026-07-09, 3d
+    Backend Sprint 1 (Current)       :active,  des3, after des2, 5d
     section Module Setup
     Tenant Portal & Enrollment       :         des3, after des2, 5d
     Academic Setup (Courses/Subjects):         des4, after des3, 4d
