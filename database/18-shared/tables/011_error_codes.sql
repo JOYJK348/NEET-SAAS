@@ -23,7 +23,7 @@ CREATE TABLE error_codes (
     version INT NOT NULL DEFAULT 1,
     metadata JSONB,
 
-    CONSTRAINT chk_error_codes_code CHECK (code ~ '^[A-Z][A-Z_]{2,29}$'),
+    CONSTRAINT chk_error_codes_code CHECK (code ~ '^[A-Z][A-Z0-9_]{2,29}$'),
     CONSTRAINT chk_error_codes_http CHECK (http_status BETWEEN 100 AND 599),
     CONSTRAINT chk_error_codes_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object'),
     CONSTRAINT chk_error_codes_version CHECK (version > 0)

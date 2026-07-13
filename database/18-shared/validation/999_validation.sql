@@ -126,7 +126,7 @@ BEGIN
 
     -- 18. Error codes format validation
     SELECT count(1) INTO v_invalid_error FROM error_codes
-    WHERE code !~ '^[A-Z][A-Z_]{2,29}$';
+    WHERE code !~ '^[A-Z][A-Z0-9_]{2,29}$';
     IF v_invalid_error > 0 THEN RAISE EXCEPTION 'Error codes with invalid format: %', v_invalid_error; END IF;
 
     -- 19. Date formats category validation

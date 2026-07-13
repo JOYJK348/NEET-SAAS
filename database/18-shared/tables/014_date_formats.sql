@@ -24,7 +24,7 @@ CREATE TABLE date_formats (
     version INT NOT NULL DEFAULT 1,
     metadata JSONB,
 
-    CONSTRAINT chk_date_formats_code CHECK (code ~ '^[A-Z][A-Z0-9_]{2,29}$'),
+    CONSTRAINT chk_date_formats_code CHECK (code ~ '^[A-Z][A-Z0-9_]{1,29}$'),
     CONSTRAINT chk_date_formats_category CHECK (category IN ('DATE', 'TIME', 'DATETIME', 'MONTH', 'YEAR', 'WEEKDAY', 'QUARTER')),
     CONSTRAINT chk_date_formats_metadata CHECK (metadata IS NULL OR jsonb_typeof(metadata) = 'object'),
     CONSTRAINT chk_date_formats_version CHECK (version > 0)

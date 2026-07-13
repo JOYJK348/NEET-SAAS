@@ -10,20 +10,21 @@
 -- India States
 WITH c AS (SELECT id FROM countries WHERE iso2 = 'IN')
 INSERT INTO states (country_id, code, name, type, display_order)
-SELECT c.id, code, name, 'STATE', display_order
+SELECT c.id, code, name, type, display_order
 FROM c, (VALUES
-    ('AP', 'Andhra Pradesh', 1), ('AR', 'Arunachal Pradesh', 2), ('AS', 'Assam', 3),
-    ('BR', 'Bihar', 4), ('CG', 'Chhattisgarh', 5), ('GA', 'Goa', 6),
-    ('GJ', 'Gujarat', 7), ('HR', 'Haryana', 8), ('HP', 'Himachal Pradesh', 9),
-    ('JH', 'Jharkhand', 10), ('KA', 'Karnataka', 11), ('KL', 'Kerala', 12),
-    ('MP', 'Madhya Pradesh', 13), ('MH', 'Maharashtra', 14), ('MN', 'Manipur', 15),
-    ('ML', 'Meghalaya', 16), ('MZ', 'Mizoram', 17), ('NL', 'Nagaland', 18),
-    ('OD', 'Odisha', 19), ('PB', 'Punjab', 20), ('RJ', 'Rajasthan', 21),
-    ('SK', 'Sikkim', 22), ('TN', 'Tamil Nadu', 23), ('TS', 'Telangana', 24),
-    ('TR', 'Tripura', 25), ('UP', 'Uttar Pradesh', 26), ('UK', 'Uttarakhand', 27),
-    ('WB', 'West Bengal', 28), ('DL', 'Delhi', 29, 'TERRITORY'),
+    ('AP', 'Andhra Pradesh', 1, 'STATE'), ('AR', 'Arunachal Pradesh', 2, 'STATE'), ('AS', 'Assam', 3, 'STATE'),
+    ('BR', 'Bihar', 4, 'STATE'), ('CG', 'Chhattisgarh', 5, 'STATE'), ('GA', 'Goa', 6, 'STATE'),
+    ('GJ', 'Gujarat', 7, 'STATE'), ('HR', 'Haryana', 8, 'STATE'), ('HP', 'Himachal Pradesh', 9, 'STATE'),
+    ('JH', 'Jharkhand', 10, 'STATE'), ('KA', 'Karnataka', 11, 'STATE'), ('KL', 'Kerala', 12, 'STATE'),
+    ('MP', 'Madhya Pradesh', 13, 'STATE'), ('MH', 'Maharashtra', 14, 'STATE'), ('MN', 'Manipur', 15, 'STATE'),
+    ('ML', 'Meghalaya', 16, 'STATE'), ('MZ', 'Mizoram', 17, 'STATE'), ('NL', 'Nagaland', 18, 'STATE'),
+    ('OD', 'Odisha', 19, 'STATE'), ('PB', 'Punjab', 20, 'STATE'), ('RJ', 'Rajasthan', 21, 'STATE'),
+    ('SK', 'Sikkim', 22, 'STATE'), ('TN', 'Tamil Nadu', 23, 'STATE'), ('TS', 'Telangana', 24, 'STATE'),
+    ('TR', 'Tripura', 25, 'STATE'), ('UP', 'Uttar Pradesh', 26, 'STATE'), ('UK', 'Uttarakhand', 27, 'STATE'),
+    ('WB', 'West Bengal', 28, 'STATE'),
+    ('DL', 'Delhi', 29, 'TERRITORY'),
     ('CH', 'Chandigarh', 30, 'TERRITORY'), ('PY', 'Puducherry', 31, 'TERRITORY'),
-    ('JK', 'Jammu & Kashmir', 32), ('LD', 'Ladakh', 33),
+    ('JK', 'Jammu & Kashmir', 32, 'STATE'), ('LD', 'Ladakh', 33, 'STATE'),
     ('AN', 'Andaman & Nicobar', 34, 'TERRITORY'), ('DN', 'Dadra & Nagar Haveli and Daman & Diu', 35, 'TERRITORY'),
     ('LA', 'Lakshadweep', 36, 'TERRITORY')
 ) AS t(code, name, display_order, type)
@@ -32,25 +33,25 @@ WHERE NOT EXISTS (SELECT 1 FROM states s WHERE s.country_id = c.id AND s.code = 
 -- US States
 WITH c AS (SELECT id FROM countries WHERE iso2 = 'US')
 INSERT INTO states (country_id, code, name, type, display_order)
-SELECT c.id, code, name, 'STATE', display_order
+SELECT c.id, code, name, type, display_order
 FROM c, (VALUES
-    ('AL', 'Alabama', 1), ('AK', 'Alaska', 2), ('AZ', 'Arizona', 3),
-    ('AR', 'Arkansas', 4), ('CA', 'California', 5), ('CO', 'Colorado', 6),
-    ('CT', 'Connecticut', 7), ('DE', 'Delaware', 8), ('FL', 'Florida', 9),
-    ('GA', 'Georgia', 10), ('HI', 'Hawaii', 11), ('ID', 'Idaho', 12),
-    ('IL', 'Illinois', 13), ('IN', 'Indiana', 14), ('IA', 'Iowa', 15),
-    ('KS', 'Kansas', 16), ('KY', 'Kentucky', 17), ('LA', 'Louisiana', 18),
-    ('ME', 'Maine', 19), ('MD', 'Maryland', 20), ('MA', 'Massachusetts', 21),
-    ('MI', 'Michigan', 22), ('MN', 'Minnesota', 23), ('MS', 'Mississippi', 24),
-    ('MO', 'Missouri', 25), ('MT', 'Montana', 26), ('NE', 'Nebraska', 27),
-    ('NV', 'Nevada', 28), ('NH', 'New Hampshire', 29), ('NJ', 'New Jersey', 30),
-    ('NM', 'New Mexico', 31), ('NY', 'New York', 32), ('NC', 'North Carolina', 33),
-    ('ND', 'North Dakota', 34), ('OH', 'Ohio', 35), ('OK', 'Oklahoma', 36),
-    ('OR', 'Oregon', 37), ('PA', 'Pennsylvania', 38), ('RI', 'Rhode Island', 39),
-    ('SC', 'South Carolina', 40), ('SD', 'South Dakota', 41), ('TN', 'Tennessee', 42),
-    ('TX', 'Texas', 43), ('UT', 'Utah', 44), ('VT', 'Vermont', 45),
-    ('VA', 'Virginia', 46), ('WA', 'Washington', 47), ('WV', 'West Virginia', 48),
-    ('WI', 'Wisconsin', 49), ('WY', 'Wyoming', 50),
+    ('AL', 'Alabama', 1, 'STATE'), ('AK', 'Alaska', 2, 'STATE'), ('AZ', 'Arizona', 3, 'STATE'),
+    ('AR', 'Arkansas', 4, 'STATE'), ('CA', 'California', 5, 'STATE'), ('CO', 'Colorado', 6, 'STATE'),
+    ('CT', 'Connecticut', 7, 'STATE'), ('DE', 'Delaware', 8, 'STATE'), ('FL', 'Florida', 9, 'STATE'),
+    ('GA', 'Georgia', 10, 'STATE'), ('HI', 'Hawaii', 11, 'STATE'), ('ID', 'Idaho', 12, 'STATE'),
+    ('IL', 'Illinois', 13, 'STATE'), ('IN', 'Indiana', 14, 'STATE'), ('IA', 'Iowa', 15, 'STATE'),
+    ('KS', 'Kansas', 16, 'STATE'), ('KY', 'Kentucky', 17, 'STATE'), ('LA', 'Louisiana', 18, 'STATE'),
+    ('ME', 'Maine', 19, 'STATE'), ('MD', 'Maryland', 20, 'STATE'), ('MA', 'Massachusetts', 21, 'STATE'),
+    ('MI', 'Michigan', 22, 'STATE'), ('MN', 'Minnesota', 23, 'STATE'), ('MS', 'Mississippi', 24, 'STATE'),
+    ('MO', 'Missouri', 25, 'STATE'), ('MT', 'Montana', 26, 'STATE'), ('NE', 'Nebraska', 27, 'STATE'),
+    ('NV', 'Nevada', 28, 'STATE'), ('NH', 'New Hampshire', 29, 'STATE'), ('NJ', 'New Jersey', 30, 'STATE'),
+    ('NM', 'New Mexico', 31, 'STATE'), ('NY', 'New York', 32, 'STATE'), ('NC', 'North Carolina', 33, 'STATE'),
+    ('ND', 'North Dakota', 34, 'STATE'), ('OH', 'Ohio', 35, 'STATE'), ('OK', 'Oklahoma', 36, 'STATE'),
+    ('OR', 'Oregon', 37, 'STATE'), ('PA', 'Pennsylvania', 38, 'STATE'), ('RI', 'Rhode Island', 39, 'STATE'),
+    ('SC', 'South Carolina', 40, 'STATE'), ('SD', 'South Dakota', 41, 'STATE'), ('TN', 'Tennessee', 42, 'STATE'),
+    ('TX', 'Texas', 43, 'STATE'), ('UT', 'Utah', 44, 'STATE'), ('VT', 'Vermont', 45, 'STATE'),
+    ('VA', 'Virginia', 46, 'STATE'), ('WA', 'Washington', 47, 'STATE'), ('WV', 'West Virginia', 48, 'STATE'),
+    ('WI', 'Wisconsin', 49, 'STATE'), ('WY', 'Wyoming', 50, 'STATE'),
     ('DC', 'District of Columbia', 51, 'TERRITORY')
 ) AS t(code, name, display_order, type)
 WHERE NOT EXISTS (SELECT 1 FROM states s WHERE s.country_id = c.id AND s.code = t.code);
