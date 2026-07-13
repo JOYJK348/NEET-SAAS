@@ -38,4 +38,29 @@ export class RequestContextService {
   get correlationId(): string | undefined {
     return this.get()?.correlationId;
   }
+
+  get branchId(): string | undefined {
+    return this.get()?.branchId;
+  }
+
+  get academicYearId(): string | undefined {
+    return this.get()?.academicYearId;
+  }
+
+  get roles(): string[] | undefined {
+    return this.get()?.roles;
+  }
+
+  get permissions(): string[] | undefined {
+    return this.get()?.permissions;
+  }
+
+  hasRole(role: string): boolean {
+    return this.roles?.includes(role) || false;
+  }
+
+  hasPermission(permission: string): boolean {
+    return this.permissions?.includes(permission) || false;
+  }
 }
+
