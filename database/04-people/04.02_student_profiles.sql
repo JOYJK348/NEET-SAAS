@@ -15,6 +15,11 @@
 -- Ensure target schema scope
 SET search_path = public;
 
+-- Idempotent schema alterations to add columns if the table already exists in database
+ALTER TABLE public.student_profiles ADD COLUMN IF NOT EXISTS profile_version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE public.student_profiles ADD COLUMN IF NOT EXISTS last_profile_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now();
+ALTER TABLE public.student_profiles ADD COLUMN IF NOT EXISTS profile_completion_percentage NUMERIC(5,2) NOT NULL DEFAULT 0.00;
+
 -- 1. Create Table Structure
 CREATE TABLE IF NOT EXISTS public.student_profiles (
     user_id UUID PRIMARY KEY,
@@ -38,6 +43,9 @@ CREATE TABLE IF NOT EXISTS public.student_profiles (
     deleted_by UUID NULL, -- References public.users.id
     
     version INTEGER NOT NULL DEFAULT 1,
+    profile_version INTEGER NOT NULL DEFAULT 1,
+    last_profile_updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    profile_completion_percentage NUMERIC(5,2) NOT NULL DEFAULT 0.00,
 
     -- Inline constraints & validations
     CONSTRAINT fk_students_user FOREIGN KEY (user_id) 

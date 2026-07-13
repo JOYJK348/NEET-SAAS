@@ -148,8 +148,8 @@ CREATE POLICY policy_seh_select
                 JOIN public.role_permissions rp ON rp.role_id = ur.role_id
                 JOIN public.permissions p ON p.id = rp.permission_id
                 WHERE ur.user_id = auth.uid()
-                  AND ur.is_active = true
-                  AND p.code = 'staff.read'
+                  AND (ur.effective_from <= NOW() AND (ur.effective_to IS NULL OR ur.effective_to > NOW()))
+                  AND p.permission_key = 'staff.read'
                   AND p.deleted_at IS NULL
             )
         )
