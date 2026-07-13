@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS public.live_classes (
     
     -- Config & Policy parameters
     class_type live_class_type_enum NOT NULL DEFAULT 'LIVE',
+    session_type session_type_enum NOT NULL DEFAULT 'BATCH',
     meeting_provider meeting_provider_enum NOT NULL DEFAULT 'ZOOM',
     meeting_code VARCHAR(100) NULL,
     meeting_password VARCHAR(100) NULL,

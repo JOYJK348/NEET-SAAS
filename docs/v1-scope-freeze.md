@@ -69,11 +69,11 @@ Education Core Platform (Generic DB/API)
 | **People** | people → users → roles | ✅ Unified Person model. Roles: Tenant Admin, Instructor, Learner, Associated Contact, Staff | Bulk Upload | Advanced Roles |
 | **Attendance** | attendance | ✅ Mark, Reports, Leave, Configurable Statuses | SMS Alerts | Biometric/RFID |
 | **Learning Content** | learning_content | ✅ Upload PDF/PPT/Video/Audio, Organize by Curriculum Node, R2 Storage | Version History | AI Recommendations |
-| **Live Classes** | live_classes | ✅ Schedule, Google Calendar (One-Way), Jitsi, Attendance, R2 Recording | Auto-Processing | Breakout, Polls |
+| **Live Classes** | live_classes | ✅ Schedule, Google Calendar (One-Way), Jitsi, Attendance, R2 Recording, Session Types (BATCH/GROUP/ONE_TO_ONE) | Auto-Processing | Breakout, Polls |
 | **Assessments** | assessments | ✅ Type: MCQ (auto-eval), Subjective (manual-eval). Create, Schedule, Lock, Publish | Quizzes | Coding Tests |
 | **Manual Evaluation** | evaluations | ✅ Instructor Evaluates → Admin Approves → Publish. Draft→Submit→Approve→Publish | — | OCR |
-| **Digital Resources** | digital_resources | ✅ Product Types (Paper, Notes, PDF, Workbook, Series). Upload, Price, R2, Purchase | Discounts, Bundles | Subscriptions |
-| **Billing** | billing | ✅ Structure, Components, Installments, Payments, Receipts, Discounts, Pending | Online Gateway | Auto Late Fee |
+| **Digital Resources** | digital_resources | ✅ Product Types (Paper, Notes, PDF, Workbook, Series). Upload, Price, R2, Purchase, Discounts, Bundles | — | Subscriptions |
+| **Billing** | billing | ✅ Structure, Components, Installments, Payments, Receipts, Discounts, Pending, Online Payment Gateway (Razorpay) | — | Auto Late Fee |
 | **Notifications** | notifications | ✅ Email, In-App, Templates, Auto-Reminders | WhatsApp | Push |
 | **AI Service** | ai_service | ✅ Capabilities: Doubt Solver, MCQ Explanation. Cache-first. Feature-flagged | Summarize | Voice, Planner |
 | **Google Calendar** | calendar | ✅ One-Way Sync: Class → Event, Assessment → Event | — | Two-Way Sync |
@@ -817,8 +817,28 @@ Education Core Platform (generic DB/API)
 14. **Soft delete everywhere, except financial data.** Financial mutations are permanent, only reversible.
 15. **API versioned from Day 1.** `/api/v1/`. Breaking change = new version. No breaking existing clients.
 16. **Storage abstracted behind interface.** R2 today, any provider tomorrow — config change only.
+17. **Scope creep prevention.** Every new idea → `V2.md` (or `V1.1.md`). Never disturbs the current sprint. If it's not in this freeze, it doesn't exist for V1.
+
+---
+
+## 14. Scope Creep Management
+
+Every new idea follows this process:
+
+```
+Idea vandha
+    ↓
+Add to V2.md
+    ↓
+Current sprint undisturbed
+    ↓
+Review at next sprint planning
+```
+
+**V2.md** lives at `docs/V2.md`. If it's not classified as V1, V1.1, V2, or V3 in this document, it goes to `V2.md` first.
 
 ---
 
 > **This document is frozen as of July 13, 2026.**  
+> See [V2.md](V2.md) for future ideas.  
 > Any feature request must be classified as V1, V1.1, V2, or V3 before implementation.

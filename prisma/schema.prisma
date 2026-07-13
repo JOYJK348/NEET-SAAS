@@ -714,6 +714,12 @@ enum SessionStatusType {
   LOGGED_OUT
 }
 
+enum SessionTypeEnum {
+  BATCH
+  GROUP
+  ONE_TO_ONE
+}
+
 enum StorageProviderType {
   LOCAL
   R2
@@ -3141,6 +3147,7 @@ model LiveClasses {
   prerequisites  String[]
   teacherNotes  String
   classType  LiveClassTypeEnum
+  sessionType  SessionTypeEnum
   meetingProvider  MeetingProviderEnum
   meetingCode  String
   meetingPassword  String

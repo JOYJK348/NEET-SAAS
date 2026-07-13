@@ -499,6 +499,15 @@ BEGIN
 END $$;
 COMMENT ON TYPE live_class_type_enum IS 'Core instructional format classifications for live classes';
 
+-- 53.1 Live class session type classifications
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'session_type_enum') THEN
+        CREATE TYPE session_type_enum AS ENUM ('BATCH', 'GROUP', 'ONE_TO_ONE');
+    END IF;
+END $$;
+COMMENT ON TYPE session_type_enum IS 'Participant scoping: BATCH (all batch students), GROUP (selected subset), ONE_TO_ONE (single participant)';
+
 -- 54. Live class lifecycle status classifications
 DO $$
 BEGIN
