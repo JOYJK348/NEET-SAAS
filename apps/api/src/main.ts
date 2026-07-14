@@ -62,10 +62,9 @@ async function bootstrap() {
 
   // Setup Swagger API documentation
   // We place this *after* prefix and versioning so it reflects global prefix routing
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
   const { setupSwagger } = await import('./common/swagger/swagger.setup.js');
   setupSwagger(app);
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 
   const requestContextService = app.get(RequestContextService);
   app.useGlobalFilters(new GlobalExceptionFilter(requestContextService));
