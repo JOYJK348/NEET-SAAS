@@ -8,6 +8,7 @@ import { RequestContextMiddleware } from './common/middleware/request-context.mi
 import { LoggerModule } from './common/logger/logger.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { RedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
     RequestContextModule,
     LoggerModule,
     PrismaModule,
+    RedisModule,
     HealthModule,
   ],
   controllers: [],
