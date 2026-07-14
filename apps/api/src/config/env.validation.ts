@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 export const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string().url(),
   REDIS_HOST: z.string().default('localhost'),
@@ -26,8 +28,10 @@ export function validate(config: Record<string, unknown>) {
   const result = EnvSchema.safeParse(config);
 
   if (!result.success) {
+    /* eslint-disable no-console */
     console.error('❌ Invalid environment variables:');
     console.error(JSON.stringify(result.error.format(), null, 2));
+    /* eslint-enable no-console */
     throw new Error('Environment validation failed');
   }
 
