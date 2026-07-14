@@ -10,6 +10,12 @@ export const EnvSchema = z.object({
   REDIS_PORT: z.coerce.number().default(6379),
   JWT_PRIVATE_KEY_BASE64: z.string().optional().default(''),
   JWT_PUBLIC_KEY_BASE64: z.string().optional().default(''),
+  JWT_ACCESS_TOKEN_EXPIRES_IN_SECONDS: z.coerce
+    .number()
+    .optional()
+    .default(900),
+  JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().optional().default(7),
+  JWT_REFRESH_COOKIE_NAME: z.string().optional().default('refresh_token'),
   RESEND_API_KEY: z.string().optional().default(''),
   R2_ACCESS_KEY_ID: z.string().optional().default(''),
   R2_SECRET_ACCESS_KEY: z.string().optional().default(''),
