@@ -110,11 +110,7 @@ export async function seedRolePermissions(roleIds: Map<string, string>, permissi
 }
 
 async function upsertRolePermission(roleId: string, permissionId: string): Promise<void> {
-  const existing = await prisma.rolePermissions.findFirst({
-    where: { tenantId: DEMO_TENANT_ID, roleId, permissionId },
-  });
-
-  if (!existing) {
+  try {
     await prisma.rolePermissions.create({
       data: {
         tenantId: DEMO_TENANT_ID,
@@ -127,6 +123,12 @@ async function upsertRolePermission(roleId: string, permissionId: string): Promi
         deletedBy: SYSTEM_USER_ID,
       },
     });
+  } catch (err: unknown) {
+    const prismaErr = err as { code?: string; meta?: { target?: string[] } };
+    if (prismaErr.code === 'P2002') {
+      return;
+    }
+    throw err;
   }
 }
 
