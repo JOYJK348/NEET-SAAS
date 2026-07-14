@@ -6,7 +6,8 @@ const DEMO_DEFAULT_PASSWORD = process.env['SEED_DEFAULT_PASSWORD'] ?? 'Admin@123
 
 async function hashPassword(password: string): Promise<string> {
   const { hash } = await import('bcrypt');
-  return hash(password, 12);
+  const rounds = Number(process.env['SEED_BCRYPT_ROUNDS']) || 8;
+  return hash(password, rounds);
 }
 
 export async function seedTenant(): Promise<void> {
