@@ -7,9 +7,16 @@ import { RequestContextModule } from './common/middleware/request-context.module
 import { RequestContextMiddleware } from './common/middleware/request-context.middleware';
 import { LoggerModule } from './common/logger/logger.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { PrismaModule } from './common/prisma/prisma.module';
 
 @Module({
-  imports: [ConfigModule, RequestContextModule, LoggerModule, HealthModule],
+  imports: [
+    ConfigModule,
+    RequestContextModule,
+    LoggerModule,
+    PrismaModule,
+    HealthModule,
+  ],
   controllers: [],
   providers: [
     AppService,
