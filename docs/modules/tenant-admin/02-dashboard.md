@@ -19,6 +19,7 @@ It helps the institute owner quickly understand what is happening today, identif
 ### 1. Welcome Section
 
 Displays:
+
 - Greeting
 - Institute Name
 - Current Date
@@ -29,11 +30,13 @@ Displays:
 Displays today's scheduled activities.
 
 Information:
+
 - Today's Classes
 - Today's Live Classes
 - Today's Mock Tests
 
 Actions:
+
 - View Schedule
 - View Mock Tests
 
@@ -42,12 +45,14 @@ Actions:
 Displays items that require immediate attention.
 
 Examples:
+
 - Pending Paper Evaluation
 - Pending OMR Upload
 - Tutor Leave Requests
 - Subscription Expiry Alerts
 
 Actions:
+
 - Review Now
 - Upload Now
 - Manage
@@ -58,6 +63,7 @@ Actions:
 Frequently used shortcuts.
 
 Examples:
+
 - Add Student
 - Add Tutor
 - Create Mock Test
@@ -68,6 +74,7 @@ Examples:
 Displays overall institute statistics.
 
 Examples:
+
 - Total Students
 - Total Tutors
 - Total Batches
@@ -78,6 +85,7 @@ Examples:
 Displays recent activities performed within the institute.
 
 Examples:
+
 - Student Registered
 - Tutor Added
 - Mock Test Published
@@ -88,6 +96,7 @@ Examples:
 Displays important announcements.
 
 Examples:
+
 - Holiday Notice
 - Parent Meeting
 - System Updates
@@ -95,6 +104,7 @@ Examples:
 ## Principles
 
 The dashboard should:
+
 - Be simple and easy to understand.
 - Focus on today's operations.
 - Highlight urgent tasks.
@@ -105,6 +115,7 @@ The dashboard should:
 ## Current Scope (Phase 1)
 
 **Included:**
+
 - Welcome Section
 - Today's Operations
 - Action Required
@@ -114,6 +125,7 @@ The dashboard should:
 - Announcements
 
 **Future Enhancements:**
+
 - Customizable Dashboard
 - Widgets
 - Advanced Analytics

@@ -7,20 +7,24 @@ This document defines endpoints for managing Redis caches.
 ## POST /api/v1/cache/evict
 
 ### Purpose
+
 Evicts configured key patterns from Redis caches (e.g. settings parameters or permission registries).
 
 ### Permission
+
 `system:cache:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:cache:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:cache:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "keyPattern": "tenant:123:settings:*"
@@ -28,9 +32,11 @@ Evicts configured key patterns from Redis caches (e.g. settings parameters or pe
 ```
 
 ### Business Rules
-*   Dispatches an eviction instruction directly to Redis caches cluster.
+
+- Dispatches an eviction instruction directly to Redis caches cluster.
 
 ### Response DTO
+
 ```json
 {
   "success": true,

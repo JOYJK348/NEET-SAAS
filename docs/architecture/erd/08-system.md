@@ -199,25 +199,25 @@ Institute ---------------------------- User
 
 # Cardinality Summary
 
-| Parent Entity | Relationship | Child Entity |
-|---------------|-------------|--------------|
-| Institute | 1 → 1 | Subscription |
-| Institute | 1 → 1 | License |
-| Institute | 1 → 1 | System Configuration |
-| Institute | 1 → N | Audit Log |
-| Institute | 1 → N | Activity Log |
-| Institute | 1 → N | Backup |
-| Institute | 1 → 1 | Storage |
-| User | 1 → N | Login Session |
-| User | 1 → N | Audit Log |
-| User | 1 → N | Activity Log |
-| User | 1 → N | System Notification |
-| Role | 1 → N | User |
-| Role | 1 → N | Permission |
-| Subscription | 1 → 1 | License |
-| License | 1 → N | Feature Flag |
-| Storage | Monitors | Study Material |
-| Storage | Monitors | Recorded Class |
+| Parent Entity | Relationship | Child Entity         |
+| ------------- | ------------ | -------------------- |
+| Institute     | 1 → 1        | Subscription         |
+| Institute     | 1 → 1        | License              |
+| Institute     | 1 → 1        | System Configuration |
+| Institute     | 1 → N        | Audit Log            |
+| Institute     | 1 → N        | Activity Log         |
+| Institute     | 1 → N        | Backup               |
+| Institute     | 1 → 1        | Storage              |
+| User          | 1 → N        | Login Session        |
+| User          | 1 → N        | Audit Log            |
+| User          | 1 → N        | Activity Log         |
+| User          | 1 → N        | System Notification  |
+| Role          | 1 → N        | User                 |
+| Role          | 1 → N        | Permission           |
+| Subscription  | 1 → 1        | License              |
+| License       | 1 → N        | Feature Flag         |
+| Storage       | Monitors     | Study Material       |
+| Storage       | Monitors     | Recorded Class       |
 
 ---
 
@@ -235,10 +235,10 @@ Institute ---------------------------- User
 - Backup ensures business continuity and disaster recovery.
 - System Notifications communicate platform-level operational events to users.
 - **Jitsi Video Recording Lifecycle Policy (Non-Negotiable):**
-  1. **Local SSD Buffer only:** Jitsi recording droplet SSD is a *temporary buffer*, not storage.
+  1. **Local SSD Buffer only:** Jitsi recording droplet SSD is a _temporary buffer_, not storage.
   2. **Auto-Transcode Trigger:** Jitsi's recording engine (jibri) script must immediately trigger FFmpeg compression (1080p -> 720p) upon class termination.
   3. **Auto-Upload to Cloudflare R2:** Transcoded files must be streamed to Cloudflare R2 immediately using the AWS S3 Node SDK.
-  4. **Strict Local Deletion:** Upon receiving a successful upload response from R2 (e.g. valid ETag), the script must execute `rm -f` on both the raw local recording and the compressed file *immediately*.
+  4. **Strict Local Deletion:** Upon receiving a successful upload response from R2 (e.g. valid ETag), the script must execute `rm -f` on both the raw local recording and the compressed file _immediately_.
   5. **Watchdog Cron:** A lightweight shell daemon script must run every 30 minutes. If droplet disk space exceeds 80%, it must force-terminate stale conversion tasks, wipe orphaned `.tmp` video buffers, and trigger a priority email notification to the Platform Admin.
 
 ---

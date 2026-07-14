@@ -7,30 +7,35 @@ This document defines advanced filter parameters for the question bank catalog.
 ## GET /api/v1/questions/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter questions in the bank.
 
 ### Permission
+
 `question:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `question:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `question:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[subjectId]`: UUID.
-*   `filter[chapterId]`: UUID.
-*   `filter[topicId]`: UUID.
-*   `filter[difficulty]`: String (`EASY`, `MEDIUM`, `HARD`).
-*   `filter[type]`: String (`MCQ`, `MSQ`, `NAT`).
-*   `search`: String (Fuzzy search matching question text).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[subjectId]`: UUID.
+- `filter[chapterId]`: UUID.
+- `filter[topicId]`: UUID.
+- `filter[difficulty]`: String (`EASY`, `MEDIUM`, `HARD`).
+- `filter[type]`: String (`MCQ`, `MSQ`, `NAT`).
+- `search`: String (Fuzzy search matching question text).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

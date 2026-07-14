@@ -7,24 +7,29 @@ This document defines endpoints for querying courses analytics.
 ## GET /api/v1/analytics/academic/courses-summary
 
 ### Purpose
+
 Exposes aggregate indicators (average class durations, syllabus completion percentages) for courses and batches.
 
 ### Permission
+
 `analytics:academic:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:academic:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:academic:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[courseId]`: UUID.
-*   `filter[branchId]`: UUID.
+
+- `filter[courseId]`: UUID.
+- `filter[branchId]`: UUID.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -33,7 +38,7 @@ Exposes aggregate indicators (average class durations, syllabus completion perce
     {
       "courseId": "cne26-bf99-4d6a-8d1a-6b4b5e6f7a3f",
       "courseName": "NEET 2-Year Intensive Program",
-      "averageSyllabusCompletionPercentage": 65.50
+      "averageSyllabusCompletionPercentage": 65.5
     }
   ],
   "meta": {

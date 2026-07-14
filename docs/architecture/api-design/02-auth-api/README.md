@@ -1,12 +1,13 @@
 # 🔐 Authentication API Specification Domain (02-auth-api)
 
-*   **Version**: 1.0
-*   **Status**: LOCKED
-*   **Owner**: Architecture Review Board
+- **Version**: 1.0
+- **Status**: LOCKED
+- **Owner**: Architecture Review Board
 
 ---
 
 ## 1. Purpose
+
 This domain owns all auth-related gateways endpoints contracts, session caching models, and identity verification logic maps.
 
 ---
@@ -34,7 +35,9 @@ sequenceDiagram
 ---
 
 ## 3. JWT Claims Payload Schema
+
 Every generated access token contains the standard claims mapping context:
+
 ```json
 {
   "iss": "coachingplatform.auth",
@@ -47,10 +50,7 @@ Every generated access token contains the standard claims mapping context:
   "tenantId": "i01b3d12-cf99-4d6a-8d1a-6b4b5e6f7a3f",
   "branchId": "b02b3d12-cf99-4d6a-8d1a-6b4b5e6f7a3f",
   "roleCode": "TUTOR",
-  "permissions": [
-    "lms:material:publish",
-    "lms:chapter:read"
-  ]
+  "permissions": ["lms:material:publish", "lms:chapter:read"]
 }
 ```
 
@@ -59,28 +59,31 @@ Every generated access token contains the standard claims mapping context:
 ## 4. Policy Specifications
 
 ### 4.1 Password Rules
-*   Minimum 12 characters.
-*   Must contain uppercase, lowercase, numbers, and special characters.
-*   Must pass dictionary-lookup check.
-*   History prevention: Cannot reuse last 5 passwords.
+
+- Minimum 12 characters.
+- Must contain uppercase, lowercase, numbers, and special characters.
+- Must pass dictionary-lookup check.
+- History prevention: Cannot reuse last 5 passwords.
 
 ### 4.2 Account Lockout Strategy
-*   After **5 consecutive failed attempts** on the same email within 5 minutes, the account is locked for 15 minutes.
-*   Subsequent attempts return `423 Locked` with code `ACCOUNT_LOCKED`.
+
+- After **5 consecutive failed attempts** on the same email within 5 minutes, the account is locked for 15 minutes.
+- Subsequent attempts return `423 Locked` with code `ACCOUNT_LOCKED`.
 
 ### 4.3 Rate Limit Scopes
 
-| Endpoint | Limit |
-|---|---|
-| `POST /auth/login` | 5 attempts / 5 mins |
-| `POST /auth/forgot-password` | 3 requests / hour |
-| `POST /auth/send-otp` | 5 requests / hour |
-| `POST /auth/mfa/verify` | 10 attempts / hour |
-| `POST /auth/refresh` | 30 requests / minute |
+| Endpoint                     | Limit                |
+| ---------------------------- | -------------------- |
+| `POST /auth/login`           | 5 attempts / 5 mins  |
+| `POST /auth/forgot-password` | 3 requests / hour    |
+| `POST /auth/send-otp`        | 5 requests / hour    |
+| `POST /auth/mfa/verify`      | 10 attempts / hour   |
+| `POST /auth/refresh`         | 30 requests / minute |
 
 ---
 
 ## 5. Domain Files Index
+
 1.  **[login.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/02-auth-api/login.md)**: Onboarding authentication, token rotation, and active session limits details.
 2.  **[refresh.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/02-auth-api/refresh.md)**: Rotated session refresh endpoints.
 3.  **[logout.md](file:///d:/FreeLance/NEET_platform/docs/architecture/api-design/02-auth-api/logout.md)**: Active refresh token revocation.

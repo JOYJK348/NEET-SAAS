@@ -12,15 +12,15 @@
 
 ## ISO Standards Compliance
 
-| Table | Standard | Version |
-|---|---|---|
-| countries | ISO 3166-1 | Current |
-| languages | ISO 639-1 / ISO 639-2 | Current |
-| currencies | ISO 4217 | Current |
-| timezones | IANA TZ | 2024a+ |
-| locales | BCP-47 (RFC 5646) | Current |
-| mime_types | IANA MIME | Current |
-| file_types | Custom (logical grouping) | 1.0 |
+| Table      | Standard                  | Version |
+| ---------- | ------------------------- | ------- |
+| countries  | ISO 3166-1                | Current |
+| languages  | ISO 639-1 / ISO 639-2     | Current |
+| currencies | ISO 4217                  | Current |
+| timezones  | IANA TZ                   | 2024a+  |
+| locales    | BCP-47 (RFC 5646)         | Current |
+| mime_types | IANA MIME                 | Current |
+| file_types | Custom (logical grouping) | 1.0     |
 
 ## Versioning
 

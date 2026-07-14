@@ -1,13 +1,14 @@
 # Meeting 01
 
 ## Date
+
 July 6, 2026
 
 ## Attendees
 
 - Client
 - JK
-- Bharathi 
+- Bharathi
 
 ## Discussion Summary
 
@@ -17,6 +18,7 @@ July 6, 2026
 - Discussed AI integration, live classes, study materials, mock tests, and deployment strategy.
 
 ## Decisions Taken
+
 - Institution-first approach.
 - Future SaaS expansion.
 - Frontend: Next.js.
@@ -30,6 +32,7 @@ July 6, 2026
 - Manual paper evaluation by tutor.
 
 ## Pending Questions
+
 - AI usage limits.
 - Subscription pricing.
 
@@ -38,6 +41,7 @@ July 6, 2026
 # Meeting 02
 
 ## Date
+
 July 13, 2026
 
 ## Attendees
@@ -59,6 +63,7 @@ July 13, 2026
 - Decision: Build in this order → V1 Scope Freeze → Prisma Schema → NestJS APIs → Next.js UI.
 
 ## Decisions Taken
+
 - **V1 Scope Freezed** — See [v1-scope-freeze.md](./v1-scope-freeze.md)
 - Exam Flow: MCQ Auto-Eval + Manual Subjective Eval + Admin Approval + Publish
 - Previous Year Papers: Paid feature (store in R2, purchase + unlock)
@@ -69,6 +74,7 @@ July 13, 2026
 - Prisma schema generation is the next technical step
 
 ## Pending
+
 - Prisma schema generation
 - NestJS project initialization
 - Sprint 1 kickoff

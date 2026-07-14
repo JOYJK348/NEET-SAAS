@@ -856,31 +856,31 @@ Overall Reporting Relationship Flow
 Institute
 │
 ├── Report
-│   ├── Academic Year
-│   ├── Student Performance Report
-│   │   ├── Student
-│   │   ├── Batch
-│   │   └── Course
-│   ├── Tutor Performance Report
-│   │   ├── Tutor
-│   │   ├── Batch
-│   │   └── Subject
-│   ├── Attendance Report
-│   │   ├── Attendance
-│   │   ├── Student
-│   │   ├── Batch
-│   │   └── Tutor
-│   ├── Assessment Report
-│   │   ├── Assessment
-│   │   ├── Batch
-│   │   └── Subject
-│   └── Audit Report
-│       ├── Institute
-│       └── User
+│ ├── Academic Year
+│ ├── Student Performance Report
+│ │ ├── Student
+│ │ ├── Batch
+│ │ └── Course
+│ ├── Tutor Performance Report
+│ │ ├── Tutor
+│ │ ├── Batch
+│ │ └── Subject
+│ ├── Attendance Report
+│ │ ├── Attendance
+│ │ ├── Student
+│ │ ├── Batch
+│ │ └── Tutor
+│ ├── Assessment Report
+│ │ ├── Assessment
+│ │ ├── Batch
+│ │ └── Subject
+│ └── Audit Report
+│ ├── Institute
+│ └── User
 ├── Dashboard
-│   └── User (Role-based Access)
+│ └── User (Role-based Access)
 └── Analytics
-    └── Report
+└── Report
 Cross-Domain Dependencies
 The Reporting domain depends on and supports multiple business domains.
 Academic Management

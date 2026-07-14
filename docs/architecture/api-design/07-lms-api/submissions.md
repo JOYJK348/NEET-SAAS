@@ -7,20 +7,24 @@ This document defines endpoints for student assignment submissions.
 ## POST /api/v1/assignments/{id}/submissions
 
 ### Purpose
+
 Submits student work for a published homework assignment.
 
 ### Permission
+
 `student:assignment:submit`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:assignment:submit`
-*   Tenant Isolation: Enforced via student token.
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:assignment:submit`
+- Tenant Isolation: Enforced via student token.
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "submittedFileId": "f78a2e1d-c0aa-43d9-a41a-7b3b4b5e6f7a",
@@ -29,13 +33,16 @@ Submits student work for a published homework assignment.
 ```
 
 ### Business Rules
+
 1.  **Late submissions**: If the submission date is past the assignment `dueDate`, flags the record as `LATE`.
 2.  **State check**: Fails if the student has already submitted this assignment and the template disables resubmissions.
 
 ### Database Tables Affected
-*   `assignment_submissions` (Insert)
+
+- `assignment_submissions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

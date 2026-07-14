@@ -25,6 +25,7 @@ The Coaching Management Platform has **5 distinct user roles** across **multiple
 ### Why not pure session-based auth?
 
 Session-based auth stores session state in the server (DB or Redis). While valid, it requires:
+
 - A Redis instance (added cost and ops overhead for Railway).
 - Session store synchronization if the backend ever scales horizontally.
 - NestJS session middleware setup.
@@ -39,16 +40,16 @@ A single long-lived JWT cannot be revoked. If a token is stolen, the attacker ha
 
 ### Why JWT + Refresh Token Rotation?
 
-| Concern | How it's handled |
-|---------|-----------------|
-| Short-lived access (15 min) | Limits damage window if token is stolen |
-| Persistent login | Refresh Token silently issues new Access Token |
-| Revocation | Refresh Token is stored in DB — can be invalidated instantly |
-| Remote logout | Delete Refresh Token from DB → next refresh fails |
-| XSS safety | Refresh Token in HttpOnly cookie → JS cannot read it |
-| CSRF safety | Access Token sent as Bearer header → cannot be forged by a CSRF form |
-| Multi-tenant | `institute_id` embedded in JWT payload → every request carries it |
-| Scalability | Access Token validation is stateless → no DB hit per request |
+| Concern                     | How it's handled                                                     |
+| --------------------------- | -------------------------------------------------------------------- |
+| Short-lived access (15 min) | Limits damage window if token is stolen                              |
+| Persistent login            | Refresh Token silently issues new Access Token                       |
+| Revocation                  | Refresh Token is stored in DB — can be invalidated instantly         |
+| Remote logout               | Delete Refresh Token from DB → next refresh fails                    |
+| XSS safety                  | Refresh Token in HttpOnly cookie → JS cannot read it                 |
+| CSRF safety                 | Access Token sent as Bearer header → cannot be forged by a CSRF form |
+| Multi-tenant                | `institute_id` embedded in JWT payload → every request carries it    |
+| Scalability                 | Access Token validation is stateless → no DB hit per request         |
 
 **Verdict: JWT + Refresh Token Rotation via HttpOnly Cookie is the correct strategy.**
 
@@ -58,13 +59,13 @@ A single long-lived JWT cannot be revoked. If a token is stolen, the attacker ha
 
 ### 3.1 Access Token (JWT)
 
-| Property | Value |
-|----------|-------|
-| Algorithm | RS256 (asymmetric — private key signs, public key verifies) |
-| Lifetime | **15 minutes** |
+| Property         | Value                                                                |
+| ---------------- | -------------------------------------------------------------------- |
+| Algorithm        | RS256 (asymmetric — private key signs, public key verifies)          |
+| Lifetime         | **15 minutes**                                                       |
 | Storage (client) | **JavaScript memory only** (variable in Next.js app state / context) |
-| Storage (server) | Not stored — stateless verification via public key |
-| Transport | `Authorization: Bearer <token>` header |
+| Storage (server) | Not stored — stateless verification via public key                   |
+| Transport        | `Authorization: Bearer <token>` header                               |
 
 #### JWT Payload Structure
 
@@ -82,15 +83,15 @@ A single long-lived JWT cannot be revoked. If a token is stolen, the attacker ha
 
 **Payload field explanations:**
 
-| Field | Purpose |
-|-------|---------|
-| `sub` | User ID — primary identity |
-| `institute_id` | Tenant identifier — scopes all DB queries |
-| `role` | Single role: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TUTOR`, `STUDENT`, `PARENT` |
-| `session_id` | References the Login Session record — enables revocation |
-| `force_password_change` | `true` on first login — blocks all APIs except `/auth/change-password` |
-| `iat` | Issued at timestamp |
-| `exp` | Expiry timestamp |
+| Field                   | Purpose                                                                     |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `sub`                   | User ID — primary identity                                                  |
+| `institute_id`          | Tenant identifier — scopes all DB queries                                   |
+| `role`                  | Single role: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TUTOR`, `STUDENT`, `PARENT` |
+| `session_id`            | References the Login Session record — enables revocation                    |
+| `force_password_change` | `true` on first login — blocks all APIs except `/auth/change-password`      |
+| `iat`                   | Issued at timestamp                                                         |
+| `exp`                   | Expiry timestamp                                                            |
 
 > **Why RS256 and not HS256?**
 > RS256 uses a private/public key pair. The backend signs with the private key.
@@ -99,6 +100,7 @@ A single long-lived JWT cannot be revoked. If a token is stolen, the attacker ha
 > This is the correct choice for any system that may grow.
 
 > **⚠️ Supabase Auth JWT Payload Constraints (Non-Negotiable):**
+>
 > 1. Custom claims inside the Supabase JWT **must only contain** the minimum identity columns: `institute_id` (UUID), `user_id` (UUID), and `role`.
 > 2. **Never** map mutable user profile fields (e.g. `phone`, `avatar_url`, `first_name`) into the JWT custom claims. This keeps HTTP headers light (< 1.5KB) and avoids stale-claim bugs when a user updates their profile.
 > 3. The frontend (Next.js) must query user profile data via a `/users/me` API endpoint, rather than decoding it from the JWT.
@@ -113,14 +115,14 @@ A single long-lived JWT cannot be revoked. If a token is stolen, the attacker ha
 
 ### 3.2 Refresh Token
 
-| Property | Value |
-|----------|-------|
-| Format | Cryptographically random 256-bit token (not a JWT) |
-| Lifetime | **7 days** (30 days if "Remember Me" is selected) |
-| Storage (client) | **HttpOnly, Secure, SameSite=Strict cookie** |
-| Storage (server) | Hashed (SHA-256) in `login_sessions` table |
-| Transport | Automatically sent by browser on cookie-eligible requests |
-| Rotation | **Every use** — old token invalidated, new token issued |
+| Property         | Value                                                     |
+| ---------------- | --------------------------------------------------------- |
+| Format           | Cryptographically random 256-bit token (not a JWT)        |
+| Lifetime         | **7 days** (30 days if "Remember Me" is selected)         |
+| Storage (client) | **HttpOnly, Secure, SameSite=Strict cookie**              |
+| Storage (server) | Hashed (SHA-256) in `login_sessions` table                |
+| Transport        | Automatically sent by browser on cookie-eligible requests |
+| Rotation         | **Every use** — old token invalidated, new token issued   |
 
 #### Why store the hash, not the raw token?
 
@@ -235,6 +237,7 @@ On first login, the JWT returned contains `"force_password_change": true`.
 ```
 
 After successful password change:
+
 - `force_password_change` is set to `false` in DB.
 - Current session is invalidated.
 - User must log in fresh with their new password.
@@ -261,16 +264,16 @@ After successful password change:
 
 ## 9. Account Security Rules
 
-| Rule | Value |
-|------|-------|
-| Password hashing | bcrypt with cost factor 12 |
-| Failed login attempts | Account locked after **5 consecutive failures** |
-| Account lock duration | **30 minutes** (then auto-unlock) |
-| Password minimum length | 8 characters |
-| Password requirements | At least 1 uppercase, 1 lowercase, 1 digit |
-| Temporary password length | 12 characters (auto-generated) |
-| Reset token expiry | 15 minutes |
-| Password reuse prevention | Last 3 passwords checked (Phase 2) |
+| Rule                      | Value                                           |
+| ------------------------- | ----------------------------------------------- |
+| Password hashing          | bcrypt with cost factor 12                      |
+| Failed login attempts     | Account locked after **5 consecutive failures** |
+| Account lock duration     | **30 minutes** (then auto-unlock)               |
+| Password minimum length   | 8 characters                                    |
+| Password requirements     | At least 1 uppercase, 1 lowercase, 1 digit      |
+| Temporary password length | 12 characters (auto-generated)                  |
+| Reset token expiry        | 15 minutes                                      |
+| Password reuse prevention | Last 3 passwords checked (Phase 2)              |
 
 ---
 
@@ -300,17 +303,17 @@ Their requests are routed to a separate PlatformGuard that skips tenant scoping.
 
 ### Endpoints
 
-| Endpoint | Method | Auth Required | Purpose |
-|----------|--------|---------------|---------|
-| `/auth/login` | POST | ❌ No | Login all user types |
-| `/auth/refresh` | POST | ❌ No (uses RT cookie) | Silent token refresh |
-| `/auth/logout` | POST | ✅ Yes | Revoke current session |
-| `/auth/logout-all` | POST | ✅ Yes | Revoke all sessions |
-| `/auth/forgot-password` | POST | ❌ No | Trigger reset email |
-| `/auth/reset-password` | POST | ❌ No | Complete password reset |
-| `/auth/change-password` | POST | ✅ Yes | Change own password |
-| `/auth/me` | GET | ✅ Yes | Get current user info |
-| `/auth/sessions` | GET | ✅ Yes | List active sessions |
+| Endpoint                | Method | Auth Required          | Purpose                 |
+| ----------------------- | ------ | ---------------------- | ----------------------- |
+| `/auth/login`           | POST   | ❌ No                  | Login all user types    |
+| `/auth/refresh`         | POST   | ❌ No (uses RT cookie) | Silent token refresh    |
+| `/auth/logout`          | POST   | ✅ Yes                 | Revoke current session  |
+| `/auth/logout-all`      | POST   | ✅ Yes                 | Revoke all sessions     |
+| `/auth/forgot-password` | POST   | ❌ No                  | Trigger reset email     |
+| `/auth/reset-password`  | POST   | ❌ No                  | Complete password reset |
+| `/auth/change-password` | POST   | ✅ Yes                 | Change own password     |
+| `/auth/me`              | GET    | ✅ Yes                 | Get current user info   |
+| `/auth/sessions`        | GET    | ✅ Yes                 | List active sessions    |
 
 ### Guards Hierarchy
 
@@ -434,12 +437,12 @@ Credentials: true  (REQUIRED — allows cookies to be sent cross-origin)
 
 ## 15. Rate Limiting (Auth Endpoints)
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `/auth/login` | 10 requests | per 15 minutes per IP |
-| `/auth/forgot-password` | 5 requests | per hour per IP |
-| `/auth/reset-password` | 5 requests | per hour per IP |
-| `/auth/refresh` | 60 requests | per hour per IP |
+| Endpoint                | Limit       | Window                |
+| ----------------------- | ----------- | --------------------- |
+| `/auth/login`           | 10 requests | per 15 minutes per IP |
+| `/auth/forgot-password` | 5 requests  | per hour per IP       |
+| `/auth/reset-password`  | 5 requests  | per hour per IP       |
+| `/auth/refresh`         | 60 requests | per hour per IP       |
 
 NestJS package: `@nestjs/throttler`
 
@@ -472,44 +475,44 @@ PASSWORD_RESET_TOKEN_EXPIRY_MINUTES=15
 
 With this decision documented, the following work can now proceed in parallel:
 
-| Unblocked Work | Why |
-|----------------|-----|
-| **Database Schema: users table** | Know exact fields: password_hash, failed_attempts, locked_until, force_password_change |
-| **Database Schema: login_sessions table** | Schema defined in Section 13 |
-| **API Design: Auth Module** | All endpoints defined in Section 11 |
-| **API Design: All other modules** | Know that JWT carries institute_id — all endpoints auto-scoped |
-| **NestJS Module Structure** | Know Guards hierarchy — Section 11 |
-| **Next.js Auth Setup** | Know AT storage strategy, interceptor pattern — Section 12 |
-| **Sprint 1 Planning** | Auth module is always Sprint 1 — can now be fully tasked |
+| Unblocked Work                            | Why                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Database Schema: users table**          | Know exact fields: password_hash, failed_attempts, locked_until, force_password_change |
+| **Database Schema: login_sessions table** | Schema defined in Section 13                                                           |
+| **API Design: Auth Module**               | All endpoints defined in Section 11                                                    |
+| **API Design: All other modules**         | Know that JWT carries institute_id — all endpoints auto-scoped                         |
+| **NestJS Module Structure**               | Know Guards hierarchy — Section 11                                                     |
+| **Next.js Auth Setup**                    | Know AT storage strategy, interceptor pattern — Section 12                             |
+| **Sprint 1 Planning**                     | Auth module is always Sprint 1 — can now be fully tasked                               |
 
 ---
 
 ## 18. Decisions NOT Made (Deferred to Phase 2)
 
-| Decision | Why Deferred |
-|----------|-------------|
-| Multi-Factor Authentication (MFA) | Not in Phase 1 scope |
-| Social Login (Google OAuth) | Not requested |
-| Single Sign-On (SSO) | Enterprise feature |
-| Biometric Login | Mobile-only, Phase 2 |
-| Device Trust / Device Management | Phase 2 |
-| Permission Matrix (granular) | Phase 1 uses role-level access only |
+| Decision                          | Why Deferred                        |
+| --------------------------------- | ----------------------------------- |
+| Multi-Factor Authentication (MFA) | Not in Phase 1 scope                |
+| Social Login (Google OAuth)       | Not requested                       |
+| Single Sign-On (SSO)              | Enterprise feature                  |
+| Biometric Login                   | Mobile-only, Phase 2                |
+| Device Trust / Device Management  | Phase 2                             |
+| Permission Matrix (granular)      | Phase 1 uses role-level access only |
 
 ---
 
 ## 19. Summary of Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Auth strategy | JWT + Refresh Token | Revocable + stateless |
-| JWT algorithm | RS256 | Future-proof for multi-service |
-| Access Token lifetime | 15 minutes | Limits exposure window |
-| Access Token storage | In-memory (JS) | XSS-safe |
-| Refresh Token lifetime | 7 days (30 with Remember Me) | Balance security vs UX |
-| Refresh Token storage (client) | HttpOnly Secure cookie | XSS-proof |
-| Refresh Token storage (server) | SHA-256 hash in DB | Breach-safe |
-| Refresh Token rotation | Every use | Industry standard |
-| Tenant isolation | `institute_id` in JWT | Automatic, zero-trust per request |
-| Password hashing | bcrypt cost 12 | Proven, NestJS-native |
-| Session revocation | Delete RT from DB | Immediate effect |
-| Reuse detection | Revoke all sessions | RFC 6819 compliant |
+| Decision                       | Choice                       | Rationale                         |
+| ------------------------------ | ---------------------------- | --------------------------------- |
+| Auth strategy                  | JWT + Refresh Token          | Revocable + stateless             |
+| JWT algorithm                  | RS256                        | Future-proof for multi-service    |
+| Access Token lifetime          | 15 minutes                   | Limits exposure window            |
+| Access Token storage           | In-memory (JS)               | XSS-safe                          |
+| Refresh Token lifetime         | 7 days (30 with Remember Me) | Balance security vs UX            |
+| Refresh Token storage (client) | HttpOnly Secure cookie       | XSS-proof                         |
+| Refresh Token storage (server) | SHA-256 hash in DB           | Breach-safe                       |
+| Refresh Token rotation         | Every use                    | Industry standard                 |
+| Tenant isolation               | `institute_id` in JWT        | Automatic, zero-trust per request |
+| Password hashing               | bcrypt cost 12               | Proven, NestJS-native             |
+| Session revocation             | Delete RT from DB            | Immediate effect                  |
+| Reuse detection                | Revoke all sessions          | RFC 6819 compliant                |

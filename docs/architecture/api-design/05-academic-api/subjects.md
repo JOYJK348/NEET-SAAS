@@ -7,20 +7,24 @@ This document defines endpoints for managing subject catalogs.
 ## POST /api/v1/subjects
 
 ### Purpose
+
 Registers a new academic subject.
 
 ### Permission
+
 `subject:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `subject:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `subject:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "courseId": "cne26-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -30,12 +34,15 @@ Registers a new academic subject.
 ```
 
 ### Business Rules
-*   Enforces subject code uniqueness per course scope context (`uq_course_subject_code`).
+
+- Enforces subject code uniqueness per course scope context (`uq_course_subject_code`).
 
 ### Database Tables Affected
-*   `subjects` (Insert)
+
+- `subjects` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

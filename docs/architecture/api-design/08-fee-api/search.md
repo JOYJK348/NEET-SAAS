@@ -7,28 +7,33 @@ This document defines advanced filter parameters for the financial transactions 
 ## GET /api/v1/payments/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter financial payments.
 
 ### Permission
+
 `fee:payment:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:payment:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (details masked for non-finance users).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:payment:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (details masked for non-finance users).
 
 ### Request Parameters
-*   `filter[paymentMethod]`: String (`ONLINE_GATEWAY`, `CASH`, `BANK_TRANSFER`).
-*   `filter[startDate]`: ISO Date.
-*   `filter[endDate]`: ISO Date.
-*   `search`: String (Fuzzy search matching transaction reference or student name).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[paymentMethod]`: String (`ONLINE_GATEWAY`, `CASH`, `BANK_TRANSFER`).
+- `filter[startDate]`: ISO Date.
+- `filter[endDate]`: ISO Date.
+- `search`: String (Fuzzy search matching transaction reference or student name).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -36,7 +41,7 @@ Exposes a criteria-based search query API to filter financial payments.
   "data": [
     {
       "paymentId": "pay092a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
-      "amountPaid": 75000.00,
+      "amountPaid": 75000.0,
       "paymentMethod": "ONLINE_GATEWAY",
       "transactionReference": "tx_razorpay_08912d",
       "paymentDate": "2026-07-09"

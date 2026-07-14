@@ -7,41 +7,46 @@ This document defines endpoints for scheduling exams and assigning them to stude
 ## POST /api/v1/exams
 
 ### Purpose
+
 Schedules an exam window for target student batches.
 
 ### Permission
+
 `exam:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `exam:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `exam:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "templateId": "t02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
   "name": "NEET Monthly Assessment - July",
   "scheduledStartTime": "2026-07-20T09:00:00.000Z",
   "scheduledEndTime": "2026-07-20T12:20:00.000Z",
-  "targetBatchIds": [
-    "b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f"
-  ]
+  "targetBatchIds": ["b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f"]
 }
 ```
 
 ### Business Rules
+
 1.  **Date constraints**: Scheduled start time must be in the future.
 2.  **Batch Mapping**: Links the exam to active batches, generating records in `exam_batches` to handle student eligibility policies.
 
 ### Database Tables Affected
-*   `exams` (Insert)
-*   `exam_batches` (Insert)
+
+- `exams` (Insert)
+- `exam_batches` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

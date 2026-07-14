@@ -7,20 +7,24 @@ This document defines endpoints for configuring academic calendar holidays.
 ## POST /api/v1/holidays
 
 ### Purpose
+
 Registers a holiday in the academic calendar (disables default attendance checks).
 
 ### Permission
+
 `holiday:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `holiday:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `holiday:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "Independence Day",
@@ -31,12 +35,15 @@ Registers a holiday in the academic calendar (disables default attendance checks
 ```
 
 ### Business Rules
-*   Prevents scheduling timetable slots or enforcing attendance checks on registered holiday dates.
+
+- Prevents scheduling timetable slots or enforcing attendance checks on registered holiday dates.
 
 ### Database Tables Affected
-*   `holidays` (Insert)
+
+- `holidays` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

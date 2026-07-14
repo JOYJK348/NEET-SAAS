@@ -7,45 +7,51 @@ This document defines endpoints for managing syllabus topics and prerequisite ma
 ## POST /api/v1/topics
 
 ### Purpose
+
 Registers a specific teaching topic within a chapter.
 
 ### Permission
+
 `topic:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `topic:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `topic:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "chapterId": "ch02a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
   "name": "Alkanes Nomenclature & Properties",
   "estimatedHours": 4,
   "orderIndex": 1,
-  "prerequisiteTopicIds": [
-    "top01a-bf99-4d6a-8d1a-6b4b5e6f7a3f"
-  ]
+  "prerequisiteTopicIds": ["top01a-bf99-4d6a-8d1a-6b4b5e6f7a3f"]
 }
 ```
 
 ### Validation Constraints
-*   `estimatedHours`: Required. Positive decimal value.
-*   `orderIndex`: Required.
+
+- `estimatedHours`: Required. Positive decimal value.
+- `orderIndex`: Required.
 
 ### Business Rules
+
 1.  **Acyclic Validation**: Verifies that prerequisite topics do not form circular dependencies (acyclic check performed in business layer).
 2.  **Prerequisites Link**: Inserts prerequisite records into `topic_prerequisites` table mapping dependencies.
 
 ### Database Tables Affected
-*   `topics` (Insert)
-*   `topic_prerequisites` (Insert)
+
+- `topics` (Insert)
+- `topic_prerequisites` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

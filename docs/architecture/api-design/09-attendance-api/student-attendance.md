@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/student-attendance
 
 ### Purpose
+
 Records roll-call attendance logs for a classroom session.
 
 ### Permission
+
 `attendance:student:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:student:write`
-*   Tenant Isolation: Enforced via `X-Tenant-ID` header.
-*   Branch Isolation: Enforced via batch parameters checks.
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:student:write`
+- Tenant Isolation: Enforced via `X-Tenant-ID` header.
+- Branch Isolation: Enforced via batch parameters checks.
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "timetableSlotId": "slot89a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -32,17 +36,21 @@ Records roll-call attendance logs for a classroom session.
 ```
 
 ### Validation Constraints
-*   `timetableSlotId`: Required.
-*   `status`: Required. Must be `PRESENT`, `ABSENT`, or `LATE`.
+
+- `timetableSlotId`: Required.
+- `status`: Required. Must be `PRESENT`, `ABSENT`, or `LATE`.
 
 ### Business Rules
+
 1.  **Duplicate check**: Overwrites existing records for the slot, keeping only the latest version.
 2.  **Date checking**: Prevents marking attendance for future timetable slots.
 
 ### Database Tables Affected
-*   `student_attendance` (Insert/Update)
+
+- `student_attendance` (Insert/Update)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

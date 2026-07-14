@@ -7,25 +7,30 @@ This document defines endpoints for querying attendance risk analytics.
 ## GET /api/v1/analytics/attendance/risk-indicators
 
 ### Purpose
+
 Exposes lists of student profiles showing high rates of consecutive absences or attendance percentages below threshold guidelines.
 
 ### Permission
+
 `analytics:attendance:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:attendance:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:attendance:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[branchId]`: UUID.
-*   `filter[batchId]`: UUID.
-*   `filter[thresholdPercentage]`: Decimal (Default: 75.00).
+
+- `filter[branchId]`: UUID.
+- `filter[batchId]`: UUID.
+- `filter[thresholdPercentage]`: Decimal (Default: 75.00).
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -34,7 +39,7 @@ Exposes lists of student profiles showing high rates of consecutive absences or 
     {
       "studentProfileId": "s71a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
       "name": "Adithya Kumar",
-      "attendancePercentage": 72.50,
+      "attendancePercentage": 72.5,
       "consecutiveAbsences": 4
     }
   ],

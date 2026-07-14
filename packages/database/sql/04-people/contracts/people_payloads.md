@@ -3,7 +3,9 @@
 JSON schema payloads definitions emitted on the database events bus:
 
 ## 1. `student.created`
+
 Emitted when a student is admitted into the system.
+
 ```json
 {
   "student_id": "UUID",
@@ -15,7 +17,9 @@ Emitted when a student is admitted into the system.
 ```
 
 ## 2. `student.status_changed`
+
 Emitted during lifecycle state transitions.
+
 ```json
 {
   "student_id": "UUID",
@@ -27,7 +31,9 @@ Emitted during lifecycle state transitions.
 ```
 
 ## 3. `batch.assigned`
+
 Emitted when faculty is mapped to a batch/subject.
+
 ```json
 {
   "assignment_id": "UUID",

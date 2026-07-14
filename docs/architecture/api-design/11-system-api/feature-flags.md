@@ -7,20 +7,24 @@ This document defines endpoints for managing platform feature flags.
 ## GET /api/v1/feature-flags
 
 ### Purpose
+
 Retrieves active feature flags list mapping toggles for the user context.
 
 ### Permission
+
 None (Active session required).
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: None
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: None
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

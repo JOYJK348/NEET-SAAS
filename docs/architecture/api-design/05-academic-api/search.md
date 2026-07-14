@@ -7,27 +7,32 @@ This document defines filters for academic catalogs and batch lookups.
 ## GET /api/v1/batches/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to retrieve active batches.
 
 ### Permission
+
 `batch:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `batch:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `batch:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[courseId]`: UUID.
-*   `filter[branchId]`: UUID.
-*   `search`: String (Fuzzy search matching batch name or code).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[courseId]`: UUID.
+- `filter[branchId]`: UUID.
+- `search`: String (Fuzzy search matching batch name or code).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -7,35 +7,42 @@ This document defines endpoints for executing discretionary student fee waivers.
 ## POST /api/v1/invoices/{id}/waivers
 
 ### Purpose
+
 Applies a fee waiver credit to an outstanding invoice ledger.
 
 ### Permission
+
 `fee:waiver:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:waiver:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:waiver:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
-  "amountWaived": 10000.00,
+  "amountWaived": 10000.0,
   "remarks": "Discretionary waiver approved by Director."
 }
 ```
 
 ### Business Rules
+
 1.  **Validation**: Ensures `amountWaived` does not exceed outstanding balance.
 2.  **Credit Entry**: Inserts credit adjustment row in `invoice_waivers` table.
 
 ### Database Tables Affected
-*   `invoice_waivers` (Insert)
+
+- `invoice_waivers` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

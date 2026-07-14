@@ -5,6 +5,7 @@ This document maps out standard response templates to ensure consistent JSON for
 ---
 
 ## 1. Success Response Envelope (200 OK / 201 Created)
+
 ```json
 {
   "success": true,
@@ -21,6 +22,7 @@ This document maps out standard response templates to ensure consistent JSON for
 ---
 
 ## 2. Error Response Envelope (4xx / 5xx)
+
 ```json
 {
   "success": false,

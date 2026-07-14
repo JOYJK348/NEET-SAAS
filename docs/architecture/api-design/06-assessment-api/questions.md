@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/questions
 
 ### Purpose
+
 Registers a new question inside the central question bank.
 
 ### Permission
+
 `question:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `question:create`
-*   Tenant Isolation: Enforced (linked to active tenant, but decoupled from LMS).
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `question:create`
+- Tenant Isolation: Enforced (linked to active tenant, but decoupled from LMS).
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "subjectId": "sub02a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -42,18 +46,22 @@ Registers a new question inside the central question bank.
 ```
 
 ### Validation Constraints
-*   `type`: Required. Must be `MCQ`, `MSQ` (Multiple Select), `NAT` (Numerical), or `TF` (True/False).
-*   `correctOptionIndices`: Required. Must match index values in options list.
+
+- `type`: Required. Must be `MCQ`, `MSQ` (Multiple Select), `NAT` (Numerical), or `TF` (True/False).
+- `correctOptionIndices`: Required. Must match index values in options list.
 
 ### Business Rules
+
 1.  **Normalization check**: Must verify that `subjectId`, `chapterId`, and `topicId` exist and are logically related.
 2.  **Version tracking**: Questions are versioned. Creating or updating a question writes to `question_versions` table to support test history immutability.
 
 ### Database Tables Affected
-*   `questions` (Insert)
-*   `question_versions` (Insert)
+
+- `questions` (Insert)
+- `question_versions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -75,12 +83,15 @@ Registers a new question inside the central question bank.
 ## POST /api/v1/questions/bulk-import
 
 ### Purpose
+
 Imports questions in batch format asynchronously.
 
 ### Permission
+
 `question:create`
 
 ### Request DTO
+
 ```json
 {
   "fileVersionId": "f78a2e1d-c0aa-43d9-a41a-7b3b4b5e6f7a"

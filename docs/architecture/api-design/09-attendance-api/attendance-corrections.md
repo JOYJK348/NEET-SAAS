@@ -7,20 +7,24 @@ This document defines endpoints for requesting manual clock-in/out timesheet ove
 ## POST /api/v1/attendance-corrections
 
 ### Purpose
+
 Submits an attendance override request (for missed clock-ins or errors).
 
 ### Permission
+
 `attendance:correction:submit`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:correction:submit`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:correction:submit`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "targetDate": "2026-07-09",
@@ -31,12 +35,15 @@ Submits an attendance override request (for missed clock-ins or errors).
 ```
 
 ### Business Rules
-*   Saves the request in `attendance_corrections` table under `PENDING` status.
+
+- Saves the request in `attendance_corrections` table under `PENDING` status.
 
 ### Database Tables Affected
-*   `attendance_corrections` (Insert)
+
+- `attendance_corrections` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -57,12 +64,15 @@ Submits an attendance override request (for missed clock-ins or errors).
 ## PATCH /api/v1/attendance-corrections/{id}/approve
 
 ### Purpose
+
 Approves or rejects a correction request.
 
 ### Permission
+
 `attendance:correction:approve`
 
 ### Request DTO
+
 ```json
 {
   "status": "APPROVED"
@@ -70,4 +80,5 @@ Approves or rejects a correction request.
 ```
 
 ### Business Rules
-*   On approval, updates the target record status to `APPROVED` and inserts/updates matching logs in timesheets.
+
+- On approval, updates the target record status to `APPROVED` and inserts/updates matching logs in timesheets.

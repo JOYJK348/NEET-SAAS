@@ -7,20 +7,24 @@ This document defines endpoints for managing chapter sequences inside subjects.
 ## POST /api/v1/chapters
 
 ### Purpose
+
 Registers a chapter within a subject.
 
 ### Permission
+
 `chapter:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `chapter:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `chapter:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "subjectId": "sub02a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -30,12 +34,15 @@ Registers a chapter within a subject.
 ```
 
 ### Business Rules
-*   Ensures `orderIndex` is unique per subject context to preserve logical teaching order structure.
+
+- Ensures `orderIndex` is unique per subject context to preserve logical teaching order structure.
 
 ### Database Tables Affected
-*   `chapters` (Insert)
+
+- `chapters` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

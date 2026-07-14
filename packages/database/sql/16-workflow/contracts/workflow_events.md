@@ -54,6 +54,6 @@ Every event notification uses this standard envelope:
 ## Guarantees
 
 - **At-least-once delivery** — History log is the authoritative source of truth
-- **Ordering** — Events fire *after* the transaction commits
+- **Ordering** — Events fire _after_ the transaction commits
 - **Idempotency** — Consumers should key on `request_id + action_code + timestamp`
 - **No persistence** — `NOTIFY` is ephemeral; use Kafka/RabbitMQ bridge for durable subscriptions

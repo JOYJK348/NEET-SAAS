@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking modifications to system
 ## GET /api/v1/system/configs/audit
 
 ### Purpose
+
 Retrieves audit records for changes made to tenant global settings and configs.
 
 ### Permission
+
 `system:settings:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:settings:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:settings:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -7,20 +7,24 @@ This document defines endpoints for managing global system and tenant-level conf
 ## POST /api/v1/tenant-settings
 
 ### Purpose
+
 Updates settings parameters for the tenant.
 
 ### Permission
+
 `tenant:settings:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `tenant:settings:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `tenant:settings:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "academicYearId": "ay26-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -31,12 +35,15 @@ Updates settings parameters for the tenant.
 ```
 
 ### Business Rules
-*   Saves the config values in `tenant_settings` table, updating global settings caches in Redis.
+
+- Saves the config values in `tenant_settings` table, updating global settings caches in Redis.
 
 ### Database Tables Affected
-*   `tenant_settings` (Insert/Update)
+
+- `tenant_settings` (Insert/Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

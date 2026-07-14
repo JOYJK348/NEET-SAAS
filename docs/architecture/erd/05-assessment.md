@@ -20,18 +20,18 @@ The domain ensures a transparent, scalable, and structured assessment ecosystem 
 
 ## ✅ Included Entities
 
-| Entity | Purpose |
-|---|---|
-| 📝 **Assessment (Exam)** | Root entity for every examination event |
-| 📄 **Question Paper** | Reusable template compiling questions for an assessment |
-| ❓ **Question** | Atomic unit — a single MCQ, Numeric, or Subjective question |
-| 🔗 **Question Paper Question** | Junction: which Questions are selected for which Paper |
-| 📋 **Exam Registration** | Student admission → assessment registration |
-| ✍️ **Exam Attempt** | Student's attempt at a registered assessment |
-| 📝 **Exam Answer** | Per-question response within an attempt |
-| 📊 **Exam Result** | Published outcome of an evaluated attempt |
-| 🏆 **Ranking** | Student rank within batch/course/institute for a result |
-| 📈 **Performance Analysis** | Aggregated long-term metrics per subject/admission |
+| Entity                         | Purpose                                                     |
+| ------------------------------ | ----------------------------------------------------------- |
+| 📝 **Assessment (Exam)**       | Root entity for every examination event                     |
+| 📄 **Question Paper**          | Reusable template compiling questions for an assessment     |
+| ❓ **Question**                | Atomic unit — a single MCQ, Numeric, or Subjective question |
+| 🔗 **Question Paper Question** | Junction: which Questions are selected for which Paper      |
+| 📋 **Exam Registration**       | Student admission → assessment registration                 |
+| ✍️ **Exam Attempt**            | Student's attempt at a registered assessment                |
+| 📝 **Exam Answer**             | Per-question response within an attempt                     |
+| 📊 **Exam Result**             | Published outcome of an evaluated attempt                   |
+| 🏆 **Ranking**                 | Student rank within batch/course/institute for a result     |
+| 📈 **Performance Analysis**    | Aggregated long-term metrics per subject/admission          |
 
 ---
 
@@ -39,13 +39,13 @@ The domain ensures a transparent, scalable, and structured assessment ecosystem 
 
 The following entities belong to other domains but are referenced by the Assessment Domain.
 
-- 📖 Subject *(Academic Domain)*
-- 📑 Chapter *(Academic Domain)*
-- 👥 Batch *(Academic Domain)*
-- 👨‍🎓 Student Admission *(Student Domain)*
-- 👨‍🏫 Tutor *(User Domain)*
-- 👨‍👩‍👦 Parent *(User Domain)*
-- 🔔 Notification *(Communication Domain)*
+- 📖 Subject _(Academic Domain)_
+- 📑 Chapter _(Academic Domain)_
+- 👥 Batch _(Academic Domain)_
+- 👨‍🎓 Student Admission _(Student Domain)_
+- 👨‍🏫 Tutor _(User Domain)_
+- 👨‍👩‍👦 Parent _(User Domain)_
+- 🔔 Notification _(Communication Domain)_
 
 ---
 
@@ -89,6 +89,7 @@ Assessment (Exam)
 ```
 
 > **Key clarifications:**
+>
 > - `Question` is the **atomic unit** — one MCQ / Numeric / Subjective / True-False.
 > - There is **no separate `question_banks` table** — questions are organized by subject/chapter directly.
 > - `Question Paper` **selects** Questions via the `question_paper_questions` junction.

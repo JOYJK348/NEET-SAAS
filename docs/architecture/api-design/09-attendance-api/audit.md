@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking attendance overrides.
 ## GET /api/v1/attendance-corrections/{id}/audit
 
 ### Purpose
+
 Retrieves audit records for manual attendance and clock override approvals.
 
 ### Permission
+
 `attendance:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -5,20 +5,21 @@ This folder contains the schema definitions for extending standard authenticatio
 ---
 
 ## 1. Domain ER Model Relationships
+
 ```mermaid
 erDiagram
     users ||--o| staff_profiles : "1:1 extension"
     users ||--o| student_profiles : "1:1 extension"
     users ||--o| parent_profiles : "1:1 extension"
-    
+
     student_profiles ||--o{ student_parents : "parent association"
     parent_profiles ||--o{ student_parents : "child association"
-    
+
     student_profiles ||--o{ student_admissions : "admission records"
     student_admissions ||--o{ student_batch_enrollments : "batch allocations"
     student_profiles ||--o{ guardian_contacts : "emergency fallback details"
     student_profiles ||--o{ student_documents : "identity uploads mapping"
-    
+
     staff_profiles ||--o{ staff_departments : "dept bridge"
     staff_profiles ||--o{ staff_subjects : "qualification catalog"
     staff_profiles ||--o{ staff_employment_history : "career track ledger"
@@ -27,6 +28,7 @@ erDiagram
 ---
 
 ## 2. Table Dependency Sequence
+
 Files must be deployed in the exact order listed below to prevent foreign key errors:
 
 1.  `04.01_staff_profiles.sql` (extending staff profiles)
@@ -44,6 +46,7 @@ Files must be deployed in the exact order listed below to prevent foreign key er
 ---
 
 ## 3. General Row-Level Security (RLS) Strategy
+
 - **Staff Profiles**: Selection allowed to Platform Super Admins, Tenant Staff Admins, and the staff member themselves. Updates limited to authorized HR personnel.
 - **Student Profiles**: Selection allowed to Platform Super Admins, Tenant Teachers/Staff, verified student parents, and the student themselves.
 - **Parent Profiles**: Selection allowed to Platform Super Admins, Tenant Staff, and mapped children's student user context.

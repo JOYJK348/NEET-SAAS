@@ -7,20 +7,24 @@ This document defines endpoints for executing employee and student leave request
 ## POST /api/v1/leaves
 
 ### Purpose
+
 Submits a new leave request (e.g. sick leave, casual leave).
 
 ### Permission
+
 `leave:submit`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `leave:submit`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `leave:submit`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "startDate": "2026-07-15",
@@ -32,13 +36,16 @@ Submits a new leave request (e.g. sick leave, casual leave).
 ```
 
 ### Business Rules
+
 1.  **Dates validation**: Start date must be chronologically prior or equal to end date.
 2.  **Pending review status**: Saves the record inside `leaves` table with status `PENDING`.
 
 ### Database Tables Affected
-*   `leaves` (Insert)
+
+- `leaves` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -59,12 +66,15 @@ Submits a new leave request (e.g. sick leave, casual leave).
 ## PATCH /api/v1/leaves/{id}/approve
 
 ### Purpose
+
 Approves or rejects a pending leave request.
 
 ### Permission
+
 `leave:approve`
 
 ### Request DTO
+
 ```json
 {
   "status": "APPROVED",

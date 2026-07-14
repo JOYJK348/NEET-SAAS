@@ -7,36 +7,43 @@ This document defines advanced query filters and indexing strategies for staff s
 ## GET /api/v1/staff/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to retrieve active staff list records.
 
 ### Permission
+
 `staff:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `staff:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced (if user is mapped to specific branch)
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (salary details hidden from non-admin roles).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `staff:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced (if user is mapped to specific branch)
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (salary details hidden from non-admin roles).
 
 ### Request Parameters
-*   `filter[departmentId]`: UUID (Filter by department).
-*   `filter[branchId]`: UUID (Filter by branch).
-*   `filter[status]`: String (`ACTIVE`, `SUSPENDED`, `TERMINATED`).
-*   `search`: String (Fuzzy search matching name, phone, or staff number).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[departmentId]`: UUID (Filter by department).
+- `filter[branchId]`: UUID (Filter by branch).
+- `filter[status]`: String (`ACTIVE`, `SUSPENDED`, `TERMINATED`).
+- `search`: String (Fuzzy search matching name, phone, or staff number).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Business Rules
+
 1.  **Scope Constraints**: Branch managers can only search staff members mapped to their active branches.
 2.  **Salary masking**: The response payload body omits compensation details unless the active JWT role matches `TENANT_ADMIN` or `HR_MANAGER`.
 
 ### Database Tables Affected
-*   `staff_profiles` (Select)
-*   `staff_employment` (Select)
+
+- `staff_profiles` (Select)
+- `staff_employment` (Select)
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

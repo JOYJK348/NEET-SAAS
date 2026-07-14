@@ -62,6 +62,7 @@ Every institute has a dedicated details page.
 ## Overview
 
 Displays:
+
 - Basic Information
 - Contact Details
 - Address
@@ -72,6 +73,7 @@ Displays:
 ## Tenant Admins
 
 Displays:
+
 - Tenant Admin List
 - Account Status
 - Reset Password
@@ -80,6 +82,7 @@ Displays:
 ## Subscription
 
 Displays:
+
 - Current Plan
 - Validity
 - Renewal History
@@ -88,6 +91,7 @@ Displays:
 ## Statistics
 
 Displays:
+
 - Total Students
 - Total Tutors
 - Total Parents
@@ -101,6 +105,7 @@ Displays:
 Internal notes. Visible only to Platform Admin.
 
 Examples:
+
 - Renewal discussion
 - Feature request
 - Support comments
@@ -108,6 +113,7 @@ Examples:
 ## Activity Timeline
 
 Displays:
+
 - Institute Created
 - Institute Activated
 - Institute Suspended

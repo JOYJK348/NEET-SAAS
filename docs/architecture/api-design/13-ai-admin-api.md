@@ -7,9 +7,11 @@ This directory defines administrative routing contracts for managing LLMs config
 ## 1. LLM Provider configurations
 
 ### GET /api/v1/ai-admin/providers
-*   **Purpose**: List all configured LLM providers.
-*   **Permission**: `ai:providers:read` (Super Admin Only)
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: List all configured LLM providers.
+- **Permission**: `ai:providers:read` (Super Admin Only)
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -25,8 +27,10 @@ This directory defines administrative routing contracts for managing LLMs config
 ```
 
 ### GET /api/v1/ai-admin/models
-*   **Purpose**: List all model profiles per provider.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: List all model profiles per provider.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -35,8 +39,8 @@ This directory defines administrative routing contracts for managing LLMs config
       "code": "DEEPSEEK_CHAT",
       "name": "DeepSeek Chat Reasoner V3",
       "contextWindowTokens": 64000,
-      "inputTokenPriceUsd": 0.1400,
-      "outputTokenPriceUsd": 0.2800,
+      "inputTokenPriceUsd": 0.14,
+      "outputTokenPriceUsd": 0.28,
       "isActive": true
     }
   ]
@@ -48,8 +52,10 @@ This directory defines administrative routing contracts for managing LLMs config
 ## 2. Dynamic Prompt Manager
 
 ### POST /api/v1/ai-admin/prompts
-*   **Purpose**: Create or update system prompts and variables.
-*   **Request DTO**:
+
+- **Purpose**: Create or update system prompts and variables.
+- **Request DTO**:
+
 ```json
 {
   "code": "EXPLAIN_QUESTION",
@@ -59,7 +65,9 @@ This directory defines administrative routing contracts for managing LLMs config
   "versionNumber": 2
 }
 ```
-*   **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -76,8 +84,10 @@ This directory defines administrative routing contracts for managing LLMs config
 ## 3. Usage & Token audit tracking
 
 ### GET /api/v1/ai-admin/usage
-*   **Purpose**: Retrieve daily tokens usage logs per tenant.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Retrieve daily tokens usage logs per tenant.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -91,4 +101,5 @@ This directory defines administrative routing contracts for managing LLMs config
   ]
 }
 ```
+
 推广

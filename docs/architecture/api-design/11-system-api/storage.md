@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/files/presign
 
 ### Purpose
+
 Generates a pre-signed upload URL for direct client binary transfer to Cloudflare R2 bucket.
 
 ### Permission
+
 `file:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `file:write`
-*   Tenant Isolation: Enforced (Bucket objects prefix namespaces mapped by tenant UUID).
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Direct SQL verification.
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `file:write`
+- Tenant Isolation: Enforced (Bucket objects prefix namespaces mapped by tenant UUID).
+- Branch Isolation: Not Applicable
+- RLS Validation: Direct SQL verification.
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "fileName": "avatar.jpg",
@@ -30,17 +34,21 @@ Generates a pre-signed upload URL for direct client binary transfer to Cloudflar
 ```
 
 ### Validation Constraints
-*   `fileSizeBytes`: Required. Must not exceed maximum upload boundaries defined for the MIME type category in conventions.
+
+- `fileSizeBytes`: Required. Must not exceed maximum upload boundaries defined for the MIME type category in conventions.
 
 ### Business Rules
+
 1.  **Prefix generation**: Generates a secure target file key string structured as: `{tenantId}/{uuid_filename}`.
 2.  **Short-Lived Link**: Generates a secure R2 pre-signed link valid for exactly 15 minutes.
 3.  **Active Version Reservation**: Inserts a pending record into `file_versions` table and returns its UUID.
 
 ### Database Tables Affected
-*   `file_versions` (Insert)
+
+- `file_versions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

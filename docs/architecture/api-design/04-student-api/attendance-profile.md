@@ -7,20 +7,24 @@ This document defines endpoints for querying student attendance summaries.
 ## GET /api/v1/students/{id}/attendance-profile
 
 ### Purpose
+
 Retrieves a summary of the student's active attendance rates (total present, absent days, and percentages) for dashboard components.
 
 ### Permission
+
 `student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -30,7 +34,7 @@ Retrieves a summary of the student's active attendance rates (total present, abs
     "totalWorkingDays": 120,
     "presentDays": 108,
     "absentDays": 12,
-    "attendancePercentage": 90.00
+    "attendancePercentage": 90.0
   },
   "meta": {
     "timestamp": "2026-07-09T03:00:00.000Z",

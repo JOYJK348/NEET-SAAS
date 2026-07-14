@@ -636,9 +636,9 @@ Institute
 ├── Student ←── Parent
 │
 └── User (Base Identity)
-    ├── Role → Permission
-    ├── Login Session
-    └── Activity Log
+├── Role → Permission
+├── Login Session
+└── Activity Log
 Cross-Domain Dependencies
 The User domain depends on and supports multiple business domains.
 Institute Management

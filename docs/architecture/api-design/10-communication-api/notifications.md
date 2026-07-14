@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/notifications
 
 ### Purpose
+
 Queues a new notification message to be dispatched to one or more channels.
 
 ### Permission
+
 `notification:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `notification:write`
-*   Tenant Isolation: Enforced via active session validation checks.
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (redacts personal identification fields in logs).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `notification:write`
+- Tenant Isolation: Enforced via active session validation checks.
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (redacts personal identification fields in logs).
 
 ### Request DTO
+
 ```json
 {
   "recipientUserId": "u091a3d1-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -34,18 +38,22 @@ Queues a new notification message to be dispatched to one or more channels.
 ```
 
 ### Validation Constraints
-*   `recipientUserId`: Required.
-*   "templateCode": Required. Valid registered template.
-*   `channels`: Required. Minimum 1 channel. Must contain `EMAIL`, `SMS`, or `PUSH`.
+
+- `recipientUserId`: Required.
+- "templateCode": Required. Valid registered template.
+- `channels`: Required. Minimum 1 channel. Must contain `EMAIL`, `SMS`, or `PUSH`.
 
 ### Business Rules
+
 1.  **Async Processing**: Queues the dispatch task immediately, returning `202 Accepted` with a `notificationId`.
 2.  **Opt-Out Enforcement**: Checks recipient's notification preferences before dispatch. If user has disabled the channel for this template class, updates status to `OPTED_OUT` and discards delivery.
 
 ### Database Tables Affected
-*   `notification_logs` (Insert)
+
+- `notification_logs` (Insert)
 
 ### Response DTO (202 Accepted)
+
 ```json
 {
   "success": true,

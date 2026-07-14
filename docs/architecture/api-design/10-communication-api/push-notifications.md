@@ -7,20 +7,24 @@ This document defines endpoints for managing device push notification tokens.
 ## POST /api/v1/push-tokens
 
 ### Purpose
+
 Registers or updates a mobile/desktop browser device push notification token.
 
 ### Permission
+
 None (Active session required).
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: None
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: None
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "deviceToken": "firebase_fcm_device_token_string_here",
@@ -30,13 +34,16 @@ None (Active session required).
 ```
 
 ### Business Rules
-*   Saves the FCM device token mapped to active `userId` inside `user_device_tokens` table.
-*   Enforces uniqueness on the `deviceToken`. If token exists on another user, re-maps it to the active logging user context to prevent leakage.
+
+- Saves the FCM device token mapped to active `userId` inside `user_device_tokens` table.
+- Enforces uniqueness on the `deviceToken`. If token exists on another user, re-maps it to the active logging user context to prevent leakage.
 
 ### Database Tables Affected
-*   `user_device_tokens` (Insert/Update)
+
+- `user_device_tokens` (Insert/Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

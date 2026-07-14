@@ -7,23 +7,28 @@ This document defines endpoints for running data sync pipelines.
 ## POST /api/v1/analytics/pipelines/sync
 
 ### Purpose
+
 Triggers a manual synchronization of CQRS read-model tables from operational event databases (Async).
 
 ### Permission
+
 `system:pipeline:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:pipeline:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:pipeline:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Business Rules
-*   Adds the synchronization task to the background processing queue. Returns `202 Accepted` status immediately.
+
+- Adds the synchronization task to the background processing queue. Returns `202 Accepted` status immediately.
 
 ### Response DTO (202 Accepted)
+
 ```json
 {
   "success": true,

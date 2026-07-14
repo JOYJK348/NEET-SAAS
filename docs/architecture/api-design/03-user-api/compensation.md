@@ -7,24 +7,28 @@ This document defines endpoints for managing employee salary, compensation histo
 ## POST /api/v1/staff/{id}/compensations
 
 ### Purpose
+
 Appends a new compensation structure for a staff member (Salary Revision).
 
 ### Permission
+
 `staff:compensation:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `staff:compensation:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (financial fields masked in log traces).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `staff:compensation:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (financial fields masked in log traces).
 
 ### Request DTO
+
 ```json
 {
-  "basicSalary": 75000.00,
-  "allowances": 15000.00,
+  "basicSalary": 75000.0,
+  "allowances": 15000.0,
   "currencyCode": "INR",
   "effectiveFrom": "2026-08-01",
   "effectiveTo": null
@@ -32,19 +36,23 @@ Appends a new compensation structure for a staff member (Salary Revision).
 ```
 
 ### Validation Constraints
-*   `basicSalary`: Required. Positive numeric value.
-*   `effectiveFrom`: Required. ISO-8601 Date.
-*   `currencyCode`: Required. Standard 3-letter currency code (e.g. `INR`, `AED`).
+
+- `basicSalary`: Required. Positive numeric value.
+- `effectiveFrom`: Required. ISO-8601 Date.
+- `currencyCode`: Required. Standard 3-letter currency code (e.g. `INR`, `AED`).
 
 ### Business Rules
+
 1.  **Append Only**: Direct updates (SQL `UPDATE`) are prohibited. Salary changes must insert a new compensation structure record.
 2.  **Date Validation**: The `effectiveFrom` date must be equal to or later than the active joining date of the staff profile.
 3.  **Exclusion check**: Verifies no time overlap bounds exist with prior structures (`uq_staff_compensations_no_overlap` PostgreSQL exclusion constraint).
 
 ### Database Tables Affected
-*   `staff_compensations` (Insert)
+
+- `staff_compensations` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -65,7 +73,9 @@ Appends a new compensation structure for a staff member (Salary Revision).
 ## GET /api/v1/staff/{id}/compensations
 
 ### Purpose
+
 Lists the historic compensation registry timeline for the staff profile.
 
 ### Permission
+
 `staff:compensation:read`

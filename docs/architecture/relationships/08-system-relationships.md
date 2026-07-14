@@ -755,23 +755,23 @@ Platform
 │
 ├── System Configuration → Institute
 ├── Subscription
-│   ├── License
-│   │   └── Feature Flag
-│   └── Institute
+│ ├── License
+│ │ └── Feature Flag
+│ └── Institute
 ├── Permission ← Role
 ├── Login Session → User
 ├── System Notification → User
 ├── Audit Log
-│   ├── Institute
-│   └── User
+│ ├── Institute
+│ └── User
 ├── Activity Log
-│   ├── User
-│   └── Institute
+│ ├── User
+│ └── Institute
 ├── Backup → Institute
 └── Storage
-    ├── Institute
-    ├── monitors Study Material
-    └── monitors Recorded Class
+├── Institute
+├── monitors Study Material
+└── monitors Recorded Class
 Cross-Domain Dependencies
 The System domain depends on and supports multiple business domains.
 Institute Management

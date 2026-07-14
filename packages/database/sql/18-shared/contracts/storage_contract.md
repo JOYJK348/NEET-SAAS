@@ -23,16 +23,16 @@ Application
 
 Every stored file follows this contract:
 
-| Field | Type | Description |
-|---|---|---|
-| `provider` | String | Storage provider code (e.g. `cloudflare_r2`) |
-| `bucket` | String | Storage bucket/container name |
-| `path` | String | Full path including filename |
-| `visibility` | Enum | `PUBLIC` or `PRIVATE` |
-| `checksum` | String | SHA-256 checksum of file content |
-| `retention_days` | Int | Retention period in days (null = indefinite) |
-| `mime_type` | String | IANA MIME type |
-| `size` | BigInt | File size in bytes |
+| Field            | Type   | Description                                  |
+| ---------------- | ------ | -------------------------------------------- |
+| `provider`       | String | Storage provider code (e.g. `cloudflare_r2`) |
+| `bucket`         | String | Storage bucket/container name                |
+| `path`           | String | Full path including filename                 |
+| `visibility`     | Enum   | `PUBLIC` or `PRIVATE`                        |
+| `checksum`       | String | SHA-256 checksum of file content             |
+| `retention_days` | Int    | Retention period in days (null = indefinite) |
+| `mime_type`      | String | IANA MIME type                               |
+| `size`           | BigInt | File size in bytes                           |
 
 ## Configuration Schema
 
@@ -42,9 +42,9 @@ Each storage provider has a `config_schema` JSON Schema defining required fields
 {
   "type": "object",
   "properties": {
-    "bucket": {"type": "string"},
-    "access_key_id": {"type": "string"},
-    "secret_access_key": {"type": "string"}
+    "bucket": { "type": "string" },
+    "access_key_id": { "type": "string" },
+    "secret_access_key": { "type": "string" }
   },
   "required": ["bucket", "access_key_id", "secret_access_key"]
 }
@@ -55,11 +55,13 @@ Actual credentials are stored encrypted in `governance.api_keys`.
 ## URL Generation
 
 Public files:
+
 ```
 {public_url}/{bucket}/{path}
 ```
 
 Private files:
+
 ```
 /api/storage/{provider}/{bucket}/{path}?token={signed_token}
 ```

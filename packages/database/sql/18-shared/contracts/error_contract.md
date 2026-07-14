@@ -20,14 +20,14 @@ Every API error response must follow this structure across backend, frontend, Fl
 
 ## Fields
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `code` | String | Yes | Error code from `error_codes` table (e.g. AUTH_001) |
-| `message` | String | Yes | Human-readable error summary |
-| `detail` | String | No | Detailed error description for debugging |
-| `http_status` | Int | Yes | HTTP status code (100-599) |
-| `correlation_id` | UUID | Yes | Trace identifier for request correlation |
-| `timestamp` | String | Yes | ISO 8601 UTC timestamp |
+| Field            | Type   | Required | Description                                         |
+| ---------------- | ------ | -------- | --------------------------------------------------- |
+| `code`           | String | Yes      | Error code from `error_codes` table (e.g. AUTH_001) |
+| `message`        | String | Yes      | Human-readable error summary                        |
+| `detail`         | String | No       | Detailed error description for debugging            |
+| `http_status`    | Int    | Yes      | HTTP status code (100-599)                          |
+| `correlation_id` | UUID   | Yes      | Trace identifier for request correlation            |
+| `timestamp`      | String | Yes      | ISO 8601 UTC timestamp                              |
 
 ## Error Code Format
 
@@ -41,6 +41,7 @@ Every API error response must follow this structure across backend, frontend, Fl
 ## Resolution
 
 Backend:
+
 ```sql
 SELECT * FROM fn_get_error('AUTH_001');
 ```

@@ -34,6 +34,7 @@ The Platform Admin does not manage day-to-day institute operations. Instead, thi
 ## Permissions
 
 Platform Admin can:
+
 - Manage Institutes
 - Manage Tenant Admins
 - Manage Subscriptions
@@ -42,6 +43,7 @@ Platform Admin can:
 - View Activity Timeline
 
 Platform Admin cannot:
+
 - Conduct Live Classes
 - Upload Study Materials
 - Create Mock Tests
@@ -64,6 +66,7 @@ Platform Admin cannot:
 ## Phase 1 Scope
 
 **Included:**
+
 - Manual Institute Creation
 - Automatic Tenant Account Creation
 - Automatic Welcome Email
@@ -73,6 +76,7 @@ Platform Admin cannot:
 - Platform Settings
 
 **Not Included:**
+
 - Self Registration
 - Trial Management
 - Custom Domains

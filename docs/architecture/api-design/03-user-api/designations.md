@@ -5,20 +5,24 @@
 ## POST /api/v1/designations
 
 ### Purpose
+
 Registers a new workforce job title designation in the tenant.
 
 ### Permission
+
 `designation:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `designation:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `designation:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "Senior Instructor",
@@ -27,12 +31,15 @@ Registers a new workforce job title designation in the tenant.
 ```
 
 ### Business Rules
-*   Prevents duplication of the designation code within the same tenant.
+
+- Prevents duplication of the designation code within the same tenant.
 
 ### Database Tables Affected
-*   `designations` (Insert)
+
+- `designations` (Insert)
 
 ### Response DTO
+
 ```json
 {
   "success": true,
@@ -53,7 +60,9 @@ Registers a new workforce job title designation in the tenant.
 ## GET /api/v1/designations
 
 ### Purpose
+
 Lists all job designations.
 
 ### Permission
+
 `designation:read`

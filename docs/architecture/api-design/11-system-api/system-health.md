@@ -7,12 +7,15 @@ This document defines endpoints for querying container check states.
 ## GET /health
 
 ### Purpose
+
 Exposes container health status check.
 
 ### Permission
+
 None (Public).
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "status": "UP"
@@ -24,9 +27,11 @@ None (Public).
 ## GET /ready
 
 ### Purpose
+
 Exposes downstream dependency check states.
 
 ### Response DTO (200 OK - Healthy)
+
 ```json
 {
   "status": "READY",

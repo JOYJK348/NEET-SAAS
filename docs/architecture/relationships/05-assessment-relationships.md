@@ -609,13 +609,13 @@ Assessment
 ├── Batch
 ├── Subject
 └── Student
-    │
-    ├── Student Response → Evaluation → Tutor
-    ├── Result
-    │   ├── Ranking (Batch / Course / Institute)
-    │   ├── Performance Analysis
-    │   └── Parent
-    └── Notification (Cross-Domain → Communication)
+│
+├── Student Response → Evaluation → Tutor
+├── Result
+│ ├── Ranking (Batch / Course / Institute)
+│ ├── Performance Analysis
+│ └── Parent
+└── Notification (Cross-Domain → Communication)
 Cross-Domain Dependencies
 The Assessment domain depends on and supports multiple business domains.
 Academic Management

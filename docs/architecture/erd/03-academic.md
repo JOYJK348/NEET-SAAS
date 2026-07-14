@@ -24,7 +24,7 @@ The Academic Domain defines the complete academic structure of the Coaching Mana
 - 🎥 Live Class
 - 🎬 Recorded Class
 - 👨‍🏫 Tutor Assignment
-- 📋 **Attendance Record** *(new — defined here)*
+- 📋 **Attendance Record** _(new — defined here)_
 
 ---
 
@@ -32,9 +32,9 @@ The Academic Domain defines the complete academic structure of the Coaching Mana
 
 The following entities belong to other domains and are referenced by this domain.
 
-- 🏢 Academic Year *(Institute Domain)*
-- 👨‍🏫 Tutor *(User Domain)*
-- 👨‍🎓 Student *(User Domain)*
+- 🏢 Academic Year _(Institute Domain)_
+- 👨‍🏫 Tutor _(User Domain)_
+- 👨‍🎓 Student _(User Domain)_
 
 ---
 
@@ -123,21 +123,21 @@ flowchart TD
 
 # 🔗 Relationship Summary
 
-| Parent Entity | Child Entity | Cardinality | Notes |
-|---|---|---|---|
-| Academic Year | Course | 1:N | — |
-| Course | Batch | 1:N | — |
-| Course | Subject | 1:N | Subject is Course-scoped, NOT Batch-scoped |
-| Subject | Chapter | 1:N | — |
-| Batch | Timetable | 1:N | — |
-| Timetable | Live Class | 1:N | A timetable slot can recur as multiple sessions |
-| Live Class | Recorded Class | 1:N | Multiple recordings per session are supported |
-| Live Class | **Attendance Record** | **1:N** | **One record per student per session** |
-| Tutor Assignment | Course | N:1 | — |
-| Tutor Assignment | Batch | N:1 | — |
-| Tutor Assignment | Subject | N:1 | — |
-| Attendance Record | Student Admission | N:1 | FK to Student Domain (`student_admission_id`) |
-| Attendance Record | Tutor | N:1 | FK to Tutor Domain (who marked it) |
+| Parent Entity     | Child Entity          | Cardinality | Notes                                           |
+| ----------------- | --------------------- | ----------- | ----------------------------------------------- |
+| Academic Year     | Course                | 1:N         | —                                               |
+| Course            | Batch                 | 1:N         | —                                               |
+| Course            | Subject               | 1:N         | Subject is Course-scoped, NOT Batch-scoped      |
+| Subject           | Chapter               | 1:N         | —                                               |
+| Batch             | Timetable             | 1:N         | —                                               |
+| Timetable         | Live Class            | 1:N         | A timetable slot can recur as multiple sessions |
+| Live Class        | Recorded Class        | 1:N         | Multiple recordings per session are supported   |
+| Live Class        | **Attendance Record** | **1:N**     | **One record per student per session**          |
+| Tutor Assignment  | Course                | N:1         | —                                               |
+| Tutor Assignment  | Batch                 | N:1         | —                                               |
+| Tutor Assignment  | Subject               | N:1         | —                                               |
+| Attendance Record | Student Admission     | N:1         | FK to Student Domain (`student_admission_id`)   |
+| Attendance Record | Tutor                 | N:1         | FK to Tutor Domain (who marked it)              |
 
 ---
 

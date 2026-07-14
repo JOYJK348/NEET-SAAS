@@ -7,27 +7,32 @@ This document defines advanced filter parameters for the attendance registry dat
 ## GET /api/v1/attendance/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter student attendance entries.
 
 ### Permission
+
 `attendance:student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[studentProfileId]`: UUID.
-*   `filter[date]`: ISO Date.
-*   `filter[status]`: String (`PRESENT`, `ABSENT`, `LATE`).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[studentProfileId]`: UUID.
+- `filter[date]`: ISO Date.
+- `filter[status]`: String (`PRESENT`, `ABSENT`, `LATE`).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

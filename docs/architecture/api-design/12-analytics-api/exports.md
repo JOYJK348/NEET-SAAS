@@ -7,20 +7,24 @@ This document defines endpoints for generating data exports.
 ## POST /api/v1/analytics/reports/{id}/export
 
 ### Purpose
+
 Triggers a background process to export report calculations to CSV or PDF (Async).
 
 ### Permission
+
 `analytics:report:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "exportFormat": "PDF"
@@ -28,10 +32,12 @@ Triggers a background process to export report calculations to CSV or PDF (Async
 ```
 
 ### Business Rules
+
 1.  **Async Processing**: This is an asynchronous operation. Returns `202 Accepted` immediately containing `jobId`.
 2.  **Output registration**: Once formatting completes, saves output pdf files in system storage, linking download links inside the background job results logs.
 
 ### Response DTO (202 Accepted)
+
 ```json
 {
   "success": true,

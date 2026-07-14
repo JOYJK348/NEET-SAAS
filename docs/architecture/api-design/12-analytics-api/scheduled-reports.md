@@ -7,20 +7,24 @@ This document defines endpoints for managing scheduled email reports.
 ## POST /api/v1/analytics/scheduled-reports
 
 ### Purpose
+
 Schedules an automated email report to be sent periodically.
 
 ### Permission
+
 `analytics:report:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "reportTemplateId": "rep89a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -30,12 +34,15 @@ Schedules an automated email report to be sent periodically.
 ```
 
 ### Business Rules
-*   Enforces standard 5-field cron parsing formats. Registers scheduling tasks in system background cron jobs.
+
+- Enforces standard 5-field cron parsing formats. Registers scheduling tasks in system background cron jobs.
 
 ### Database Tables Affected
-*   `scheduled_reports` (Insert)
+
+- `scheduled_reports` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

@@ -513,21 +513,21 @@ Overall Communication Relationship Flow
 Institute
 │
 ├── Announcement
-│     └── Recipient Group
-│             └── User
+│ └── Recipient Group
+│ └── User
 │
 ├── Notification
-│     ├── User
-│     └── Communication Channel
+│ ├── User
+│ └── Communication Channel
 │
 ├── Reminder
-│     ├── User
-│     └── Communication Channel
+│ ├── User
+│ └── Communication Channel
 │
 └── Communication History
-      ├── Announcement
-      ├── Notification
-      └── Reminder
+├── Announcement
+├── Notification
+└── Reminder
 Cross-Domain Dependencies
 The Communication domain depends on and supports multiple business domains.
 Academic Management

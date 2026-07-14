@@ -5,12 +5,15 @@ This document contains standard schema definitions for paginated query requests 
 ---
 
 ## 1. Offset Pagination Parameters
+
 All standard list endpoints (GET) support offset pagination via query params:
-*   `page`: Positive Integer (Default: `1`).
-*   `limit`: Constraint limit count per page (Default: `25`, Max: `100`).
-*   `sort`: Comma-separated field names. Prefix with `-` for descending (e.g. `-createdAt,lastName`).
+
+- `page`: Positive Integer (Default: `1`).
+- `limit`: Constraint limit count per page (Default: `25`, Max: `100`).
+- `sort`: Comma-separated field names. Prefix with `-` for descending (e.g. `-createdAt,lastName`).
 
 ### Paginated Metadata Response Block
+
 ```json
 "meta": {
   "pagination": {
@@ -27,11 +30,14 @@ All standard list endpoints (GET) support offset pagination via query params:
 ---
 
 ## 2. Cursor Pagination Parameters
+
 Required for high-volume logs and telemetry endpoints (e.g. `student_learning_history`, `audit_logs`):
-*   `cursor`: Base64 encoded cursor string wrapping the sorting offset identifiers.
-*   `limit`: Constraint limit count per page (Default: `50`, Max: `250`).
+
+- `cursor`: Base64 encoded cursor string wrapping the sorting offset identifiers.
+- `limit`: Constraint limit count per page (Default: `50`, Max: `250`).
 
 ### Cursor Metadata Response Block
+
 ```json
 "meta": {
   "pagination": {

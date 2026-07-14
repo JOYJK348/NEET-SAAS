@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a student's chronological history
 ## GET /api/v1/students/{id}/timeline
 
 ### Purpose
+
 Retrieves a chronological sequence of all lifecycle and audit milestones for a student.
 
 ### Permission
+
 `student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

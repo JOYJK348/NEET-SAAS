@@ -7,20 +7,24 @@ This document defines endpoints for allocating students to academic batches.
 ## POST /api/v1/students/{id}/batch-allocations
 
 ### Purpose
+
 Allocates a student to an active academic study batch.
 
 ### Permission
+
 `student:batch:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:batch:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:batch:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "batchId": "b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -29,14 +33,17 @@ Allocates a student to an active academic study batch.
 ```
 
 ### Business Rules
+
 1.  **State check**: Verifies the student profile status is `ACTIVE`.
 2.  **Unique enrollment**: Prevents mapping multiple active batch enrollments concurrently.
 3.  **Active records**: Creates the active link inside `batch_enrollments`.
 
 ### Database Tables Affected
-*   `batch_enrollments` (Insert)
+
+- `batch_enrollments` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

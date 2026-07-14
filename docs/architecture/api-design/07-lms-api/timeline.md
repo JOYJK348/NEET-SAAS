@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a student's coursework timeline.
 ## GET /api/v1/students/{id}/lms-timeline
 
 ### Purpose
+
 Retrieves a chronological learning progress history (materials accessed, homework submitted, grades awarded, and topic completions).
 
 ### Permission
+
 `student:progress:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:progress:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:progress:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

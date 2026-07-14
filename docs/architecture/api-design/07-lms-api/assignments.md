@@ -7,20 +7,24 @@ This document defines endpoints for managing coursework homework assignments.
 ## POST /api/v1/assignments
 
 ### Purpose
+
 Publishes a new homework assignment task for a batch.
 
 ### Permission
+
 `lms:assignment:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `lms:assignment:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `lms:assignment:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "batchId": "b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -28,21 +32,25 @@ Publishes a new homework assignment task for a batch.
   "title": "Kinematics Practice Sheet 1",
   "description": "Solve all numericals in the attached sheet.",
   "dueDate": "2026-07-15T23:59:59.000Z",
-  "maxMarks": 50.00
+  "maxMarks": 50.0
 }
 ```
 
 ### Validation Constraints
-*   `dueDate`: Required. Must be in the future.
-*   `maxMarks`: Required. Positive decimal.
+
+- `dueDate`: Required. Must be in the future.
+- `maxMarks`: Required. Positive decimal.
 
 ### Business Rules
-*   Creates the assignment record, automatically setting status to `PUBLISHED`.
+
+- Creates the assignment record, automatically setting status to `PUBLISHED`.
 
 ### Database Tables Affected
-*   `assignments` (Insert)
+
+- `assignments` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

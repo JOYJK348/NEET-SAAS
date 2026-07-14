@@ -7,20 +7,24 @@ This document defines endpoints for managing invoices.
 ## POST /api/v1/invoices
 
 ### Purpose
+
 Generates an invoice ledger debit record for an enrolled student.
 
 ### Permission
+
 `fee:invoice:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:invoice:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:invoice:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "studentProfileId": "s71a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -31,13 +35,16 @@ Generates an invoice ledger debit record for an enrolled student.
 ```
 
 ### Business Rules
+
 1.  **State check**: Verifies student profile is active.
 2.  **Ledger debit registration**: Creates the debit row in `invoices` table.
 
 ### Database Tables Affected
-*   `invoices` (Insert)
+
+- `invoices` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

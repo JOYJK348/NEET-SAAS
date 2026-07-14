@@ -11,7 +11,7 @@
 
 The Tutor domain manages the complete faculty lifecycle within the coaching institute — from onboarding and profile management through subject and batch assignment, class delivery, attendance recording, assessment evaluation, and performance monitoring.
 
-The Tutor is the **primary academic delivery agent** of the platform. While the Academic domain defines the *structure* (Course → Batch → Subject), the Tutor domain defines *who teaches what, to whom, and when*. The `TutorAssignment` entity is the critical bridge that connects these two domains.
+The Tutor is the **primary academic delivery agent** of the platform. While the Academic domain defines the _structure_ (Course → Batch → Subject), the Tutor domain defines _who teaches what, to whom, and when_. The `TutorAssignment` entity is the critical bridge that connects these two domains.
 
 ---
 
@@ -19,31 +19,31 @@ The Tutor is the **primary academic delivery agent** of the platform. While the 
 
 ### ✅ Included Entities
 
-| Entity | Purpose |
-|---|---|
-| 👨‍🏫 **Tutor** | Core identity of a faculty member within the institute |
-| 🪪 **Tutor Profile** | Extended professional qualification and experience info |
-| 🎯 **Tutor Assignment** | Bridge entity — links Tutor to Course + Batch + Subject |
-| 📁 **Tutor Document** | Professional documents (certificates, contracts, ID proofs) |
-| 🏖️ **Tutor Leave** | Leave request records (Phase 1: tracking only) |
+| Entity                  | Purpose                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| 👨‍🏫 **Tutor**            | Core identity of a faculty member within the institute      |
+| 🪪 **Tutor Profile**    | Extended professional qualification and experience info     |
+| 🎯 **Tutor Assignment** | Bridge entity — links Tutor to Course + Batch + Subject     |
+| 📁 **Tutor Document**   | Professional documents (certificates, contracts, ID proofs) |
+| 🏖️ **Tutor Leave**      | Leave request records (Phase 1: tracking only)              |
 
 ### ❌ Excluded (Cross-Domain References)
 
 These entities are **owned by other domains** and are referenced, not duplicated.
 
-| Entity | Owning Domain |
-|---|---|
-| Course | Academic Domain |
-| Batch | Academic Domain |
-| Subject | Academic Domain |
-| Timetable | Academic Domain |
-| Live Class | Academic Domain |
-| Recorded Class | Academic Domain |
-| Study Material | Learning Domain |
-| Assignment | Learning Domain |
-| Mock Test / Evaluation | Assessment Domain |
-| Attendance Record | Student Domain |
-| Notification | Communication Domain |
+| Entity                 | Owning Domain        |
+| ---------------------- | -------------------- |
+| Course                 | Academic Domain      |
+| Batch                  | Academic Domain      |
+| Subject                | Academic Domain      |
+| Timetable              | Academic Domain      |
+| Live Class             | Academic Domain      |
+| Recorded Class         | Academic Domain      |
+| Study Material         | Learning Domain      |
+| Assignment             | Learning Domain      |
+| Mock Test / Evaluation | Assessment Domain    |
+| Attendance Record      | Student Domain       |
+| Notification           | Communication Domain |
 
 ---
 
@@ -110,21 +110,21 @@ erDiagram
 
 ## 🔗 Relationship Summary
 
-| Parent Entity | Relationship | Child / Reference | Cardinality | Notes |
-|---|---|---|---|---|
-| Institute | employs | Tutor | 1:N | `institute_id NOT NULL` on every row |
-| Tutor | has | Tutor Profile | 1:1 | Created on onboarding |
-| Tutor | uploads | Tutor Document | 1:N | Certs, ID, contracts |
-| Tutor | requests | Tutor Leave | 1:N | Leave request tracking |
-| Tutor | assigned via | Tutor Assignment | 1:N | **Core bridge entity** |
-| Tutor Assignment | scoped to | Course | N:1 | FK to Academic domain |
-| Tutor Assignment | delivers to | Batch | N:1 | FK to Academic domain |
-| Tutor Assignment | teaches | Subject | N:1 | FK to Academic domain |
-| Tutor | conducts | Live Class | 1:N | FK to Academic domain |
-| Tutor | creates | Study Material | 1:N | FK to Learning domain |
-| Tutor | publishes | Assignment | 1:N | FK to Learning domain |
-| Tutor | performs | Evaluation | 1:N | FK to Assessment domain |
-| Tutor | marks | Attendance Record | 1:N | FK to Student domain |
+| Parent Entity    | Relationship | Child / Reference | Cardinality | Notes                                |
+| ---------------- | ------------ | ----------------- | ----------- | ------------------------------------ |
+| Institute        | employs      | Tutor             | 1:N         | `institute_id NOT NULL` on every row |
+| Tutor            | has          | Tutor Profile     | 1:1         | Created on onboarding                |
+| Tutor            | uploads      | Tutor Document    | 1:N         | Certs, ID, contracts                 |
+| Tutor            | requests     | Tutor Leave       | 1:N         | Leave request tracking               |
+| Tutor            | assigned via | Tutor Assignment  | 1:N         | **Core bridge entity**               |
+| Tutor Assignment | scoped to    | Course            | N:1         | FK to Academic domain                |
+| Tutor Assignment | delivers to  | Batch             | N:1         | FK to Academic domain                |
+| Tutor Assignment | teaches      | Subject           | N:1         | FK to Academic domain                |
+| Tutor            | conducts     | Live Class        | 1:N         | FK to Academic domain                |
+| Tutor            | creates      | Study Material    | 1:N         | FK to Learning domain                |
+| Tutor            | publishes    | Assignment        | 1:N         | FK to Learning domain                |
+| Tutor            | performs     | Evaluation        | 1:N         | FK to Assessment domain              |
+| Tutor            | marks        | Attendance Record | 1:N         | FK to Student domain                 |
 
 ---
 

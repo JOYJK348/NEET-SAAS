@@ -7,36 +7,43 @@ This document defines endpoints for managing installment billing terms.
 ## POST /api/v1/invoices/{id}/installments
 
 ### Purpose
+
 Splits an invoice's total bill into installment intervals.
 
 ### Permission
+
 `fee:installment:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:installment:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:installment:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "installments": [
-    { "installmentNo": 1, "amount": 75000.00, "dueDate": "2026-08-09" },
-    { "installmentNo": 2, "amount": 75000.00, "dueDate": "2026-12-09" }
+    { "installmentNo": 1, "amount": 75000.0, "dueDate": "2026-08-09" },
+    { "installmentNo": 2, "amount": 75000.0, "dueDate": "2026-12-09" }
   ]
 }
 ```
 
 ### Business Rules
-*   Ensures sum of installment values matches invoice total amount context.
+
+- Ensures sum of installment values matches invoice total amount context.
 
 ### Database Tables Affected
-*   `invoice_installments` (Insert)
+
+- `invoice_installments` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

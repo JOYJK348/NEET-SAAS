@@ -51,6 +51,7 @@
 # Notifications
 
 Platform Admin can:
+
 - Automatically send Welcome Email
 - Resend Welcome Email
 - Send Password Reset Email

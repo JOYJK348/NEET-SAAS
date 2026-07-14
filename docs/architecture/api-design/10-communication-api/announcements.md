@@ -7,20 +7,24 @@ This document defines endpoints for managing public announcements.
 ## POST /api/v1/comms/announcements
 
 ### Purpose
+
 Publishes a dashboard announcement alert.
 
 ### Permission
+
 `announcement:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `announcement:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced via `branchId` mappings.
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `announcement:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced via `branchId` mappings.
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "title": "Independence Day Holiday Notice",
@@ -31,12 +35,15 @@ Publishes a dashboard announcement alert.
 ```
 
 ### Business Rules
-*   Saves the record to `announcements` table, restricting layout display scope to target roles.
+
+- Saves the record to `announcements` table, restricting layout display scope to target roles.
 
 ### Database Tables Affected
-*   `announcements` (Insert)
+
+- `announcements` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

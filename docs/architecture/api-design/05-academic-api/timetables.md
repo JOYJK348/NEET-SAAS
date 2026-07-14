@@ -7,20 +7,24 @@ This document defines endpoints for managing class schedules.
 ## POST /api/v1/timetable-slots
 
 ### Purpose
+
 Schedules a class slot session for a batch.
 
 ### Permission
+
 `timetable:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `timetable:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced via batch metadata checks.
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `timetable:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced via batch metadata checks.
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "batchId": "b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -33,15 +37,18 @@ Schedules a class slot session for a batch.
 ```
 
 ### Business Rules
+
 1.  **Staff Conflict Check**: Verifies that the instructor (`staffId`) has no overlapping class slot schedules in the database.
 2.  **Room Conflict Check**: Verifies the classroom (`roomId`) has no scheduling collisions.
 3.  **Batch Conflict Check**: Verifies the batch is not scheduled for another class during the same time interval.
 4.  If any conflict is detected, aborts execution and returns `409 Conflict` with error code `SCHEDULE_CONFLICT`.
 
 ### Database Tables Affected
-*   `timetable_slots` (Insert)
+
+- `timetable_slots` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

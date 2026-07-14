@@ -7,17 +7,21 @@ This document defines filters for querying public course directories.
 ## GET /api/v1/public/courses/search
 
 ### Purpose
+
 Filters the list of public courses.
 
 ### Permission
+
 None (Public).
 
 ### Request Parameters
-*   `search`: String (Fuzzy search matching course name).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `search`: String (Fuzzy search matching course name).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

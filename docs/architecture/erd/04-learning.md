@@ -37,11 +37,11 @@ The domain focuses on knowledge delivery, self-learning, revision, and continuou
 
 The following entities belong to other domains but are referenced by the Learning Domain.
 
-- 📖 Subject *(Academic Domain)*
-- 📑 Chapter *(Academic Domain)*
-- 👥 Batch *(Academic Domain)*
-- 👨‍🏫 Tutor *(User Domain)*
-- 👨‍🎓 Student Admission *(Student Domain)* — all learning activity is scoped to `student_admission_id`
+- 📖 Subject _(Academic Domain)_
+- 📑 Chapter _(Academic Domain)_
+- 👥 Batch _(Academic Domain)_
+- 👨‍🏫 Tutor _(User Domain)_
+- 👨‍🎓 Student Admission _(Student Domain)_ — all learning activity is scoped to `student_admission_id`
 
 ---
 

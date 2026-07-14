@@ -7,20 +7,24 @@ This document defines query endpoints for retrieving student academic details.
 ## GET /api/v1/students/{id}/academic-profile
 
 ### Purpose
+
 Retrieves a summary of the student's active courses, batches, roll numbers, and historical progress aggregates.
 
 ### Permission
+
 `student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -47,19 +47,19 @@ The following principles should be followed during Entity Discovery.
 
 The platform is divided into the following business domains.
 
-| Domain | Description |
-|---------|-------------|
-| User Management | Platform users, authentication, and user lifecycle. |
-| Institute Management | Institute information, academic years, branches, and operational configuration. |
-| Academic Management | Courses, batches, subjects, chapters, timetables, and academic planning. |
-| Student Management | Student lifecycle, enrollment, attendance, and academic progress. |
-| Parent Management | Parent profiles, guardian relationships, and parent engagement. |
-| Tutor Management | Faculty management, teaching responsibilities, and tutor operations. |
-| Learning Management | Study materials, recorded classes, assignments, and learning resources. |
-| Assessment Management | Mock tests, evaluations, results, rankings, and performance analysis. |
-| Communication Management | Announcements, notifications, reminders, and communication channels. |
-| Reporting & Analytics | Reports, dashboards, analytics, and institutional insights. |
-| System Management | Platform configuration, permissions, auditing, subscriptions, and system operations. |
+| Domain                   | Description                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| User Management          | Platform users, authentication, and user lifecycle.                                  |
+| Institute Management     | Institute information, academic years, branches, and operational configuration.      |
+| Academic Management      | Courses, batches, subjects, chapters, timetables, and academic planning.             |
+| Student Management       | Student lifecycle, enrollment, attendance, and academic progress.                    |
+| Parent Management        | Parent profiles, guardian relationships, and parent engagement.                      |
+| Tutor Management         | Faculty management, teaching responsibilities, and tutor operations.                 |
+| Learning Management      | Study materials, recorded classes, assignments, and learning resources.              |
+| Assessment Management    | Mock tests, evaluations, results, rankings, and performance analysis.                |
+| Communication Management | Announcements, notifications, reminders, and communication channels.                 |
+| Reporting & Analytics    | Reports, dashboards, analytics, and institutional insights.                          |
+| System Management        | Platform configuration, permissions, auditing, subscriptions, and system operations. |
 
 ---
 

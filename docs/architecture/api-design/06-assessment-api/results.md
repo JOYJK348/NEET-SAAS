@@ -7,25 +7,30 @@ This document defines endpoints for querying student exam scores, ranking sheets
 ## GET /api/v1/exams/{id}/results
 
 ### Purpose
+
 Retrieves the ranked scorecard list for an exam.
 
 ### Permission
+
 `exam:result:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `exam:result:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `exam:result:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[batchId]`: UUID.
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[batchId]`: UUID.
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -34,7 +39,7 @@ Retrieves the ranked scorecard list for an exam.
     {
       "studentName": "Adithya Kumar",
       "rollNumber": "PH-2026-0089",
-      "totalMarksObtained": 620.00,
+      "totalMarksObtained": 620.0,
       "rank": 1,
       "percentile": 99.85,
       "sectionScores": [
@@ -42,7 +47,7 @@ Retrieves the ranked scorecard list for an exam.
           "sectionName": "Physics Section A",
           "correctAnswersCount": 32,
           "wrongAnswersCount": 3,
-          "score": 125.00
+          "score": 125.0
         }
       ]
     }

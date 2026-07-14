@@ -40,50 +40,50 @@ Education Core Platform (Generic DB/API)
 
 ### Generic Naming (DB/API) → NEET Profile (UI Labels)
 
-| Generic (DB/API) | NEET Profile Label | Why Generic |
-|-----------------|-------------------|-------------|
-| Assessment | Mock Test | Covers MCQ, Subjective, Quiz, Assignment, Practice Test |
-| Learning Content | Study Material | Covers PDF, Video, Audio, SCORM, Interactive, URL |
-| Learning Group | Batch | Covers Batch, Class, Section, Cohort, Group |
-| Instructor | Tutor | Covers Tutor, Teacher, Faculty, Trainer, Coach, Mentor |
-| Learner | Student | Covers Student, Employee, Resident, Trainee |
-| Associated Contact | Parent | Covers Parent, Guardian, Sponsor, Manager |
-| Learning Unit | Subject | Covers Subject, Skill, Module, Rotation |
-| Curriculum Node | Chapter | Configurable depth: Course→Subject→Chapter→Topic |
-| Billing | Fee | Covers Fee, Subscription, Tuition, Transport, Hostel |
-| Digital Resource | Previous Paper | Covers Paper, Notes, PDF, Video Course, Test Series |
+| Generic (DB/API)   | NEET Profile Label | Why Generic                                             |
+| ------------------ | ------------------ | ------------------------------------------------------- |
+| Assessment         | Mock Test          | Covers MCQ, Subjective, Quiz, Assignment, Practice Test |
+| Learning Content   | Study Material     | Covers PDF, Video, Audio, SCORM, Interactive, URL       |
+| Learning Group     | Batch              | Covers Batch, Class, Section, Cohort, Group             |
+| Instructor         | Tutor              | Covers Tutor, Teacher, Faculty, Trainer, Coach, Mentor  |
+| Learner            | Student            | Covers Student, Employee, Resident, Trainee             |
+| Associated Contact | Parent             | Covers Parent, Guardian, Sponsor, Manager               |
+| Learning Unit      | Subject            | Covers Subject, Skill, Module, Rotation                 |
+| Curriculum Node    | Chapter            | Configurable depth: Course→Subject→Chapter→Topic        |
+| Billing            | Fee                | Covers Fee, Subscription, Tuition, Transport, Hostel    |
+| Digital Resource   | Previous Paper     | Covers Paper, Notes, PDF, Video Course, Test Series     |
 
 ---
 
 ## 2. V1 Feature Matrix
 
-| Module | Generic Name (DB/API) | V1 (Must-Have) | V1.1 | V2+ |
-|--------|----------------------|---------------|------|-----|
-| **Platform Admin** | platform_admin | ✅ Login, Create Tenant, Activate/Deactivate, Subscription, Storage, Dashboard | — | Advanced Analytics |
-| **Multi-Tenant** | tenant_isolation | ✅ Row-Level Isolation, institute_id scoping | — | Sharding |
-| **Institute** | institutes | ✅ Profile, Logo, Address, Contact, Code, Timezone | Theme | White-label |
-| **Branches** | branches | ✅ Create, Edit, Status | — | Branch Analytics |
-| **Academic Years** | academic_years | ✅ Create, Set Active | — | Multi-Year Planning |
-| **Curriculum** | curriculum_nodes | ✅ Configurable tree: Course→Subject→Chapter→Topic | Bulk Import | AI Generation |
-| **Learning Groups** | learning_groups | ✅ Create, Assign Instructor/Learner, Timetable | Auto Scheduling | AI Optimization |
-| **People** | people → users → roles | ✅ Unified Person model. Roles: Tenant Admin, Instructor, Learner, Associated Contact, Staff | Bulk Upload | Advanced Roles |
-| **Attendance** | attendance | ✅ Mark, Reports, Leave, Configurable Statuses | SMS Alerts | Biometric/RFID |
-| **Learning Content** | learning_content | ✅ Upload PDF/PPT/Video/Audio, Organize by Curriculum Node, R2 Storage | Version History | AI Recommendations |
-| **Live Classes** | live_classes | ✅ Schedule, Google Calendar (One-Way), Jitsi, Attendance, R2 Recording, Session Types (BATCH/GROUP/ONE_TO_ONE) | Auto-Processing | Breakout, Polls |
-| **Assessments** | assessments | ✅ Type: MCQ (auto-eval), Subjective (manual-eval). Create, Schedule, Lock, Publish | Quizzes | Coding Tests |
-| **Manual Evaluation** | evaluations | ✅ Instructor Evaluates → Admin Approves → Publish. Draft→Submit→Approve→Publish | — | OCR |
-| **Digital Resources** | digital_resources | ✅ Product Types (Paper, Notes, PDF, Workbook, Series). Upload, Price, R2, Purchase, Discounts, Bundles | — | Subscriptions |
-| **Billing** | billing | ✅ Structure, Components, Installments, Payments, Receipts, Discounts, Pending, Online Payment Gateway (Razorpay) | — | Auto Late Fee |
-| **Notifications** | notifications | ✅ Email, In-App, Templates, Auto-Reminders | WhatsApp | Push |
-| **AI Service** | ai_service | ✅ Capabilities: Doubt Solver, MCQ Explanation. Cache-first. Feature-flagged | Summarize | Voice, Planner |
-| **Google Calendar** | calendar | ✅ One-Way Sync: Class → Event, Assessment → Event | — | Two-Way Sync |
-| **Dashboards** | dashboards | ✅ Platform Admin, Tenant Admin, Instructor, Learner, Associated Contact | Custom Widgets | Predictive |
-| **Analytics** | analytics | ✅ Attendance, Billing, Assessment, Progress reports | Export | AI Insights |
-| **Feature Flags** | feature_flags | ✅ Toggle: AI, Live Class, Assessments, Store, Billing, Portal, Calendar | — | Per-Rule |
-| **Associated Contact Portal** | contact_portal | ✅ Dashboard, Attendance, Results, Billing, Notifications | Self-Payment | Two-Way Comms |
-| **Profile System** | profiles | ⚠️ Generic DB naming only. NEET labels hardcoded in UI | UI Labels Config | Multi-Profile |
-| **Workflow Engine** | workflow | ❌ | ❌ | ✅ V2 |
-| **Advanced RBAC** | abac | ❌ | ❌ | ✅ V2 |
+| Module                        | Generic Name (DB/API)  | V1 (Must-Have)                                                                                                    | V1.1             | V2+                 |
+| ----------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------- |
+| **Platform Admin**            | platform_admin         | ✅ Login, Create Tenant, Activate/Deactivate, Subscription, Storage, Dashboard                                    | —                | Advanced Analytics  |
+| **Multi-Tenant**              | tenant_isolation       | ✅ Row-Level Isolation, institute_id scoping                                                                      | —                | Sharding            |
+| **Institute**                 | institutes             | ✅ Profile, Logo, Address, Contact, Code, Timezone                                                                | Theme            | White-label         |
+| **Branches**                  | branches               | ✅ Create, Edit, Status                                                                                           | —                | Branch Analytics    |
+| **Academic Years**            | academic_years         | ✅ Create, Set Active                                                                                             | —                | Multi-Year Planning |
+| **Curriculum**                | curriculum_nodes       | ✅ Configurable tree: Course→Subject→Chapter→Topic                                                                | Bulk Import      | AI Generation       |
+| **Learning Groups**           | learning_groups        | ✅ Create, Assign Instructor/Learner, Timetable                                                                   | Auto Scheduling  | AI Optimization     |
+| **People**                    | people → users → roles | ✅ Unified Person model. Roles: Tenant Admin, Instructor, Learner, Associated Contact, Staff                      | Bulk Upload      | Advanced Roles      |
+| **Attendance**                | attendance             | ✅ Mark, Reports, Leave, Configurable Statuses                                                                    | SMS Alerts       | Biometric/RFID      |
+| **Learning Content**          | learning_content       | ✅ Upload PDF/PPT/Video/Audio, Organize by Curriculum Node, R2 Storage                                            | Version History  | AI Recommendations  |
+| **Live Classes**              | live_classes           | ✅ Schedule, Google Calendar (One-Way), Jitsi, Attendance, R2 Recording, Session Types (BATCH/GROUP/ONE_TO_ONE)   | Auto-Processing  | Breakout, Polls     |
+| **Assessments**               | assessments            | ✅ Type: MCQ (auto-eval), Subjective (manual-eval). Create, Schedule, Lock, Publish                               | Quizzes          | Coding Tests        |
+| **Manual Evaluation**         | evaluations            | ✅ Instructor Evaluates → Admin Approves → Publish. Draft→Submit→Approve→Publish                                  | —                | OCR                 |
+| **Digital Resources**         | digital_resources      | ✅ Product Types (Paper, Notes, PDF, Workbook, Series). Upload, Price, R2, Purchase, Discounts, Bundles           | —                | Subscriptions       |
+| **Billing**                   | billing                | ✅ Structure, Components, Installments, Payments, Receipts, Discounts, Pending, Online Payment Gateway (Razorpay) | —                | Auto Late Fee       |
+| **Notifications**             | notifications          | ✅ Email, In-App, Templates, Auto-Reminders                                                                       | WhatsApp         | Push                |
+| **AI Service**                | ai_service             | ✅ Capabilities: Doubt Solver, MCQ Explanation. Cache-first. Feature-flagged                                      | Summarize        | Voice, Planner      |
+| **Google Calendar**           | calendar               | ✅ One-Way Sync: Class → Event, Assessment → Event                                                                | —                | Two-Way Sync        |
+| **Dashboards**                | dashboards             | ✅ Platform Admin, Tenant Admin, Instructor, Learner, Associated Contact                                          | Custom Widgets   | Predictive          |
+| **Analytics**                 | analytics              | ✅ Attendance, Billing, Assessment, Progress reports                                                              | Export           | AI Insights         |
+| **Feature Flags**             | feature_flags          | ✅ Toggle: AI, Live Class, Assessments, Store, Billing, Portal, Calendar                                          | —                | Per-Rule            |
+| **Associated Contact Portal** | contact_portal         | ✅ Dashboard, Attendance, Results, Billing, Notifications                                                         | Self-Payment     | Two-Way Comms       |
+| **Profile System**            | profiles               | ⚠️ Generic DB naming only. NEET labels hardcoded in UI                                                            | UI Labels Config | Multi-Profile       |
+| **Workflow Engine**           | workflow               | ❌                                                                                                                | ❌               | ✅ V2               |
+| **Advanced RBAC**             | abac                   | ❌                                                                                                                | ❌               | ✅ V2               |
 
 ---
 
@@ -107,15 +107,16 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 
 **V1 NEET Profile role mapping:**
 
-| Generic Role | NEET Label | Description |
-|-------------|-----------|-------------|
-| TENANT_ADMIN | Tenant Admin | Full institute control |
-| INSTRUCTOR | Tutor | Teaching + evaluation |
-| LEARNER | Student | Learning + assessments |
-| ASSOCIATED_CONTACT | Parent | Monitoring + communication |
-| STAFF | Staff (Receptionist, Cashier) | Limited operational access |
+| Generic Role       | NEET Label                    | Description                |
+| ------------------ | ----------------------------- | -------------------------- |
+| TENANT_ADMIN       | Tenant Admin                  | Full institute control     |
+| INSTRUCTOR         | Tutor                         | Teaching + evaluation      |
+| LEARNER            | Student                       | Learning + assessments     |
+| ASSOCIATED_CONTACT | Parent                        | Monitoring + communication |
+| STAFF              | Staff (Receptionist, Cashier) | Limited operational access |
 
 ### 3.1 Platform Admin
+
 - Login to platform
 - Create new tenant (select profile: NEET)
 - Activate / Deactivate tenant
@@ -125,6 +126,7 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 - Resend welcome email, reset tenant admin password
 
 ### 3.2 Tenant Admin (Full Control)
+
 - Everything below is configurable without code changes
 - Full CRUD on: Institute Profile, Branches, Academic Years, Curriculum Tree
 - Full CRUD on: Learning Groups, Learners, Instructors, Associated Contacts
@@ -135,6 +137,7 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 - Cannot: Delete other tenant data, access platform admin features
 
 ### 3.3 Instructor (Assigned Data Only)
+
 - Dashboard with assigned learning groups
 - Mark attendance for assigned groups
 - Upload learning content for assigned learning units
@@ -145,6 +148,7 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 - **Cannot:** Publish results (only submit for admin approval)
 
 ### 3.4 Learner
+
 - Dashboard with my learning groups
 - View learning content (assigned only)
 - Join live classes (assigned only)
@@ -157,6 +161,7 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 - AI Service: Doubt Solver, MCQ Explanation
 
 ### 3.5 Associated Contact
+
 - Dashboard with learner's progress
 - View learner's attendance
 - View learner's assessment results
@@ -171,114 +176,124 @@ Role (TENANT_ADMIN | INSTRUCTOR | LEARNER | ASSOCIATED_CONTACT | STAFF)
 > **Principle:** Every setting changeable from UI. Zero code changes. NEET defaults shown.
 
 ### 4.1 Institute Settings
-| Setting | Type | Default (NEET) | Description |
-|---------|------|----------------|-------------|
-| Institute Name | Text | — | Display name |
-| Platform Profile | Select (locked) | NEET Coaching | Vertical configuration |
-| Institute Logo | Image | — | Logo across platform |
-| Institute Code | Text (auto) | — | Unique code |
-| Address | Text | — | Physical address |
-| Contact Phone | Phone | — | Primary contact |
-| Support Email | Email | — | For notifications |
-| Website | URL | — | Optional |
-| Timezone | Select | Asia/Kolkata | All timestamps display in this TZ |
-| Academic Year | Select (active) | — | Current active academic year |
+
+| Setting          | Type            | Default (NEET) | Description                       |
+| ---------------- | --------------- | -------------- | --------------------------------- |
+| Institute Name   | Text            | —              | Display name                      |
+| Platform Profile | Select (locked) | NEET Coaching  | Vertical configuration            |
+| Institute Logo   | Image           | —              | Logo across platform              |
+| Institute Code   | Text (auto)     | —              | Unique code                       |
+| Address          | Text            | —              | Physical address                  |
+| Contact Phone    | Phone           | —              | Primary contact                   |
+| Support Email    | Email           | —              | For notifications                 |
+| Website          | URL             | —              | Optional                          |
+| Timezone         | Select          | Asia/Kolkata   | All timestamps display in this TZ |
+| Academic Year    | Select (active) | —              | Current active academic year      |
 
 ### 4.2 Academic Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Working Days | Multi-select | Mon-Sat | Days classes run |
-| Default Session Duration | Minutes | 60 | Default class length |
-| Default Course Duration | Months | 12 | When creating course |
-| Learning Group Naming | Text | "{Course}-{Year}-{Shift}" | Auto-generate names |
-| Attendance Policy | Select | PER_SESSION | PER_SESSION or PER_DAY |
-| Curriculum Levels | Config | Course→Subject→Chapter→Topic | Hierarchy depth |
+
+| Setting                  | Type         | Default                      | Description            |
+| ------------------------ | ------------ | ---------------------------- | ---------------------- |
+| Working Days             | Multi-select | Mon-Sat                      | Days classes run       |
+| Default Session Duration | Minutes      | 60                           | Default class length   |
+| Default Course Duration  | Months       | 12                           | When creating course   |
+| Learning Group Naming    | Text         | "{Course}-{Year}-{Shift}"    | Auto-generate names    |
+| Attendance Policy        | Select       | PER_SESSION                  | PER_SESSION or PER_DAY |
+| Curriculum Levels        | Config       | Course→Subject→Chapter→Topic | Hierarchy depth        |
 
 ### 4.3 Billing Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Default Late Fee Amount | Decimal | 0 | Per day late fee |
-| Late Fee Grace Days | Integer | 3 | Days before late fee applies |
-| Receipt Prefix | Text | "RCP-" | Prefix for receipt numbers |
-| Default Installment Plan | Select | — | When creating structure |
-| Partial Payment Allowed | Boolean | true | Allow partial payments |
-| Auto-Generate Receipt | Boolean | true | Auto on payment recording |
+
+| Setting                  | Type    | Default | Description                  |
+| ------------------------ | ------- | ------- | ---------------------------- |
+| Default Late Fee Amount  | Decimal | 0       | Per day late fee             |
+| Late Fee Grace Days      | Integer | 3       | Days before late fee applies |
+| Receipt Prefix           | Text    | "RCP-"  | Prefix for receipt numbers   |
+| Default Installment Plan | Select  | —       | When creating structure      |
+| Partial Payment Allowed  | Boolean | true    | Allow partial payments       |
+| Auto-Generate Receipt    | Boolean | true    | Auto on payment recording    |
 
 ### 4.4 Assessment Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| MCQ Correct Mark | Decimal | 4 | Per correct answer (NEET: +4) |
-| MCQ Negative Mark | Decimal | 1 | Per wrong answer deduction |
-| MCQ Unattempted Mark | Decimal | 0 | For unanswered |
-| Allow Negative Scoring | Boolean | false | Can total go below 0 |
-| Default Total Marks | Integer | 720 | Per assessment |
-| Default Duration Minutes | Integer | 180 | Per assessment |
-| Leaderboard Enabled | Boolean | true | Show rankings |
-| Leaderboard Visibility | Select | ALL | ALL or TOP_10 |
-| Auto-Publish on Eval | Boolean | false | Auto after all evaluated |
-| Re-evaluation Allowed | Boolean | true | Admin can reopen |
+
+| Setting                  | Type    | Default | Description                   |
+| ------------------------ | ------- | ------- | ----------------------------- |
+| MCQ Correct Mark         | Decimal | 4       | Per correct answer (NEET: +4) |
+| MCQ Negative Mark        | Decimal | 1       | Per wrong answer deduction    |
+| MCQ Unattempted Mark     | Decimal | 0       | For unanswered                |
+| Allow Negative Scoring   | Boolean | false   | Can total go below 0          |
+| Default Total Marks      | Integer | 720     | Per assessment                |
+| Default Duration Minutes | Integer | 180     | Per assessment                |
+| Leaderboard Enabled      | Boolean | true    | Show rankings                 |
+| Leaderboard Visibility   | Select  | ALL     | ALL or TOP_10                 |
+| Auto-Publish on Eval     | Boolean | false   | Auto after all evaluated      |
+| Re-evaluation Allowed    | Boolean | true    | Admin can reopen              |
 
 ### 4.5 Feature Flags
-| Feature | Generic Key | Toggle | Default | Description |
-|---------|------------|--------|---------|-------------|
-| AI Service | ai_service | ON/OFF | ON | Master toggle for all AI |
-| AI: Doubt Solver | ai_doubt_solver | ON/OFF | ON | Q&A capability |
-| AI: MCQ Explanation | ai_mcq_explain | ON/OFF | ON | Explain capability |
-| Live Classes | live_classes | ON/OFF | ON | Jitsi integration |
-| Assessments | assessments | ON/OFF | ON | Exam module |
-| Digital Resources | digital_resources | ON/OFF | ON | Product purchase |
-| Billing | billing | ON/OFF | ON | Fee management |
-| Associated Contact Portal | contact_portal | ON/OFF | ON | Parent access |
-| Google Calendar | calendar | ON/OFF | ON | Calendar events |
-| Attendance | attendance | ON/OFF | ON | Tracking |
-| Learner Registration | learner_registration | ON/OFF | ON | New admissions |
-| WhatsApp | whatsapp | ON/OFF | OFF | V1.1 feature |
+
+| Feature                   | Generic Key          | Toggle | Default | Description              |
+| ------------------------- | -------------------- | ------ | ------- | ------------------------ |
+| AI Service                | ai_service           | ON/OFF | ON      | Master toggle for all AI |
+| AI: Doubt Solver          | ai_doubt_solver      | ON/OFF | ON      | Q&A capability           |
+| AI: MCQ Explanation       | ai_mcq_explain       | ON/OFF | ON      | Explain capability       |
+| Live Classes              | live_classes         | ON/OFF | ON      | Jitsi integration        |
+| Assessments               | assessments          | ON/OFF | ON      | Exam module              |
+| Digital Resources         | digital_resources    | ON/OFF | ON      | Product purchase         |
+| Billing                   | billing              | ON/OFF | ON      | Fee management           |
+| Associated Contact Portal | contact_portal       | ON/OFF | ON      | Parent access            |
+| Google Calendar           | calendar             | ON/OFF | ON      | Calendar events          |
+| Attendance                | attendance           | ON/OFF | ON      | Tracking                 |
+| Learner Registration      | learner_registration | ON/OFF | ON      | New admissions           |
+| WhatsApp                  | whatsapp             | ON/OFF | OFF     | V1.1 feature             |
 
 ### 4.6 Notification Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Email Notifications | ON/OFF | ON | Master toggle |
-| In-App Notifications | ON/OFF | ON | Master toggle |
-| Live Class Reminder | Minutes | 30 | Before class |
-| Assessment Reminder | Hours | 24 | Before test |
-| Billing Due Reminder Days | Integer | 7, 3, 1 | Before due date |
-| Billing Overdue Reminder Days | Integer | 3, 7, 14 | After due date |
-| Default Email From | Email | institute@email | Sender address |
+
+| Setting                       | Type    | Default         | Description     |
+| ----------------------------- | ------- | --------------- | --------------- |
+| Email Notifications           | ON/OFF  | ON              | Master toggle   |
+| In-App Notifications          | ON/OFF  | ON              | Master toggle   |
+| Live Class Reminder           | Minutes | 30              | Before class    |
+| Assessment Reminder           | Hours   | 24              | Before test     |
+| Billing Due Reminder Days     | Integer | 7, 3, 1         | Before due date |
+| Billing Overdue Reminder Days | Integer | 3, 7, 14        | After due date  |
+| Default Email From            | Email   | institute@email | Sender address  |
 
 ### 4.7 Storage Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| R2 Storage Bucket | Text | — | Cloudflare R2 bucket |
-| Storage Quota MB | Integer | 10240 | Per-institute limit |
-| Max File Size MB | Integer | 100 | Single file limit |
-| Allowed File Types | Multi-select | pdf, ppt, mp4, jpg, png | Upload whitelist |
+
+| Setting            | Type         | Default                 | Description          |
+| ------------------ | ------------ | ----------------------- | -------------------- |
+| R2 Storage Bucket  | Text         | —                       | Cloudflare R2 bucket |
+| Storage Quota MB   | Integer      | 10240                   | Per-institute limit  |
+| Max File Size MB   | Integer      | 100                     | Single file limit    |
+| Allowed File Types | Multi-select | pdf, ppt, mp4, jpg, png | Upload whitelist     |
 
 ### 4.8 Branding Settings
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| Institute Name | Text | — | Displayed everywhere |
-| Logo | Image | — | Header, receipts, emails |
-| Theme Color | Color | #2563EB | Primary color |
-| Footer Text | Text | — | Custom footer |
+
+| Setting        | Type  | Default | Description              |
+| -------------- | ----- | ------- | ------------------------ |
+| Institute Name | Text  | —       | Displayed everywhere     |
+| Logo           | Image | —       | Header, receipts, emails |
+| Theme Color    | Color | #2563EB | Primary color            |
+| Footer Text    | Text  | —       | Custom footer            |
 
 ### 4.9 UI Labels (V1.1)
-| Generic Key | NEET Label | Description |
-|------------|-----------|-------------|
-| learning_group | Batch | Display name for groups |
-| instructor | Tutor | Display name for teachers |
-| learner | Student | Display name for students |
-| associated_contact | Parent | Display name for guardians |
-| learning_unit | Subject | Display name for subjects |
-| assessment | Mock Test | Display name for exams |
-| learning_content | Study Material | Display name for resources |
-| billing | Fee | Display name for charges |
-| digital_resource | Previous Paper | Display name for store items |
+
+| Generic Key        | NEET Label     | Description                  |
+| ------------------ | -------------- | ---------------------------- |
+| learning_group     | Batch          | Display name for groups      |
+| instructor         | Tutor          | Display name for teachers    |
+| learner            | Student        | Display name for students    |
+| associated_contact | Parent         | Display name for guardians   |
+| learning_unit      | Subject        | Display name for subjects    |
+| assessment         | Mock Test      | Display name for exams       |
+| learning_content   | Study Material | Display name for resources   |
+| billing            | Fee            | Display name for charges     |
+| digital_resource   | Previous Paper | Display name for store items |
 
 ---
 
 ## 5. Complete User Flows (V1 — NEET Profile)
 
 ### 5.1 Platform Admin Flow
+
 ```
 Login
   ↓
@@ -304,6 +319,7 @@ Platform Admin can:
 ```
 
 ### 5.2 Tenant Admin — Complete Operations Flow
+
 ```
 Tenant Admin Login (first login → force password change)
   ↓
@@ -494,6 +510,7 @@ Dashboard
 ```
 
 ### 5.3 Instructor Flow (NEET: Tutor)
+
 ```
 Login
   ↓
@@ -523,6 +540,7 @@ Learner Progress → View
 ```
 
 ### 5.4 Learner Flow (NEET: Student)
+
 ```
 Login
   ↓
@@ -551,6 +569,7 @@ Billing → View Records → Download Receipts
 ```
 
 ### 5.5 Associated Contact Flow (NEET: Parent)
+
 ```
 Login (via learner association)
   ↓
@@ -576,6 +595,7 @@ Notifications → Upcoming Classes, Assessment Reminders, Billing Alerts
 ## 6. Assessment Evaluation State Machine (V1)
 
 ### 6.1 MCQ Assessments (Auto Evaluation)
+
 ```
 Learner Attempts
     ↓
@@ -591,6 +611,7 @@ Status: PUBLISHED → Learner Can View
 ```
 
 ### 6.2 Subjective Assessments (Manual Evaluation)
+
 ```
 Learner Submits Answer (PDF/Text)
     ↓
@@ -613,13 +634,14 @@ Status: PUBLISHED → Learner Can View
 ```
 
 ### 6.3 Result States
-| State | Description | Set By |
-|-------|-------------|--------|
-| DRAFT | Instructor is evaluating | Instructor |
-| EVALUATED | Submitted for approval | Instructor |
-| APPROVED | Admin approved, not yet published | Tenant Admin |
-| PUBLISHED | Visible to learners | Tenant Admin |
-| REOPENED | Reopened for re-evaluation | Tenant Admin |
+
+| State     | Description                       | Set By       |
+| --------- | --------------------------------- | ------------ |
+| DRAFT     | Instructor is evaluating          | Instructor   |
+| EVALUATED | Submitted for approval            | Instructor   |
+| APPROVED  | Admin approved, not yet published | Tenant Admin |
+| PUBLISHED | Visible to learners               | Tenant Admin |
+| REOPENED  | Reopened for re-evaluation        | Tenant Admin |
 
 ---
 
@@ -627,29 +649,30 @@ Status: PUBLISHED → Learner Can View
 
 > **All 200+ tables exist in the database.** Below shows which get V1 APIs vs. sit ready for future.
 
-| Domain | V1 CRUD APIs | V1 Read-Only | Future (No V1 APIs) |
-|--------|-------------|-------------|---------------------|
-| **Master** | institutes, branches, academic_years, curriculum_nodes, learning_groups | batch_delivery_types | — |
-| **Auth** | users, user_roles, user_sessions | roles, permissions, role_permissions | auth_events |
-| **People** | persons, learners, instructors, associated_contacts, contact_mappings, enrollments, group_assignments, documents, medical_profiles | — | qualifications, employment_history, status_history, identifiers |
-| **Attendance** | attendance_sessions, attendance_records, leave_requests | — | adjustments, leave_attachments |
-| **Assessments** | assessments, assessment_sections, assessment_questions, registrations, attempts, answers, results, evaluations | — | result_history, documents |
-| **Question Bank** | questions, question_options, question_explanations, tags, tag_mappings | — | versions, attachments, reviews, usage, import_jobs |
-| **Learning Content** | learning_content, content_attachments, assignment_submissions | — | versions, paths, progress, bookmarks, notes, discussions |
-| **Live Classes** | live_classes, sessions, participants, attendance, recordings, resources | — | instructors, chat, polls, whiteboard, breakout, events |
-| **Billing** | billing_structures, structure_items, assignments, installments, payments, transactions, receipts, discounts, discount_assignments, penalties | — | refunds, waivers, reconciliation, audit, adjustments, allocations, closures, centers, scholarships |
-| **Communication** | notification_templates, queue, deliveries, preferences, announcements, reads | — | versions, campaigns, targets, channels, subscriptions, logs, providers, webhooks, audit, attachments, retry, rate_limits, failovers |
-| **AI Service** | ai_conversations, ai_messages, ai_requests, ai_generated_content | providers, models, prompts | feedback, usage_logs, audit_logs |
-| **Platform** | tenant_settings, feature_flags, file_uploads | — | background_jobs, schedulers, api_keys, logs, health, configs, events, audit |
-| **Calendar** | calendar_events, event_participants | — | recurring, two-way sync |
-| **Digital Resources** | store_products, product_files, purchases, access_grants | — | subscriptions, bundles |
-| **Profile System** | profiles, profile_ui_labels, profile_feature_packs, tenant_profile_config | profile_business_rules | curriculum_levels, attendance_statuses, assessment_types, billing_types, resource_types |
+| Domain                | V1 CRUD APIs                                                                                                                                 | V1 Read-Only                         | Future (No V1 APIs)                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Master**            | institutes, branches, academic_years, curriculum_nodes, learning_groups                                                                      | batch_delivery_types                 | —                                                                                                                                   |
+| **Auth**              | users, user_roles, user_sessions                                                                                                             | roles, permissions, role_permissions | auth_events                                                                                                                         |
+| **People**            | persons, learners, instructors, associated_contacts, contact_mappings, enrollments, group_assignments, documents, medical_profiles           | —                                    | qualifications, employment_history, status_history, identifiers                                                                     |
+| **Attendance**        | attendance_sessions, attendance_records, leave_requests                                                                                      | —                                    | adjustments, leave_attachments                                                                                                      |
+| **Assessments**       | assessments, assessment_sections, assessment_questions, registrations, attempts, answers, results, evaluations                               | —                                    | result_history, documents                                                                                                           |
+| **Question Bank**     | questions, question_options, question_explanations, tags, tag_mappings                                                                       | —                                    | versions, attachments, reviews, usage, import_jobs                                                                                  |
+| **Learning Content**  | learning_content, content_attachments, assignment_submissions                                                                                | —                                    | versions, paths, progress, bookmarks, notes, discussions                                                                            |
+| **Live Classes**      | live_classes, sessions, participants, attendance, recordings, resources                                                                      | —                                    | instructors, chat, polls, whiteboard, breakout, events                                                                              |
+| **Billing**           | billing_structures, structure_items, assignments, installments, payments, transactions, receipts, discounts, discount_assignments, penalties | —                                    | refunds, waivers, reconciliation, audit, adjustments, allocations, closures, centers, scholarships                                  |
+| **Communication**     | notification_templates, queue, deliveries, preferences, announcements, reads                                                                 | —                                    | versions, campaigns, targets, channels, subscriptions, logs, providers, webhooks, audit, attachments, retry, rate_limits, failovers |
+| **AI Service**        | ai_conversations, ai_messages, ai_requests, ai_generated_content                                                                             | providers, models, prompts           | feedback, usage_logs, audit_logs                                                                                                    |
+| **Platform**          | tenant_settings, feature_flags, file_uploads                                                                                                 | —                                    | background_jobs, schedulers, api_keys, logs, health, configs, events, audit                                                         |
+| **Calendar**          | calendar_events, event_participants                                                                                                          | —                                    | recurring, two-way sync                                                                                                             |
+| **Digital Resources** | store_products, product_files, purchases, access_grants                                                                                      | —                                    | subscriptions, bundles                                                                                                              |
+| **Profile System**    | profiles, profile_ui_labels, profile_feature_packs, tenant_profile_config                                                                    | profile_business_rules               | curriculum_levels, attendance_statuses, assessment_types, billing_types, resource_types                                             |
 
 ---
 
 ## 8. Data Flows for Key Operations
 
 ### 8.1 File Upload (All Types)
+
 ```
 User uploads file
     ↓
@@ -663,6 +686,7 @@ Access: R2 signed URL with expiry
 ```
 
 ### 8.2 Digital Resource Purchase
+
 ```
 Learner browses store
     ↓
@@ -678,6 +702,7 @@ Product unlocked → Read/Download
 ```
 
 ### 8.3 AI Service (Generic)
+
 ```
 Learner triggers AI Capability (Doubt Solve / MCQ Explain / future)
     ↓
@@ -700,42 +725,42 @@ Display result
 
 ## 9. Sprint Plan (V1 Build — 15 Weeks)
 
-| Sprint | Focus | Duration | Deliverables |
-|--------|-------|----------|-------------|
-| **Sprint 1** | Foundation | Week 1 | Prisma schema (all tables), Base NestJS, PrismaService, Tenant middleware, JWT auth, RBAC guards, Seed scripts |
-| **Sprint 2** | Platform Admin | Week 2 | Login, Create Tenant (Profile: NEET), Activate/Deactivate, Subscription, Dashboard |
-| **Sprint 3** | Institute + People | Weeks 3-4 | Institute profile, Branches, Academic Years, Curriculum Nodes CRUD, Unified Person model, Learner/Instructor/Contact management |
-| **Sprint 4** | Academics | Weeks 5-6 | Learning Groups (Batches), Instructor Assignment, Timetable, Attendance (mark + reports), Leave |
-| **Sprint 5** | Content + Live Classes | Weeks 7-8 | Learning Content upload (R2), Organize by Curriculum, Live Class schedule + Jitsi, Google Calendar one-way, Recording + playback |
-| **Sprint 6** | Assessments | Weeks 9-10 | Question Bank CRUD, Assessment Create/Schedule/Attempt, MCQ Auto-Eval, Manual Evaluation flow (Instructor→Admin→Publish) |
-| **Sprint 7** | Billing + Store | Weeks 11-12 | Billing Structure, Learner Records, Payments + Receipts, Digital Resources Store (upload + purchase + unlock) |
-| **Sprint 8** | Comms + AI | Week 13 | Notifications (Email + In-App), Templates, Auto-Reminders, AI Doubt Solver, AI MCQ Explanation |
-| **Sprint 9** | Dashboards + Settings | Week 14 | All role dashboards, Basic analytics, Feature Flags UI, Settings pages, Error handling |
-| **Sprint 10** | Production | Week 15 | Sentry, Rate limiting, Health checks, Vercel + Railway deploy, Smoke test, Handoff |
+| Sprint        | Focus                  | Duration    | Deliverables                                                                                                                     |
+| ------------- | ---------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Sprint 1**  | Foundation             | Week 1      | Prisma schema (all tables), Base NestJS, PrismaService, Tenant middleware, JWT auth, RBAC guards, Seed scripts                   |
+| **Sprint 2**  | Platform Admin         | Week 2      | Login, Create Tenant (Profile: NEET), Activate/Deactivate, Subscription, Dashboard                                               |
+| **Sprint 3**  | Institute + People     | Weeks 3-4   | Institute profile, Branches, Academic Years, Curriculum Nodes CRUD, Unified Person model, Learner/Instructor/Contact management  |
+| **Sprint 4**  | Academics              | Weeks 5-6   | Learning Groups (Batches), Instructor Assignment, Timetable, Attendance (mark + reports), Leave                                  |
+| **Sprint 5**  | Content + Live Classes | Weeks 7-8   | Learning Content upload (R2), Organize by Curriculum, Live Class schedule + Jitsi, Google Calendar one-way, Recording + playback |
+| **Sprint 6**  | Assessments            | Weeks 9-10  | Question Bank CRUD, Assessment Create/Schedule/Attempt, MCQ Auto-Eval, Manual Evaluation flow (Instructor→Admin→Publish)         |
+| **Sprint 7**  | Billing + Store        | Weeks 11-12 | Billing Structure, Learner Records, Payments + Receipts, Digital Resources Store (upload + purchase + unlock)                    |
+| **Sprint 8**  | Comms + AI             | Week 13     | Notifications (Email + In-App), Templates, Auto-Reminders, AI Doubt Solver, AI MCQ Explanation                                   |
+| **Sprint 9**  | Dashboards + Settings  | Week 14     | All role dashboards, Basic analytics, Feature Flags UI, Settings pages, Error handling                                           |
+| **Sprint 10** | Production             | Week 15     | Sentry, Rate limiting, Health checks, Vercel + Railway deploy, Smoke test, Handoff                                               |
 
 ---
 
 ## 10. Technology Decisions
 
-| Decision | Choice | Status |
-|----------|--------|--------|
-| Frontend | Next.js 14 (App Router) | ✅ Locked |
-| Styling | Tailwind CSS + shadcn/ui | ✅ Locked |
-| State | Zustand + React Query | ✅ Locked |
-| Backend | NestJS (TypeScript) | ✅ Locked |
-| ORM | Prisma | ✅ Locked |
-| Database | Supabase PostgreSQL (RLS) | ✅ Locked |
-| Auth | JWT + Refresh Token (RS256) | ✅ Locked |
-| Live Classes | Jitsi Meet (Self-hosted) | ✅ Locked |
-| Video Storage | Cloudflare R2 | ✅ Locked |
-| Document Storage | R2 (via Supabase Storage) | ✅ Locked |
-| AI | LLM API (OpenAI / Claude) | ✅ Locked |
-| Payments | Manual (V1) / Razorpay (V1.1) | ✅ Locked |
-| Notifications | Email (Resend) + In-App | ✅ Locked |
-| Calendar | Google Calendar API (One-Way) | ✅ Locked |
-| Hosting | Vercel + Railway | ✅ Locked |
-| Monitoring | Sentry | ✅ Locked |
-| CI/CD | GitHub Actions | ✅ Locked |
+| Decision         | Choice                        | Status    |
+| ---------------- | ----------------------------- | --------- |
+| Frontend         | Next.js 14 (App Router)       | ✅ Locked |
+| Styling          | Tailwind CSS + shadcn/ui      | ✅ Locked |
+| State            | Zustand + React Query         | ✅ Locked |
+| Backend          | NestJS (TypeScript)           | ✅ Locked |
+| ORM              | Prisma                        | ✅ Locked |
+| Database         | Supabase PostgreSQL (RLS)     | ✅ Locked |
+| Auth             | JWT + Refresh Token (RS256)   | ✅ Locked |
+| Live Classes     | Jitsi Meet (Self-hosted)      | ✅ Locked |
+| Video Storage    | Cloudflare R2                 | ✅ Locked |
+| Document Storage | R2 (via Supabase Storage)     | ✅ Locked |
+| AI               | LLM API (OpenAI / Claude)     | ✅ Locked |
+| Payments         | Manual (V1) / Razorpay (V1.1) | ✅ Locked |
+| Notifications    | Email (Resend) + In-App       | ✅ Locked |
+| Calendar         | Google Calendar API (One-Way) | ✅ Locked |
+| Hosting          | Vercel + Railway              | ✅ Locked |
+| Monitoring       | Sentry                        | ✅ Locked |
+| CI/CD            | GitHub Actions                | ✅ Locked |
 
 ---
 
@@ -789,9 +814,11 @@ These will be **rejected** if requested during V1:
 ## 13. Key Principles
 
 ### Golden Rule
+
 > **Business-specific behavior belongs in configuration, not in the database schema.**
 
 ### Platform Architecture
+
 ```
 Education Core Platform (generic DB/API)
          │
@@ -801,6 +828,7 @@ Education Core Platform (generic DB/API)
 ```
 
 ### Principles
+
 1. **Future-ready database, MVP-ready implementation.** All 200+ tables exist. Only V1 features get APIs + UI.
 2. **Everything configurable from Tenant Admin.** Zero code changes for daily operations.
 3. **Generic naming in DB/API.** Profile-specific labels in UI config.

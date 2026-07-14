@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking modifications to public
 ## GET /api/v1/public/integrations/audit
 
 ### Purpose
+
 Retrieves audit records for changes made to partner configurations, CORS settings, and API keys.
 
 ### Permission
+
 `system:integration:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:integration:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:integration:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

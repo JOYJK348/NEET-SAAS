@@ -7,38 +7,42 @@ This document defines endpoints for managing outbound integrations webhook subsc
 ## POST /api/v1/comms/webhooks/subscriptions
 
 ### Purpose
+
 Registers a webhook subscription URL to receive platform event notifications.
 
 ### Permission
+
 `webhook:subscription:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `webhook:subscription:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (secret verification keys are encrypted in db).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `webhook:subscription:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (secret verification keys are encrypted in db).
 
 ### Request DTO
+
 ```json
 {
   "targetUrl": "https://client-endpoint.com/webhook-receiver",
-  "subscribedEvents": [
-    "student.enrolled",
-    "payment.received"
-  ]
+  "subscribedEvents": ["student.enrolled", "payment.received"]
 }
 ```
 
 ### Business Rules
+
 1.  **URL Validation**: Must verify target URL is valid and uses HTTPS protocol.
 2.  **Secret generation**: Generates a secure signing secret key returned in the response payload to allow verification of the `X-Webhook-Signature` header in calls from this platform.
 
 ### Database Tables Affected
-*   `webhook_subscriptions` (Insert)
+
+- `webhook_subscriptions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

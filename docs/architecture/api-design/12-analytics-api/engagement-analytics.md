@@ -7,27 +7,31 @@ This document defines endpoints for querying LMS content engagement.
 ## GET /api/v1/analytics/engagement/lms-usage
 
 ### Purpose
+
 Exposes aggregate stats for study materials accessed counts and video playbacks watch completions.
 
 ### Permission
+
 `analytics:engagement:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:engagement:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:engagement:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
   "message": "LMS usage engagement stats retrieved.",
   "data": {
     "totalPdfViews": 1420,
-    "averageVideoWatchCompletionPercentage": 68.20
+    "averageVideoWatchCompletionPercentage": 68.2
   },
   "meta": {
     "timestamp": "2026-07-09T03:00:00.000Z",

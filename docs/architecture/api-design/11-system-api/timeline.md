@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a file's chronological history.
 ## GET /api/v1/files/{id}/timeline
 
 ### Purpose
+
 Retrieves a chronological sequence of all file actions (presign url generation, binary upload completion, and verification checks).
 
 ### Permission
+
 `file:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `file:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `file:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

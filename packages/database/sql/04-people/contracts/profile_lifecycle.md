@@ -17,8 +17,9 @@ stateDiagram-Obj
 ```
 
 ## State Definitions
-* **DRAFT**: Application initialized, documents pending verification.
-* **ACTIVE**: Fully verified student enrolled in an active batch.
-* **SUSPENDED**: Profile locked from dashboard access (e.g. fee arrears).
-* **LEFT**: Soft-archived account representing alumni or withdrawals.
-* **GRADUATED**: Completed program (NEET qualification/Term completion).
+
+- **DRAFT**: Application initialized, documents pending verification.
+- **ACTIVE**: Fully verified student enrolled in an active batch.
+- **SUSPENDED**: Profile locked from dashboard access (e.g. fee arrears).
+- **LEFT**: Soft-archived account representing alumni or withdrawals.
+- **GRADUATED**: Completed program (NEET qualification/Term completion).

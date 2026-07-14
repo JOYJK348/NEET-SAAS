@@ -7,20 +7,24 @@ This document defines endpoints for executing employee branch and department tra
 ## POST /api/v1/staff/{id}/transfer-department
 
 ### Purpose
+
 Logs a department transfer and updates the employee's active record.
 
 ### Permission
+
 `staff:transfer:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `staff:transfer:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `staff:transfer:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "newDepartmentId": "d09a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -30,13 +34,16 @@ Logs a department transfer and updates the employee's active record.
 ```
 
 ### Business Rules
+
 1.  **State check**: Employee must be `ACTIVE` or `CONFIRMED`.
 2.  **Update Employment**: Updates the `department_id` in the active `staff_employment` table.
 
 ### Database Tables Affected
-*   `staff_employment` (Update)
+
+- `staff_employment` (Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

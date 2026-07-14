@@ -7,20 +7,24 @@ This document defines endpoints for managing batch classes.
 ## POST /api/v1/batches
 
 ### Purpose
+
 Registers a new academic batch in a branch.
 
 ### Permission
+
 `batch:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `batch:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced via payload `branchId` mapping.
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `batch:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced via payload `branchId` mapping.
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "NEET 2026 Batch Alpha",
@@ -32,17 +36,21 @@ Registers a new academic batch in a branch.
 ```
 
 ### Validation Constraints
-*   `maxCapacity`: Required. Positive Integer.
-*   `code`: Required. Unique per tenant.
+
+- `maxCapacity`: Required. Positive Integer.
+- `code`: Required. Unique per tenant.
 
 ### Business Rules
+
 1.  **Capacity Validation**: Restricts admissions or student mappings once active batch enrollment count reaches `maxCapacity`.
 2.  **Duplicate check**: Ensures code does not conflict within tenant.
 
 ### Database Tables Affected
-*   `batches` (Insert)
+
+- `batches` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

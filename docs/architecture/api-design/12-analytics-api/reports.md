@@ -7,34 +7,38 @@ This document defines endpoints for configuring custom analytics reports.
 ## POST /api/v1/analytics/reports
 
 ### Purpose
+
 Registers a custom reporting query template structure.
 
 ### Permission
+
 `analytics:report:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "NEET Batch A Chemistry Progress",
   "domainFilter": "LMS",
-  "aggregationRules": [
-    { "field": "watchCompletionPercentage", "op": "AVG" }
-  ]
+  "aggregationRules": [{ "field": "watchCompletionPercentage", "op": "AVG" }]
 }
 ```
 
 ### Database Tables Affected
-*   `analytics_report_templates` (Insert)
+
+- `analytics_report_templates` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

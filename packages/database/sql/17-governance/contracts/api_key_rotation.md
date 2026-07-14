@@ -24,13 +24,13 @@ Create → Active → Expiring (30d warning) → Expired → Inactive
 
 ## Client Libraries Supported
 
-| Service | Key Type | Rotation Auto |
-|---|---|---|
-| OpenAI | Bearer Token | Manual |
-| Twilio | Account SID + Auth Token | Manual |
-| Razorpay | Key ID + Key Secret | Manual |
-| SMTP | Username + Password | Manual |
-| WhatsApp | API Token | Manual |
+| Service  | Key Type                 | Rotation Auto |
+| -------- | ------------------------ | ------------- |
+| OpenAI   | Bearer Token             | Manual        |
+| Twilio   | Account SID + Auth Token | Manual        |
+| Razorpay | Key ID + Key Secret      | Manual        |
+| SMTP     | Username + Password      | Manual        |
+| WhatsApp | API Token                | Manual        |
 
 ## Scheduled Job (via external cron)
 

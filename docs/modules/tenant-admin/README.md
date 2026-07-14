@@ -64,7 +64,7 @@ The goal of the Tenant Admin is to ensure that the coaching institute operates e
 - [Academics](06-academics.md)
 - [Mock Tests](07-mock-tests.md)
 - [Study Materials](08-study-materials.md)
-- [Fee Management](09-fee-management.md)
+- [Billing](09-billing.md)
 - [Reports](10-reports.md)
 - [Settings](11-settings.md)
 - [Workflow](12-workflow.md)

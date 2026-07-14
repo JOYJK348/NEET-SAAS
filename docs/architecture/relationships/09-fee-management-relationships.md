@@ -524,6 +524,7 @@ Triggered when the overall fee status becomes `OVERDUE` or when the fee record h
 ### Fee Installment → Fee Reminder
 
 Triggered when:
+
 - An installment due date is approaching (configurable: 7 days, 3 days, 1 day before).
 - An installment becomes `OVERDUE`.
 - A partial payment is received but balance remains.
@@ -595,6 +596,7 @@ Payment Receipt (unique numbered, immutable)
 The Fee Management domain transforms the institute's financial operations from ad-hoc manual tracking (spreadsheets, receipt books, phone calls) into a structured, auditable, and scalable financial management system.
 
 Key business impacts:
+
 - **Revenue Visibility** — institute knows total expected revenue, collected revenue, and outstanding at any point in time.
 - **Student Transparency** — students and parents always know what they owe and what they have paid.
 - **Audit Trail** — every rupee received is traceable from structure → record → installment → payment → receipt.

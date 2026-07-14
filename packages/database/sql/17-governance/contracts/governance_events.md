@@ -15,14 +15,14 @@ Fired via `pg_notify` when a feature flag's `enabled` state toggles.
 
 ## Standard Event Names (via `fn_write_audit`)
 
-| Event | Trigger | Description |
-|---|---|---|
-| `policy.created` | INSERT on `policy_settings` | New policy created |
-| `policy.updated` | UPDATE on `policy_settings` | Policy value changed |
-| `feature.enabled` | Feature flag toggled ON | Feature activated |
-| `feature.disabled` | Feature flag toggled OFF | Feature deactivated |
-| `api_key.rotated` | `sp_rotate_api_keys()` | Expired key deactivated |
-| `audit.cleanup` | `sp_cleanup_audit_logs()` | Old audit records purged |
+| Event              | Trigger                     | Description              |
+| ------------------ | --------------------------- | ------------------------ |
+| `policy.created`   | INSERT on `policy_settings` | New policy created       |
+| `policy.updated`   | UPDATE on `policy_settings` | Policy value changed     |
+| `feature.enabled`  | Feature flag toggled ON     | Feature activated        |
+| `feature.disabled` | Feature flag toggled OFF    | Feature deactivated      |
+| `api_key.rotated`  | `sp_rotate_api_keys()`      | Expired key deactivated  |
+| `audit.cleanup`    | `sp_cleanup_audit_logs()`   | Old audit records purged |
 
 ## Consumer Guide
 

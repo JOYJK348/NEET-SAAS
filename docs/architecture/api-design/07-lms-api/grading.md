@@ -7,37 +7,45 @@ This document defines endpoints for grading student coursework submissions.
 ## POST /api/v1/submissions/{id}/grade
 
 ### Purpose
+
 Grades a student's homework submission (marks allocation and remarks).
 
 ### Permission
+
 `lms:assignment:grade`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `lms:assignment:grade`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `lms:assignment:grade`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
-  "marksObtained": 45.50,
+  "marksObtained": 45.5,
   "gradingRemarks": "Excellent steps. Minor arithmetic mistake on Q4."
 }
 ```
 
 ### Validation Constraints
-*   `marksObtained`: Required. Decimal value. Must not exceed assignment maximum marks constraints.
+
+- `marksObtained`: Required. Decimal value. Must not exceed assignment maximum marks constraints.
 
 ### Business Rules
-*   Updates the submission record status to `GRADED`, stamping the grading staff ID.
+
+- Updates the submission record status to `GRADED`, stamping the grading staff ID.
 
 ### Database Tables Affected
-*   `assignment_submissions` (Update)
+
+- `assignment_submissions` (Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

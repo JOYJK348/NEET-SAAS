@@ -47,19 +47,19 @@ Education Core Platform (Generic)
 
 ### 2.1 Module Naming (Database → Generic)
 
-| Current (NEET-specific) | Generic (DB/API) | Reason |
-|------------------------|-----------------|--------|
-| Mock Test | **Assessment** | Covers MCQ, Subjective, Quiz, Assignment, Practice Test, Coding Test |
-| Learning Materials | **Learning Content** | Covers PDF, Video, Audio, SCORM, Interactive, URL, AR/VR |
-| Batch | **Learning Group** | Covers Batch, Class, Section, Cohort, Group |
-| Tutor | **Instructor** | Covers Tutor, Teacher, Faculty, Trainer, Coach, Mentor, Professor |
-| Student | **Learner** | Covers Student, Employee, Resident, Trainee, Participant |
-| Parent | **Associated Contact** | Covers Parent, Guardian, Sponsor, Manager, Emergency Contact |
-| Subject | **Learning Unit** | Covers Subject, Skill, Module, Rotation, Domain |
-| Chapter | **Curriculum Node** | Covers Chapter, Unit, Lesson, Module, Topic (configurable depth) |
-| Fee | **Billing** | Covers Fee, Subscription, Membership, Tuition, Transport, Hostel |
-| Previous Papers | **Digital Resource** | Covers Paper, Notes, PDF, Video Course, Test Series, Bundle |
-| Attendance | **Attendance** | Status values configurable per profile |
+| Current (NEET-specific) | Generic (DB/API)       | Reason                                                               |
+| ----------------------- | ---------------------- | -------------------------------------------------------------------- |
+| Mock Test               | **Assessment**         | Covers MCQ, Subjective, Quiz, Assignment, Practice Test, Coding Test |
+| Learning Materials      | **Learning Content**   | Covers PDF, Video, Audio, SCORM, Interactive, URL, AR/VR             |
+| Batch                   | **Learning Group**     | Covers Batch, Class, Section, Cohort, Group                          |
+| Tutor                   | **Instructor**         | Covers Tutor, Teacher, Faculty, Trainer, Coach, Mentor, Professor    |
+| Student                 | **Learner**            | Covers Student, Employee, Resident, Trainee, Participant             |
+| Parent                  | **Associated Contact** | Covers Parent, Guardian, Sponsor, Manager, Emergency Contact         |
+| Subject                 | **Learning Unit**      | Covers Subject, Skill, Module, Rotation, Domain                      |
+| Chapter                 | **Curriculum Node**    | Covers Chapter, Unit, Lesson, Module, Topic (configurable depth)     |
+| Fee                     | **Billing**            | Covers Fee, Subscription, Membership, Tuition, Transport, Hostel     |
+| Previous Papers         | **Digital Resource**   | Covers Paper, Notes, PDF, Video Course, Test Series, Bundle          |
+| Attendance              | **Attendance**         | Status values configurable per profile                               |
 
 ### 2.2 Database Tables Stay Generic
 
@@ -83,17 +83,17 @@ digital_resources   → NOT previous_papers
 
 ### 3.1 Profile Registry
 
-| Profile ID | Name | V1 Status |
-|-----------|------|-----------|
-| `neet-coaching` | NEET Coaching Center | ✅ V1 Target |
-| `jee-coaching` | JEE Coaching Center | 🔜 Future |
-| `upsc-coaching` | UPSC / TNPSC Academy | 🔜 Future |
-| `school-k12` | School (K-12) | 🔜 Future |
-| `college` | College / University | 🔜 Future |
-| `tuition` | Tuition Center | 🔜 Future |
-| `language` | Language Institute | 🔜 Future |
-| `corporate` | Corporate Training | 🔜 Future |
-| `competitive-exams` | Banking / SSC / Others | 🔜 Future |
+| Profile ID          | Name                   | V1 Status    |
+| ------------------- | ---------------------- | ------------ |
+| `neet-coaching`     | NEET Coaching Center   | ✅ V1 Target |
+| `jee-coaching`      | JEE Coaching Center    | 🔜 Future    |
+| `upsc-coaching`     | UPSC / TNPSC Academy   | 🔜 Future    |
+| `school-k12`        | School (K-12)          | 🔜 Future    |
+| `college`           | College / University   | 🔜 Future    |
+| `tuition`           | Tuition Center         | 🔜 Future    |
+| `language`          | Language Institute     | 🔜 Future    |
+| `corporate`         | Corporate Training     | 🔜 Future    |
+| `competitive-exams` | Banking / SSC / Others | 🔜 Future    |
 
 ### 3.2 Profile Configuration Schema
 
@@ -172,21 +172,21 @@ A `ui_labels` table or JSONB config maps generic DB names → profile-specific d
 
 ### 4.2 Label Map Per Profile
 
-| Generic (DB/API) | NEET | School | Corporate | UPSC |
-|-----------------|------|--------|-----------|------|
-| Learning Group | Batch | Class | Cohort | Batch |
-| Instructor | Tutor | Teacher | Trainer | Faculty |
-| Learner | Student | Student | Employee | Candidate |
-| Associated Contact | Parent | Guardian | Manager | — |
-| Learning Unit | Subject | Subject | Skill | Subject |
-| Assessment | Mock Test | Exam | Assessment | Test Series |
-| Learning Content | Study Material | Textbook | Course Material | Notes |
-| Billing | Fees | Fees | Training Cost | Fees |
-| Digital Resource | Previous Paper | Worksheet | Resource | PYQ |
-| Curriculum Node 1 | Course | Class | Program | Course |
-| Curriculum Node 2 | Subject | Subject | Module | Subject |
-| Curriculum Node 3 | Chapter | Unit | Session | Chapter |
-| Curriculum Node 4 | Topic | Lesson | Topic | Topic |
+| Generic (DB/API)   | NEET           | School    | Corporate       | UPSC        |
+| ------------------ | -------------- | --------- | --------------- | ----------- |
+| Learning Group     | Batch          | Class     | Cohort          | Batch       |
+| Instructor         | Tutor          | Teacher   | Trainer         | Faculty     |
+| Learner            | Student        | Student   | Employee        | Candidate   |
+| Associated Contact | Parent         | Guardian  | Manager         | —           |
+| Learning Unit      | Subject        | Subject   | Skill           | Subject     |
+| Assessment         | Mock Test      | Exam      | Assessment      | Test Series |
+| Learning Content   | Study Material | Textbook  | Course Material | Notes       |
+| Billing            | Fees           | Fees      | Training Cost   | Fees        |
+| Digital Resource   | Previous Paper | Worksheet | Resource        | PYQ         |
+| Curriculum Node 1  | Course         | Class     | Program         | Course      |
+| Curriculum Node 2  | Subject        | Subject   | Module          | Subject     |
+| Curriculum Node 3  | Chapter        | Unit      | Session         | Chapter     |
+| Curriculum Node 4  | Topic          | Lesson    | Topic           | Topic       |
 
 ### 4.3 Implementation
 
@@ -207,23 +207,23 @@ CREATE TABLE profile_ui_labels (
 
 ### 5.1 Module Availability Matrix
 
-| Module | NEET | School | Corporate | UPSC | College | Language |
-|--------|------|--------|-----------|------|---------|----------|
-| Attendance | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Learning Content | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Live Classes | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Assessments | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Billing | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Digital Resources | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| AI Service | ✅ | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Parent Portal | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Calendar | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Communication | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Analytics | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Certification | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ |
-| Placement | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-| Hostel Management | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ |
-| Transport Management | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Module               | NEET | School | Corporate | UPSC | College | Language |
+| -------------------- | ---- | ------ | --------- | ---- | ------- | -------- |
+| Attendance           | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Learning Content     | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Live Classes         | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Assessments          | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Billing              | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Digital Resources    | ✅   | ✅     | ❌        | ✅   | ✅      | ✅       |
+| AI Service           | ✅   | ⚠️     | ✅        | ✅   | ✅      | ✅       |
+| Parent Portal        | ✅   | ✅     | ❌        | ❌   | ❌      | ❌       |
+| Calendar             | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Communication        | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Analytics            | ✅   | ✅     | ✅        | ✅   | ✅      | ✅       |
+| Certification        | ❌   | ✅     | ✅        | ❌   | ✅      | ❌       |
+| Placement            | ❌   | ❌     | ❌        | ❌   | ✅      | ❌       |
+| Hostel Management    | ❌   | ⚠️     | ❌        | ❌   | ✅      | ❌       |
+| Transport Management | ❌   | ✅     | ❌        | ❌   | ❌      | ❌       |
 
 ### 5.2 Implementation
 
@@ -245,14 +245,14 @@ CREATE TABLE profile_feature_packs (
 
 Different verticals have different curriculum depths:
 
-| Vertical | Level 1 | Level 2 | Level 3 | Level 4 | Level 5 |
-|----------|---------|---------|---------|---------|---------|
-| NEET Coaching | Course | Subject | Chapter | Topic | — |
-| School (K12) | Grade/Class | Subject | Unit | Lesson | Topic |
-| Corporate | Program | Module | Session | Topic | — |
-| College | Degree/Course | Semester | Subject | Unit | Topic |
-| Language Institute | Level | Module | Unit | Lesson | — |
-| UPSC | Course | Subject | Topic | Subtopic | — |
+| Vertical           | Level 1       | Level 2  | Level 3 | Level 4  | Level 5 |
+| ------------------ | ------------- | -------- | ------- | -------- | ------- |
+| NEET Coaching      | Course        | Subject  | Chapter | Topic    | —       |
+| School (K12)       | Grade/Class   | Subject  | Unit    | Lesson   | Topic   |
+| Corporate          | Program       | Module   | Session | Topic    | —       |
+| College            | Degree/Course | Semester | Subject | Unit     | Topic   |
+| Language Institute | Level         | Module   | Unit    | Lesson   | —       |
+| UPSC               | Course        | Subject  | Topic   | Subtopic | —       |
 
 ### 6.2 Solution: Configurable Curriculum Tree
 
@@ -279,6 +279,7 @@ CREATE INDEX idx_curriculum_nodes_tenant_parent
 ```
 
 **How it works:**
+
 - Profile defines how many levels and what each level is called
 - The same table handles Course→Subject→Chapter→Topic for NEET
 - AND handles Program→Module→Session→Topic for Corporate
@@ -322,10 +323,10 @@ CREATE TABLE profile_attendance_statuses (
 
 ### 7.2 Examples
 
-| Profile | Statuses |
-|---------|----------|
-| NEET | PRESENT, ABSENT, LATE, EXCUSED |
-| School | PRESENT, ABSENT, LATE, EXCUSED, HALF_DAY, HOLIDAY, MEDICAL, PERMISSION |
+| Profile   | Statuses                                                                |
+| --------- | ----------------------------------------------------------------------- |
+| NEET      | PRESENT, ABSENT, LATE, EXCUSED                                          |
+| School    | PRESENT, ABSENT, LATE, EXCUSED, HALF_DAY, HOLIDAY, MEDICAL, PERMISSION  |
 | Corporate | PRESENT, ABSENT, LATE, WFH, HALF_DAY, ON_LEAVE, TRAINING, BUSINESS_TRIP |
 
 ---
@@ -349,12 +350,12 @@ CREATE TABLE profile_assessment_types (
 
 ### 8.2 Examples
 
-| Profile | Assessment Types |
-|---------|-----------------|
-| NEET | MCQ (auto), Subjective (manual), Assignment (manual), Practice Test (auto) |
-| School | MCQ (auto), Subjective (manual), Quiz (auto), Project (manual), Oral (manual) |
-| Corporate | Quiz (auto), Assessment (auto), Certification (auto), Project (manual) |
-| Language | MCQ (auto), Speaking (manual), Listening (auto), Writing (manual) |
+| Profile   | Assessment Types                                                              |
+| --------- | ----------------------------------------------------------------------------- |
+| NEET      | MCQ (auto), Subjective (manual), Assignment (manual), Practice Test (auto)    |
+| School    | MCQ (auto), Subjective (manual), Quiz (auto), Project (manual), Oral (manual) |
+| Corporate | Quiz (auto), Assessment (auto), Certification (auto), Project (manual)        |
+| Language  | MCQ (auto), Speaking (manual), Listening (auto), Writing (manual)             |
 
 ---
 
@@ -378,12 +379,12 @@ CREATE TABLE profile_billing_types (
 
 ### 9.2 Examples
 
-| Profile | Billing Types |
-|---------|--------------|
-| NEET | Tuition Fee, Library Fee, Lab Fee, Exam Fee, Miscellaneous |
-| School | Tuition, Transport, Hostel, Library, Sports, Lab, Exam, Uniform |
-| College | Tuition, Hostel, Mess, Library, Lab, Sports, Exam, Placement |
-| Corporate | Training Cost, Certification Fee, Material Fee |
+| Profile   | Billing Types                                                   |
+| --------- | --------------------------------------------------------------- |
+| NEET      | Tuition Fee, Library Fee, Lab Fee, Exam Fee, Miscellaneous      |
+| School    | Tuition, Transport, Hostel, Library, Sports, Lab, Exam, Uniform |
+| College   | Tuition, Hostel, Mess, Library, Lab, Sports, Exam, Placement    |
+| Corporate | Training Cost, Certification Fee, Material Fee                  |
 
 ---
 
@@ -406,12 +407,12 @@ CREATE TABLE profile_digital_resource_types (
 
 ### 10.2 Examples
 
-| Profile | Resource Types |
-|---------|---------------|
-| NEET | Previous Year Paper, Notes, Premium PDF, Workbook, Test Series |
-| School | Worksheet, Practice Paper, Notes, Reference Book, Video Lesson |
-| Corporate | Training Manual, Assessment Guide, Template, Reference Document |
-| Language Institute | Workbook, Audio Lesson, Practice Test, Phrasebook |
+| Profile            | Resource Types                                                  |
+| ------------------ | --------------------------------------------------------------- |
+| NEET               | Previous Year Paper, Notes, Premium PDF, Workbook, Test Series  |
+| School             | Worksheet, Practice Paper, Notes, Reference Book, Video Lesson  |
+| Corporate          | Training Manual, Assessment Guide, Template, Reference Document |
+| Language Institute | Workbook, Audio Lesson, Practice Test, Phrasebook               |
 
 ---
 
@@ -450,33 +451,33 @@ Month 12: Profile marketplace — tenants choose their vertical.
 
 ## 12. Profile System — Database Tables
 
-| Table | Purpose |
-|-------|---------|
-| `profiles` | Profile registry (neet-coaching, school-k12, corporate) |
-| `profile_ui_labels` | Generic → display label mapping per profile |
-| `profile_feature_packs` | Enabled modules per profile |
-| `profile_business_rules` | Business rules (JSONB) per profile |
-| `profile_curriculum_levels` | Curriculum hierarchy definition per profile |
-| `profile_attendance_statuses` | Available attendance statuses per profile |
-| `profile_assessment_types` | Assessment type definitions per profile |
-| `profile_billing_types` | Billing type definitions per profile |
-| `profile_digital_resource_types` | Digital resource type definitions per profile |
-| `tenant_profile_config` | Tenant-specific profile overrides |
+| Table                            | Purpose                                                 |
+| -------------------------------- | ------------------------------------------------------- |
+| `profiles`                       | Profile registry (neet-coaching, school-k12, corporate) |
+| `profile_ui_labels`              | Generic → display label mapping per profile             |
+| `profile_feature_packs`          | Enabled modules per profile                             |
+| `profile_business_rules`         | Business rules (JSONB) per profile                      |
+| `profile_curriculum_levels`      | Curriculum hierarchy definition per profile             |
+| `profile_attendance_statuses`    | Available attendance statuses per profile               |
+| `profile_assessment_types`       | Assessment type definitions per profile                 |
+| `profile_billing_types`          | Billing type definitions per profile                    |
+| `profile_digital_resource_types` | Digital resource type definitions per profile           |
+| `tenant_profile_config`          | Tenant-specific profile overrides                       |
 
 ---
 
 ## 13. Implementation Priority (V1)
 
-| Item | V1 | V1.1 | V2 |
-|------|----|------|----|
-| Generic DB naming (assessments, learning_content, etc.) | ✅ ASAP | — | — |
-| UI Labels config | — | ✅ | — |
-| Profile registry | — | ✅ | — |
-| Feature packs | — | ✅ | — |
-| Curriculum tree (configurable levels) | — | — | ✅ |
-| Business rules config | — | — | ✅ |
-| Multi-profile activation | — | — | ✅ |
-| Profile marketplace | — | — | ✅ |
+| Item                                                    | V1      | V1.1 | V2  |
+| ------------------------------------------------------- | ------- | ---- | --- |
+| Generic DB naming (assessments, learning_content, etc.) | ✅ ASAP | —    | —   |
+| UI Labels config                                        | —       | ✅   | —   |
+| Profile registry                                        | —       | ✅   | —   |
+| Feature packs                                           | —       | ✅   | —   |
+| Curriculum tree (configurable levels)                   | —       | —    | ✅  |
+| Business rules config                                   | —       | —    | ✅  |
+| Multi-profile activation                                | —       | —    | ✅  |
+| Profile marketplace                                     | —       | —    | ✅  |
 
 **V1 Recommendation:** Use generic naming in DB and APIs from day 1. Hardcode NEET labels in frontend initially. Add the profile config engine in V1.1.
 
@@ -484,20 +485,20 @@ Month 12: Profile marketplace — tenants choose their vertical.
 
 ## 14. Summary: Generic vs NEET-Specific
 
-| Concept | Generic (DB/API) | NEET (Profile Config) |
-|---------|-----------------|----------------------|
-| Table: Learning Groups | `learning_groups` | Display as "Batch" |
-| Table: Instructors | `instructors` | Display as "Tutor" |
-| Table: Learners | `learners` | Display as "Student" |
-| Table: Assessments | `assessments` | Display as "Mock Test" |
-| Table: Learning Content | `learning_content` | Display as "Study Material" |
-| Table: Digital Resources | `digital_resources` | Display as "Previous Papers" |
-| Table: Billing | `billing` | Display as "Fees" |
-| Curriculum | Curriculum Tree | Course → Subject → Chapter → Topic |
-| Attendance Status | Configurable | PRESENT, ABSENT, LATE, EXCUSED |
-| Assessment Types | Configurable | MCQ (auto), Subjective (manual) |
-| Exam Rules | Profile Config | +4/-1 marking, 720 marks |
-| Enabled Modules | Feature Packs | Attendance, Exams, Fees, AI... |
+| Concept                  | Generic (DB/API)    | NEET (Profile Config)              |
+| ------------------------ | ------------------- | ---------------------------------- |
+| Table: Learning Groups   | `learning_groups`   | Display as "Batch"                 |
+| Table: Instructors       | `instructors`       | Display as "Tutor"                 |
+| Table: Learners          | `learners`          | Display as "Student"               |
+| Table: Assessments       | `assessments`       | Display as "Mock Test"             |
+| Table: Learning Content  | `learning_content`  | Display as "Study Material"        |
+| Table: Digital Resources | `digital_resources` | Display as "Previous Papers"       |
+| Table: Billing           | `billing`           | Display as "Fees"                  |
+| Curriculum               | Curriculum Tree     | Course → Subject → Chapter → Topic |
+| Attendance Status        | Configurable        | PRESENT, ABSENT, LATE, EXCUSED     |
+| Assessment Types         | Configurable        | MCQ (auto), Subjective (manual)    |
+| Exam Rules               | Profile Config      | +4/-1 marking, 720 marks           |
+| Enabled Modules          | Feature Packs       | Attendance, Exams, Fees, AI...     |
 
 ---
 

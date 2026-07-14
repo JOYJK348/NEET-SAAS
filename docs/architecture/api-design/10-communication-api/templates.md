@@ -7,20 +7,24 @@ This document defines endpoints for managing communication templates.
 ## POST /api/v1/comms/templates
 
 ### Purpose
+
 Registers a new notification layout template.
 
 ### Permission
+
 `template:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `template:create`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `template:create`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "code": "WELCOME-EMAIL",
@@ -31,13 +35,16 @@ Registers a new notification layout template.
 ```
 
 ### Business Rules
-*   Validates template variables structure format using dynamic template compilation checks.
-*   Enforces code uniqueness.
+
+- Validates template variables structure format using dynamic template compilation checks.
+- Enforces code uniqueness.
 
 ### Database Tables Affected
-*   `communication_templates` (Insert)
+
+- `communication_templates` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

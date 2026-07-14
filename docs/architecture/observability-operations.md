@@ -10,14 +10,14 @@
 
 ## 1. Observability Stack
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Metrics** | Prometheus | System + application metrics collection |
-| **Visualization** | Grafana | Dashboards, alerting UI |
-| **Logs** | Loki (via Grafana) | Centralized log aggregation |
-| **Tracing** | OpenTelemetry | Distributed tracing across services |
-| **Error Tracking** | Sentry | Unhandled exceptions, error grouping |
-| **Uptime** | UptimeRobot / BetterStack | External availability monitoring |
+| Layer              | Technology                | Purpose                                 |
+| ------------------ | ------------------------- | --------------------------------------- |
+| **Metrics**        | Prometheus                | System + application metrics collection |
+| **Visualization**  | Grafana                   | Dashboards, alerting UI                 |
+| **Logs**           | Loki (via Grafana)        | Centralized log aggregation             |
+| **Tracing**        | OpenTelemetry             | Distributed tracing across services     |
+| **Error Tracking** | Sentry                    | Unhandled exceptions, error grouping    |
+| **Uptime**         | UptimeRobot / BetterStack | External availability monitoring        |
 
 ---
 
@@ -25,61 +25,61 @@
 
 ### 2.1 Infrastructure Metrics
 
-| Metric | Source | Dashboard |
-|---|---|---|
-| CPU Usage | Prometheus node_exporter | Grafana: Infrastructure |
+| Metric       | Source                   | Dashboard               |
+| ------------ | ------------------------ | ----------------------- |
+| CPU Usage    | Prometheus node_exporter | Grafana: Infrastructure |
 | Memory Usage | Prometheus node_exporter | Grafana: Infrastructure |
-| Disk I/O | Prometheus node_exporter | Grafana: Infrastructure |
-| Network I/O | Prometheus node_exporter | Grafana: Infrastructure |
+| Disk I/O     | Prometheus node_exporter | Grafana: Infrastructure |
+| Network I/O  | Prometheus node_exporter | Grafana: Infrastructure |
 
 ### 2.2 Database Metrics
 
-| Metric | Source | Dashboard |
-|---|---|---|
-| Query Latency (P50/P95/P99) | pg_stat_statements | Grafana: Database |
-| Slow Queries (> 200ms) | pg_stat_statements | Grafana: Database |
-| Active Connections | pg_stat_activity | Grafana: Database |
-| Connection Pool Usage | PgBouncer / Supabase metrics | Grafana: Database |
-| Deadlocks | pg_stat_database | Grafana: Database |
-| Table Bloat | pg_stat_user_tables | Grafana: Database |
-| Index Hit Rate | pg_stat_user_indexes | Grafana: Database |
-| Rows Read / Written | pg_stat_user_tables | Grafana: Database |
-| WAL Size | pg_stat_wal | Grafana: Database |
-| Replication Lag | pg_stat_replication | Grafana: Database |
+| Metric                      | Source                       | Dashboard         |
+| --------------------------- | ---------------------------- | ----------------- |
+| Query Latency (P50/P95/P99) | pg_stat_statements           | Grafana: Database |
+| Slow Queries (> 200ms)      | pg_stat_statements           | Grafana: Database |
+| Active Connections          | pg_stat_activity             | Grafana: Database |
+| Connection Pool Usage       | PgBouncer / Supabase metrics | Grafana: Database |
+| Deadlocks                   | pg_stat_database             | Grafana: Database |
+| Table Bloat                 | pg_stat_user_tables          | Grafana: Database |
+| Index Hit Rate              | pg_stat_user_indexes         | Grafana: Database |
+| Rows Read / Written         | pg_stat_user_tables          | Grafana: Database |
+| WAL Size                    | pg_stat_wal                  | Grafana: Database |
+| Replication Lag             | pg_stat_replication          | Grafana: Database |
 
 ### 2.3 Application Metrics
 
-| Metric | Source | Dashboard |
-|---|---|---|
-| API Latency (per endpoint, P50/P95/P99) | OpenTelemetry / NestJS interceptor | Grafana: API |
-| Request Count (per endpoint, per status code) | OpenTelemetry | Grafana: API |
-| Error Rate (4xx, 5xx) | OpenTelemetry | Grafana: API |
-| Active Users (concurrent sessions) | Application counter | Grafana: Business |
-| Background Job Duration | Bull MQ metrics | Grafana: Jobs |
-| Queue Depth | Bull MQ metrics | Grafana: Jobs |
-| Event Processing Lag | Custom metric | Grafana: Events |
+| Metric                                        | Source                             | Dashboard         |
+| --------------------------------------------- | ---------------------------------- | ----------------- |
+| API Latency (per endpoint, P50/P95/P99)       | OpenTelemetry / NestJS interceptor | Grafana: API      |
+| Request Count (per endpoint, per status code) | OpenTelemetry                      | Grafana: API      |
+| Error Rate (4xx, 5xx)                         | OpenTelemetry                      | Grafana: API      |
+| Active Users (concurrent sessions)            | Application counter                | Grafana: Business |
+| Background Job Duration                       | Bull MQ metrics                    | Grafana: Jobs     |
+| Queue Depth                                   | Bull MQ metrics                    | Grafana: Jobs     |
+| Event Processing Lag                          | Custom metric                      | Grafana: Events   |
 
 ### 2.4 Cache Metrics
 
-| Metric | Source | Dashboard |
-|---|---|---|
-| Redis Hit Rate | Redis INFO stats | Grafana: Cache |
-| Redis Memory Usage | Redis INFO memory | Grafana: Cache |
-| Redis Connection Count | Redis INFO clients | Grafana: Cache |
+| Metric                            | Source              | Dashboard      |
+| --------------------------------- | ------------------- | -------------- |
+| Redis Hit Rate                    | Redis INFO stats    | Grafana: Cache |
+| Redis Memory Usage                | Redis INFO memory   | Grafana: Cache |
+| Redis Connection Count            | Redis INFO clients  | Grafana: Cache |
 | Cache Miss Rate (per key pattern) | Application counter | Grafana: Cache |
-| Cache Eviction Rate | Redis INFO stats | Grafana: Cache |
+| Cache Eviction Rate               | Redis INFO stats    | Grafana: Cache |
 
 ### 2.5 Business Metrics
 
-| Metric | Source | Dashboard |
-|---|---|---|
-| Daily New Institutes | Application event counter | Grafana: Business |
-| Daily Admissions | Application event counter | Grafana: Business |
-| Active Subscriptions | Periodic DB count | Grafana: Business |
-| Subscription Renewals / Expirations | Domain events | Grafana: Business |
-| Daily Attendance % | Aggregation job | Grafana: Business |
-| Assessment Completion Rate | Aggregation job | Grafana: Business |
-| Revenue (if applicable) | Payment domain events | Grafana: Business |
+| Metric                              | Source                    | Dashboard         |
+| ----------------------------------- | ------------------------- | ----------------- |
+| Daily New Institutes                | Application event counter | Grafana: Business |
+| Daily Admissions                    | Application event counter | Grafana: Business |
+| Active Subscriptions                | Periodic DB count         | Grafana: Business |
+| Subscription Renewals / Expirations | Domain events             | Grafana: Business |
+| Daily Attendance %                  | Aggregation job           | Grafana: Business |
+| Assessment Completion Rate          | Aggregation job           | Grafana: Business |
+| Revenue (if applicable)             | Payment domain events     | Grafana: Business |
 
 ---
 
@@ -87,13 +87,13 @@
 
 ### 3.1 Log Levels
 
-| Level | Usage | Example |
-|---|---|---|
-| `ERROR` | Unrecoverable failures, unhandled exceptions | Prisma query failure, payment webhook crash |
-| `WARN` | Recoverable issues, degraded performance | Redis fallback to DB, retry attempt |
-| `INFO` | Business events, state transitions | Institute created, subscription expired |
-| `DEBUG` | Development-time detail | Query parameters, cache key lookups |
-| `TRACE` | Granular internal flow | Function entry/exit (disabled in production) |
+| Level   | Usage                                        | Example                                      |
+| ------- | -------------------------------------------- | -------------------------------------------- |
+| `ERROR` | Unrecoverable failures, unhandled exceptions | Prisma query failure, payment webhook crash  |
+| `WARN`  | Recoverable issues, degraded performance     | Redis fallback to DB, retry attempt          |
+| `INFO`  | Business events, state transitions           | Institute created, subscription expired      |
+| `DEBUG` | Development-time detail                      | Query parameters, cache key lookups          |
+| `TRACE` | Granular internal flow                       | Function entry/exit (disabled in production) |
 
 ### 3.2 Log Format (Structured JSON)
 
@@ -117,25 +117,25 @@
 
 Every log line MUST include:
 
-| Field | Source | Purpose |
-|---|---|---|
-| `correlationId` | `X-Correlation-ID` header (or generated) | End-to-end request tracing |
-| `traceId` | OpenTelemetry auto-instrumentation | Distributed tracing correlation |
-| `instituteId` | JWT claim | Tenant isolation in logs |
-| `userId` | JWT claim | Who performed the action |
-| `module` | NestJS service class name | Source identification |
-| `action` | Developer-defined action name | Business event identification |
+| Field           | Source                                   | Purpose                         |
+| --------------- | ---------------------------------------- | ------------------------------- |
+| `correlationId` | `X-Correlation-ID` header (or generated) | End-to-end request tracing      |
+| `traceId`       | OpenTelemetry auto-instrumentation       | Distributed tracing correlation |
+| `instituteId`   | JWT claim                                | Tenant isolation in logs        |
+| `userId`        | JWT claim                                | Who performed the action        |
+| `module`        | NestJS service class name                | Source identification           |
+| `action`        | Developer-defined action name            | Business event identification   |
 
 ### 3.4 Log Categories
 
-| Category | Content | Retention |
-|---|---|---|
-| **Application Logs** | API requests, responses, business logic | 30 days |
-| **Access Logs** | HTTP method, path, status, latency, user agent | 90 days |
-| **Audit Logs** | CRUD on sensitive entities (before/after JSONB) | 3 years |
-| **Security Logs** | Failed login, permission denied, JWT invalid, rate limit | 1 year |
-| **Payment Logs** | Webhook payloads, payment status changes | 7 years (financial compliance) |
-| **Error Logs** | Stack traces, unhandled exceptions | 90 days |
+| Category             | Content                                                  | Retention                      |
+| -------------------- | -------------------------------------------------------- | ------------------------------ |
+| **Application Logs** | API requests, responses, business logic                  | 30 days                        |
+| **Access Logs**      | HTTP method, path, status, latency, user agent           | 90 days                        |
+| **Audit Logs**       | CRUD on sensitive entities (before/after JSONB)          | 3 years                        |
+| **Security Logs**    | Failed login, permission denied, JWT invalid, rate limit | 1 year                         |
+| **Payment Logs**     | Webhook payloads, payment status changes                 | 7 years (financial compliance) |
+| **Error Logs**       | Stack traces, unhandled exceptions                       | 90 days                        |
 
 ---
 
@@ -182,28 +182,28 @@ Domain events include correlation ID
 
 ### 5.1 Alert Thresholds
 
-| Alert | Condition | Severity | Notification Channel |
-|---|---|---|---|
-| API P95 > 200ms | Sustained 5 min | ⚠️ Warning | Slack #ops-alerts |
-| API P99 > 500ms | Sustained 5 min | 🔴 Critical | Slack + PagerDuty |
-| Error Rate > 1% | Sustained 5 min | ⚠️ Warning | Slack #ops-alerts |
-| Error Rate > 5% | Sustained 2 min | 🔴 Critical | Slack + PagerDuty |
-| DB Connection Pool > 85% | Any | ⚠️ Warning | Slack #db-alerts |
-| DB Connection Pool > 95% | Any | 🔴 Critical | PagerDuty |
-| Redis Unavailable | > 30 seconds | 🔴 Critical | Slack + PagerDuty |
-| Redis Memory > 75% | Any | ⚠️ Warning | Slack #cache-alerts |
-| Deadlocks > 3/hour | Rolling 1 hour | ⚠️ Warning | Slack #db-alerts |
-| Deadlocks > 10/hour | Rolling 1 hour | 🔴 Critical | PagerDuty |
-| Slow Query > 1s | Any single query | ⚠️ Warning | Slack #db-alerts |
-| Queue Depth > 1,000 | Sustained 5 min | ⚠️ Warning | Slack #ops-alerts |
-| Queue Depth > 5,000 | Sustained 5 min | 🔴 Critical | PagerDuty |
-| Event Processing Lag > 60s | Sustained 5 min | ⚠️ Warning | Slack #ops-alerts |
-| Disk Usage > 80% | Any | ⚠️ Warning | Slack #infra-alerts |
-| Disk Usage > 90% | Any | 🔴 Critical | PagerDuty |
-| CPU > 85% | Sustained 10 min | ⚠️ Warning | Slack #infra-alerts |
-| Subscription Cron Failure | Any failure | 🔴 Critical | Slack + PagerDuty |
-| Payment Webhook Failure > 3/hour | Rolling 1 hour | 🔴 Critical | PagerDuty |
-| Failed Logins > 10/min (same IP) | Rolling 1 min | 🔴 Critical (security) | Slack #security-alerts |
+| Alert                            | Condition        | Severity               | Notification Channel   |
+| -------------------------------- | ---------------- | ---------------------- | ---------------------- |
+| API P95 > 200ms                  | Sustained 5 min  | ⚠️ Warning             | Slack #ops-alerts      |
+| API P99 > 500ms                  | Sustained 5 min  | 🔴 Critical            | Slack + PagerDuty      |
+| Error Rate > 1%                  | Sustained 5 min  | ⚠️ Warning             | Slack #ops-alerts      |
+| Error Rate > 5%                  | Sustained 2 min  | 🔴 Critical            | Slack + PagerDuty      |
+| DB Connection Pool > 85%         | Any              | ⚠️ Warning             | Slack #db-alerts       |
+| DB Connection Pool > 95%         | Any              | 🔴 Critical            | PagerDuty              |
+| Redis Unavailable                | > 30 seconds     | 🔴 Critical            | Slack + PagerDuty      |
+| Redis Memory > 75%               | Any              | ⚠️ Warning             | Slack #cache-alerts    |
+| Deadlocks > 3/hour               | Rolling 1 hour   | ⚠️ Warning             | Slack #db-alerts       |
+| Deadlocks > 10/hour              | Rolling 1 hour   | 🔴 Critical            | PagerDuty              |
+| Slow Query > 1s                  | Any single query | ⚠️ Warning             | Slack #db-alerts       |
+| Queue Depth > 1,000              | Sustained 5 min  | ⚠️ Warning             | Slack #ops-alerts      |
+| Queue Depth > 5,000              | Sustained 5 min  | 🔴 Critical            | PagerDuty              |
+| Event Processing Lag > 60s       | Sustained 5 min  | ⚠️ Warning             | Slack #ops-alerts      |
+| Disk Usage > 80%                 | Any              | ⚠️ Warning             | Slack #infra-alerts    |
+| Disk Usage > 90%                 | Any              | 🔴 Critical            | PagerDuty              |
+| CPU > 85%                        | Sustained 10 min | ⚠️ Warning             | Slack #infra-alerts    |
+| Subscription Cron Failure        | Any failure      | 🔴 Critical            | Slack + PagerDuty      |
+| Payment Webhook Failure > 3/hour | Rolling 1 hour   | 🔴 Critical            | PagerDuty              |
+| Failed Logins > 10/min (same IP) | Rolling 1 min    | 🔴 Critical (security) | Slack #security-alerts |
 
 ### 5.2 Escalation Policy
 
@@ -219,21 +219,21 @@ Fatal    → All channels → Incident declared → War room
 
 ### 6.1 Service Level Objectives
 
-| SLI (Indicator) | SLO (Objective) | Measurement |
-|---|---|---|
-| Availability | 99.9% | Uptime checks every 30s |
-| API Latency (P95) | < 200ms | OpenTelemetry histogram |
-| API Latency (P99) | < 500ms | OpenTelemetry histogram |
-| Error Rate (5xx) | < 0.1% | Request count ratio |
-| Data Durability | 99.999% | Supabase managed (WAL + replication) |
+| SLI (Indicator)   | SLO (Objective) | Measurement                          |
+| ----------------- | --------------- | ------------------------------------ |
+| Availability      | 99.9%           | Uptime checks every 30s              |
+| API Latency (P95) | < 200ms         | OpenTelemetry histogram              |
+| API Latency (P99) | < 500ms         | OpenTelemetry histogram              |
+| Error Rate (5xx)  | < 0.1%          | Request count ratio                  |
+| Data Durability   | 99.999%         | Supabase managed (WAL + replication) |
 
 ### 6.2 Error Budget
 
-| SLO | Allowed Downtime / Month | Allowed Errors / Million Requests |
-|---|---|---|
-| 99.9% availability | 43 minutes 49 seconds | — |
-| 99.95% availability | 21 minutes 54 seconds | — |
-| < 0.1% error rate | — | 1,000 errors per 1M requests |
+| SLO                 | Allowed Downtime / Month | Allowed Errors / Million Requests |
+| ------------------- | ------------------------ | --------------------------------- |
+| 99.9% availability  | 43 minutes 49 seconds    | —                                 |
+| 99.95% availability | 21 minutes 54 seconds    | —                                 |
+| < 0.1% error rate   | —                        | 1,000 errors per 1M requests      |
 
 ### 6.3 Error Budget Policy
 
@@ -273,20 +273,20 @@ GET /health
 
 ### 7.3 Check Definitions
 
-| Component | Check Method | Timeout | Failure Behavior |
-|---|---|---|---|
-| Database | `SELECT 1` via Prisma | 5s | Status: unhealthy, alert |
-| Redis | `PING` command | 3s | Status: degraded (fallback to DB) |
-| Supabase Storage | HEAD request to bucket | 5s | Status: degraded (uploads disabled) |
-| Bull Queue | Connection check | 3s | Status: degraded (async jobs paused) |
-| Mail (SMTP) | Connection test | 5s | Status: degraded (notifications queued) |
-| Payment Gateway | API status endpoint | 5s | Status: degraded (payments queued) |
+| Component        | Check Method           | Timeout | Failure Behavior                        |
+| ---------------- | ---------------------- | ------- | --------------------------------------- |
+| Database         | `SELECT 1` via Prisma  | 5s      | Status: unhealthy, alert                |
+| Redis            | `PING` command         | 3s      | Status: degraded (fallback to DB)       |
+| Supabase Storage | HEAD request to bucket | 5s      | Status: degraded (uploads disabled)     |
+| Bull Queue       | Connection check       | 3s      | Status: degraded (async jobs paused)    |
+| Mail (SMTP)      | Connection test        | 5s      | Status: degraded (notifications queued) |
+| Payment Gateway  | API status endpoint    | 5s      | Status: degraded (payments queued)      |
 
 ### 7.4 Liveness vs Readiness
 
-| Probe | Purpose | Endpoint | Failure Action |
-|---|---|---|---|
-| **Liveness** | Is the process alive? | `GET /health/live` | Restart container |
+| Probe         | Purpose                 | Endpoint            | Failure Action            |
+| ------------- | ----------------------- | ------------------- | ------------------------- |
+| **Liveness**  | Is the process alive?   | `GET /health/live`  | Restart container         |
 | **Readiness** | Can it handle requests? | `GET /health/ready` | Remove from load balancer |
 
 ---
@@ -295,30 +295,30 @@ GET /health
 
 ### 8.1 Backup Schedule
 
-| Type | Frequency | Retention | Storage |
-|---|---|---|---|
-| Continuous WAL Backup | Real-time | 7 days | Supabase managed (S3) |
-| Daily Snapshot | Every 24 hours (02:00 UTC) | 30 days | Supabase managed |
-| Weekly Full Backup | Every Sunday (04:00 UTC) | 90 days | Separate S3 bucket |
-| Monthly Archive | 1st of month | 1 year | Cold storage (S3 Glacier) |
+| Type                  | Frequency                  | Retention | Storage                   |
+| --------------------- | -------------------------- | --------- | ------------------------- |
+| Continuous WAL Backup | Real-time                  | 7 days    | Supabase managed (S3)     |
+| Daily Snapshot        | Every 24 hours (02:00 UTC) | 30 days   | Supabase managed          |
+| Weekly Full Backup    | Every Sunday (04:00 UTC)   | 90 days   | Separate S3 bucket        |
+| Monthly Archive       | 1st of month               | 1 year    | Cold storage (S3 Glacier) |
 
 ### 8.2 Recovery Targets
 
-| Scenario | RTO | RPO | Method |
-|---|---|---|---|
-| Single table corruption | 15 min | 5 min | Point-in-time recovery (WAL) |
-| Full DB failure | 30 min | 5 min | Supabase automatic failover |
-| Region outage | 2 hours | 15 min | Cross-region replica promotion |
-| Accidental data deletion | 1 hour | 0 min | Point-in-time recovery to pre-deletion |
+| Scenario                 | RTO     | RPO    | Method                                 |
+| ------------------------ | ------- | ------ | -------------------------------------- |
+| Single table corruption  | 15 min  | 5 min  | Point-in-time recovery (WAL)           |
+| Full DB failure          | 30 min  | 5 min  | Supabase automatic failover            |
+| Region outage            | 2 hours | 15 min | Cross-region replica promotion         |
+| Accidental data deletion | 1 hour  | 0 min  | Point-in-time recovery to pre-deletion |
 
 ### 8.3 Restore Testing
 
-| Test | Frequency | Owner |
-|---|---|---|
-| Single table restore | Monthly | Platform Team |
-| Full DB restore to staging | Quarterly | Platform Team |
-| Cross-region failover drill | Bi-annually | Platform Team + DevOps |
-| Backup integrity verification | Weekly (automated) | Automated script |
+| Test                          | Frequency          | Owner                  |
+| ----------------------------- | ------------------ | ---------------------- |
+| Single table restore          | Monthly            | Platform Team          |
+| Full DB restore to staging    | Quarterly          | Platform Team          |
+| Cross-region failover drill   | Bi-annually        | Platform Team + DevOps |
+| Backup integrity verification | Weekly (automated) | Automated script       |
 
 ---
 
@@ -446,25 +446,25 @@ Step 4: If pool > 95% (Critical):
 
 ### 10.1 Resource Thresholds
 
-| Resource | Warning (⚠️) | Critical (🔴) | Action |
-|---|---|---|---|
-| DB Storage | 70% | 85% | Archive old data, increase storage |
-| DB Connections | 85% | 95% | Scale pool, investigate leaks |
-| Redis Memory | 75% | 90% | Review TTLs, increase memory |
-| Disk Usage | 80% | 90% | Clean logs, archive, expand |
-| CPU | 80% (sustained 10 min) | 95% (sustained 5 min) | Scale horizontally |
-| RAM | 80% | 90% | Optimize queries, scale |
-| Queue Depth | 1,000 | 5,000 | Scale workers, investigate delays |
+| Resource       | Warning (⚠️)           | Critical (🔴)         | Action                             |
+| -------------- | ---------------------- | --------------------- | ---------------------------------- |
+| DB Storage     | 70%                    | 85%                   | Archive old data, increase storage |
+| DB Connections | 85%                    | 95%                   | Scale pool, investigate leaks      |
+| Redis Memory   | 75%                    | 90%                   | Review TTLs, increase memory       |
+| Disk Usage     | 80%                    | 90%                   | Clean logs, archive, expand        |
+| CPU            | 80% (sustained 10 min) | 95% (sustained 5 min) | Scale horizontally                 |
+| RAM            | 80%                    | 90%                   | Optimize queries, scale            |
+| Queue Depth    | 1,000                  | 5,000                 | Scale workers, investigate delays  |
 
 ### 10.2 Capacity Review Schedule
 
-| Review | Frequency | Focus |
-|---|---|---|
-| Storage growth trend | Monthly | DB size, log volume, attachment storage |
-| Connection pool utilization | Weekly | Peak vs average, leak detection |
-| Cache efficiency | Monthly | Hit rate, eviction rate, memory |
-| Query performance | Weekly | Slow query log, index usage stats |
-| Growth projection vs actual | Quarterly | Compare predictions vs reality |
+| Review                      | Frequency | Focus                                   |
+| --------------------------- | --------- | --------------------------------------- |
+| Storage growth trend        | Monthly   | DB size, log volume, attachment storage |
+| Connection pool utilization | Weekly    | Peak vs average, leak detection         |
+| Cache efficiency            | Monthly   | Hit rate, eviction rate, memory         |
+| Query performance           | Weekly    | Slow query log, index usage stats       |
+| Growth projection vs actual | Quarterly | Compare predictions vs reality          |
 
 ---
 
@@ -476,13 +476,13 @@ Feature flags control the rollout of new features and database migrations. They 
 
 ### 11.2 Current Feature Flags
 
-| Flag Name | Default | Description | Phase |
-|---|---|---|---|
-| `ff_branch_timezone` | `false` | Enable per-branch timezone support | Phase 2 |
-| `ff_academic_calendar_v2` | `false` | Branch-level academic years | Phase 4 |
-| `ff_subscription_features_jsonb` | `false` | Feature-based licensing (JSONB) | Phase 3 |
-| `ff_holiday_recurrence` | `false` | Recurring holiday auto-generation | Phase 4 |
-| `ff_franchise_mode` | `false` | Parent-child institute hierarchy | Phase 3 |
+| Flag Name                        | Default | Description                        | Phase   |
+| -------------------------------- | ------- | ---------------------------------- | ------- |
+| `ff_branch_timezone`             | `false` | Enable per-branch timezone support | Phase 2 |
+| `ff_academic_calendar_v2`        | `false` | Branch-level academic years        | Phase 4 |
+| `ff_subscription_features_jsonb` | `false` | Feature-based licensing (JSONB)    | Phase 3 |
+| `ff_holiday_recurrence`          | `false` | Recurring holiday auto-generation  | Phase 4 |
+| `ff_franchise_mode`              | `false` | Parent-child institute hierarchy   | Phase 3 |
 
 ### 11.3 Flag Lifecycle
 
@@ -498,10 +498,10 @@ Created → Enabled (% rollout) → Fully Enabled → Flag Removed (code cleanup
 
 ### 12.1 Deployment Model
 
-| Environment | Strategy | Rollback Time |
-|---|---|---|
-| Staging | Direct deploy | Instant (redeploy previous) |
-| Production | Blue-Green | < 2 minutes |
+| Environment | Strategy      | Rollback Time               |
+| ----------- | ------------- | --------------------------- |
+| Staging     | Direct deploy | Instant (redeploy previous) |
+| Production  | Blue-Green    | < 2 minutes                 |
 
 ### 12.2 Deployment Order
 
@@ -521,11 +521,11 @@ Created → Enabled (% rollout) → Fully Enabled → Flag Removed (code cleanup
 
 ### 12.3 Rollback Plan
 
-| Scenario | Action | Time |
-|---|---|---|
-| API bug (no DB change) | Switch traffic back to Blue | < 1 min |
-| DB migration issue | Run rollback migration, then swap | 5-15 min |
-| Data corruption | Point-in-time recovery | 15-30 min |
+| Scenario               | Action                            | Time      |
+| ---------------------- | --------------------------------- | --------- |
+| API bug (no DB change) | Switch traffic back to Blue       | < 1 min   |
+| DB migration issue     | Run rollback migration, then swap | 5-15 min  |
+| Data corruption        | Point-in-time recovery            | 15-30 min |
 
 ### 12.4 Migration Safety Rules
 
@@ -540,12 +540,12 @@ Created → Enabled (% rollout) → Fully Enabled → Flag Removed (code cleanup
 
 ### 13.1 Severity Levels
 
-| Severity | Definition | Response Time | Example |
-|---|---|---|---|
-| **SEV-1** | Full service outage | 5 min | DB down, all APIs failing |
-| **SEV-2** | Major feature broken | 15 min | Payments failing, authentication broken |
-| **SEV-3** | Minor feature broken | 1 hour | Dashboard widget not loading |
-| **SEV-4** | Cosmetic / low impact | Next business day | Typo in notification, minor UI issue |
+| Severity  | Definition            | Response Time     | Example                                 |
+| --------- | --------------------- | ----------------- | --------------------------------------- |
+| **SEV-1** | Full service outage   | 5 min             | DB down, all APIs failing               |
+| **SEV-2** | Major feature broken  | 15 min            | Payments failing, authentication broken |
+| **SEV-3** | Minor feature broken  | 1 hour            | Dashboard widget not loading            |
+| **SEV-4** | Cosmetic / low impact | Next business day | Typo in notification, minor UI issue    |
 
 ### 13.2 Incident Flow
 
@@ -570,6 +570,7 @@ Action Items (preventive measures, runbook updates)
 ## 14. Dashboard Templates
 
 ### 14.1 Platform Dashboard (Global Operations)
+
 - **Active Institutes**: Total gauge of active tenants.
 - **Active Users**: Concurrent user sessions count.
 - **API TPS**: Transaction-per-second API throughput trends.
@@ -577,6 +578,7 @@ Action Items (preventive measures, runbook updates)
 - **Redis Hit Ratio**: Hit/miss percentage comparison.
 
 ### 14.2 Institute Dashboard (Tenant Operations)
+
 - **Students**: Total active student enrollments count.
 - **Attendance**: Daily student attendance percentage status.
 - **Revenue**: Current monthly billing collection rate.
@@ -584,6 +586,7 @@ Action Items (preventive measures, runbook updates)
 - **Branches**: Total configured physical campuses count.
 
 ### 14.3 Operations Dashboard (Infrastructure Alerts)
+
 - **Queue Lag**: Bull MQ jobs waiting time trends.
 - **Failed Jobs**: Background job failure metrics.
 - **Webhooks**: Webhook status delivery trends (Stripe/Razorpay callback metrics).
@@ -592,4 +595,4 @@ Action Items (preventive measures, runbook updates)
 
 ---
 
-*Last updated: July 8, 2026*
+_Last updated: July 8, 2026_

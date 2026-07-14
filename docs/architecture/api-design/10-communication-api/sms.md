@@ -7,20 +7,24 @@ This document defines query endpoints for tracking outbound SMS logs.
 ## GET /api/v1/comms/sms-logs
 
 ### Purpose
+
 Retrieves a paginated list of dispatched SMS records.
 
 ### Permission
+
 `notification:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `notification:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (masks phone numbers in results).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `notification:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (masks phone numbers in results).
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

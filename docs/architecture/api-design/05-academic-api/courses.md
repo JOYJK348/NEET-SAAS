@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/courses
 
 ### Purpose
+
 Registers a new academic course catalog entry.
 
 ### Permission
+
 `course:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `course:create`
-*   Tenant Isolation: Enforced via `X-Tenant-ID` header.
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `course:create`
+- Tenant Isolation: Enforced via `X-Tenant-ID` header.
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "NEET 2-Year Intensive Program",
@@ -31,17 +35,21 @@ Registers a new academic course catalog entry.
 ```
 
 ### Validation Constraints
-*   `name`: Required. Max 255 characters.
-*   `code`: Required. Unique per tenant.
+
+- `name`: Required. Max 255 characters.
+- `code`: Required. Unique per tenant.
 
 ### Business Rules
-*   Enforces alphanumeric constraints on `code`.
-*   Saves the course record to `courses` table under `DRAFT` status.
+
+- Enforces alphanumeric constraints on `code`.
+- Saves the course record to `courses` table under `DRAFT` status.
 
 ### Database Tables Affected
-*   `courses` (Insert)
+
+- `courses` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

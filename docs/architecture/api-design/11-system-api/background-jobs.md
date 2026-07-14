@@ -7,20 +7,24 @@ This document defines endpoints for querying background outbox tasks.
 ## GET /api/v1/background-jobs/{id}
 
 ### Purpose
+
 Retrieves details and processing progress of a background job.
 
 ### Permission
+
 `system:job:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:job:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:job:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -44,11 +48,14 @@ Retrieves details and processing progress of a background job.
 ## POST /api/v1/background-jobs/{id}/retry
 
 ### Purpose
+
 Triggers a manual retry execution for a failed background job.
 
 ### Permission
+
 `system:job:write`
 
 ### Business Rules
-*   Verifies that the target job status is `FAILED`.
-*   Resets the execution attempt counter and sets the status back to `PENDING` to trigger immediate queue pick-up.
+
+- Verifies that the target job status is `FAILED`.
+- Resets the execution attempt counter and sets the status back to `PENDING` to trigger immediate queue pick-up.

@@ -7,20 +7,24 @@ Refer to [01-api-design-conventions.md](file:///d:/FreeLance/NEET_platform/docs/
 ## POST /api/v1/users
 
 ### Purpose
+
 Creates a core system user credentials identity.
 
 ### Permission
+
 `user:create`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `user:create`
-*   Tenant Isolation: Not Applicable (Users are global identities in auth registry).
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Direct SQL verification.
-*   Sensitive Fields Masked: Yes (passwords).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `user:create`
+- Tenant Isolation: Not Applicable (Users are global identities in auth registry).
+- Branch Isolation: Not Applicable
+- RLS Validation: Direct SQL verification.
+- Sensitive Fields Masked: Yes (passwords).
 
 ### Request DTO
+
 ```json
 {
   "email": "user@coachingplatform.com",
@@ -32,23 +36,29 @@ Creates a core system user credentials identity.
 ```
 
 ### Validation Constraints
-*   `email`: Required. Unique globally. Max 255 characters.
-*   `password`: Required. Must pass password rules.
+
+- `email`: Required. Unique globally. Max 255 characters.
+- `password`: Required. Must pass password rules.
 
 ### Business Rules
-*   Enforces global email uniqueness constraints before writing credential hashes to `users` and `auth_identities`.
+
+- Enforces global email uniqueness constraints before writing credential hashes to `users` and `auth_identities`.
 
 ### Transaction Boundary
+
 Synchronous single database transaction.
 
 ### Events Published
-*   `UserIdentityCreated`
+
+- `UserIdentityCreated`
 
 ### Database Tables Affected
-*   `users` (Insert)
-*   `auth_identities` (Insert)
+
+- `users` (Insert)
+- `auth_identities` (Insert)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

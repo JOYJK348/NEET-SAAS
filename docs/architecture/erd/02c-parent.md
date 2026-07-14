@@ -19,28 +19,28 @@ The Parent domain is intentionally a **lightweight, view-oriented domain**. It d
 
 ### ✅ Included Entities
 
-| Entity | Purpose |
-|---|---|
-| 👨‍👩‍👧 **Parent** | Core identity of a guardian within the institute |
-| 🪪 **Parent Profile** | Contact information and communication preferences |
+| Entity                     | Purpose                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| 👨‍👩‍👧 **Parent**              | Core identity of a guardian within the institute             |
+| 🪪 **Parent Profile**      | Contact information and communication preferences            |
 | 🔗 **Student Parent Link** | M:N junction — authorizes parent access to specific students |
-| 📅 **Parent Meeting** | Scheduled parent-teacher or admin-parent meetings |
+| 📅 **Parent Meeting**      | Scheduled parent-teacher or admin-parent meetings            |
 
 ### ❌ Excluded (Cross-Domain References — View Only)
 
 Parents **read** but do not **own** any of these:
 
-| Entity | Owning Domain | Parent Access Level |
-|---|---|---|
-| Attendance Record | Student Domain | View-only (via linked student) |
-| Student Performance | Student Domain | View-only (summary level) |
-| Assessment Result | Assessment Domain | View-only (after publish) |
-| Mock Test Schedule | Assessment Domain | View-only (upcoming tests) |
-| Study Material | Learning Domain | View-only (no download) |
-| Notification | Communication Domain | Receive (relevant to linked student) |
-| Announcement | Communication Domain | Receive |
-| Fee Installment | Fee Domain | View-only (own child's dues) |
-| Student Enrollment | Student Domain | View-only |
+| Entity              | Owning Domain        | Parent Access Level                  |
+| ------------------- | -------------------- | ------------------------------------ |
+| Attendance Record   | Student Domain       | View-only (via linked student)       |
+| Student Performance | Student Domain       | View-only (summary level)            |
+| Assessment Result   | Assessment Domain    | View-only (after publish)            |
+| Mock Test Schedule  | Assessment Domain    | View-only (upcoming tests)           |
+| Study Material      | Learning Domain      | View-only (no download)              |
+| Notification        | Communication Domain | Receive (relevant to linked student) |
+| Announcement        | Communication Domain | Receive                              |
+| Fee Installment     | Fee Domain           | View-only (own child's dues)         |
+| Student Enrollment  | Student Domain       | View-only                            |
 
 ---
 
@@ -98,15 +98,15 @@ erDiagram
 
 ## 🔗 Relationship Summary
 
-| Parent Entity | Relationship | Child / Reference | Cardinality | Notes |
-|---|---|---|---|---|
-| Institute | registers | Parent | 1:N | `institute_id NOT NULL` on every row |
-| Parent | has | Parent Profile | 1:1 | Always created at registration |
-| Parent | linked via | Student Parent Link | 1:N | M:N junction with primary_guardian flag |
-| Student Parent Link | grants access to | Student | N:1 | Access control boundary |
-| Parent | attends | Parent Meeting | 1:N | Scheduled discussions |
-| Parent | receives | Notification | 1:N | Scoped to linked students |
-| Parent | receives | Announcement | M:N | Via institute broadcast |
+| Parent Entity       | Relationship     | Child / Reference   | Cardinality | Notes                                   |
+| ------------------- | ---------------- | ------------------- | ----------- | --------------------------------------- |
+| Institute           | registers        | Parent              | 1:N         | `institute_id NOT NULL` on every row    |
+| Parent              | has              | Parent Profile      | 1:1         | Always created at registration          |
+| Parent              | linked via       | Student Parent Link | 1:N         | M:N junction with primary_guardian flag |
+| Student Parent Link | grants access to | Student             | N:1         | Access control boundary                 |
+| Parent              | attends          | Parent Meeting      | 1:N         | Scheduled discussions                   |
+| Parent              | receives         | Notification        | 1:N         | Scoped to linked students               |
+| Parent              | receives         | Announcement        | M:N         | Via institute broadcast                 |
 
 ---
 
@@ -155,6 +155,7 @@ student_parent_links (
 
 > **Business Constraint:** Only one row with `is_primary = TRUE` allowed per `(institute_id, student_id)`.
 > Enforced via partial unique index:
+>
 > ```sql
 > CREATE UNIQUE INDEX idx_primary_guardian
 >   ON student_parent_links (institute_id, student_id)

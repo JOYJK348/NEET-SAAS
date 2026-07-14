@@ -19,34 +19,34 @@ The Student entity is the **central beneficiary** of every academic operation in
 
 ### ✅ Included Entities
 
-| Entity | Purpose |
-|---|---|
-| 👨‍🎓 **Student** | Core identity of a learner within the institute |
-| 📋 **Student Admission** | Formal admission record; entry point into the lifecycle |
-| 🪪 **Student Profile** | Extended personal, academic, and emergency contact information |
-| 📋 **Student Admission** | Root entity — formal admission into a Course for an Academic Year (owns course + academic year) |
-| 📝 **Student Batch Enrollment** | Batch allocation child of admission — links admission to a specific batch |
-| 🗓️ **Attendance Record** | Per-session attendance tracked by tutor |
-| 📈 **Student Progress** | Syllabus completion tracking (separate from test scores) |
-| 📊 **Student Performance** | Aggregated assessment performance analytics |
-| 📁 **Student Document** | Official documents uploaded during admission |
+| Entity                          | Purpose                                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 👨‍🎓 **Student**                  | Core identity of a learner within the institute                                                 |
+| 📋 **Student Admission**        | Formal admission record; entry point into the lifecycle                                         |
+| 🪪 **Student Profile**          | Extended personal, academic, and emergency contact information                                  |
+| 📋 **Student Admission**        | Root entity — formal admission into a Course for an Academic Year (owns course + academic year) |
+| 📝 **Student Batch Enrollment** | Batch allocation child of admission — links admission to a specific batch                       |
+| 🗓️ **Attendance Record**        | Per-session attendance tracked by tutor                                                         |
+| 📈 **Student Progress**         | Syllabus completion tracking (separate from test scores)                                        |
+| 📊 **Student Performance**      | Aggregated assessment performance analytics                                                     |
+| 📁 **Student Document**         | Official documents uploaded during admission                                                    |
 
 ### ❌ Excluded (Cross-Domain References)
 
 These entities are **owned by other domains** and are referenced, not duplicated.
 
-| Entity | Owning Domain |
-|---|---|
-| Course | Academic Domain |
-| Batch | Academic Domain |
-| Live Class | Academic Domain |
-| Recorded Class | Academic Domain |
-| Study Material | Learning Domain |
-| Assignment / Submission | Learning Domain |
-| Mock Test / Result | Assessment Domain |
-| Notification | Communication Domain |
-| Fee Record | Fee Management Domain |
-| Parent | Parent Domain |
+| Entity                  | Owning Domain         |
+| ----------------------- | --------------------- |
+| Course                  | Academic Domain       |
+| Batch                   | Academic Domain       |
+| Live Class              | Academic Domain       |
+| Recorded Class          | Academic Domain       |
+| Study Material          | Learning Domain       |
+| Assignment / Submission | Learning Domain       |
+| Mock Test / Result      | Assessment Domain     |
+| Notification            | Communication Domain  |
+| Fee Record              | Fee Management Domain |
+| Parent                  | Parent Domain         |
 
 ---
 
@@ -88,10 +88,10 @@ Student  ◄── Student Admission (entry point — ROOT entity)
 
 This was a direct contradiction between two module documents:
 
-| Document | Statement |
-|---|---|
-| `modules/tenant-admin/09-fee-management.md` | "Every student enrolled in a **course** must have a Student Fee Record" |
-| `modules/tenant-admin/06-academics.md` | "Students are enrolled into **Batches**" |
+| Document                               | Statement                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| `modules/tenant-admin/09-billing.md`   | "Every student enrolled in a **course** must have a Student Fee Record" |
+| `modules/tenant-admin/06-academics.md` | "Students are enrolled into **Batches**"                                |
 
 **Both statements are correct — the resolution is the Admission + BatchEnrollment split:**
 
@@ -109,21 +109,23 @@ StudentBatchEnrollment(  ←── Child of Admission
 ```
 
 **Rule 1 — Fee is Course-scoped:**
+
 - A `FeeStructure` belongs to a `Course` (not a Batch).
 - When a student is admitted, `fee_structure_id` is captured on the admission record.
 - Different batches of the same course share the same fee structure.
 
 **Rule 2 — Academic delivery is Batch-scoped:**
+
 - Timetable, Live Classes, Attendance Records, and Tutor Assignments are all scoped to a Batch.
 - The Batch determines which specific teacher, schedule, and classroom sessions the student attends.
 
 **Rule 3 — StudentAdmission is the root; BatchEnrollment is the child:**
+
 - `student_admissions` owns the course + academic year context.
 - `student_batch_enrollments` links the admission to one or more batches.
 - A single admission can have multiple batch enrollments (e.g., main batch + crash course batch).
 
 > **This is the canonical design. All module docs, API designs, and schema files reference `student_admissions` for course/year context and `student_batch_enrollments` for batch allocation.**
-
 
 ---
 

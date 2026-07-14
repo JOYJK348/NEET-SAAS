@@ -22,7 +22,7 @@ The main navigation provides quick access to all major modules required for mana
   - Results
 - Study Materials
 - Announcements
-- Fee Management
+- Billing
   - Fee Structures
   - Student Fee Records
   - Payments
@@ -41,6 +41,7 @@ The main navigation provides quick access to all major modules required for mana
 ## Current Scope (Phase 1)
 
 **Included:**
+
 - Dashboard
 - Students
 - Parents
@@ -49,6 +50,6 @@ The main navigation provides quick access to all major modules required for mana
 - Mock Tests
 - Study Materials
 - Announcements
-- Fee Management
+- Billing
 - Reports & Analytics
 - Settings

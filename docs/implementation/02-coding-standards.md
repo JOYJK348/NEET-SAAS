@@ -7,40 +7,46 @@ This playbook defines naming conventions, folder layouts, and styling standards 
 ## 1. Naming Conventions
 
 ### File Naming
-*   **Database Migrations:** Use the sequential pattern: `<sprint>_<module_name>_<action>.sql` (e.g., `00_auth_roles.sql`).
-*   **TypeScript Files:** Use camelCase with dots indicating the artifact type:
-    *   Controllers: `student.controller.ts`
-    *   Services: `student.service.ts`
-    *   Repositories: `student.repository.ts`
-    *   DTOs: `create-student.dto.ts`
-    *   Hooks: `useMarkAttendance.ts`
-    *   Components: PascalCase (e.g., `DataTable.tsx`, `SidebarItem.tsx`).
+
+- **Database Migrations:** Use the sequential pattern: `<sprint>_<module_name>_<action>.sql` (e.g., `00_auth_roles.sql`).
+- **TypeScript Files:** Use camelCase with dots indicating the artifact type:
+  - Controllers: `student.controller.ts`
+  - Services: `student.service.ts`
+  - Repositories: `student.repository.ts`
+  - DTOs: `create-student.dto.ts`
+  - Hooks: `useMarkAttendance.ts`
+  - Components: PascalCase (e.g., `DataTable.tsx`, `SidebarItem.tsx`).
 
 ### Code Identifiers
-*   **Types & Interfaces:** PascalCase (e.g., `StudentFilters`).
-*   **Classes:** PascalCase (e.g., `StudentService`).
-*   **Functions & Methods:** camelCase (e.g., `markAttendance()`).
-*   **Variables:** camelCase (e.g., `activeAcademicYear`).
-*   **Enums:** UPPERCASE with snake_case (e.g., `ACADEMIC_STATUS`).
+
+- **Types & Interfaces:** PascalCase (e.g., `StudentFilters`).
+- **Classes:** PascalCase (e.g., `StudentService`).
+- **Functions & Methods:** camelCase (e.g., `markAttendance()`).
+- **Variables:** camelCase (e.g., `activeAcademicYear`).
+- **Enums:** UPPERCASE with snake_case (e.g., `ACADEMIC_STATUS`).
 
 ### Git Commit Conventions
+
 We enforce the Conventional Commits specification. Every commit message must match:
 `type(scope): description`
 
 Approved Types:
-*   `feat`: A new feature (e.g., `feat(auth): add refresh token rotation`)
-*   `fix`: A bug fix (e.g., `fix(attendance): resolve duplicate marking`)
-*   `refactor`: Code changes that neither fix a bug nor add a feature (e.g., `refactor(people): simplify repository`)
-*   `docs`: Documentation only changes (e.g., `docs(api): update swagger examples`)
-*   `test`: Adding missing tests or correcting existing tests (e.g., `test(billing): add payment integration tests`)
-*   `chore`: Changes to the build process or auxiliary tools/libraries.
+
+- `feat`: A new feature (e.g., `feat(auth): add refresh token rotation`)
+- `fix`: A bug fix (e.g., `fix(attendance): resolve duplicate marking`)
+- `refactor`: Code changes that neither fix a bug nor add a feature (e.g., `refactor(people): simplify repository`)
+- `docs`: Documentation only changes (e.g., `docs(api): update swagger examples`)
+- `test`: Adding missing tests or correcting existing tests (e.g., `test(billing): add payment integration tests`)
+- `chore`: Changes to the build process or auxiliary tools/libraries.
 
 ---
 
 ## 2. Directory Layout Standards
 
 ### Backend NestJS Modules
+
 NestJS modules must follow the bounded context architecture:
+
 ```
 src/modules/<context>/
 ├── dto/                              # Validation schemas
@@ -54,7 +60,9 @@ src/modules/<context>/
 ```
 
 ### Frontend Next.js Features
+
 Frontend feature modules must remain strictly sandboxed. Deep imports across features are prohibited (e.g., `@/features/billing` cannot import from `features/attendance/components/`).
+
 ```
 src/features/<context>/
 ├── components/                       # Feature-specific client components

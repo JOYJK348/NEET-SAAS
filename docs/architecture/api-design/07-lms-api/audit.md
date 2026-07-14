@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking modifications to course
 ## GET /api/v1/study-materials/{id}/audit
 
 ### Purpose
+
 Retrieves action audit trails for study materials.
 
 ### Permission
+
 `lms:material:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `lms:material:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `lms:material:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

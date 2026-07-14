@@ -8,18 +8,18 @@ For each decision, the status, date, and a link to the detailed decision documen
 
 ## Decision Index
 
-| # | Decision | Status | Date | Document |
-|---|----------|--------|------|-----------|
-| 01 | Authentication Architecture | ✅ Decided | July 8, 2026 | See below — **Supabase Auth + JWT** |
-| 02 | Multi-Tenancy Isolation Strategy | ✅ Decided | July 8, 2026 | [multitenancy-strategy.md](architecture/multitenancy-strategy.md) |
-| 03 | ORM Selection | ✅ Decided | July 8, 2026 | See below — **Prisma** |
-| 04 | Email Provider | ⏳ Pending | — | — |
-| 05 | Background Job Queue | ✅ Decided | July 8, 2026 | See below — **pg-boss** |
-| 06 | Caching Strategy | ✅ Decided | July 8, 2026 | See below — **In-memory (NestJS) + Redis** |
-| 07 | File Storage Strategy | ✅ Decided | July 8, 2026 | See below — **Supabase Storage + Cloudflare R2** |
-| 08 | Live Class Provider | ✅ Decided | July 6, 2026 | See below — **Jitsi Meet (Self-hosted)** |
-| 09 | Host Infrastructure | ✅ Decided | July 8, 2026 | See below — **Railway + Vercel** |
-| 10 | Database Provider | ✅ Decided | July 8, 2026 | See below — **Supabase Postgres** |
+| #   | Decision                         | Status     | Date         | Document                                                          |
+| --- | -------------------------------- | ---------- | ------------ | ----------------------------------------------------------------- |
+| 01  | Authentication Architecture      | ✅ Decided | July 8, 2026 | See below — **Supabase Auth + JWT**                               |
+| 02  | Multi-Tenancy Isolation Strategy | ✅ Decided | July 8, 2026 | [multitenancy-strategy.md](architecture/multitenancy-strategy.md) |
+| 03  | ORM Selection                    | ✅ Decided | July 8, 2026 | See below — **Prisma**                                            |
+| 04  | Email Provider                   | ⏳ Pending | —            | —                                                                 |
+| 05  | Background Job Queue             | ✅ Decided | July 8, 2026 | See below — **pg-boss**                                           |
+| 06  | Caching Strategy                 | ✅ Decided | July 8, 2026 | See below — **In-memory (NestJS) + Redis**                        |
+| 07  | File Storage Strategy            | ✅ Decided | July 8, 2026 | See below — **Supabase Storage + Cloudflare R2**                  |
+| 08  | Live Class Provider              | ✅ Decided | July 6, 2026 | See below — **Jitsi Meet (Self-hosted)**                          |
+| 09  | Host Infrastructure              | ✅ Decided | July 8, 2026 | See below — **Railway + Vercel**                                  |
+| 10  | Database Provider                | ✅ Decided | July 8, 2026 | See below — **Supabase Postgres**                                 |
 
 ---
 
@@ -31,6 +31,7 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **Supabase Auth + JWT**
 
 **Summary of choices made:**
+
 - Strategy: **JWT + Supabase Auth management**
 - Refresh Token Rotation: Managed natively by Supabase Auth Client
 - Tenant isolation: `institute_id` injected into custom JWT claims on login
@@ -59,6 +60,7 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Full document:** [multitenancy-strategy.md](architecture/multitenancy-strategy.md)
 
 **What this unblocks:**
+
 - Every table's `institute_id` column and index pattern is now defined
 - `schema.prisma` file can be started
 - NestJS service patterns are defined (every method receives `instituteId` from context)
@@ -83,11 +85,13 @@ For each decision, the status, date, and a link to the detailed decision documen
 - Schema-per-tenant (which would have required raw SQL) was explicitly rejected in Decision 02 — this aligns perfectly with Prisma's row-level model.
 
 **Rejected: TypeORM**
+
 - Decorator-based metadata makes the schema scattered across multiple entity files — harder to review for a 9-domain system.
 - TypeORM's `Relations` decorator syntax makes compound index definitions (`(institute_id, id)`) harder to express cleanly.
 - Less predictable migration generation for complex schema evolutions.
 
 **What this unblocks:**
+
 - `schema.prisma` file can now be created
 - `PrismaService` and middleware can be implemented in Sprint 1
 - All NestJS service patterns are unblocked
@@ -99,12 +103,14 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Status:** ⏳ Pending
 
 **Required for:**
+
 - Welcome email (Tenant Admin creation)
 - Password reset email
 - Fee payment receipt (future)
 - Fee reminder notifications (future)
 
 **Options:**
+
 - **Resend** — Developer-friendly, simple API, good free tier
 - **SendGrid** — Industry standard, higher free tier
 - **Nodemailer + SMTP** — No vendor dependency, but no analytics
@@ -119,12 +125,14 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **pg-boss (Phase 1)**
 
 **Required for:**
+
 - Fee reminder notifications (installment due date triggers)
 - Email delivery (async, non-blocking)
 - Report generation (heavy DB aggregation queries)
 - Notification dispatch (student/parent/tutor events)
 
 **Rationale:**
+
 - Phase 1 runs on a **single Railway PostgreSQL instance** that is already paid for. pg-boss uses the same DB — zero additional infrastructure cost.
 - BullMQ requires a Redis add-on on Railway (~$15–25/month for persistent Redis). Unjustified at Phase 1 scale.
 - pg-boss provides **persistent job records** in PostgreSQL with retry logic, dead-letter queue, and job scheduling — all the Phase 1 requirements are covered.
@@ -132,10 +140,12 @@ For each decision, the status, date, and a link to the detailed decision documen
 - Migration path to BullMQ + Redis is clean when scale demands it — the job producer/consumer interfaces are similar enough to refactor without business logic changes.
 
 **Rejected: BullMQ (for Phase 1)**
+
 - Requires Redis add-on (extra infra cost and operational complexity).
 - Over-engineered for Phase 1's expected queue volume (< 10K jobs/day).
 
 **What this unblocks:**
+
 - Fee reminder scheduler can be designed
 - Email delivery service (async) can be implemented
 - Report generation endpoint can be implemented without blocking HTTP request
@@ -150,11 +160,13 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **In-memory cache (NestJS Map) for Phase 1**
 
 **Required for:**
+
 - Role → Permissions map (loaded at startup, cached in memory)
 - Institute settings (frequently read, rarely changed)
 - Dashboard summary counts
 
 **Rationale:**
+
 - Phase 1 runs as a **single NestJS instance** on Railway. There is no multi-instance deployment requiring a shared cache layer.
 - In-memory cache using a `Map<string, T>` inside a NestJS provider is zero-cost, zero-infra, and zero-latency.
 - The two primary cache targets (role→permissions map, institute settings) are **read-heavy, write-rare** — ideal for startup-loaded in-memory cache.
@@ -162,20 +174,22 @@ For each decision, the status, date, and a link to the detailed decision documen
 
 **Cache Invalidation Rules (must be implemented):**
 
-| Cache Key | Updated When | Invalidation Method |
-|---|---|---|
+| Cache Key                 | Updated When                  | Invalidation Method                    |
+| ------------------------- | ----------------------------- | -------------------------------------- |
 | `role:permissions:{role}` | Role permissions are modified | Clear that role's cache key in-process |
-| `institute:settings:{id}` | Tenant Admin updates settings | Clear that institute's key in-process |
-| All keys | Server restart | Auto-reloaded on next request |
+| `institute:settings:{id}` | Tenant Admin updates settings | Clear that institute's key in-process  |
+| All keys                  | Server restart                | Auto-reloaded on next request          |
 
 **⚠️ Security Note:** Stale role→permissions cache must NOT persist beyond the server request cycle after a permission change. Implement a NestJS `EventEmitter` event on role update that clears the in-process cache immediately.
 
 **Rejected: Redis (for Phase 1)**
+
 - Requires Redis add-on (additional Railway cost).
 - Shared cache across instances is not needed when running a single instance.
 - Can be added in Phase 2 if horizontal scaling is required.
 
 **What this unblocks:**
+
 - `RolePermissionsCache` NestJS provider can be implemented
 - `InstituteSettingsCache` can be implemented
 - Guards and interceptors can use cached permissions without DB hits
@@ -190,6 +204,7 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **Supabase Storage + Cloudflare R2**
 
 **Rationale:**
+
 - **Supabase Storage:** Used for transactional documents (student documents, study material PDFs) requiring tight integration with Postgres row-level security (RLS).
 - **Cloudflare R2:** Used for large video files (live class recordings). R2 has **zero egress fees**, which saves significant bandwidth cost (₹1.25/GB storage pricing only).
 
@@ -203,6 +218,7 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **Jitsi Meet (Self-hosted on DigitalOcean Droplet)**
 
 **Rationale:**
+
 - Full control of stream data and recording layout.
 - Cost-effective scaling (~₹1,500/mo flat-rate virtual machine CPU) without session-minute charges.
 - Integrates with local FFmpeg transcoding processes.
@@ -217,6 +233,7 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **Railway (NestJS Backend) + Vercel (Next.js Frontend)**
 
 **Rationale:**
+
 - **Vercel:** Auto-deploy, optimized Next.js App Router caching, edge API routes, fast global CDN.
 - **Railway:** Auto-deploy on git push, auto-scale containers, simple ENV management, cost-effective (₹500/mo flat rate pricing models for early workloads).
 
@@ -230,10 +247,11 @@ For each decision, the status, date, and a link to the detailed decision documen
 **Decision:** **Supabase Managed PostgreSQL**
 
 **Rationale:**
+
 - High performance PostgreSQL database with built-in connection pooler (PgBouncer/Supavisor).
 - Integrates with Supabase Auth and Supabase Storage under a single management system.
 - Supports native PostgreSQL RLS and migrations schema control via Prisma.
 
 ---
 
-*Last updated: July 8, 2026 — This document is updated as decisions are made. All decisions must be documented here before implementation begins.*
+_Last updated: July 8, 2026 — This document is updated as decisions are made. All decisions must be documented here before implementation begins._

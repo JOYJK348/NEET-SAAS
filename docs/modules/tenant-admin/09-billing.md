@@ -1,12 +1,12 @@
-# Fee Management
+# Billing
 
 ## Module Overview
 
-The Fee Management module enables the Tenant Admin to define fee structures, collect student payments, issue receipts, track outstanding dues, and manage the complete financial lifecycle of the coaching institute.
+The Billing module enables the Tenant Admin to define fee structures, collect student payments, issue receipts, track outstanding dues, and manage the complete financial lifecycle of the coaching institute.
 
 This module is the financial backbone of the institute operations. Every student's fee obligation — from what they owe to what they have paid — is tracked here with full transparency and a complete audit trail.
 
-The objective of this module is to replace manual fee tracking (spreadsheets, receipt books, phone registers) with a structured, automated, and accountable fee management system.
+The objective of this module is to replace manual fee tracking (spreadsheets, receipt books, phone registers) with a structured, automated, and accountable billing system.
 
 ---
 
@@ -27,7 +27,7 @@ The objective of this module is to replace manual fee tracking (spreadsheets, re
 
 # Responsibilities
 
-The Tenant Admin is responsible for the complete fee management lifecycle.
+The Tenant Admin is responsible for the complete billing lifecycle.
 
 Responsibilities include:
 
@@ -46,7 +46,7 @@ Responsibilities include:
 
 # Dashboard Widgets
 
-The Fee Management dashboard provides the Tenant Admin with an instant financial snapshot.
+The Billing dashboard provides the Tenant Admin with an instant financial snapshot.
 
 ## Summary Cards
 
@@ -337,7 +337,7 @@ The Tenant Admin can generate comprehensive fee collection reports.
 
 ---
 
-# Fee Management Workflow
+# Billing Workflow
 
 ```text
 Course Created

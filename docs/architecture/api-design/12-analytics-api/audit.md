@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking modifications to report
 ## GET /api/v1/analytics/reports/{id}/audit
 
 ### Purpose
+
 Retrieves audit records for changes made to custom report templates and parameters.
 
 ### Permission
+
 `analytics:report:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -7,20 +7,24 @@ This document defines endpoints for uploading and verifying HR onboarding compli
 ## POST /api/v1/staff/{id}/documents
 
 ### Purpose
+
 Registers a compliance document for a staff profile (linked to a centralized storage upload version).
 
 ### Permission
+
 `staff:document:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `staff:document:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `staff:document:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "documentCategory": "IDENTITY",
@@ -31,20 +35,24 @@ Registers a compliance document for a staff profile (linked to a centralized sto
 ```
 
 ### Validation Constraints
-*   `documentCategory`: Required. Must be `IDENTITY`, `ACADEMIC`, `EMPLOYMENT`, `LEGAL`, or `FINANCIAL`.
-*   `documentType`: Required. Must be `AADHAAR`, `PAN`, `RESUME`, `DEGREE`, or `OFFER_LETTER`.
-*   `fileVersionId`: Required. Valid central file version identifier.
+
+- `documentCategory`: Required. Must be `IDENTITY`, `ACADEMIC`, `EMPLOYMENT`, `LEGAL`, or `FINANCIAL`.
+- `documentType`: Required. Must be `AADHAAR`, `PAN`, `RESUME`, `DEGREE`, or `OFFER_LETTER`.
+- `fileVersionId`: Required. Valid central file version identifier.
 
 ### Business Rules
+
 1.  **Partial uniqueness check**: Ensures exactly one active identity document per owner (e.g. only one active Aadhaar or PAN). Handled by DB partial index:
     `uq_active_identity_document`.
 2.  **Version tracking**: Creates a record in `entity_documents` pointing to `fileVersionId` as the current version, and logs a historical entry in `entity_document_versions`.
 
 ### Database Tables Affected
-*   `entity_documents` (Insert)
-*   `entity_document_versions` (Insert)
+
+- `entity_documents` (Insert)
+- `entity_document_versions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -65,12 +73,15 @@ Registers a compliance document for a staff profile (linked to a centralized sto
 ## PATCH /api/v1/staff/{id}/documents/{docId}/verify
 
 ### Purpose
+
 Approves or rejects a submitted onboarding document.
 
 ### Permission
+
 `staff:document:verify`
 
 ### Request DTO
+
 ```json
 {
   "verificationStatus": "VERIFIED",
@@ -79,9 +90,11 @@ Approves or rejects a submitted onboarding document.
 ```
 
 ### Validation Constraints
-*   `verificationStatus`: Required. Must be `VERIFIED` or `REJECTED`.
+
+- `verificationStatus`: Required. Must be `VERIFIED` or `REJECTED`.
 
 ### Response DTO
+
 ```json
 {
   "success": true,

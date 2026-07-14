@@ -7,33 +7,39 @@ This document defines endpoints for running auto-evaluations and generating test
 ## POST /api/v1/exams/{id}/grade
 
 ### Purpose
+
 Triggers the automatic grading process for all submitted attempts of an exam (Async).
 
 ### Permission
+
 `exam:grade`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `exam:grade`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `exam:grade`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Business Rules
+
 1.  **Exam Completion Check**: Verifies that the scheduled exam window has ended before grading begins.
 2.  **Async Processing**: This is an asynchronous batch operation. Returns a `202 Accepted` status along with a `jobId`.
 3.  **Auto Scoring Evaluation**:
-    *   Iterates through all `exam_attempt_responses` records for the exam.
-    *   Compares student answers against correct keys in the question bank.
-    *   Applies positive/negative marking rules defined in the exam template to calculate raw scores.
-    *   Calculates ranks, percentiles, and updates individual `exam_attempts` scores.
+    - Iterates through all `exam_attempt_responses` records for the exam.
+    - Compares student answers against correct keys in the question bank.
+    - Applies positive/negative marking rules defined in the exam template to calculate raw scores.
+    - Calculates ranks, percentiles, and updates individual `exam_attempts` scores.
 
 ### Database Tables Affected
-*   `exam_attempts` (Update status to `GRADED`, sets scores)
-*   `exam_results` (Insert score details)
+
+- `exam_attempts` (Update status to `GRADED`, sets scores)
+- `exam_results` (Insert score details)
 
 ### Response DTO (202 Accepted)
+
 ```json
 {
   "success": true,

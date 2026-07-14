@@ -7,20 +7,24 @@ This document defines endpoints for managing external partner API integrations.
 ## POST /api/v1/public/integrations/partners
 
 ### Purpose
+
 Registers a third-party partner integration client profile.
 
 ### Permission
+
 `system:integration:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:integration:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:integration:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "partnerName": "NEET Mock Evaluators Inc",
@@ -29,9 +33,11 @@ Registers a third-party partner integration client profile.
 ```
 
 ### Database Tables Affected
-*   `integration_partners` (Insert)
+
+- `integration_partners` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

@@ -34,11 +34,11 @@ It is a **critical operational domain** for any coaching institute, providing fi
 
 The following entities belong to other domains and are referenced by this domain.
 
-- 📚 Course *(Academic Domain)*
-- 👨‍🎓 Student *(User Domain)*
-- 👨‍👩‍👧 Parent *(User Domain)*
-- 🏢 Institute *(Institute Domain)*
-- 👤 Tenant Admin *(User Domain — discount approver)*
+- 📚 Course _(Academic Domain)_
+- 👨‍🎓 Student _(User Domain)_
+- 👨‍👩‍👧 Parent _(User Domain)_
+- 🏢 Institute _(Institute Domain)_
+- 👤 Tenant Admin _(User Domain — discount approver)_
 
 ---
 
@@ -115,19 +115,19 @@ flowchart TD
 
 # 🔗 Relationship Summary
 
-| Parent Entity | Child Entity | Cardinality |
-|---------------|--------------|-------------|
-| Course | Fee Structure | One-to-Many (1:N) |
-| Fee Structure | Fee Component | One-to-Many (1:N) |
-| Fee Structure | Installment Plan | One-to-Many (1:N) |
-| Fee Structure | Student Fee Record | One-to-Many (1:N) |
-| Fee Discount | Student Fee Record | One-to-Many (1:N) |
-| Student | Student Fee Record | One-to-Many (1:N) |
-| Student Fee Record | Fee Installment | One-to-Many (1:N) |
-| Fee Installment | Payment | One-to-Many (1:N) |
-| Payment | Payment Receipt | One-to-One (1:1) |
-| Student Fee Record | Fee Reminder | One-to-Many (1:N) |
-| Fee Installment | Fee Reminder | One-to-Many (1:N) |
+| Parent Entity      | Child Entity       | Cardinality       |
+| ------------------ | ------------------ | ----------------- |
+| Course             | Fee Structure      | One-to-Many (1:N) |
+| Fee Structure      | Fee Component      | One-to-Many (1:N) |
+| Fee Structure      | Installment Plan   | One-to-Many (1:N) |
+| Fee Structure      | Student Fee Record | One-to-Many (1:N) |
+| Fee Discount       | Student Fee Record | One-to-Many (1:N) |
+| Student            | Student Fee Record | One-to-Many (1:N) |
+| Student Fee Record | Fee Installment    | One-to-Many (1:N) |
+| Fee Installment    | Payment            | One-to-Many (1:N) |
+| Payment            | Payment Receipt    | One-to-One (1:1)  |
+| Student Fee Record | Fee Reminder       | One-to-Many (1:N) |
+| Fee Installment    | Fee Reminder       | One-to-Many (1:N) |
 
 ---
 

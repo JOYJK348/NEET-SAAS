@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a student's billing timeline.
 ## GET /api/v1/invoices/{id}/timeline
 
 ### Purpose
+
 Retrieves a chronological sequence of all transaction events (invoice, payments, waivers, and refunds) for an invoice.
 
 ### Permission
+
 `fee:invoice:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:invoice:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:invoice:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

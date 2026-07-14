@@ -259,6 +259,7 @@ The platform should support
 - Institute ownership.
 - Academic Year relationship.
 - Course relationship.
+
 # Institute → Student
 
 ## Purpose
@@ -473,7 +474,6 @@ The platform should support
 - Institute → Course
 - Institute → Student
 - Institute → Tutor
-
 
 # Institute → Branch
 

@@ -7,27 +7,32 @@ This document defines advanced filter parameters for the communication log.
 ## GET /api/v1/comms/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter dispatched notification logs.
 
 ### Permission
+
 `notification:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `notification:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (details masked for non-comms-admin users).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `notification:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (details masked for non-comms-admin users).
 
 ### Request Parameters
-*   `filter[recipientUserId]`: UUID.
-*   `filter[status]`: String (`QUEUED`, `SENT`, `DELIVERED`, `FAILED`, `OPTED_OUT`).
-*   `filter[channel]`: String (`EMAIL`, `SMS`, `PUSH`).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[recipientUserId]`: UUID.
+- `filter[status]`: String (`QUEUED`, `SENT`, `DELIVERED`, `FAILED`, `OPTED_OUT`).
+- `filter[channel]`: String (`EMAIL`, `SMS`, `PUSH`).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

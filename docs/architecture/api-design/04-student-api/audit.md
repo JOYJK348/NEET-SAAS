@@ -7,24 +7,29 @@ This document defines query contracts for pulling compliance audit trails and se
 ## GET /api/v1/students/{id}/audit
 
 ### Purpose
+
 Retrieves action audit trails for the student.
 
 ### Permission
+
 `student:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (hides old/new values of passwords).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (hides old/new values of passwords).
 
 ### Request Parameters
-*   `cursor`: String (Cursor offset for paging).
-*   `limit`: Integer.
+
+- `cursor`: String (Cursor offset for paging).
+- `limit`: Integer.
 
 ### Response DTO
+
 ```json
 {
   "success": true,
@@ -54,7 +59,9 @@ Retrieves action audit trails for the student.
 ## GET /api/v1/students/{id}/login-history
 
 ### Purpose
+
 Retrieves login histories logs for the student account.
 
 ### Permission
+
 `student:audit:read`

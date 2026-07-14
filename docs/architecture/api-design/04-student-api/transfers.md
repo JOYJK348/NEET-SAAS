@@ -7,20 +7,24 @@ This document defines endpoints for executing student branch relocations, batch 
 ## POST /api/v1/students/{id}/transfer-batch
 
 ### Purpose
+
 Transfers a student to a new study batch (re-allocating enrollment histories).
 
 ### Permission
+
 `student:transfer:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:transfer:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:transfer:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "targetBatchId": "b09a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -31,18 +35,22 @@ Transfers a student to a new study batch (re-allocating enrollment histories).
 ```
 
 ### Validation Constraints
-*   `reason`: Required. Must be `ACADEMIC`, `BEHAVIOR`, `PARENT_REQUEST`, `ADMINISTRATIVE`, `MEDICAL`, or `FEE_RELATED`.
+
+- `reason`: Required. Must be `ACADEMIC`, `BEHAVIOR`, `PARENT_REQUEST`, `ADMINISTRATIVE`, `MEDICAL`, or `FEE_RELATED`.
 
 ### Business Rules
+
 1.  **Old Batch Exit**: Updates the current active `batch_enrollments` record for the student, setting `left_on` to the transfer date.
 2.  **New Batch Enrollment**: Inserts a new active record into the `batch_enrollments` table with status `ACTIVE`.
 3.  **Logs Audit**: Inserts a transfer trace entry into the `batch_transfer_logs` audit table (which is strictly immutable/non-editable).
 
 ### Database Tables Affected
-*   `batch_enrollments` (Update / Insert)
-*   `batch_transfer_logs` (Insert)
+
+- `batch_enrollments` (Update / Insert)
+- `batch_transfer_logs` (Insert)
 
 ### Response DTO
+
 ```json
 {
   "success": true,
@@ -61,12 +69,15 @@ Transfers a student to a new study batch (re-allocating enrollment histories).
 ## POST /api/v1/students/{id}/promote
 
 ### Purpose
+
 Promotes an active student to the next academic year program.
 
 ### Permission
+
 `student:promotion:write`
 
 ### Request DTO
+
 ```json
 {
   "targetAcademicYearId": "ay27-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -75,16 +86,19 @@ Promotes an active student to the next academic year program.
 ```
 
 ### Business Rules
-*   Verifies student's current status is `ACTIVE` and all fee dues for the current year are cleared (calls fee billing context verify checks).
+
+- Verifies student's current status is `ACTIVE` and all fee dues for the current year are cleared (calls fee billing context verify checks).
 
 ---
 
 ## POST /api/v1/students/{id}/repeat-year
 
 ### Purpose
+
 Retains a student in the same academic level for the next year session.
 
 ### Permission
+
 `student:promotion:write`
 
 ---
@@ -92,12 +106,15 @@ Retains a student in the same academic level for the next year session.
 ## POST /api/v1/students/bulk-transfer
 
 ### Purpose
+
 Executes a bulk batch transfer for multiple students (Async).
 
 ### Permission
+
 `student:transfer:write`
 
 ### Request DTO
+
 ```json
 {
   "studentProfileIds": [

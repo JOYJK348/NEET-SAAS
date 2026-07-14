@@ -7,20 +7,24 @@ This document defines endpoints for configuring maintenance modes.
 ## POST /api/v1/system/maintenance
 
 ### Purpose
+
 Locks the gateway to activate system-wide maintenance mode blocks.
 
 ### Permission
+
 `system:maintenance:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:maintenance:write`
-*   Tenant Isolation: Not Applicable
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Direct SQL verification.
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:maintenance:write`
+- Tenant Isolation: Not Applicable
+- Branch Isolation: Not Applicable
+- RLS Validation: Direct SQL verification.
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "isEnabled": true,
@@ -30,9 +34,11 @@ Locks the gateway to activate system-wide maintenance mode blocks.
 ```
 
 ### Business Rules
-*   Sets lock state flags in Redis cache memory. Subsequent client requests receive a `503 Service Unavailable` status showing the custom notification content (except requests carrying authorized Platform Admin tokens).
+
+- Sets lock state flags in Redis cache memory. Subsequent client requests receive a `503 Service Unavailable` status showing the custom notification content (except requests carrying authorized Platform Admin tokens).
 
 ### Response DTO
+
 ```json
 {
   "success": true,

@@ -7,42 +7,50 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/fee-plans
 
 ### Purpose
+
 Registers a new fee plan structure configuration (e.g. NEET Premium Pack).
 
 ### Permission
+
 `fee:plan:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:plan:write`
-*   Tenant Isolation: Enforced via `X-Tenant-ID` header.
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:plan:write`
+- Tenant Isolation: Enforced via `X-Tenant-ID` header.
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "name": "NEET Premium 2-Year Program Fees",
   "code": "NEET-PREM-2YR",
   "courseId": "cne26-bf99-4d6a-8d1a-6b4b5e6f7a3f",
-  "totalAmount": 150000.00,
+  "totalAmount": 150000.0,
   "currencyCode": "INR"
 }
 ```
 
 ### Validation Constraints
-*   `totalAmount`: Required. Positive numeric value.
-*   `code`: Required. Unique per tenant.
+
+- `totalAmount`: Required. Positive numeric value.
+- `code`: Required. Unique per tenant.
 
 ### Business Rules
-*   Prevents duplication of code within tenant.
-*   Creates fee plan templates mapped in `fee_plans` table.
+
+- Prevents duplication of code within tenant.
+- Creates fee plan templates mapped in `fee_plans` table.
 
 ### Database Tables Affected
-*   `fee_plans` (Insert)
+
+- `fee_plans` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

@@ -34,7 +34,7 @@ import { RequestContextModule } from '../middleware/request-context.module';
               : undefined,
           autoLogging: true,
           serializers: {
-            /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+            /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
             req: (req: any) => ({
               method: req.method,
               url: req.url,
@@ -43,7 +43,7 @@ import { RequestContextModule } from '../middleware/request-context.module';
             res: (res: any) => ({
               statusCode: res.statusCode,
             }),
-            /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+            /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
           },
         },
       }),

@@ -577,12 +577,12 @@ Subject
 Chapter
 │
 ├── Study Material ←── Resource Category
-│   ├── Batch → Student
-│   └── Tutor
+│ ├── Batch → Student
+│ └── Tutor
 │
 ├── Assignment
-│   ├── Batch → Student → Assignment Submission
-│   └── Tutor
+│ ├── Batch → Student → Assignment Submission
+│ └── Tutor
 │
 └── Live Class → Recorded Class
 Cross-Domain Dependencies

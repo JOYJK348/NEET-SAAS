@@ -7,20 +7,24 @@ This document defines endpoints for managing student emergency contacts.
 ## POST /api/v1/students/{id}/emergency-contacts
 
 ### Purpose
+
 Registers a prioritized emergency contact card for the student.
 
 ### Permission
+
 `student:emergency:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:emergency:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:emergency:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "contactName": "Suresh Kumar",
@@ -31,15 +35,19 @@ Registers a prioritized emergency contact card for the student.
 ```
 
 ### Validation Constraints
-*   `priorityOrder`: Required. Integer (e.g. 1 represents primary fallback contact).
+
+- `priorityOrder`: Required. Integer (e.g. 1 represents primary fallback contact).
 
 ### Business Rules
-*   Ensures `priorityOrder` values are unique per student profile context.
+
+- Ensures `priorityOrder` values are unique per student profile context.
 
 ### Database Tables Affected
-*   `student_emergency_contacts` (Insert)
+
+- `student_emergency_contacts` (Insert)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

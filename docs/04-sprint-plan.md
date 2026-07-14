@@ -6,6 +6,7 @@
 ---
 
 ## Sprint 1 — Foundation (Week 1)
+
 - Generate Prisma schema (all 200+ tables)
 - Base NestJS project setup
 - PrismaService + middleware
@@ -15,6 +16,7 @@
 - DB seed scripts
 
 ## Sprint 2 — Platform Admin (Week 2)
+
 - Platform Admin login
 - Create Tenant
 - Activate / Deactivate Tenant
@@ -23,6 +25,7 @@
 - Tenant Admin onboarding
 
 ## Sprint 3 — Tenant Setup + People (Weeks 3-4)
+
 - Institute Profile
 - Branches, Academic Years
 - Courses / Subjects / Chapters / Topics CRUD
@@ -31,6 +34,7 @@
 - Tutor onboarding
 
 ## Sprint 4 — Academics (Weeks 5-6)
+
 - Batch CRUD
 - Tutor Assignment (Subject + Batch)
 - Batch Timetable
@@ -38,6 +42,7 @@
 - Leave Management
 
 ## Sprint 5 — Learning + Live Classes (Weeks 7-8)
+
 - Learning Materials upload (R2)
 - Organize by Subject/Chapter
 - Live Class schedule + Jitsi embed
@@ -45,6 +50,7 @@
 - Recording upload + R2 playback
 
 ## Sprint 6 — Assessments (Weeks 9-10)
+
 - Question Bank CRUD (MCQ)
 - Mock Test Create / Schedule / Attempt
 - MCQ Auto Evaluation
@@ -52,6 +58,7 @@
 - Results display
 
 ## Sprint 7 — Fees + Papers (Weeks 11-12)
+
 - Fee Structure + Components
 - Installment Plans
 - Student Fee Records
@@ -59,12 +66,14 @@
 - Previous Papers Store (Upload, Price, Purchase, Unlock)
 
 ## Sprint 8 — Communication + AI (Week 13)
+
 - Notifications (Email + In-App + Templates)
 - Auto-reminders (Class, Test, Fee)
 - AI Doubt Solver
 - AI MCQ Explanation
 
 ## Sprint 9 — Dashboards + Polish (Week 14)
+
 - All role dashboards
 - Basic reports (Attendance, Fees, Results)
 - Tenant Feature Flags (UI)
@@ -72,6 +81,7 @@
 - Error handling + validation
 
 ## Sprint 10 — Production Readiness (Week 15)
+
 - Sentry error monitoring
 - Rate limiting
 - Health checks

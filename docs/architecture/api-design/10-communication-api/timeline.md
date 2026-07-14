@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a user's chronological communicat
 ## GET /api/v1/students/{id}/comms-timeline
 
 ### Purpose
+
 Retrieves a chronological sequence of all alerts dispatched to a student/parent.
 
 ### Permission
+
 `notification:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `notification:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `notification:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

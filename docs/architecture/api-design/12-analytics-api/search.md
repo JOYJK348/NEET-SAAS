@@ -7,26 +7,31 @@ This document defines advanced filter parameters for querying report archives.
 ## GET /api/v1/analytics/reports/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter generated report templates.
 
 ### Permission
+
 `analytics:report:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[domainFilter]`: String (`LMS`, `FEES`, `ASSESSMENTS`, `ATTENDANCE`).
-*   `search`: String (Fuzzy search matching report name).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[domainFilter]`: String (`LMS`, `FEES`, `ASSESSMENTS`, `ATTENDANCE`).
+- `search`: String (Fuzzy search matching report name).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

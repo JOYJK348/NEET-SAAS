@@ -7,20 +7,24 @@ This document defines endpoints for retrieving chronological analytics events.
 ## GET /api/v1/analytics/reports/{id}/timeline
 
 ### Purpose
+
 Retrieves a chronological history of report configurations, exports, and scheduled distributions.
 
 ### Permission
+
 `analytics:report:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:report:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:report:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

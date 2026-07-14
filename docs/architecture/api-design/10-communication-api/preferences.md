@@ -7,20 +7,24 @@ This document defines endpoints for managing user notification channel preferenc
 ## POST /api/v1/user-preferences/notifications
 
 ### Purpose
+
 Updates user settings for notification channel dispatches.
 
 ### Permission
+
 None (Active session required).
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: None
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: None
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "preferenceSettings": [
@@ -31,12 +35,15 @@ None (Active session required).
 ```
 
 ### Business Rules
-*   Saves opt-in/opt-out configuration settings to the `user_notification_preferences` table.
+
+- Saves opt-in/opt-out configuration settings to the `user_notification_preferences` table.
 
 ### Database Tables Affected
-*   `user_notification_preferences` (Insert/Update)
+
+- `user_notification_preferences` (Insert/Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

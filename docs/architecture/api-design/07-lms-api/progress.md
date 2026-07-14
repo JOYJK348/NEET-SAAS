@@ -7,20 +7,24 @@ This document defines endpoints for capturing student progression telemetry.
 ## POST /api/v1/students/{id}/progress/topics
 
 ### Purpose
+
 Logs completion of a teaching/learning topic for a student (telemetry tracker).
 
 ### Permission
+
 `student:progress:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:progress:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:progress:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "topicId": "top02b-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -30,13 +34,16 @@ Logs completion of a teaching/learning topic for a student (telemetry tracker).
 ```
 
 ### Business Rules
+
 1.  **State check**: Verifies the student profile status is `ACTIVE`.
 2.  **Telemetry save**: Inserts or updates the progress row in `student_topic_progress` table.
 
 ### Database Tables Affected
-*   `student_topic_progress` (Insert/Update)
+
+- `student_topic_progress` (Insert/Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

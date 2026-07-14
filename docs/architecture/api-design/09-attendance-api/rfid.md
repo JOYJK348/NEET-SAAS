@@ -7,20 +7,24 @@ This document defines endpoints for mapping RFID hardware tags.
 ## POST /api/v1/rfids/register
 
 ### Purpose
+
 Registers a hardware RFID badge card to a user profile.
 
 ### Permission
+
 `rfid:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `rfid:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `rfid:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "userId": "u091a3d1-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -29,9 +33,11 @@ Registers a hardware RFID badge card to a user profile.
 ```
 
 ### Business Rules
-*   Ensures that `badgeCode` is globally unique in `user_rfid_cards` table.
+
+- Ensures that `badgeCode` is globally unique in `user_rfid_cards` table.
 
 ### Response DTO
+
 ```json
 {
   "success": true,

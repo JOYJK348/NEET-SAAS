@@ -7,20 +7,24 @@ This document defines endpoints for managing student guardian profiles and relat
 ## POST /api/v1/students/{id}/guardians
 
 ### Purpose
+
 Creates a guardian profile and links it to the student.
 
 ### Permission
+
 `student:guardian:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:guardian:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:guardian:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "firstName": "Rajendra",
@@ -33,18 +37,22 @@ Creates a guardian profile and links it to the student.
 ```
 
 ### Validation Constraints
-*   `relationship`: Required. Must be `FATHER`, `MOTHER`, `GUARDIAN`, or `OTHER`.
-*   `phone`: Required. Valid format.
+
+- `relationship`: Required. Must be `FATHER`, `MOTHER`, `GUARDIAN`, or `OTHER`.
+- `phone`: Required. Valid format.
 
 ### Business Rules
+
 1.  **Multiple guardians**: Allows multiple guardians per student, but enforces that exactly one guardian must be marked as `isPrimaryContact = true` (enforced via database constraints/partial indices).
 2.  **User Portal Link**: If an email is provided, generates a linked user profile and triggers credentials emails for the Parent Portal.
 
 ### Database Tables Affected
-*   `guardian_profiles` (Insert)
-*   `student_guardians` (Insert)
+
+- `guardian_profiles` (Insert)
+- `student_guardians` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

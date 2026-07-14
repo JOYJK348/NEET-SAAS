@@ -35,13 +35,13 @@ export class PrismaService
 
     if (process.env.NODE_ENV !== 'production') {
       // Bind query telemetry logging
-      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+      /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
       (this as any).$on('query', (e: any) => {
         this.logger.debug(
           `Query: ${e.query} | Params: ${e.params} | Duration: ${e.duration}ms`,
         );
       });
-      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+      /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any */
     }
   }
 

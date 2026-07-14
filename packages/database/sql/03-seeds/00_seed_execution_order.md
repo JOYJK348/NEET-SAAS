@@ -5,7 +5,9 @@ This document details the exact execution order and dependency graph for seeding
 ---
 
 ## 1. Structure
+
 Seeds are split into two categories:
+
 1. `system/`: Core system setup scripts (idempotent, needed for production)
 2. `demo/`: Fake/testing data setup scripts (not run on production)
 
@@ -23,14 +25,18 @@ graph TD
 ## 2. Seed Execution Order (DML)
 
 ### 2.1 System Seeds
+
 System seeds must be executed in order:
+
 1. [03.01_permissions_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/system/03.01_permissions_seed.sql)
 2. [03.02_menus_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/system/03.02_menus_seed.sql)
 3. [03.03_system_roles_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/system/03.03_system_roles_seed.sql)
 4. [03.04_role_permissions_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/system/03.04_role_permissions_seed.sql)
 
 ### 2.2 Demo Seeds
+
 Demo seeds must be executed in order:
+
 1. [03.05_institutes_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/demo/03.05_institutes_seed.sql)
 2. [03.06_branches_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/demo/03.06_branches_seed.sql)
 3. [03.07_academic_years_seed.sql](file:///d:/FreeLance/NEET_platform/database/03-seeds/demo/03.07_academic_years_seed.sql)

@@ -2,7 +2,7 @@
 
 ## Context and Problem Statement
 
-Initially, questions and their dynamic version revisions were modeled within the `06-assessment` exam schema, tightly coupled with generated papers. 
+Initially, questions and their dynamic version revisions were modeled within the `06-assessment` exam schema, tightly coupled with generated papers.
 
 As the platform expands to support self-paced Homework, interactive Quizzes, and personalized AI assessments within the `12-lms` domain, the system needs to reuse the same database of questions. Redefining separate question models for LMS assignments causes database duplication and fragments the AI performance telemetry (which evaluates learning outcomes across both exams and homework).
 

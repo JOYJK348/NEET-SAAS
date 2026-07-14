@@ -7,20 +7,24 @@ Refer to [common-errors.md](file:///d:/FreeLance/NEET_platform/docs/architecture
 ## POST /api/v1/public/admissions
 
 ### Purpose
+
 Allows prospects to submit admission applications directly from the institute's public website.
 
 ### Permission
+
 None (Public endpoint).
 
 ### Security Notes
-*   Authentication Required: No
-*   Required RBAC Permission: None
-*   Tenant Isolation: Enforced via `X-Tenant-ID` header.
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Direct SQL verification.
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: No
+- Required RBAC Permission: None
+- Tenant Isolation: Enforced via `X-Tenant-ID` header.
+- Branch Isolation: Not Applicable
+- RLS Validation: Direct SQL verification.
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "firstName": "Adithya",
@@ -33,17 +37,21 @@ None (Public endpoint).
 ```
 
 ### Validation Constraints
-*   `email`: Required. Valid format.
-*   `phone`: Required. Valid format.
+
+- `email`: Required. Valid format.
+- `phone`: Required. Valid format.
 
 ### Business Rules
-*   Validates `X-Tenant-ID` matches an active tenant.
-*   Inserts the record into the `admissions` table with status `APPLIED`.
+
+- Validates `X-Tenant-ID` matches an active tenant.
+- Inserts the record into the `admissions` table with status `APPLIED`.
 
 ### Database Tables Affected
-*   `admissions` (Insert)
+
+- `admissions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

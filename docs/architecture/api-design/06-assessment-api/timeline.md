@@ -7,20 +7,24 @@ This document defines endpoints for retrieving chronological exam status updates
 ## GET /api/v1/exams/{id}/timeline
 
 ### Purpose
+
 Retrieves a chronological history of exam milestones (creation, scheduling, starts, auto-grading execution, and results publication).
 
 ### Permission
+
 `exam:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `exam:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced via batch associations.
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `exam:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced via batch associations.
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

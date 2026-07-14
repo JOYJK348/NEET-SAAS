@@ -7,20 +7,24 @@ This document defines endpoints for recording employee timesheets.
 ## POST /api/v1/staff-attendance/clock-in
 
 ### Purpose
+
 Records a staff member's morning clock-in timesheet log.
 
 ### Permission
+
 `attendance:staff:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:staff:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:staff:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "clockInTime": "2026-07-09T08:30:00.000Z",
@@ -29,12 +33,15 @@ Records a staff member's morning clock-in timesheet log.
 ```
 
 ### Business Rules
-*   Creates a timesheet row inside `staff_attendance_logs` table, storing coordinate points for geofencing compliance verification.
+
+- Creates a timesheet row inside `staff_attendance_logs` table, storing coordinate points for geofencing compliance verification.
 
 ### Database Tables Affected
-*   `staff_attendance_logs` (Insert)
+
+- `staff_attendance_logs` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -55,12 +62,15 @@ Records a staff member's morning clock-in timesheet log.
 ## POST /api/v1/staff-attendance/clock-out
 
 ### Purpose
+
 Records a staff member's evening clock-out log.
 
 ### Permission
+
 `attendance:staff:write`
 
 ### Request DTO
+
 ```json
 {
   "clockOutTime": "2026-07-09T17:30:00.000Z"

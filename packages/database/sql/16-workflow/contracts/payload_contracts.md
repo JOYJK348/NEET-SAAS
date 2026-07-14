@@ -16,15 +16,15 @@
 
 ## Type Definitions
 
-| Field | Type | Format | Description |
-|---|---|---|---|
-| `request_id` | UUID | v4 | Workflow request identifier |
-| `tenant_id` | UUID | v4 | Multi-tenant scope identifier |
-| `action_code` | String | Uppercase | Action performed (APPROVE, REJECT, etc.) |
-| `from_status` | String | Uppercase | Previous workflow state |
-| `to_status` | String | Uppercase | New workflow state |
-| `performed_by` | UUID | v4 | User who performed the action |
-| `timestamp` | String | ISO 8601 | UTC timestamp of transition |
+| Field          | Type   | Format    | Description                              |
+| -------------- | ------ | --------- | ---------------------------------------- |
+| `request_id`   | UUID   | v4        | Workflow request identifier              |
+| `tenant_id`    | UUID   | v4        | Multi-tenant scope identifier            |
+| `action_code`  | String | Uppercase | Action performed (APPROVE, REJECT, etc.) |
+| `from_status`  | String | Uppercase | Previous workflow state                  |
+| `to_status`    | String | Uppercase | New workflow state                       |
+| `performed_by` | UUID   | v4        | User who performed the action            |
+| `timestamp`    | String | ISO 8601  | UTC timestamp of transition              |
 
 ## Event-Specific Contracts
 

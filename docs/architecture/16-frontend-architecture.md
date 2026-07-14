@@ -1,4 +1,5 @@
 # Enterprise Frontend Architecture Specification (Next.js App Router)
+
 **Version:** 5.0.0-Final  
 **Classification:** Internal Technical Architecture  
 **Author:** Principal Frontend Architect (15+ Years Enterprise Systems)  
@@ -11,13 +12,13 @@
 
 To deliver a high-performance, resilient, and enterprise-grade learning management experience that feels instantaneous (achieving ~20ms interaction responses), the following frontend development rules are strictly enforced:
 
-*   **Server Components by Default:** All layouts, page wrappers, and non-interactive list views must be React Server Components (RSC) to minimize client-side JavaScript bundles and shift rendering overhead to the server edge.
-*   **Leaf-Node Client Interactivity:** Mark components with `'use client'` only at the lowest possible level in the DOM tree (e.g., individual toggle buttons, form inputs, dynamic dropdowns) to maximize static rendering capabilities.
-*   **Cache-Aware and Query-Driven Views:** Raw components must never fetch data directly. Data retrieval must be delegated to specialized, React Query-wrapped hooks with precise cache invalidate policies.
-*   **Zero-Spinner Layouts:** Spinners and page-level blocking loaders are prohibited. Layouts must employ skeleton UI blocks matching the exact geometry of the loading content to prevent layout shifts.
-*   **Deterministic Boundary Separation:** Modules are isolated sandbox domains. The importing of logic across domains (e.g., importing a components folder from `billing` inside `attendance`) is blocked by static analysis rules. Inter-module communication is permitted only through predefined services and shared TS contracts.
-*   **Optimistic Operations:** High-frequency student actions (such as attendance marking, quiz answers submission, and bookmarking) must update the UI immediately before network roundtrips complete.
-*   **Budget-Bound Assets:** Every asset (JS bundles, images, icons) must pass size audits. External dependency additions require an Architecture Decision Record (ADR) approval.
+- **Server Components by Default:** All layouts, page wrappers, and non-interactive list views must be React Server Components (RSC) to minimize client-side JavaScript bundles and shift rendering overhead to the server edge.
+- **Leaf-Node Client Interactivity:** Mark components with `'use client'` only at the lowest possible level in the DOM tree (e.g., individual toggle buttons, form inputs, dynamic dropdowns) to maximize static rendering capabilities.
+- **Cache-Aware and Query-Driven Views:** Raw components must never fetch data directly. Data retrieval must be delegated to specialized, React Query-wrapped hooks with precise cache invalidate policies.
+- **Zero-Spinner Layouts:** Spinners and page-level blocking loaders are prohibited. Layouts must employ skeleton UI blocks matching the exact geometry of the loading content to prevent layout shifts.
+- **Deterministic Boundary Separation:** Modules are isolated sandbox domains. The importing of logic across domains (e.g., importing a components folder from `billing` inside `attendance`) is blocked by static analysis rules. Inter-module communication is permitted only through predefined services and shared TS contracts.
+- **Optimistic Operations:** High-frequency student actions (such as attendance marking, quiz answers submission, and bookmarking) must update the UI immediately before network roundtrips complete.
+- **Budget-Bound Assets:** Every asset (JS bundles, images, icons) must pass size audits. External dependency additions require an Architecture Decision Record (ADR) approval.
 
 ---
 
@@ -61,12 +62,17 @@ To prevent spaghetti dependencies, boundary constraints are enforced via ESLint:
 ```json
 {
   "rules": {
-    "no-restricted-imports": ["error", {
-      "patterns": [{
-        "group": ["@/features/*/*"],
-        "message": "Direct deep imports are prohibited. Import only from the public api file (e.g. '@/features/attendance')."
-      }]
-    }]
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/features/*/*"],
+            "message": "Direct deep imports are prohibited. Import only from the public api file (e.g. '@/features/attendance')."
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -77,14 +83,14 @@ To prevent spaghetti dependencies, boundary constraints are enforced via ESLint:
 
 We implement a hybrid rendering strategy mapped to user security levels, search visibility targets, and interactivity demands.
 
-| Path Segment / Module | Rendering Strategy | Caching / Revalidation Policy | Suspense & Hydration Rules |
-| :--- | :--- | :--- | :--- |
-| `/login`, `/auth/*` | **SSR (Server-Side Rendering)** | Dynamic, no caching | Synchronous form hydration |
-| `/admin/dashboard` | **PPR (Partial Prerendering)** | Layout static, content fetched client-side | Suspense bounds per chart and widget |
-| `/admin/academic/courses` | **SSR + Client Cache** | staleTime: 5 min, gcTime: 30 min | Stream table skeletons |
-| `/admin/reports` | **CSR (Client-Side Rendering)** | Dynamic, bypass persistent storage cache | Lazy-loaded heavy PDF/CSV parsing modules |
-| `/marketing/*` | **ISR (Incremental Static Reval)** | Revalidate: 3600 seconds (1 hour) | Server cache edge distribution |
-| `/admin/settings` | **SSR (Dynamic Layout)** | Dynamic, no caching | Standard form wrappers |
+| Path Segment / Module     | Rendering Strategy                 | Caching / Revalidation Policy              | Suspense & Hydration Rules                |
+| :------------------------ | :--------------------------------- | :----------------------------------------- | :---------------------------------------- |
+| `/login`, `/auth/*`       | **SSR (Server-Side Rendering)**    | Dynamic, no caching                        | Synchronous form hydration                |
+| `/admin/dashboard`        | **PPR (Partial Prerendering)**     | Layout static, content fetched client-side | Suspense bounds per chart and widget      |
+| `/admin/academic/courses` | **SSR + Client Cache**             | staleTime: 5 min, gcTime: 30 min           | Stream table skeletons                    |
+| `/admin/reports`          | **CSR (Client-Side Rendering)**    | Dynamic, bypass persistent storage cache   | Lazy-loaded heavy PDF/CSV parsing modules |
+| `/marketing/*`            | **ISR (Incremental Static Reval)** | Revalidate: 3600 seconds (1 hour)          | Server cache edge distribution            |
+| `/admin/settings`         | **SSR (Dynamic Layout)**           | Dynamic, no caching                        | Standard form wrappers                    |
 
 ---
 
@@ -92,15 +98,15 @@ We implement a hybrid rendering strategy mapped to user security levels, search 
 
 State is split by mutate patterns and persistence requirements to prevent stale state bugs and sync lag.
 
-| Data Frame | Owner | Mechanism | Mutation Access | Lifecycle / Persistence |
-| :--- | :--- | :--- | :--- | :--- |
-| **Server State** | React Query | Cache Memory / Hydration | Mutations / Invalidation | sessionStore synced, background refresh |
-| **Transient UI State** | Zustand (Selective Selectors) | React Context Memory | Direct Store Actions | Tab runtime memory, clean on unload |
-| **Brand Customizations** | Cookies | HTTP Header / Client State | Server-side actions | Persistent Cookie |
-| **Input Form Buffer** | React Hook Form | Virtual Input State | Input-level bindings | Component execution lifetime |
-| **Active Filters / Page** | URL State | Next Router SearchParams | router.push / query mutate | Browser URL History, shareable link |
-| **Access Tokens (JWT)** | Client Memory | JS Variable | Silent token refresh rotation | In-memory only (Secure HttpOnly Cookie) |
-| **Refresh Token** | Server Session | HttpOnly Cookie | Cookie rotation endpoint | Secure cookie storage |
+| Data Frame                | Owner                         | Mechanism                  | Mutation Access               | Lifecycle / Persistence                 |
+| :------------------------ | :---------------------------- | :------------------------- | :---------------------------- | :-------------------------------------- |
+| **Server State**          | React Query                   | Cache Memory / Hydration   | Mutations / Invalidation      | sessionStore synced, background refresh |
+| **Transient UI State**    | Zustand (Selective Selectors) | React Context Memory       | Direct Store Actions          | Tab runtime memory, clean on unload     |
+| **Brand Customizations**  | Cookies                       | HTTP Header / Client State | Server-side actions           | Persistent Cookie                       |
+| **Input Form Buffer**     | React Hook Form               | Virtual Input State        | Input-level bindings          | Component execution lifetime            |
+| **Active Filters / Page** | URL State                     | Next Router SearchParams   | router.push / query mutate    | Browser URL History, shareable link     |
+| **Access Tokens (JWT)**   | Client Memory                 | JS Variable                | Silent token refresh rotation | In-memory only (Secure HttpOnly Cookie) |
+| **Refresh Token**         | Server Session                | HttpOnly Cookie            | Cookie rotation endpoint      | Secure cookie storage                   |
 
 ---
 
@@ -125,7 +131,7 @@ export interface StudentFilters {
 
 export interface AttendanceFilters {
   batchId: string;
-  date?: string;       // ISO date string
+  date?: string; // ISO date string
   status?: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED';
 }
 
@@ -165,7 +171,8 @@ export const queryKeys = {
   },
   attendance: {
     today: (batchId: string) => ['attendance', 'today', batchId] as const,
-    history: (studentId: string, range: string) => ['attendance', 'history', studentId, range] as const,
+    history: (studentId: string, range: string) =>
+      ['attendance', 'history', studentId, range] as const,
     batch: (filters: AttendanceFilters) => ['attendance', 'batch', filters] as const,
   },
   billing: {
@@ -299,7 +306,10 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // NEVER use console.error() directly — route through centralized capture
-    captureFrontendException('ErrorBoundary caught an error', { error, componentStack: info.componentStack });
+    captureFrontendException('ErrorBoundary caught an error', {
+      error,
+      componentStack: info.componentStack,
+    });
   }
 
   render() {
@@ -390,11 +400,11 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
 
 We prevent client-side data leaks, content injections, and framing exploits using the following security controls:
 
-*   **XSS Mitigation:** Content rendering must be sanitized on the client using `DOMPurify` before mounting to the DOM.
-*   **Content Security Policy (CSP):** Layout responses must carry strict CSP headers containing `nonce` injections.
-*   **CSRF Prevention:** Axios requests include validation checks that reject modifications unless the payload carries a `X-CSRF-Token` header.
-*   **X-Frame-Options:** Headers must enforce `DENY` to restrict iframe wrapping (clickjacking protection).
-*   **Client Cookie Storage:** Session identifiers must never be written to `localStorage`. Only use `Secure`, `HttpOnly`, `SameSite=Strict` cookies.
+- **XSS Mitigation:** Content rendering must be sanitized on the client using `DOMPurify` before mounting to the DOM.
+- **Content Security Policy (CSP):** Layout responses must carry strict CSP headers containing `nonce` injections.
+- **CSRF Prevention:** Axios requests include validation checks that reject modifications unless the payload carries a `X-CSRF-Token` header.
+- **X-Frame-Options:** Headers must enforce `DENY` to restrict iframe wrapping (clickjacking protection).
+- **Client Cookie Storage:** Session identifiers must never be written to `localStorage`. Only use `Secure`, `HttpOnly`, `SameSite=Strict` cookies.
 
 ---
 
@@ -402,14 +412,14 @@ We prevent client-side data leaks, content injections, and framing exploits usin
 
 Assets are optimized to minimize initial layout shift and latency:
 
-*   **Font Subsets:** All system fonts must load via `next/font/google` using the `latin` subset and display swap parameter to prevent Cumulative Layout Shift (CLS):
-    ```typescript
-    // app/layout.tsx
-    import { Inter } from 'next/font/google';
-    const inter = Inter({ subsets: ['latin'], display: 'swap' });
-    ```
-*   **Edge Resizing CDN:** External profile images are fetched using Cloudflare R2 parameters: `https://cdn.platform.com/cdn-cgi/image/width=128,quality=80/avatar.png`
-*   **Priority Preloading:** The logo and the default tenant background images must be preloaded immediately on login validation.
+- **Font Subsets:** All system fonts must load via `next/font/google` using the `latin` subset and display swap parameter to prevent Cumulative Layout Shift (CLS):
+  ```typescript
+  // app/layout.tsx
+  import { Inter } from 'next/font/google';
+  const inter = Inter({ subsets: ['latin'], display: 'swap' });
+  ```
+- **Edge Resizing CDN:** External profile images are fetched using Cloudflare R2 parameters: `https://cdn.platform.com/cdn-cgi/image/width=128,quality=80/avatar.png`
+- **Priority Preloading:** The logo and the default tenant background images must be preloaded immediately on login validation.
 
 ---
 
@@ -446,13 +456,13 @@ jobs:
 
 We leverage HTTP/2 features and server hint configurations to download assets in parallel:
 
-*   **Preconnect & DNS Prefetch:** Connect early to key edge resources:
-    ```html
-    <link rel="preconnect" href="https://cdn.platform.com" />
-    <link rel="dns-prefetch" href="https://cdn.platform.com" />
-    ```
-*   **Network Priorities (HTTP/2):** Layout-critical chunks (CSS, theme configs) use `fetchPriority="high"`. Analytical reports and charts use `fetchPriority="low"`.
-*   **Caching & Validation:** Response headers enforce ETags and `Cache-Control: public, max-age=31536000, immutable` for static components.
+- **Preconnect & DNS Prefetch:** Connect early to key edge resources:
+  ```html
+  <link rel="preconnect" href="https://cdn.platform.com" />
+  <link rel="dns-prefetch" href="https://cdn.platform.com" />
+  ```
+- **Network Priorities (HTTP/2):** Layout-critical chunks (CSS, theme configs) use `fetchPriority="high"`. Analytical reports and charts use `fetchPriority="low"`.
+- **Caching & Validation:** Response headers enforce ETags and `Cache-Control: public, max-age=31536000, immutable` for static components.
 
 ---
 
@@ -491,6 +501,7 @@ To eliminate the latency waterfall caused by sequential client queries, we conso
 ```
 
 The bootstrap payload compiles:
+
 1.  **RBAC Configs:** Role permissions, dynamic authorization maps.
 2.  **Tenant Parameters:** Custom HSL branding variables, logos.
 3.  **Active Environment:** Current Academic Year, Campus Branches configurations.
@@ -583,8 +594,8 @@ export function SidebarItem({ label, href }: { label: string; href: string }) {
   };
 
   return (
-    <Link 
-      href={href} 
+    <Link
+      href={href}
       onMouseEnter={handleWarmup}
       onFocus={handleWarmup}
       className="flex items-center space-x-2 rounded-lg p-2 hover:bg-primary/10"
@@ -599,45 +610,45 @@ export function SidebarItem({ label, href }: { label: string; href: string }) {
 
 Rendering thousands of DOM nodes causes heavy thread locking. The table below lists the layout virtualization strategies required based on result row size:
 
-| Dataset Size | Interface Strategy | Technical Implementation | Pagination Mode |
-| :--- | :--- | :--- | :--- |
-| **< 100 Rows** | Standard paginated table | Base shadcn elements | Server offset paging |
-| **101 - 500 Rows** | Virtual scroll list | `TanStack Virtual` | Server offset paging |
-| **501 - 5000 Rows** | Infinite loading grid | `useInfiniteQuery` + `TanStack Virtual` | Keyset/Cursor pagination |
-| **> 5000 Rows** | Elastic search filters + virtual view | Search Index server queries + Virtual table | Strict cursor queries |
+| Dataset Size        | Interface Strategy                    | Technical Implementation                    | Pagination Mode          |
+| :------------------ | :------------------------------------ | :------------------------------------------ | :----------------------- |
+| **< 100 Rows**      | Standard paginated table              | Base shadcn elements                        | Server offset paging     |
+| **101 - 500 Rows**  | Virtual scroll list                   | `TanStack Virtual`                          | Server offset paging     |
+| **501 - 5000 Rows** | Infinite loading grid                 | `useInfiniteQuery` + `TanStack Virtual`     | Keyset/Cursor pagination |
+| **> 5000 Rows**     | Elastic search filters + virtual view | Search Index server queries + Virtual table | Strict cursor queries    |
 
 ### 15.7 Component Lazy Loading Policies
 
 To maintain a minimal initial JS bundle, components are classified into dynamic loading groups:
 
-| component Group | Dynamic Loading Mode | lazy Import Strategy | Bundle Budget (Gzipped) |
-| :--- | :--- | :--- | :--- |
-| **Critical Frames** (Sidebar, Header) | Synchronous / Core Hydrate | Eager Import | `< 30 KB` |
-| **Layout Content** (KPI Cards, Details) | Progressive / CSR | Eager Import | `< 50 KB` |
-| **Heavy Panels** (Charts, Recharts) | Dynamic Deferred | `dynamic(() => import(...), { ssr: false })` | `< 120 KB` |
-| **Utility Panels** (Rich Text, Calendars) | Lazy Hover | Loaded on container hover/activation | `< 250 KB` |
-| **Heavy Libraries** (Excel parsing, PDF views) | Idle Defer | Dynamically loaded via request callbacks | `< 500 KB` |
+| component Group                                | Dynamic Loading Mode       | lazy Import Strategy                         | Bundle Budget (Gzipped) |
+| :--------------------------------------------- | :------------------------- | :------------------------------------------- | :---------------------- |
+| **Critical Frames** (Sidebar, Header)          | Synchronous / Core Hydrate | Eager Import                                 | `< 30 KB`               |
+| **Layout Content** (KPI Cards, Details)        | Progressive / CSR          | Eager Import                                 | `< 50 KB`               |
+| **Heavy Panels** (Charts, Recharts)            | Dynamic Deferred           | `dynamic(() => import(...), { ssr: false })` | `< 120 KB`              |
+| **Utility Panels** (Rich Text, Calendars)      | Lazy Hover                 | Loaded on container hover/activation         | `< 250 KB`              |
+| **Heavy Libraries** (Excel parsing, PDF views) | Idle Defer                 | Dynamically loaded via request callbacks     | `< 500 KB`              |
 
 ### 15.8 Image Loading & Cloudflare R2 Optimization
 
 Images must prevent Cumulative Layout Shift (CLS) and leverage edge processing optimization:
 
-*   **Format Selection:** All responsive images are loaded as `AVIF` format (supported on Cloudflare CDN) with `WEBP` fallback.
-*   **Dimensions Allocation:** The `next/image` tag must explicitly carry width and height boundaries to reserve layout sizes.
-*   **Edge Resizing:** User profiles fetch optimized thumbnails dynamically using R2 edge transformations: `https://cdn.platform.com/cdn-cgi/image/width=128,quality=80/avatar.png`.
-*   **Priority Preloading:** Above-the-fold images (such as tenant logotypes and user avatar icons) must carry the `priority` tag to ensure preloading.
+- **Format Selection:** All responsive images are loaded as `AVIF` format (supported on Cloudflare CDN) with `WEBP` fallback.
+- **Dimensions Allocation:** The `next/image` tag must explicitly carry width and height boundaries to reserve layout sizes.
+- **Edge Resizing:** User profiles fetch optimized thumbnails dynamically using R2 edge transformations: `https://cdn.platform.com/cdn-cgi/image/width=128,quality=80/avatar.png`.
+- **Priority Preloading:** Above-the-fold images (such as tenant logotypes and user avatar icons) must carry the `priority` tag to ensure preloading.
 
 ### 15.9 Mutation & Optimistic UI Matrix
 
 For high-frequency actions, the UI must immediately reflect success, scheduling background synchronizations and rolling back on network failures.
 
-| User Action | Optimistic UI Strategy | rollback Action | API Invalidation Target |
-| :--- | :--- | :--- | :--- |
-| **Marking Attendance** | Toggle local present/absent array | Restore original state value | Invalidate `attendance.today()` |
-| **Answering Quiz Question** | Mark option state as checked | Restore previous option value | Invalidate `assessments.state()` |
-| **Updating Student Profile** | Normal loading mask, no optimistic state | None (Standard Form Validation) | Invalidate `student.detail()` |
-| **Deleting Student Profile** | Remove row immediately from virtual table | Re-insert row back into cache array | Invalidate `student.list()` |
-| **Bulk CSV Rosters Upload** | Show upload progress bar inside notifications | Reset notification progress bar | Invalidate `student.list()` |
+| User Action                  | Optimistic UI Strategy                        | rollback Action                     | API Invalidation Target          |
+| :--------------------------- | :-------------------------------------------- | :---------------------------------- | :------------------------------- |
+| **Marking Attendance**       | Toggle local present/absent array             | Restore original state value        | Invalidate `attendance.today()`  |
+| **Answering Quiz Question**  | Mark option state as checked                  | Restore previous option value       | Invalidate `assessments.state()` |
+| **Updating Student Profile** | Normal loading mask, no optimistic state      | None (Standard Form Validation)     | Invalidate `student.detail()`    |
+| **Deleting Student Profile** | Remove row immediately from virtual table     | Re-insert row back into cache array | Invalidate `student.list()`      |
+| **Bulk CSV Rosters Upload**  | Show upload progress bar inside notifications | Reset notification progress bar     | Invalidate `student.list()`      |
 
 #### Optimistic Mutation Implementation Example:
 
@@ -661,7 +672,7 @@ export function useMarkAttendance(batchId: string) {
 
       // Optimistically modify cache array state
       queryClient.setQueryData(queryKeys.attendance.today(batchId), (old: any) => {
-        return old.map((s: any) => s.studentId === studentId ? { ...s, present: isPresent } : s);
+        return old.map((s: any) => (s.studentId === studentId ? { ...s, present: isPresent } : s));
       });
 
       // Return snapshot value to support rollback on error
@@ -684,31 +695,31 @@ export function useMarkAttendance(batchId: string) {
 
 We implement edge pre-connection rules inside the Next.js `DocumentLayout` headers:
 
-*   **Pre-connect & DNS Prefetch:** Warm up external assets links early:
-    ```html
-    <link rel="preconnect" href="https://cdn.platform.com" />
-    <link rel="dns-prefetch" href="https://cdn.platform.com" />
-    ```
-*   **Compression Rules:** Cloudflare edge handles `Brotli` and `gzip` compression headers automatically.
-*   **Cache-Control & ETags:** Static assets (fonts, icons) use:
-    `Cache-Control: public, max-age=31536000, immutable`
-    Dynamic API responses leverage `ETag` matching headers to prevent downloading unmodified payloads.
+- **Pre-connect & DNS Prefetch:** Warm up external assets links early:
+  ```html
+  <link rel="preconnect" href="https://cdn.platform.com" />
+  <link rel="dns-prefetch" href="https://cdn.platform.com" />
+  ```
+- **Compression Rules:** Cloudflare edge handles `Brotli` and `gzip` compression headers automatically.
+- **Cache-Control & ETags:** Static assets (fonts, icons) use:
+  `Cache-Control: public, max-age=31536000, immutable`
+  Dynamic API responses leverage `ETag` matching headers to prevent downloading unmodified payloads.
 
 ### 15.11 UI Thread Blocking Controls (Zero-Freeze UI)
 
 To keep user input handlers responsive (< 50ms INP), execution tasks are kept off the primary browser rendering thread:
 
-*   **No Render Execution Awaiting:** Never resolve asynchronous operations inside render loops.
-*   **Web Workers for Data Parsing:** Large calculations, such as client-side JSON parsing of bulk student CSV logs (exceeding 2MB), must be offloaded to Web Workers:
-    ```typescript
-    // utils/parseCsvWorker.ts
-    const worker = new Worker(new URL('./csvParser.worker.ts', import.meta.url));
-    worker.postMessage(csvRawString);
-    worker.onmessage = (event) => {
-      const parsedData = event.data;
-      // Update store state with parsedData
-    };
-    ```
+- **No Render Execution Awaiting:** Never resolve asynchronous operations inside render loops.
+- **Web Workers for Data Parsing:** Large calculations, such as client-side JSON parsing of bulk student CSV logs (exceeding 2MB), must be offloaded to Web Workers:
+  ```typescript
+  // utils/parseCsvWorker.ts
+  const worker = new Worker(new URL('./csvParser.worker.ts', import.meta.url));
+  worker.postMessage(csvRawString);
+  worker.onmessage = (event) => {
+    const parsedData = event.data;
+    // Update store state with parsedData
+  };
+  ```
 
 ### 15.12 Error Recovery & Exponential Backoff
 
@@ -753,7 +764,7 @@ export function monitorPerformanceMetrics() {
           duration: `${entry.duration.toFixed(2)}ms`,
         });
       }
-      
+
       // Audit layout shifts
       if (entry.entryType === 'layout-shift' && (entry as any).value > 0.1) {
         captureFrontendLog('WARN', 'CLS Layout Shift Triggered', {
@@ -822,7 +833,7 @@ export function recordTransitionAndPrefetch(currentPath: string, nextPath: strin
   // Determine top likely routes from current path
   const paths = history[currentPath];
   const sortedPaths = Object.keys(paths).sort((a, b) => paths[b] - paths[a]);
-  
+
   if (sortedPaths[0] && sortedPaths[0].includes('/admin/people/learners')) {
     // Eagerly prefetch next likely query on browser idle thread
     window.requestIdleCallback(() => {
@@ -872,14 +883,14 @@ export function initializeWebSocketCacheSync() {
 
   ws.onmessage = (event) => {
     const { action, payload } = JSON.parse(event.data);
-    
+
     // Process real-time cache updates without querying backend
     if (action === 'STUDENT_CHECKIN') {
       const { studentId, batchId, isPresent } = payload;
-      
+
       queryClient.setQueryData(['attendance', 'today', batchId], (old: any) => {
         if (!old) return old;
-        return old.map((s: any) => s.studentId === studentId ? { ...s, present: isPresent } : s);
+        return old.map((s: any) => (s.studentId === studentId ? { ...s, present: isPresent } : s));
       });
     }
   };
@@ -896,13 +907,13 @@ Uniform consistency across tenants and layouts is governed via declarative desig
 // lib/theme/tokens.ts
 export const designTokens = {
   spacing: {
-    xxs: '0.25rem',  // 4px
-    xs: '0.5rem',    // 8px
-    sm: '0.75rem',   // 12px
-    md: '1rem',      // 16px
-    lg: '1.5rem',    // 24px
-    xl: '2rem',      // 32px
-    xxl: '3rem',     // 48px
+    xxs: '0.25rem', // 4px
+    xs: '0.5rem', // 8px
+    sm: '0.75rem', // 12px
+    md: '1rem', // 16px
+    lg: '1.5rem', // 24px
+    xl: '2rem', // 32px
+    xxl: '3rem', // 48px
   },
   fontSizes: {
     xs: '0.75rem',
@@ -923,7 +934,7 @@ export const designTokens = {
   motion: {
     transitionInstant: 'all 50ms cubic-bezier(0.4, 0, 0.2, 1)',
     transitionSmooth: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-  }
+  },
 };
 ```
 
@@ -1036,7 +1047,7 @@ export function queueOfflineMutation(url: string, payload: any) {
   const queue: OfflineTask[] = JSON.parse(localStorage.getItem('offline_mutations') || '[]');
   queue.push({ id: crypto.randomUUID(), url, payload });
   localStorage.setItem('offline_mutations', JSON.stringify(queue));
-  
+
   // Register service event to sync on network restore
   if ('serviceWorker' in navigator && 'SyncManager' in window) {
     navigator.serviceWorker.ready.then((reg) => {
@@ -1050,9 +1061,11 @@ export async function processOfflineQueue() {
   if (queue.length === 0) return;
 
   for (const task of queue) {
-    await fetchWithBackoff(() => fetch(task.url, { method: 'POST', body: JSON.stringify(task.payload) }));
+    await fetchWithBackoff(() =>
+      fetch(task.url, { method: 'POST', body: JSON.stringify(task.payload) }),
+    );
   }
-  
+
   localStorage.removeItem('offline_mutations');
 }
 ```
@@ -1066,27 +1079,18 @@ Offline asset storage and background sync rules are registered inside the Servic
 ```javascript
 // public/sw.js
 const CACHE_NAME = 'neet-saas-cache-v1';
-const OFFLINE_URLS = [
-  '/',
-  '/offline.html',
-  '/styles/global.css',
-  '/fonts/inter.woff2'
-];
+const OFFLINE_URLS = ['/', '/offline.html', '/styles/global.css', '/fonts/inter.woff2'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(OFFLINE_URLS)));
 });
 
 self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match('/offline.html'))
-    );
+    event.respondWith(fetch(event.request).catch(() => caches.match('/offline.html')));
   } else {
     event.respondWith(
-      caches.match(event.request).then((response) => response || fetch(event.request))
+      caches.match(event.request).then((response) => response || fetch(event.request)),
     );
   }
 });
@@ -1113,30 +1117,30 @@ export const admissionMachine = createMachine({
   initial: 'idle',
   states: {
     idle: {
-      on: { SUBMIT: 'validating' }
+      on: { SUBMIT: 'validating' },
     },
     validating: {
       on: {
         SUCCESS: 'payment_pending',
-        FAIL: 'error'
-      }
+        FAIL: 'error',
+      },
     },
     payment_pending: {
       on: {
         PAYMENT_SUCCESS: 'enrolled',
-        PAYMENT_FAIL: 'payment_retry'
-      }
+        PAYMENT_FAIL: 'payment_retry',
+      },
     },
     payment_retry: {
-      on: { RETRY: 'payment_pending' }
+      on: { RETRY: 'payment_pending' },
     },
     enrolled: {
-      type: 'final'
+      type: 'final',
     },
     error: {
-      on: { BACK: 'idle' }
-    }
-  }
+      on: { BACK: 'idle' },
+    },
+  },
 });
 ```
 
@@ -1161,7 +1165,7 @@ import { queryClient } from '@/lib/queryClient';
 describe('useMarkAttendance Hook', () => {
   it('should optimistically modify student attendance cache status', async () => {
     const { result } = renderHook(() => useMarkAttendance('batch_123'));
-    
+
     result.current.mutate({ studentId: 'student_1', isPresent: true });
 
     // Assert cache was updated immediately before network completed
@@ -1177,22 +1181,22 @@ describe('useMarkAttendance Hook', () => {
 
 Unresolved observers or sockets block Javascript memory cleanup. The following cleanup protocols are mandatory:
 
-*   **Cancel Outgoing Queries on Unmount:** Page changes must cancel pending fetches:
-    ```typescript
-    useEffect(() => {
-      return () => {
-        queryClient.cancelQueries({ queryKey: ['active_page_data'] });
-      };
-    }, []);
-    ```
-*   **Disconnect Resize & Mutation Observers:** Ensure listeners disconnect cleanly:
-    ```typescript
-    useEffect(() => {
-      const observer = new ResizeObserver(() => {});
-      return () => observer.disconnect();
-    }, []);
-    ```
-*   **WS Sockets Disconnections:** WebSockets must close explicitly on component unmount to prevent connection exhaustion.
+- **Cancel Outgoing Queries on Unmount:** Page changes must cancel pending fetches:
+  ```typescript
+  useEffect(() => {
+    return () => {
+      queryClient.cancelQueries({ queryKey: ['active_page_data'] });
+    };
+  }, []);
+  ```
+- **Disconnect Resize & Mutation Observers:** Ensure listeners disconnect cleanly:
+  ```typescript
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {});
+    return () => observer.disconnect();
+  }, []);
+  ```
+- **WS Sockets Disconnections:** WebSockets must close explicitly on component unmount to prevent connection exhaustion.
 
 ---
 
@@ -1247,14 +1251,27 @@ Backend RBAC alone is insufficient. The frontend must enforce visibility and act
 
 ```typescript
 // lib/security/permissions.types.ts
-export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'export' | 'approve' | 'archive';
+export type PermissionAction =
+  'create' | 'read' | 'update' | 'delete' | 'export' | 'approve' | 'archive';
 export type PermissionResource =
-  | 'student' | 'staff' | 'parent'
-  | 'batch' | 'course' | 'subject'
-  | 'attendance' | 'exam' | 'assessment'
-  | 'invoice' | 'payment' | 'fee_structure'
-  | 'report' | 'settings' | 'tenant'
-  | 'admission' | 'timetable' | 'notification';
+  | 'student'
+  | 'staff'
+  | 'parent'
+  | 'batch'
+  | 'course'
+  | 'subject'
+  | 'attendance'
+  | 'exam'
+  | 'assessment'
+  | 'invoice'
+  | 'payment'
+  | 'fee_structure'
+  | 'report'
+  | 'settings'
+  | 'tenant'
+  | 'admission'
+  | 'timetable'
+  | 'notification';
 
 export type Permission = `${PermissionResource}.${PermissionAction}`;
 
@@ -1344,6 +1361,7 @@ export function Can({ permission, mode = 'all', fallback = null, children }: Can
 ```
 
 **Usage Example:**
+
 ```tsx
 <Can permission="student.create">
   <CreateStudentButton />
@@ -1366,12 +1384,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionToken } from '@/lib/security/session';
 
 const ROUTE_PERMISSION_MAP: Record<string, string[]> = {
-  '/admin/people/learners':     ['student.read'],
+  '/admin/people/learners': ['student.read'],
   '/admin/people/learners/new': ['student.create'],
-  '/admin/billing':             ['invoice.read'],
-  '/admin/billing/create':      ['invoice.create'],
-  '/admin/settings':            ['settings.read'],
-  '/admin/reports':             ['report.read'],
+  '/admin/billing': ['invoice.read'],
+  '/admin/billing/create': ['invoice.create'],
+  '/admin/settings': ['settings.read'],
+  '/admin/reports': ['report.read'],
 };
 
 export async function middleware(request: NextRequest) {
@@ -1400,7 +1418,7 @@ import type { Permission } from '@/lib/security/permissions.types';
 
 export function useAuthorizedMutation<TData, TError, TVariables>(
   requiredPermission: Permission,
-  options: UseMutationOptions<TData, TError, TVariables>
+  options: UseMutationOptions<TData, TError, TVariables>,
 ) {
   const { hasPermission } = usePermission();
 
@@ -1426,8 +1444,16 @@ Instead of scattering route strings across components, all navigation entries ar
 // lib/navigation/navigationRegistry.ts
 import type { Permission } from '@/lib/security/permissions.types';
 import {
-  LayoutDashboard, Users, GraduationCap, ClipboardCheck,
-  Receipt, BarChart3, Settings, BookOpen, Calendar, Bell
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  ClipboardCheck,
+  Receipt,
+  BarChart3,
+  Settings,
+  BookOpen,
+  Calendar,
+  Bell,
 } from 'lucide-react';
 
 export interface NavigationItem {
@@ -1437,10 +1463,10 @@ export interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
   permission?: Permission;
   group: 'main' | 'academic' | 'finance' | 'system';
-  badge?: () => Promise<number>;      // Dynamic badge count resolver
+  badge?: () => Promise<number>; // Dynamic badge count resolver
   children?: NavigationItem[];
-  keywords?: string[];                 // For Command Palette fuzzy search
-  prefetchKeys?: string[];             // Query keys to warmup on hover
+  keywords?: string[]; // For Command Palette fuzzy search
+  prefetchKeys?: string[]; // Query keys to warmup on hover
 }
 
 export const navigationRegistry: NavigationItem[] = [
@@ -1556,9 +1582,7 @@ export function getNavigationByGroup(group: NavigationItem['group']) {
 }
 
 export function flattenNavigation(): NavigationItem[] {
-  return navigationRegistry.flatMap((item) =>
-    item.children ? [item, ...item.children] : [item]
-  );
+  return navigationRegistry.flatMap((item) => (item.children ? [item, ...item.children] : [item]));
 }
 
 export function findNavigationByHref(href: string): NavigationItem | undefined {
@@ -1635,7 +1659,10 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
   // 2. CSRF Token Injection (from meta tag or cookie)
   const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-  if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() || '')) {
+  if (
+    csrfToken &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() || '')
+  ) {
     config.headers['X-CSRF-Token'] = csrfToken;
   }
 
@@ -1676,7 +1703,7 @@ apiClient.interceptors.response.use(
         const { data } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
         tokenStore.setAccessToken(data.accessToken);
 
@@ -1706,7 +1733,7 @@ apiClient.interceptors.response.use(
     });
 
     return Promise.reject(mappedError);
-  }
+  },
 );
 
 // ── Error Mapper ──
@@ -1751,7 +1778,9 @@ import { apiClient } from './apiClient';
 export function createService<TEntity>(basePath: string) {
   return {
     list: async (params?: Record<string, unknown>) => {
-      const { data } = await apiClient.get<{ data: TEntity[]; meta: PaginationMeta }>(basePath, { params });
+      const { data } = await apiClient.get<{ data: TEntity[]; meta: PaginationMeta }>(basePath, {
+        params,
+      });
       return data;
     },
     getById: async (id: string) => {
@@ -1906,14 +1935,16 @@ export const errorCodeRegistry: Record<string, ErrorCodeEntry> = {
 
 // ── Error Resolution Hook ──
 export function resolveError(code: string): ErrorCodeEntry {
-  return errorCodeRegistry[code] || {
-    code: 'UNKNOWN',
-    severity: 'error' as const,
-    userMessage: 'An unexpected error occurred. Please try again.',
-    devHint: `Unmapped error code: ${code}`,
-    retryable: false,
-    action: 'toast' as const,
-  };
+  return (
+    errorCodeRegistry[code] || {
+      code: 'UNKNOWN',
+      severity: 'error' as const,
+      userMessage: 'An unexpected error occurred. Please try again.',
+      devHint: `Unmapped error code: ${code}`,
+      retryable: false,
+      action: 'toast' as const,
+    }
+  );
 }
 ```
 
@@ -1938,7 +1969,10 @@ export function useErrorHandler() {
 
     switch (entry.action) {
       case 'toast':
-        toast({ variant: entry.severity === 'critical' ? 'destructive' : 'default', title: entry.userMessage });
+        toast({
+          variant: entry.severity === 'critical' ? 'destructive' : 'default',
+          title: entry.userMessage,
+        });
         break;
       case 'modal':
         openModal({ type: 'error', title: 'Error', message: entry.userMessage });
@@ -2217,7 +2251,7 @@ interface ModalEntry {
   props?: Record<string, unknown>;
   onConfirm?: () => void | Promise<void>;
   onCancel?: () => void;
-  preventClose?: boolean;       // Prevent Escape / backdrop click
+  preventClose?: boolean; // Prevent Escape / backdrop click
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
@@ -2226,7 +2260,11 @@ interface ModalState {
   open: (entry: Omit<ModalEntry, 'id'>) => string;
   close: (id?: string) => void;
   closeAll: () => void;
-  confirm: (opts: { title: string; message: string; onConfirm: () => void | Promise<void> }) => void;
+  confirm: (opts: {
+    title: string;
+    message: string;
+    onConfirm: () => void | Promise<void>;
+  }) => void;
 }
 
 export const useModalStore = create<ModalState>((set, get) => ({
@@ -2332,7 +2370,7 @@ export type ThemeMode = 'light' | 'dark' | 'high-contrast';
 export interface TenantTheme {
   mode: ThemeMode;
   colors: {
-    primary: string;        // HSL: '221 83% 53%'
+    primary: string; // HSL: '221 83% 53%'
     primaryForeground: string;
     secondary: string;
     accent: string;
@@ -2347,8 +2385,8 @@ export interface TenantTheme {
     cardForeground: string;
   };
   logo?: {
-    light: string;   // URL
-    dark: string;     // URL
+    light: string; // URL
+    dark: string; // URL
   };
   borderRadius: string; // e.g., '0.5rem'
   fontFamily?: string;
@@ -2482,7 +2520,7 @@ Enterprise applications require keyboard-driven navigation. Every primary action
 // lib/shortcuts/shortcutRegistry.ts
 export interface Shortcut {
   id: string;
-  keys: string[];              // e.g., ['Ctrl', 'K'] or ['?']
+  keys: string[]; // e.g., ['Ctrl', 'K'] or ['?']
   label: string;
   description: string;
   action: () => void;
@@ -2502,7 +2540,7 @@ export function unregisterShortcut(id: string) {
 
 export function getShortcuts(context?: string): Shortcut[] {
   return Array.from(shortcuts.values()).filter(
-    (s) => !context || !s.context || s.context === context
+    (s) => !context || !s.context || s.context === context,
   );
 }
 
@@ -2664,18 +2702,18 @@ export function CommandPalette() {
 
 ### 37.4 Default Keyboard Shortcuts Map
 
-| Shortcut | Action | Context |
-| :--- | :--- | :--- |
-| `Ctrl + K` / `⌘ + K` | Open Command Palette | Global |
-| `/` | Focus Search | Global (outside inputs) |
-| `Ctrl + S` | Save current form | Form context |
-| `Escape` | Close modal / palette | Modal / Palette |
-| `?` | Show keyboard shortcuts help | Global |
-| `Ctrl + Shift + D` | Toggle dark mode | Global |
-| `Ctrl + /` | Toggle sidebar collapse | Global |
-| `↑ / ↓` | Navigate table rows | Table context |
-| `Enter` | Open selected row | Table context |
-| `Ctrl + N` | Create new entity | Context-dependent |
+| Shortcut             | Action                       | Context                 |
+| :------------------- | :--------------------------- | :---------------------- |
+| `Ctrl + K` / `⌘ + K` | Open Command Palette         | Global                  |
+| `/`                  | Focus Search                 | Global (outside inputs) |
+| `Ctrl + S`           | Save current form            | Form context            |
+| `Escape`             | Close modal / palette        | Modal / Palette         |
+| `?`                  | Show keyboard shortcuts help | Global                  |
+| `Ctrl + Shift + D`   | Toggle dark mode             | Global                  |
+| `Ctrl + /`           | Toggle sidebar collapse      | Global                  |
+| `↑ / ↓`              | Navigate table rows          | Table context           |
+| `Enter`              | Open selected row            | Table context           |
+| `Ctrl + N`           | Create new entity            | Context-dependent       |
 
 ---
 
@@ -2683,20 +2721,20 @@ export function CommandPalette() {
 
 Every pull request must pass this 12-point checklist before merge approval. CI/CD pipelines enforce automated checks; manual items require reviewer attestation.
 
-| # | Category | Check | Enforcement | Pass Criteria |
-| :--- | :--- | :--- | :--- | :--- |
-| 1 | **Accessibility** | WCAG 2.2 AA compliance | `axe-core` CI check | 0 violations |
-| 2 | **Bundle Size** | JS/CSS budget not exceeded | `@next/bundle-analyzer` | Within declared budgets |
-| 3 | **Performance** | Lighthouse Performance score | CI Lighthouse audit | ≥ 90 |
-| 4 | **Security** | No `dangerouslySetInnerHTML` without sanitizer | ESLint rule | 0 violations |
-| 5 | **TypeScript** | Strict mode, no `any` casts | `tsc --noEmit` | 0 errors |
-| 6 | **Tests** | Unit + Integration coverage | Vitest coverage report | ≥ 85% lines |
-| 7 | **Storybook** | New components have stories | `storybook build` | No broken stories |
-| 8 | **Mobile** | Responsive at 320px / 768px / 1440px | Playwright viewport tests | All viewports pass |
-| 9 | **RTL** | Layout direction support | `[dir="rtl"]` snapshot test | No layout breakage |
-| 10 | **Memory Leaks** | Observer/WS cleanup on unmount | ESLint exhaustive-deps | 0 warnings |
-| 11 | **Error Handling** | All mutations use `useErrorHandler` | ESLint custom rule | No raw `catch` blocks |
-| 12 | **Console** | No `console.*` in production | ESLint `no-console` | 0 violations |
+| #   | Category           | Check                                          | Enforcement                 | Pass Criteria           |
+| :-- | :----------------- | :--------------------------------------------- | :-------------------------- | :---------------------- |
+| 1   | **Accessibility**  | WCAG 2.2 AA compliance                         | `axe-core` CI check         | 0 violations            |
+| 2   | **Bundle Size**    | JS/CSS budget not exceeded                     | `@next/bundle-analyzer`     | Within declared budgets |
+| 3   | **Performance**    | Lighthouse Performance score                   | CI Lighthouse audit         | ≥ 90                    |
+| 4   | **Security**       | No `dangerouslySetInnerHTML` without sanitizer | ESLint rule                 | 0 violations            |
+| 5   | **TypeScript**     | Strict mode, no `any` casts                    | `tsc --noEmit`              | 0 errors                |
+| 6   | **Tests**          | Unit + Integration coverage                    | Vitest coverage report      | ≥ 85% lines             |
+| 7   | **Storybook**      | New components have stories                    | `storybook build`           | No broken stories       |
+| 8   | **Mobile**         | Responsive at 320px / 768px / 1440px           | Playwright viewport tests   | All viewports pass      |
+| 9   | **RTL**            | Layout direction support                       | `[dir="rtl"]` snapshot test | No layout breakage      |
+| 10  | **Memory Leaks**   | Observer/WS cleanup on unmount                 | ESLint exhaustive-deps      | 0 warnings              |
+| 11  | **Error Handling** | All mutations use `useErrorHandler`            | ESLint custom rule          | No raw `catch` blocks   |
+| 12  | **Console**        | No `console.*` in production                   | ESLint `no-console`         | 0 violations            |
 
 ### 38.1 CI Pipeline Configuration
 
@@ -2760,13 +2798,20 @@ Direct calls to Google Analytics, PostHog, or Mixpanel are **strictly prohibited
 // lib/analytics/analyticsService.ts
 export type AnalyticsEvent =
   | 'page_view'
-  | 'student_created' | 'student_updated' | 'student_archived'
+  | 'student_created'
+  | 'student_updated'
+  | 'student_archived'
   | 'attendance_submitted'
-  | 'invoice_created' | 'payment_received'
-  | 'exam_started' | 'exam_submitted'
-  | 'login_success' | 'login_failure'
-  | 'feature_used' | 'error_occurred'
-  | 'search_performed' | 'export_triggered';
+  | 'invoice_created'
+  | 'payment_received'
+  | 'exam_started'
+  | 'exam_submitted'
+  | 'login_success'
+  | 'login_failure'
+  | 'feature_used'
+  | 'error_occurred'
+  | 'search_performed'
+  | 'export_triggered';
 
 interface AnalyticsProvider {
   name: string;
@@ -2846,8 +2891,12 @@ class AnalyticsService {
     this.providers.forEach((p) => p.page(name, properties));
   }
 
-  disable() { this.isEnabled = false; }
-  enable() { this.isEnabled = true; }
+  disable() {
+    this.isEnabled = false;
+  }
+  enable() {
+    this.isEnabled = true;
+  }
 }
 
 export const analytics = new AnalyticsService();
@@ -2855,7 +2904,8 @@ export const analytics = new AnalyticsService();
 // ── Initialize on App Boot ──
 export function initializeAnalytics() {
   if (process.env.NEXT_PUBLIC_ENABLE_GA === 'true') analytics.registerProvider(ga4Provider);
-  if (process.env.NEXT_PUBLIC_ENABLE_POSTHOG === 'true') analytics.registerProvider(posthogProvider);
+  if (process.env.NEXT_PUBLIC_ENABLE_POSTHOG === 'true')
+    analytics.registerProvider(posthogProvider);
   analytics.registerProvider(internalAuditProvider); // Always enabled for compliance
 }
 ```
@@ -2887,32 +2937,34 @@ export function usePageTracking() {
 
 Every significant technology choice must be documented with context, alternatives considered, and rationale. These records serve as institutional memory for future engineers.
 
-| ADR | Decision | Status | Date |
-| :--- | :--- | :--- | :--- |
-| ADR-001 | Use React Query (TanStack Query v5) for Server State | **Accepted** | 2025-01-15 |
-| ADR-002 | Use Zustand (v5) for Client UI State | **Accepted** | 2025-01-15 |
+| ADR     | Decision                                                           | Status       | Date       |
+| :------ | :----------------------------------------------------------------- | :----------- | :--------- |
+| ADR-001 | Use React Query (TanStack Query v5) for Server State               | **Accepted** | 2025-01-15 |
+| ADR-002 | Use Zustand (v5) for Client UI State                               | **Accepted** | 2025-01-15 |
 | ADR-003 | Use React Server Components (RSC) with Selective Client Boundaries | **Accepted** | 2025-01-20 |
-| ADR-004 | Use Next.js App Router (v15) over Pages Router | **Accepted** | 2025-01-20 |
-| ADR-005 | Use XState for Complex Multi-Step Wizards | **Accepted** | 2025-02-01 |
-| ADR-006 | Use Zod for Runtime Schema Validation | **Accepted** | 2025-02-01 |
-| ADR-007 | Use shadcn/ui as Component Primitive Base | **Accepted** | 2025-02-10 |
-| ADR-008 | Use TanStack Virtual for Large List Rendering | **Accepted** | 2025-02-10 |
-| ADR-009 | Use Axios over native Fetch for HTTP Client | **Accepted** | 2025-02-15 |
-| ADR-010 | Use CSS Custom Properties for Runtime Theming | **Accepted** | 2025-03-01 |
+| ADR-004 | Use Next.js App Router (v15) over Pages Router                     | **Accepted** | 2025-01-20 |
+| ADR-005 | Use XState for Complex Multi-Step Wizards                          | **Accepted** | 2025-02-01 |
+| ADR-006 | Use Zod for Runtime Schema Validation                              | **Accepted** | 2025-02-01 |
+| ADR-007 | Use shadcn/ui as Component Primitive Base                          | **Accepted** | 2025-02-10 |
+| ADR-008 | Use TanStack Virtual for Large List Rendering                      | **Accepted** | 2025-02-10 |
+| ADR-009 | Use Axios over native Fetch for HTTP Client                        | **Accepted** | 2025-02-15 |
+| ADR-010 | Use CSS Custom Properties for Runtime Theming                      | **Accepted** | 2025-03-01 |
 
 ### ADR-001: React Query for Server State Management
 
 **Context:** The platform requires real-time data synchronization across multiple dashboard widgets, optimistic mutation support, and automatic background refetching. Multiple state management solutions were evaluated.
 
 **Alternatives Considered:**
-| Library | Pros | Cons | Verdict |
-| :--- | :--- | :--- | :--- |
-| Redux Toolkit Query | Mature ecosystem, devtools | Heavy boilerplate, larger bundle | Rejected |
-| SWR | Lightweight, simple API | No mutation lifecycle, limited cache control | Rejected |
-| React Query v5 | Optimistic mutations, cache dependency graphs, devtools, SSR hydration | Slightly larger than SWR | **Selected** |
-| Apollo Client | Excellent for GraphQL | REST-first API makes this overkill | Rejected |
+
+| Library             | Pros                                                                   | Cons                                         | Verdict      |
+| :------------------ | :--------------------------------------------------------------------- | :------------------------------------------- | :----------- |
+| Redux Toolkit Query | Mature ecosystem, devtools                                             | Heavy boilerplate, larger bundle             | Rejected     |
+| SWR                 | Lightweight, simple API                                                | No mutation lifecycle, limited cache control | Rejected     |
+| React Query v5      | Optimistic mutations, cache dependency graphs, devtools, SSR hydration | Slightly larger than SWR                     | **Selected** |
+| Apollo Client       | Excellent for GraphQL                                                  | REST-first API makes this overkill           | Rejected     |
 
 **Decision:** React Query v5 is selected because:
+
 1. Native optimistic mutation support with rollback (`onMutate` / `onError` context).
 2. Cache dependency invalidation graphs (Chapter 17.3) require `invalidateQueries` with prefix matching.
 3. SSR hydration via `dehydrate`/`HydrationBoundary` integrates with Next.js App Router.
@@ -2924,6 +2976,7 @@ Every significant technology choice must be documented with context, alternative
 **Context:** Non-server UI state (sidebar toggle, theme mode, active tab) needs fast, synchronous access without provider nesting.
 
 **Decision:** Zustand is selected over Redux and Jotai because:
+
 1. Zero-boilerplate store creation.
 2. Selector-based subscriptions prevent unnecessary re-renders (Chapter 8).
 3. No context provider wrapping required — stores are importable anywhere.
@@ -2934,6 +2987,7 @@ Every significant technology choice must be documented with context, alternative
 **Context:** The HTTP client needs request/response interceptor chains for JWT injection, CSRF tokens, token refresh, and structured error mapping.
 
 **Decision:** Axios is selected because:
+
 1. First-class interceptor pipeline (request and response).
 2. Automatic JSON transformation.
 3. Request cancellation via `AbortController` integration.
@@ -2946,20 +3000,20 @@ Every significant technology choice must be documented with context, alternative
 
 Every HTTP status code must have a deterministic UI response. Components must never handle raw status codes — they flow through the Error Code Registry (Chapter 32) and this mapping table.
 
-| HTTP Status | Category | UI Behavior | Component Action | User Message |
-| :--- | :--- | :--- | :--- | :--- |
-| **200** | Success | Silent (data updates automatically) | React Query cache hydration | None |
-| **201** | Created | Success toast + redirect | Navigate to detail view | "Created successfully" |
-| **204** | No Content | Silent | Invalidate related cache | None |
-| **400** | Bad Request | Inline form errors | Highlight invalid fields (Zod mapping) | Field-level messages |
-| **401** | Unauthorized | Silent refresh → redirect | Trigger token refresh; if failed → `/login` | "Session expired" |
-| **403** | Forbidden | Error modal | Show permission denial dialog | "You don't have permission" |
-| **404** | Not Found | Empty state or redirect | Show domain-specific empty state | "Resource not found" |
-| **409** | Conflict | Warning modal | Show conflict resolution dialog | "Resource was modified" |
-| **422** | Validation | Inline form errors | Map server errors to form fields | Per-field messages |
-| **429** | Rate Limited | Retry toast with countdown | Queue retry with exponential backoff | "Too many requests" |
-| **500** | Server Error | Error toast | Log to telemetry, show retry option | "Something went wrong" |
-| **503** | Unavailable | Maintenance modal | Show maintenance page with ETA | "Service unavailable" |
+| HTTP Status | Category     | UI Behavior                         | Component Action                            | User Message                |
+| :---------- | :----------- | :---------------------------------- | :------------------------------------------ | :-------------------------- |
+| **200**     | Success      | Silent (data updates automatically) | React Query cache hydration                 | None                        |
+| **201**     | Created      | Success toast + redirect            | Navigate to detail view                     | "Created successfully"      |
+| **204**     | No Content   | Silent                              | Invalidate related cache                    | None                        |
+| **400**     | Bad Request  | Inline form errors                  | Highlight invalid fields (Zod mapping)      | Field-level messages        |
+| **401**     | Unauthorized | Silent refresh → redirect           | Trigger token refresh; if failed → `/login` | "Session expired"           |
+| **403**     | Forbidden    | Error modal                         | Show permission denial dialog               | "You don't have permission" |
+| **404**     | Not Found    | Empty state or redirect             | Show domain-specific empty state            | "Resource not found"        |
+| **409**     | Conflict     | Warning modal                       | Show conflict resolution dialog             | "Resource was modified"     |
+| **422**     | Validation   | Inline form errors                  | Map server errors to form fields            | Per-field messages          |
+| **429**     | Rate Limited | Retry toast with countdown          | Queue retry with exponential backoff        | "Too many requests"         |
+| **500**     | Server Error | Error toast                         | Log to telemetry, show retry option         | "Something went wrong"      |
+| **503**     | Unavailable  | Maintenance modal                   | Show maintenance page with ETA              | "Service unavailable"       |
 
 ---
 
@@ -3018,14 +3072,14 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
 
 ### 42.1 Domain-Specific Empty State Registry
 
-| Module | Title | Description | Action Label | Permission |
-| :--- | :--- | :--- | :--- | :--- |
-| Students | No students yet | Start by adding your first student or importing a CSV roster. | Add Student | `student.create` |
-| Attendance | No attendance records | Attendance hasn't been recorded for this date yet. | Mark Attendance | `attendance.create` |
-| Billing | No invoices | Create your first invoice to start tracking fees. | Create Invoice | `invoice.create` |
-| Exams | No exams scheduled | Schedule an exam to get started with assessments. | Schedule Exam | `exam.create` |
-| Reports | No data available | There isn't enough data to generate this report yet. | — | — |
-| Staff | No staff members | Add your first staff member to begin team management. | Add Staff | `staff.create` |
+| Module     | Title                 | Description                                                   | Action Label    | Permission          |
+| :--------- | :-------------------- | :------------------------------------------------------------ | :-------------- | :------------------ |
+| Students   | No students yet       | Start by adding your first student or importing a CSV roster. | Add Student     | `student.create`    |
+| Attendance | No attendance records | Attendance hasn't been recorded for this date yet.            | Mark Attendance | `attendance.create` |
+| Billing    | No invoices           | Create your first invoice to start tracking fees.             | Create Invoice  | `invoice.create`    |
+| Exams      | No exams scheduled    | Schedule an exam to get started with assessments.             | Schedule Exam   | `exam.create`       |
+| Reports    | No data available     | There isn't enough data to generate this report yet.          | —               | —                   |
+| Staff      | No staff members      | Add your first staff member to begin team management.         | Add Staff       | `staff.create`      |
 
 ---
 
@@ -3163,14 +3217,14 @@ import { captureFrontendException } from '@/lib/observability/exceptionCapture';
 export interface UploadOptions {
   file: File;
   endpoint: string;
-  chunkSizeMB?: number;           // Default: 5MB
-  maxFileSizeMB?: number;         // Default: 50MB
-  allowedTypes?: string[];        // MIME types
-  compressImages?: boolean;       // Default: true for images
+  chunkSizeMB?: number; // Default: 5MB
+  maxFileSizeMB?: number; // Default: 50MB
+  allowedTypes?: string[]; // MIME types
+  compressImages?: boolean; // Default: true for images
   onProgress?: (percent: number) => void;
   onComplete?: (result: UploadResult) => void;
   onError?: (error: UploadError) => void;
-  signal?: AbortSignal;           // For cancellation
+  signal?: AbortSignal; // For cancellation
 }
 
 interface UploadResult {
@@ -3190,7 +3244,10 @@ interface UploadError {
 function validateFile(file: File, options: UploadOptions): UploadError | null {
   const maxSize = (options.maxFileSizeMB || 50) * 1024 * 1024;
   if (file.size > maxSize) {
-    return { code: 'FILE_TOO_LARGE', message: `File exceeds ${options.maxFileSizeMB || 50}MB limit.` };
+    return {
+      code: 'FILE_TOO_LARGE',
+      message: `File exceeds ${options.maxFileSizeMB || 50}MB limit.`,
+    };
   }
 
   if (options.allowedTypes && !options.allowedTypes.includes(file.type)) {
@@ -3224,7 +3281,7 @@ async function compressImage(file: File, maxWidth = 1920, quality = 0.85): Promi
           }
         },
         file.type,
-        quality
+        quality,
       );
     };
 
@@ -3325,28 +3382,31 @@ export function useFileUpload(endpoint: string) {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const upload = useCallback(async (file: File, opts?: Partial<UploadOptions>) => {
-    setIsUploading(true);
-    setProgress(0);
-    setError(null);
-    abortControllerRef.current = new AbortController();
+  const upload = useCallback(
+    async (file: File, opts?: Partial<UploadOptions>) => {
+      setIsUploading(true);
+      setProgress(0);
+      setError(null);
+      abortControllerRef.current = new AbortController();
 
-    try {
-      const result = await uploadFile({
-        file,
-        endpoint,
-        onProgress: setProgress,
-        signal: abortControllerRef.current.signal,
-        ...opts,
-      });
-      return result;
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
-      throw err;
-    } finally {
-      setIsUploading(false);
-    }
-  }, [endpoint]);
+      try {
+        const result = await uploadFile({
+          file,
+          endpoint,
+          onProgress: setProgress,
+          signal: abortControllerRef.current.signal,
+          ...opts,
+        });
+        return result;
+      } catch (err: any) {
+        setError(err.message || 'Upload failed');
+        throw err;
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [endpoint],
+  );
 
   const cancel = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -3370,10 +3430,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface UseSearchOptions {
-  debounceMs?: number;      // Default: 300ms
-  syncToUrl?: boolean;       // Default: true
-  urlParamName?: string;     // Default: 'q'
-  minLength?: number;        // Default: 2
+  debounceMs?: number; // Default: 300ms
+  syncToUrl?: boolean; // Default: true
+  urlParamName?: string; // Default: 'q'
+  minLength?: number; // Default: 2
   maxRecentSearches?: number; // Default: 5
   storageKey?: string;
 }
@@ -3415,12 +3475,15 @@ export function useSearch(options: UseSearchOptions = {}) {
   }, [debouncedQuery, syncToUrl, urlParamName, minLength, router, searchParams]);
 
   // Recent searches
-  const addToRecent = useCallback((term: string) => {
-    if (typeof window === 'undefined') return;
-    const stored: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const updated = [term, ...stored.filter((s) => s !== term)].slice(0, maxRecentSearches);
-    localStorage.setItem(storageKey, JSON.stringify(updated));
-  }, [storageKey, maxRecentSearches]);
+  const addToRecent = useCallback(
+    (term: string) => {
+      if (typeof window === 'undefined') return;
+      const stored: string[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const updated = [term, ...stored.filter((s) => s !== term)].slice(0, maxRecentSearches);
+      localStorage.setItem(storageKey, JSON.stringify(updated));
+    },
+    [storageKey, maxRecentSearches],
+  );
 
   const getRecentSearches = useCallback((): string[] => {
     if (typeof window === 'undefined') return [];
@@ -3502,15 +3565,19 @@ class ExportService {
 
   private exportCSV<T>(options: ExportOptions<T>) {
     const headers = options.columns.map((c) => c.header).join(',');
-    const rows = options.data.map((row) =>
-      options.columns.map((col) => {
-        const value = col.format ? col.format(row[col.key]) : String(row[col.key] ?? '');
-        // Escape CSV values containing commas, quotes, or newlines
-        return value.includes(',') || value.includes('"') || value.includes('\n')
-          ? `"${value.replace(/"/g, '""')}"`
-          : value;
-      }).join(',')
-    ).join('\n');
+    const rows = options.data
+      .map((row) =>
+        options.columns
+          .map((col) => {
+            const value = col.format ? col.format(row[col.key]) : String(row[col.key] ?? '');
+            // Escape CSV values containing commas, quotes, or newlines
+            return value.includes(',') || value.includes('"') || value.includes('\n')
+              ? `"${value.replace(/"/g, '""')}"`
+              : value;
+          })
+          .join(','),
+      )
+      .join('\n');
 
     const blob = new Blob([`${headers}\n${rows}`], { type: 'text/csv;charset=utf-8;' });
     this.downloadBlob(blob, `${options.filename}.csv`);
@@ -3522,9 +3589,7 @@ class ExportService {
     const wsData = [
       options.columns.map((c) => c.header),
       ...options.data.map((row) =>
-        options.columns.map((col) =>
-          col.format ? col.format(row[col.key]) : row[col.key]
-        )
+        options.columns.map((col) => (col.format ? col.format(row[col.key]) : row[col.key])),
       ),
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -3547,8 +3612,8 @@ class ExportService {
       head: [options.columns.map((c) => c.header)],
       body: options.data.map((row) =>
         options.columns.map((col) =>
-          col.format ? col.format(row[col.key]) : String(row[col.key] ?? '')
-        )
+          col.format ? col.format(row[col.key]) : String(row[col.key] ?? ''),
+        ),
       ),
     });
 
@@ -3579,7 +3644,7 @@ class ExportService {
         <table>
           <thead><tr>${options.columns.map((c) => `<th>${c.header}</th>`).join('')}</tr></thead>
           <tbody>
-            ${options.data.map((row) => `<tr>${options.columns.map((col) => `<td>${col.format ? col.format(row[col.key]) : row[col.key] ?? ''}</td>`).join('')}</tr>`).join('')}
+            ${options.data.map((row) => `<tr>${options.columns.map((col) => `<td>${col.format ? col.format(row[col.key]) : (row[col.key] ?? '')}</td>`).join('')}</tr>`).join('')}
           </tbody>
         </table>
       </body>
@@ -3708,9 +3773,9 @@ export function ChartContainer({
 
 ### 47.2 Accessibility for Charts
 
-*   All charts must include `role="figure"` and `aria-label` with a descriptive title.
-*   Color-only data encoding is prohibited — use pattern fills or shape markers alongside colors for colorblind users.
-*   Provide a "View as Table" toggle for screen reader users to access the raw data behind every chart.
+- All charts must include `role="figure"` and `aria-label` with a descriptive title.
+- Color-only data encoding is prohibited — use pattern fills or shape markers alongside colors for colorblind users.
+- Provide a "View as Table" toggle for screen reader users to access the raw data behind every chart.
 
 ---
 
@@ -3727,7 +3792,12 @@ interface ExceptionContext {
 }
 
 class FrontendExceptionService {
-  private buffer: Array<{ level: LogLevel; message: string; context: ExceptionContext; ts: number }> = [];
+  private buffer: Array<{
+    level: LogLevel;
+    message: string;
+    context: ExceptionContext;
+    ts: number;
+  }> = [];
   private flushInterval: NodeJS.Timeout | null = null;
 
   initialize() {
@@ -3784,10 +3854,7 @@ class FrontendExceptionService {
     this.buffer = [];
 
     try {
-      navigator.sendBeacon(
-        '/api/v1/telemetry/frontend-errors',
-        JSON.stringify({ errors: batch })
-      );
+      navigator.sendBeacon('/api/v1/telemetry/frontend-errors', JSON.stringify({ errors: batch }));
     } catch {
       // If beacon fails, re-queue (with a cap to prevent memory leaks)
       this.buffer = [...batch.slice(-50), ...this.buffer];
@@ -3825,9 +3892,12 @@ export function captureFrontendFatal(message: string, context?: ExceptionContext
 ```json
 {
   "rules": {
-    "no-console": ["error", {
-      "allow": []
-    }]
+    "no-console": [
+      "error",
+      {
+        "allow": []
+      }
+    ]
   },
   "overrides": [
     {
@@ -3852,7 +3922,7 @@ export interface FeatureModule {
   id: string;
   name: string;
   basePath: string;
-  icon: string;                // Lucide icon name
+  icon: string; // Lucide icon name
   permissions: string[];
   queryKeyPrefix: string;
   isEnabled: boolean;
@@ -3860,11 +3930,56 @@ export interface FeatureModule {
 }
 
 export const featureRegistry: FeatureModule[] = [
-  { id: 'people', name: 'People Management', basePath: '/admin/people', icon: 'Users', permissions: ['student.read', 'staff.read'], queryKeyPrefix: 'students', isEnabled: true, version: '1.0.0' },
-  { id: 'attendance', name: 'Attendance', basePath: '/admin/attendance', icon: 'ClipboardCheck', permissions: ['attendance.read'], queryKeyPrefix: 'attendance', isEnabled: true, version: '1.0.0' },
-  { id: 'billing', name: 'Billing & Fees', basePath: '/admin/billing', icon: 'Receipt', permissions: ['invoice.read'], queryKeyPrefix: 'billing', isEnabled: true, version: '1.0.0' },
-  { id: 'exams', name: 'Examinations', basePath: '/admin/exams', icon: 'GraduationCap', permissions: ['exam.read'], queryKeyPrefix: 'exams', isEnabled: true, version: '1.0.0' },
-  { id: 'reports', name: 'Reports', basePath: '/admin/reports', icon: 'BarChart3', permissions: ['report.read'], queryKeyPrefix: 'reports', isEnabled: true, version: '1.0.0' },
+  {
+    id: 'people',
+    name: 'People Management',
+    basePath: '/admin/people',
+    icon: 'Users',
+    permissions: ['student.read', 'staff.read'],
+    queryKeyPrefix: 'students',
+    isEnabled: true,
+    version: '1.0.0',
+  },
+  {
+    id: 'attendance',
+    name: 'Attendance',
+    basePath: '/admin/attendance',
+    icon: 'ClipboardCheck',
+    permissions: ['attendance.read'],
+    queryKeyPrefix: 'attendance',
+    isEnabled: true,
+    version: '1.0.0',
+  },
+  {
+    id: 'billing',
+    name: 'Billing & Fees',
+    basePath: '/admin/billing',
+    icon: 'Receipt',
+    permissions: ['invoice.read'],
+    queryKeyPrefix: 'billing',
+    isEnabled: true,
+    version: '1.0.0',
+  },
+  {
+    id: 'exams',
+    name: 'Examinations',
+    basePath: '/admin/exams',
+    icon: 'GraduationCap',
+    permissions: ['exam.read'],
+    queryKeyPrefix: 'exams',
+    isEnabled: true,
+    version: '1.0.0',
+  },
+  {
+    id: 'reports',
+    name: 'Reports',
+    basePath: '/admin/reports',
+    icon: 'BarChart3',
+    permissions: ['report.read'],
+    queryKeyPrefix: 'reports',
+    isEnabled: true,
+    version: '1.0.0',
+  },
 ];
 ```
 
@@ -3894,25 +4009,25 @@ export function getIcon(name: string): React.ComponentType<{ className?: string 
 
 ## 50. Frontend Logging Rules
 
-| Rule | Prohibited | Required |
-| :--- | :--- | :--- |
-| Error logging | `console.error(err)` | `captureFrontendException(msg, ctx)` |
-| Warning logging | `console.warn(msg)` | `captureFrontendWarning(msg, ctx)` |
-| Debug logging | `console.log(data)` | Remove entirely, or use dev-only `if (process.env.NODE_ENV === 'development')` guard |
-| API errors | `toast(error.message)` | `useErrorHandler()` → Error Code Registry → UI mapping |
-| Analytics | `gtag('event', ...)` | `analytics.track('event_name', props)` |
-| Performance | `console.time()` | `monitorPerformanceMetrics()` via PerformanceObserver |
+| Rule            | Prohibited             | Required                                                                             |
+| :-------------- | :--------------------- | :----------------------------------------------------------------------------------- |
+| Error logging   | `console.error(err)`   | `captureFrontendException(msg, ctx)`                                                 |
+| Warning logging | `console.warn(msg)`    | `captureFrontendWarning(msg, ctx)`                                                   |
+| Debug logging   | `console.log(data)`    | Remove entirely, or use dev-only `if (process.env.NODE_ENV === 'development')` guard |
+| API errors      | `toast(error.message)` | `useErrorHandler()` → Error Code Registry → UI mapping                               |
+| Analytics       | `gtag('event', ...)`   | `analytics.track('event_name', props)`                                               |
+| Performance     | `console.time()`       | `monitorPerformanceMetrics()` via PerformanceObserver                                |
 
 ---
 
 ## 51. Version History & Document Governance
 
-| Version | Date | Author | Changes |
-| :--- | :--- | :--- | :--- |
-| 1.0.0 | 2025-01-15 | Principal Architect | Initial specification — Rendering, State, Forms, Security |
-| 2.0.0 | 2025-02-01 | Principal Architect | Performance Engineering, Bootstrap Pipeline, WebSocket Sync |
-| 3.0.0 | 2025-03-01 | Principal Architect | Design System Governance, Accessibility, PWA, Testing Matrix |
-| 4.0.0 | 2025-04-01 | Principal Architect | Authorization Layer, API Client, Error Registry, Theme Engine |
+| Version     | Date       | Author              | Changes                                                                                                                                                                                                                                                          |
+| :---------- | :--------- | :------------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0.0       | 2025-01-15 | Principal Architect | Initial specification — Rendering, State, Forms, Security                                                                                                                                                                                                        |
+| 2.0.0       | 2025-02-01 | Principal Architect | Performance Engineering, Bootstrap Pipeline, WebSocket Sync                                                                                                                                                                                                      |
+| 3.0.0       | 2025-03-01 | Principal Architect | Design System Governance, Accessibility, PWA, Testing Matrix                                                                                                                                                                                                     |
+| 4.0.0       | 2025-04-01 | Principal Architect | Authorization Layer, API Client, Error Registry, Theme Engine                                                                                                                                                                                                    |
 | 5.0.0-Final | 2025-05-01 | Principal Architect | Full 51-chapter Enterprise Specification — Navigation Registry, Modal Management, Keyboard Engine, Analytics, ADRs, File Upload, Search, Print/Export, Charts, Skeleton Library, Empty States, i18n, Notification Service, Exception Capture, Feature Registries |
 
 **Classification:** Internal Technical Architecture — Do not distribute externally.  

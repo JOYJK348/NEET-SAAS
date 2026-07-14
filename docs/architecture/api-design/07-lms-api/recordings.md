@@ -7,20 +7,24 @@ This document defines endpoints for managing recorded video lectures.
 ## POST /api/v1/live-recordings
 
 ### Purpose
+
 Registers a recorded video lecture from a live class session.
 
 ### Permission
+
 `lms:recording:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `lms:recording:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `lms:recording:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "batchId": "b02a3d12-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -31,12 +35,15 @@ Registers a recorded video lecture from a live class session.
 ```
 
 ### Business Rules
-*   Validates that `videoFileId` exists in the system files storage engine.
+
+- Validates that `videoFileId` exists in the system files storage engine.
 
 ### Database Tables Affected
-*   `live_session_recordings` (Insert)
+
+- `live_session_recordings` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

@@ -35,11 +35,11 @@ It establishes the foundation for authentication, authorization, role-based acce
 
 The following entities belong to other domains but interact with the User Domain.
 
-- 🏢 Institute *(Institute Domain)*
-- 📚 Course *(Academic Domain)*
-- 👥 Batch *(Academic Domain)*
-- 📖 Subject *(Academic Domain)*
-- 👨‍🏫 Tutor Assignment *(Academic Domain)*
+- 🏢 Institute _(Institute Domain)_
+- 📚 Course _(Academic Domain)_
+- 👥 Batch _(Academic Domain)_
+- 📖 Subject _(Academic Domain)_
+- 👨‍🏫 Tutor Assignment _(Academic Domain)_
 
 ---
 
@@ -116,22 +116,22 @@ flowchart TD
 
 # 🔗 Relationship Summary
 
-| Parent Entity | Child Entity | Cardinality |
-|---------------|--------------|-------------|
-| Platform Admin | Tenant Admin | One-to-Many (1:N) |
-| Platform Admin | Institute | One-to-Many (1:N) |
-| Tenant Admin | Institute | One-to-Many (1:N)\* |
-| Tenant Admin | Tutor | One-to-Many (1:N) |
-| Tenant Admin | Student | One-to-Many (1:N) |
-| Tenant Admin | Parent | One-to-Many (1:N) |
-| Tenant Admin | Role | One-to-Many (1:N) |
-| Tenant Admin | Permission | One-to-Many (1:N) |
-| Role | Permission | One-to-Many (1:N) |
-| Role | User | One-to-Many (1:N) |
-| User | Institute | Many-to-One (N:1) |
-| User | Login Session | One-to-Many (1:N) |
-| User | Activity Log | One-to-Many (1:N) |
-| Parent | Student | Many-to-Many (M:N) |
+| Parent Entity  | Child Entity  | Cardinality         |
+| -------------- | ------------- | ------------------- |
+| Platform Admin | Tenant Admin  | One-to-Many (1:N)   |
+| Platform Admin | Institute     | One-to-Many (1:N)   |
+| Tenant Admin   | Institute     | One-to-Many (1:N)\* |
+| Tenant Admin   | Tutor         | One-to-Many (1:N)   |
+| Tenant Admin   | Student       | One-to-Many (1:N)   |
+| Tenant Admin   | Parent        | One-to-Many (1:N)   |
+| Tenant Admin   | Role          | One-to-Many (1:N)   |
+| Tenant Admin   | Permission    | One-to-Many (1:N)   |
+| Role           | Permission    | One-to-Many (1:N)   |
+| Role           | User          | One-to-Many (1:N)   |
+| User           | Institute     | Many-to-One (N:1)   |
+| User           | Login Session | One-to-Many (1:N)   |
+| User           | Activity Log  | One-to-Many (1:N)   |
+| Parent         | Student       | Many-to-Many (M:N)  |
 
 > **Note:** Initial implementation supports one Tenant Admin managing one Institute. The relationship is modeled as scalable for future multi-admin support.
 

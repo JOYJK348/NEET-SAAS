@@ -7,9 +7,11 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ## 1. Tenant Settings Configuration
 
 ### GET /api/v1/platform/settings
-*   **Purpose**: Fetch locale, timezone, password policies configurations for the active tenant.
-*   **Permission**: `tenant:settings:read` (Tenant Admin only)
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Fetch locale, timezone, password policies configurations for the active tenant.
+- **Permission**: `tenant:settings:read` (Tenant Admin only)
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -24,10 +26,12 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ```
 
 ### PUT /api/v1/platform/settings
-*   **Purpose**: Update active settings parameters.
-*   **Request Headers**:
-    *   `If-Match`: Integer (Required for Optimistic Locking)
-*   **Request DTO**:
+
+- **Purpose**: Update active settings parameters.
+- **Request Headers**:
+  - `If-Match`: Integer (Required for Optimistic Locking)
+- **Request DTO**:
+
 ```json
 {
   "timezone": "Asia/Kolkata",
@@ -42,8 +46,10 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ## 2. Feature Flags Management
 
 ### GET /api/v1/platform/features
-*   **Purpose**: Retrieve custom modules status flags.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Retrieve custom modules status flags.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -58,8 +64,10 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ```
 
 ### PATCH /api/v1/platform/features/:code
-*   **Purpose**: Toggle feature activation switch.
-*   **Request DTO**:
+
+- **Purpose**: Toggle feature activation switch.
+- **Request DTO**:
+
 ```json
 {
   "isEnabled": false
@@ -71,8 +79,10 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ## 3. Storage objects & chunked Uploads
 
 ### POST /api/v1/platform/files/presign
-*   **Purpose**: Generate short-lived pre-signed destination URL to upload file binaries directly to S3/R2 storage.
-*   **Request DTO**:
+
+- **Purpose**: Generate short-lived pre-signed destination URL to upload file binaries directly to S3/R2 storage.
+- **Request DTO**:
+
 ```json
 {
   "fileName": "profile_image.png",
@@ -80,7 +90,9 @@ This directory defines API routing contracts for cross-cutting platform infrastr
   "fileSizeBytes": 524288
 }
 ```
-*   **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -97,10 +109,12 @@ This directory defines API routing contracts for cross-cutting platform infrastr
 ## 4. Background Job Queue Manager
 
 ### POST /api/v1/platform/jobs
-*   **Purpose**: Queue a long-running operational task (e.g. Bulk result PDF generation).
-*   **Request Headers**:
-    *   `Idempotency-Key`: UUID (Required. Prevents duplicate job creation).
-*   **Request DTO**:
+
+- **Purpose**: Queue a long-running operational task (e.g. Bulk result PDF generation).
+- **Request Headers**:
+  - `Idempotency-Key`: UUID (Required. Prevents duplicate job creation).
+- **Request DTO**:
+
 ```json
 {
   "jobType": "GENERATE_REPORT",
@@ -111,7 +125,9 @@ This directory defines API routing contracts for cross-cutting platform infrastr
   }
 }
 ```
-*   **Response DTO (202 Accepted)**:
+
+- **Response DTO (202 Accepted)**:
+
 ```json
 {
   "success": true,

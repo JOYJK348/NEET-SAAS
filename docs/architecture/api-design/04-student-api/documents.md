@@ -7,20 +7,24 @@ This document defines endpoints for uploading and verifying student compliance f
 ## POST /api/v1/students/{id}/documents
 
 ### Purpose
+
 Registers a compliance document for a student profile (linked to a centralized storage upload version).
 
 ### Permission
+
 `student:document:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:document:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:document:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "documentCategory": "IDENTITY",
@@ -31,15 +35,18 @@ Registers a compliance document for a student profile (linked to a centralized s
 ```
 
 ### Business Rules
+
 1.  **Central Link**: References the centralized file storage via `fileVersionId` mapping to `file_versions.id`.
 2.  **Uniqueness**: Employs partial unique index constraints (`uq_active_identity_document`) allowing only one active document per owner (e.g. only one active Aadhaar or PAN).
 3.  **Audit Versioning**: Inserts history metadata traces into `entity_document_versions`.
 
 ### Database Tables Affected
-*   `entity_documents` (Insert)
-*   `entity_document_versions` (Insert)
+
+- `entity_documents` (Insert)
+- `entity_document_versions` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

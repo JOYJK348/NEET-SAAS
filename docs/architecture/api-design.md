@@ -3,36 +3,41 @@
 > **Module:** Platform Integration, API Routing & Gateway Contracts  
 > **Schema Version:** 1.0  
 > **Status:** 🟡 Draft  
-> **Parent Architecture:** `docs/architecture/tech-stack.md`  
+> **Parent Architecture:** `docs/architecture/tech-stack.md`
 
 ---
 
 ## 1. Global API Conventions
 
 ### 1.1 Base URL & Versioning
+
 All API endpoints conform to RESTful path guidelines prefixed with the semantic versioning parameter:
+
 ```text
 https://api.coachingplatform.com/api/v1
 ```
 
 ### 1.2 Global Headers
+
 Requests must supply the following headers to pass authentication and multi-tenancy verification rules:
 
-| Header | Type | Required | Description |
-|---|---|---|---|
-| `Authorization` | String | Yes | Bearer JWT Token (`Bearer <jwt_token>`) |
-| `X-Tenant-ID` | UUID | Yes | Tenant Context Reference (`institute_id`) |
-| `X-Branch-ID` | UUID | No | Active branch boundary filter context |
-| `X-Correlation-ID`| UUID | No | Tracing correlation trace identifier |
+| Header             | Type   | Required | Description                               |
+| ------------------ | ------ | -------- | ----------------------------------------- |
+| `Authorization`    | String | Yes      | Bearer JWT Token (`Bearer <jwt_token>`)   |
+| `X-Tenant-ID`      | UUID   | Yes      | Tenant Context Reference (`institute_id`) |
+| `X-Branch-ID`      | UUID   | No       | Active branch boundary filter context     |
+| `X-Correlation-ID` | UUID   | No       | Tracing correlation trace identifier      |
 
 ---
 
 ## 2. Standardized Payloads
 
 ### 2.1 Unified Response Envelope
+
 To maintain consistency across frontend integrations, all JSON payloads are wrapped in the standard response wrapper:
 
 #### Success Response Envelope (200 OK / 201 Created)
+
 ```json
 {
   "success": true,
@@ -45,6 +50,7 @@ To maintain consistency across frontend integrations, all JSON payloads are wrap
 ```
 
 #### Error Response Envelope (4xx / 5xx)
+
 ```json
 {
   "success": false,
@@ -68,6 +74,7 @@ To maintain consistency across frontend integrations, all JSON payloads are wrap
 ---
 
 ### 2.2 Pagination, Filtering, Sorting & Search
+
 GET endpoints returning list payloads use standardized query parameters:
 
 ```text
@@ -75,13 +82,15 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ```
 
 #### Parameters:
-* `page`: Positive Integer (Default: `1`).
-* `limit`: Page count constraint (Default: `25`, Max: `100`).
-* `sort`: Comma-separated field names. Prefix with `-` for descending order (e.g. `-created_at,name`).
-* `search`: Free-text fuzzy string matcher scoped by indexed search arrays (e.g. student names/roll numbers).
-* `filter[field]`: Precise key-value filters matching database indexes (e.g. `filter[status]=ACTIVE`).
+
+- `page`: Positive Integer (Default: `1`).
+- `limit`: Page count constraint (Default: `25`, Max: `100`).
+- `sort`: Comma-separated field names. Prefix with `-` for descending order (e.g. `-created_at,name`).
+- `search`: Free-text fuzzy string matcher scoped by indexed search arrays (e.g. student names/roll numbers).
+- `filter[field]`: Precise key-value filters matching database indexes (e.g. `filter[status]=ACTIVE`).
 
 #### Paginated Metadata Envelope
+
 ```json
 {
   "success": true,
@@ -103,14 +112,14 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 
 ## 3. Global Error Registry
 
-| HTTP Status | Custom Error Code | Description / Triggers |
-|---|---|---|
-| **400 Bad Request** | `BAD_REQUEST`, `VALIDATION_FAILED` | Broken schema validation payloads |
-| **401 Unauthorized** | `TOKEN_EXPIRED`, `INVALID_TOKEN` | Auth verification issues |
-| **403 Forbidden** | `FORBIDDEN_RESOURCE`, `ROLE_MISMATCH`| Access boundary errors (RLS blocks) |
-| **404 Not Found** | `RESOURCE_NOT_FOUND` | Missing ID lookups |
-| **409 Conflict** | `DUPLICATE_ENTRY`, `RECORD_LOCKED` | Idempotency or DB unique constraints hit |
-| **422 Unprocessable** | `BUSINESS_INVARIANT_VIOLATION` | State machine transition / logic error |
+| HTTP Status           | Custom Error Code                     | Description / Triggers                   |
+| --------------------- | ------------------------------------- | ---------------------------------------- |
+| **400 Bad Request**   | `BAD_REQUEST`, `VALIDATION_FAILED`    | Broken schema validation payloads        |
+| **401 Unauthorized**  | `TOKEN_EXPIRED`, `INVALID_TOKEN`      | Auth verification issues                 |
+| **403 Forbidden**     | `FORBIDDEN_RESOURCE`, `ROLE_MISMATCH` | Access boundary errors (RLS blocks)      |
+| **404 Not Found**     | `RESOURCE_NOT_FOUND`                  | Missing ID lookups                       |
+| **409 Conflict**      | `DUPLICATE_ENTRY`, `RECORD_LOCKED`    | Idempotency or DB unique constraints hit |
+| **422 Unprocessable** | `BUSINESS_INVARIANT_VIOLATION`        | State machine transition / logic error   |
 
 ---
 
@@ -121,8 +130,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.1 Institute Domain (01)
 
 #### `POST /api/v1/institutes/onboard`
-* **Purpose**: Onboard a new tenant institute and auto-provision the default administrative credentials.
-* **Payload (Request DTO)**:
+
+- **Purpose**: Onboard a new tenant institute and auto-provision the default administrative credentials.
+- **Payload (Request DTO)**:
+
 ```json
 {
   "name": "Elite NEET Academy",
@@ -133,10 +144,12 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "admin_phone": "+919876543210"
 }
 ```
-* **Validation**:
-  * `sub_domain`: Matches regex `^[a-z0-9-]+$`.
-  * `admin_email`: Valid email format.
-* **Response DTO (201 Created)**:
+
+- **Validation**:
+  - `sub_domain`: Matches regex `^[a-z0-9-]+$`.
+  - `admin_email`: Valid email format.
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -149,8 +162,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ```
 
 #### `GET /api/v1/institutes/branches`
-* **Purpose**: List all branches inside the tenant context.
-* **Response DTO (200 OK)**:
+
+- **Purpose**: List all branches inside the tenant context.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -170,8 +185,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.2 User & Auth Domain (02)
 
 #### `POST /api/v1/auth/login`
-* **Purpose**: Authenticate user and issue access and refresh tokens.
-* **Request DTO**:
+
+- **Purpose**: Authenticate user and issue access and refresh tokens.
+- **Request DTO**:
+
 ```json
 {
   "email": "rajesh@eliteneet.com",
@@ -179,7 +196,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "device_id": "device_fingerprint_hash"
 }
 ```
-* **Response DTO (200 OK)**:
+
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -194,11 +213,14 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   }
 }
 ```
-* **Security Note**: Refresh token is placed in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie named `jid`.
+
+- **Security Note**: Refresh token is placed in an `HttpOnly`, `Secure`, `SameSite=Strict` cookie named `jid`.
 
 #### `POST /api/v1/auth/refresh`
-* **Purpose**: Rotate refresh token and issue new transient JWT keys.
-* **Response DTO (200 OK)**:
+
+- **Purpose**: Rotate refresh token and issue new transient JWT keys.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -214,8 +236,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.3 Academic Domain (03)
 
 #### `POST /api/v1/academics/batches`
-* **Purpose**: Create a new academic batch allocation.
-* **Request DTO**:
+
+- **Purpose**: Create a new academic batch allocation.
+- **Request DTO**:
+
 ```json
 {
   "course_id": "c12d3e1d-c0aa-43d9-a41a-7b3b4b5e6f7b",
@@ -225,7 +249,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "max_seats": 50
 }
 ```
-* **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -238,8 +264,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ```
 
 #### `GET /api/v1/academics/batches/:id/schedule`
-* **Purpose**: Load scheduled timetable slots for a batch.
-* **Response DTO (200 OK)**:
+
+- **Purpose**: Load scheduled timetable slots for a batch.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -261,8 +289,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.4 Student Domain (04)
 
 #### `POST /api/v1/students`
-* **Purpose**: Create a new Student Profile record.
-* **Request DTO**:
+
+- **Purpose**: Create a new Student Profile record.
+- **Request DTO**:
+
 ```json
 {
   "first_name": "Aditya",
@@ -276,7 +306,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "initial_batch_id": "b88d3e1d-c0aa-43d9-a41a-7b3b4b5e6f7c"
 }
 ```
-* **Response DTO (210 Created)**:
+
+- **Response DTO (210 Created)**:
+
 ```json
 {
   "success": true,
@@ -293,8 +325,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.5 Attendance Domain (05)
 
 #### `POST /api/v1/attendance/check-in`
-* **Purpose**: Record a daily check-in event (supporting physical RFID/biometric or application-based check-in).
-* **Request DTO**:
+
+- **Purpose**: Record a daily check-in event (supporting physical RFID/biometric or application-based check-in).
+- **Request DTO**:
+
 ```json
 {
   "student_profile_id": "s99a3e1d-c0aa-43d9-a41a-7b3b4b5e6f7a",
@@ -304,7 +338,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "longitude": 80.2574
 }
 ```
-* **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -321,8 +357,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.6 Assessment Domain (06)
 
 #### `POST /api/v1/assessments/attempts/:id/submit`
-* **Purpose**: Submit an active CBT test attempt containing all answered questions.
-* **Request DTO**:
+
+- **Purpose**: Submit an active CBT test attempt containing all answered questions.
+- **Request DTO**:
+
 ```json
 {
   "responses": [
@@ -339,7 +377,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   }
 }
 ```
-* **Response DTO (200 OK)**:
+
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -356,8 +396,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.7 Fee Management Domain (07)
 
 #### `POST /api/v1/billing/payments/checkout`
-* **Purpose**: Initialize a payment check-out transaction for tuition installments.
-* **Request DTO**:
+
+- **Purpose**: Initialize a payment check-out transaction for tuition installments.
+- **Request DTO**:
+
 ```json
 {
   "student_fee_installment_id": "inst88d3-c0aa-43d9-a41a-7b3b4b5e6f7c",
@@ -365,13 +407,15 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "gateway_name": "RAZORPAY"
 }
 ```
-* **Response DTO (200 OK)**:
+
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
   "data": {
     "gateway_order_id": "order_FGH8923JKL",
-    "amount": 25000.00,
+    "amount": 25000.0,
     "currency": "INR"
   }
 }
@@ -382,8 +426,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.8 Communication Domain (08)
 
 #### `POST /api/v1/notifications/dispatch`
-* **Purpose**: Direct transactional notification queue dispatch.
-* **Request DTO**:
+
+- **Purpose**: Direct transactional notification queue dispatch.
+- **Request DTO**:
+
 ```json
 {
   "recipient_user_id": "u11d3e1d-c0aa-43d9-a41a-7b3b4b5e6f7b",
@@ -396,7 +442,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   }
 }
 ```
-* **Response DTO (202 Accepted)**:
+
+- **Response DTO (202 Accepted)**:
+
 ```json
 {
   "success": true,
@@ -412,8 +460,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.9 CRM Domain (09)
 
 #### `POST /api/v1/crm/leads/convert`
-* **Purpose**: Convert qualified pipeline lead into a registered Student Profile.
-* **Request DTO**:
+
+- **Purpose**: Convert qualified pipeline lead into a registered Student Profile.
+- **Request DTO**:
+
 ```json
 {
   "lead_id": "l99d3e1d-c0aa-43d9-a41a-7b3b4b5e6f7c",
@@ -421,7 +471,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "initial_payment_verified": true
 }
 ```
-* **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -437,8 +489,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.10 Reporting & Analytics Domain (10)
 
 #### `POST /api/v1/reports/export`
-* **Purpose**: Trigger an asynchronous data export.
-* **Request DTO**:
+
+- **Purpose**: Trigger an asynchronous data export.
+- **Request DTO**:
+
 ```json
 {
   "template_id": "rt55d3e1-c0aa-43d9-a41a-7b3b4b5e6f7c",
@@ -448,7 +502,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   }
 }
 ```
-* **Response DTO (202 Accepted)**:
+
+- **Response DTO (202 Accepted)**:
+
 ```json
 {
   "success": true,
@@ -464,8 +520,10 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ### 4.11 System Core Domain (11)
 
 #### `POST /api/v1/system/files/upload`
-* **Purpose**: Upload document metadata registry mapping.
-* **Request DTO**:
+
+- **Purpose**: Upload document metadata registry mapping.
+- **Request DTO**:
+
 ```json
 {
   "file_path": "admissions/ADY-2026-0089/marksheet.pdf",
@@ -474,7 +532,9 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
   "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 }
 ```
-* **Response DTO (201 Created)**:
+
+- **Response DTO (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -488,5 +548,6 @@ GET /api/v1/students?page=1&limit=25&sort=-created_at&search=John&filter[status]
 ---
 
 ## 5. Security & Verification Strategy
+
 1. **Payload Signatures**: Webhook triggers must verify signature hashes using dynamic tenant keys (`secret_signing_key`).
 2. **Access Token Lifetimes**: Strict 15-minute verification lifetimes verified against the central database blacklist registries on revocation events.

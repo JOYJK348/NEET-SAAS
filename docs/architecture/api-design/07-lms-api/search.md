@@ -7,28 +7,33 @@ This document defines filters for querying study materials and courses.
 ## GET /api/v1/study-materials/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter published materials.
 
 ### Permission
+
 `lms:material:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `lms:material:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `lms:material:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[subjectId]`: UUID.
-*   `filter[chapterId]`: UUID.
-*   `filter[topicId]`: UUID.
-*   `search`: String (Fuzzy search matching title).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[subjectId]`: UUID.
+- `filter[chapterId]`: UUID.
+- `filter[topicId]`: UUID.
+- `search`: String (Fuzzy search matching title).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

@@ -7,37 +7,44 @@ This document defines endpoints for managing payments refunds and ledger adjustm
 ## POST /api/v1/refunds
 
 ### Purpose
+
 Processes a refund request, recording debit adjustment rows in the ledger.
 
 ### Permission
+
 `fee:refund:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:refund:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:refund:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "paymentId": "pay092a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
-  "refundAmount": 20000.00,
+  "refundAmount": 20000.0,
   "reason": "Student course withdrawal",
   "remarks": "Refund issued based on exit policies."
 }
 ```
 
 ### Business Rules
+
 1.  **Balance verification**: Ensures `refundAmount` does not exceed the payment's original credited value.
 2.  **Ledger Adjustment Entry**: Inserts a debit adjustment record in `refunds` table (which is immutable).
 
 ### Database Tables Affected
-*   `refunds` (Insert)
+
+- `refunds` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

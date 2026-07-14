@@ -7,20 +7,24 @@ This document defines endpoints for querying student performance trends.
 ## GET /api/v1/analytics/students/{id}/performance-trends
 
 ### Purpose
+
 Exposes chronological performance trends (attendance rates, CBT averages, LMS material accessed counts) for a student.
 
 ### Permission
+
 `analytics:student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `analytics:student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `analytics:student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,
@@ -30,8 +34,8 @@ Exposes chronological performance trends (attendance rates, CBT averages, LMS ma
     "timeline": [
       {
         "month": "2026-06",
-        "averageAttendancePercentage": 92.00,
-        "cbtAveragePercentage": 75.00,
+        "averageAttendancePercentage": 92.0,
+        "cbtAveragePercentage": 75.0,
         "lmsCompletionCount": 14
       }
     ]

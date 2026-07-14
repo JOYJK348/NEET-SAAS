@@ -89,15 +89,15 @@ flowchart TD
 
 # 🔗 Relationship Summary
 
-| Parent | Child | Cardinality |
-|---------|-------|-------------|
-| 🏢 Institute | 🌿 Branch | 1 : N |
-| 🏢 Institute | 📅 Academic Year | 1 : N |
-| 🏢 Institute | 📚 Course | 1 : N |
-| 🏢 Institute | 💳 Subscription | 1 : 1 |
-| 💳 Subscription | 🔑 License | 1 : 1 |
-| 🏢 Institute | 🎉 Holiday | 1 : N |
-| 🏢 Institute | 📢 Announcement | 1 : N |
+| Parent          | Child            | Cardinality |
+| --------------- | ---------------- | ----------- |
+| 🏢 Institute    | 🌿 Branch        | 1 : N       |
+| 🏢 Institute    | 📅 Academic Year | 1 : N       |
+| 🏢 Institute    | 📚 Course        | 1 : N       |
+| 🏢 Institute    | 💳 Subscription  | 1 : 1       |
+| 💳 Subscription | 🔑 License       | 1 : 1       |
+| 🏢 Institute    | 🎉 Holiday       | 1 : N       |
+| 🏢 Institute    | 📢 Announcement  | 1 : N       |
 
 ---
 

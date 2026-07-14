@@ -7,20 +7,24 @@ This document defines endpoints for managing integration credentials.
 ## POST /api/v1/public/api-keys
 
 ### Purpose
+
 Generates a secure API key credentials credential token for a partner integration.
 
 ### Permission
+
 `system:integration:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:integration:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (raw API key returned once, stored encrypted).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:integration:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (raw API key returned once, stored encrypted).
 
 ### Request DTO
+
 ```json
 {
   "partnerId": "part02a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
@@ -29,10 +33,12 @@ Generates a secure API key credentials credential token for a partner integratio
 ```
 
 ### Business Rules
-*   Generates a cryptographically secure token prefix (`pk_live_...`).
-*   Stores encrypted hash matching parameters in `partner_api_keys` table.
+
+- Generates a cryptographically secure token prefix (`pk_live_...`).
+- Stores encrypted hash matching parameters in `partner_api_keys` table.
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,
@@ -54,7 +60,9 @@ Generates a secure API key credentials credential token for a partner integratio
 ## DELETE /api/v1/public/api-keys/{id}
 
 ### Purpose
+
 Revokes an API key credentials token immediately.
 
 ### Permission
+
 `system:integration:write`

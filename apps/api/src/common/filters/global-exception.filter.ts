@@ -24,10 +24,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = 'INTERNAL_SERVER_ERROR';
     let message = 'An unexpected error occurred';
-    let errors: any[] = [];
+    let errors: Array<{ field?: string; message: string }> = [];
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const exceptionResponse: any = exception.getResponse();
       code =
         exception.name
@@ -59,7 +60,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     } else {
       // Mask Prisma / SQL database stack details on client response
-      const err = exception as any;
+      const err = exception as { code?: string };
       if (
         err?.code &&
         typeof err.code === 'string' &&

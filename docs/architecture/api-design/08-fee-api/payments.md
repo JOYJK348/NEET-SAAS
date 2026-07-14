@@ -7,25 +7,29 @@ This document defines endpoints for recording ledger credit payment events.
 ## POST /api/v1/payments
 
 ### Purpose
+
 Records a fee credit payment transaction (gateway success token or manual cash receipt).
 
 ### Permission
+
 `fee:payment:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:payment:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:payment:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "invoiceId": "inv092a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
   "installmentId": "inst02a-bf99-4d6a-8d1a-6b4b5e6f7a3f",
-  "amountPaid": 75000.00,
+  "amountPaid": 75000.0,
   "paymentMethod": "ONLINE_GATEWAY",
   "transactionReference": "tx_razorpay_08912d",
   "paymentDate": "2026-07-09"
@@ -33,15 +37,18 @@ Records a fee credit payment transaction (gateway success token or manual cash r
 ```
 
 ### Business Rules
+
 1.  **State check**: Verifies linked invoice exists and is unpaid/partially paid.
 2.  **Ledger Credit Entry**: Inserts a transaction entry into `payments` table.
 3.  **Invoice Status Update**: Recalculates payment balances to check if invoice can transition to `PAID` or `PARTIALLY_PAID`.
 
 ### Database Tables Affected
-*   `payments` (Insert)
-*   `invoices` (Update balances status)
+
+- `payments` (Insert)
+- `invoices` (Update balances status)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

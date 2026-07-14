@@ -11,6 +11,7 @@
 ## 📖 Purpose
 
 This document defines the **lifecycle management strategy** for high-volume tables in the Coaching Management Platform. It covers:
+
 - Which tables need partitioning and when
 - How data is partitioned (key selection, range boundaries)
 - How old data is archived and eventually purged
@@ -24,15 +25,15 @@ This document defines the **lifecycle management strategy** for high-volume tabl
 
 Only tables that are projected to exceed **10 Lakh rows within the first year** of operation qualify for partition planning. Based on scale targets (500 institutes, 5L+ students):
 
-| Table | Expected Rows (Year 1) | Expected Rows (Year 3) | Primary Write Pattern |
-|---|---|---|---|
-| `attendance_records` | 1.5 Crore | 5+ Crore | Tutor marks attendance per class per student |
-| `student_responses` | 50 Lakh | 2+ Crore | Student submits answers during assessment |
-| `notifications` | 30 Lakh | 1+ Crore | System generates event-driven notifications |
-| `communication_history` | 40 Lakh | 1+ Crore | One row per message per channel per recipient |
-| `activity_logs` | 60 Lakh | 2+ Crore | Every user action (page view, click) |
-| `audit_logs` | 30 Lakh | 1+ Crore | Every data mutation (create, update, delete) |
-| `login_sessions` | 15 Lakh | 50+ Lakh | Every user login creates a session row |
+| Table                   | Expected Rows (Year 1) | Expected Rows (Year 3) | Primary Write Pattern                         |
+| ----------------------- | ---------------------- | ---------------------- | --------------------------------------------- |
+| `attendance_records`    | 1.5 Crore              | 5+ Crore               | Tutor marks attendance per class per student  |
+| `student_responses`     | 50 Lakh                | 2+ Crore               | Student submits answers during assessment     |
+| `notifications`         | 30 Lakh                | 1+ Crore               | System generates event-driven notifications   |
+| `communication_history` | 40 Lakh                | 1+ Crore               | One row per message per channel per recipient |
+| `activity_logs`         | 60 Lakh                | 2+ Crore               | Every user action (page view, click)          |
+| `audit_logs`            | 30 Lakh                | 1+ Crore               | Every data mutation (create, update, delete)  |
+| `login_sessions`        | 15 Lakh                | 50+ Lakh               | Every user login creates a session row        |
 
 ---
 
@@ -42,14 +43,14 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** A single institute with 1,000 students and 6 classes/day generates ~1.5 Lakh rows/month. Across 500 institutes, this table hits **5 Crore rows in 3 years**. Unpartitioned, a simple monthly attendance report query would scan millions of irrelevant rows.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `session_date` (DATE) |
-| **Partition Type** | Range (Monthly) |
-| **Partition Naming** | `attendance_records_2026_07`, `attendance_records_2026_08`, ... |
-| **Active Partitions** | Current month + previous 2 months (3 months active) |
-| **Archive Trigger** | Data older than 12 months moves to archive partition |
-| **Delete Policy** | Data older than 5 years is permanently deleted |
+| Property              | Decision                                                        |
+| --------------------- | --------------------------------------------------------------- |
+| **Partition Key**     | `session_date` (DATE)                                           |
+| **Partition Type**    | Range (Monthly)                                                 |
+| **Partition Naming**  | `attendance_records_2026_07`, `attendance_records_2026_08`, ... |
+| **Active Partitions** | Current month + previous 2 months (3 months active)             |
+| **Archive Trigger**   | Data older than 12 months moves to archive partition            |
+| **Delete Policy**     | Data older than 5 years is permanently deleted                  |
 
 **Query Impact:** When a tutor queries "this month's attendance for Batch A", PostgreSQL's partition pruning automatically skips all other months' partitions. A 5 Crore row table behaves like a 15 Lakh row table for current-month queries.
 
@@ -59,13 +60,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** Every mock test with 200 questions × 500 students = 1 Lakh rows per test event. With weekly tests across 500 institutes, this accumulates rapidly.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `submitted_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Monthly) |
-| **Active Partitions** | Current academic year (12 months) |
-| **Archive Trigger** | Data older than 1 academic year moves to archive |
-| **Delete Policy** | Data older than 3 years is permanently deleted |
+| Property              | Decision                                         |
+| --------------------- | ------------------------------------------------ |
+| **Partition Key**     | `submitted_at` (TIMESTAMPTZ)                     |
+| **Partition Type**    | Range (Monthly)                                  |
+| **Active Partitions** | Current academic year (12 months)                |
+| **Archive Trigger**   | Data older than 1 academic year moves to archive |
+| **Delete Policy**     | Data older than 3 years is permanently deleted   |
 
 **Note:** Results and rankings are computed and stored in the `results` table (warm table, not partitioned). Raw student responses are only needed for dispute resolution and detailed analytics.
 
@@ -75,13 +76,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** Every attendance mark, fee overdue, result publication, and assignment upload generates notifications for students and parents. High-frequency writes with rapidly declining read relevance.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `created_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Monthly) |
+| Property              | Decision                                           |
+| --------------------- | -------------------------------------------------- |
+| **Partition Key**     | `created_at` (TIMESTAMPTZ)                         |
+| **Partition Type**    | Range (Monthly)                                    |
 | **Active Partitions** | Current month + previous 1 month (2 months active) |
-| **Archive Trigger** | Data older than 6 months moves to archive |
-| **Delete Policy** | Data older than 2 years is permanently deleted |
+| **Archive Trigger**   | Data older than 6 months moves to archive          |
+| **Delete Policy**     | Data older than 2 years is permanently deleted     |
 
 **Rationale:** Users rarely scroll past 1 month of notifications. The "Notifications" UI shows recent items with cursor pagination. Archived notifications are accessible via an "Older Notifications" link that queries the archive partition.
 
@@ -91,13 +92,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** One announcement to 1,000 users across 2 channels = 2,000 history rows per announcement. This is pure audit/compliance data.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `created_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Monthly) |
-| **Active Partitions** | Current month + previous 2 months |
-| **Archive Trigger** | Data older than 6 months moves to archive |
-| **Delete Policy** | Data older than 3 years is permanently deleted |
+| Property              | Decision                                       |
+| --------------------- | ---------------------------------------------- |
+| **Partition Key**     | `created_at` (TIMESTAMPTZ)                     |
+| **Partition Type**    | Range (Monthly)                                |
+| **Active Partitions** | Current month + previous 2 months              |
+| **Archive Trigger**   | Data older than 6 months moves to archive      |
+| **Delete Policy**     | Data older than 3 years is permanently deleted |
 
 ---
 
@@ -105,13 +106,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** Every page view, button click, and feature interaction generates a log entry. This is the highest-velocity write table in the platform but has the lowest read priority.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `occurred_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Monthly) |
-| **Active Partitions** | Current month only |
-| **Archive Trigger** | Data older than 3 months moves to archive |
-| **Delete Policy** | Data older than 1 year is permanently deleted |
+| Property              | Decision                                      |
+| --------------------- | --------------------------------------------- |
+| **Partition Key**     | `occurred_at` (TIMESTAMPTZ)                   |
+| **Partition Type**    | Range (Monthly)                               |
+| **Active Partitions** | Current month only                            |
+| **Archive Trigger**   | Data older than 3 months moves to archive     |
+| **Delete Policy**     | Data older than 1 year is permanently deleted |
 
 **Note:** Activity logs exist for product analytics, not compliance. Aggressive archival is acceptable.
 
@@ -121,13 +122,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** Every data mutation (student created, fee recorded, attendance edited) generates an immutable audit entry. Unlike activity logs, audit logs have **legal retention requirements**.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `created_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Quarterly) |
-| **Active Partitions** | Current quarter + previous quarter |
-| **Archive Trigger** | Data older than 1 year moves to cold archive |
-| **Delete Policy** | Data older than **7 years** is permanently deleted (compliance) |
+| Property              | Decision                                                        |
+| --------------------- | --------------------------------------------------------------- |
+| **Partition Key**     | `created_at` (TIMESTAMPTZ)                                      |
+| **Partition Type**    | Range (Quarterly)                                               |
+| **Active Partitions** | Current quarter + previous quarter                              |
+| **Archive Trigger**   | Data older than 1 year moves to cold archive                    |
+| **Delete Policy**     | Data older than **7 years** is permanently deleted (compliance) |
 
 **Critical:** Audit logs must never be modified or deleted before the retention period. Archive partitions must be read-only.
 
@@ -137,13 +138,13 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 **Why partition:** Every login creates a session row. Sessions are short-lived (7-30 days) but accumulate over time. Only active sessions matter for security monitoring.
 
-| Property | Decision |
-|---|---|
-| **Partition Key** | `created_at` (TIMESTAMPTZ) |
-| **Partition Type** | Range (Monthly) |
-| **Active Partitions** | Current month only |
-| **Archive Trigger** | Expired sessions older than 3 months are archived |
-| **Delete Policy** | Data older than 1 year is permanently deleted |
+| Property              | Decision                                          |
+| --------------------- | ------------------------------------------------- |
+| **Partition Key**     | `created_at` (TIMESTAMPTZ)                        |
+| **Partition Type**    | Range (Monthly)                                   |
+| **Active Partitions** | Current month only                                |
+| **Archive Trigger**   | Expired sessions older than 3 months are archived |
+| **Delete Policy**     | Data older than 1 year is permanently deleted     |
 
 **Optimization:** A nightly pg-boss job should clean up expired sessions (`WHERE expires_at < NOW() AND status = 'EXPIRED'`) from the active partition to keep it lean.
 
@@ -151,15 +152,15 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 
 ## 📊 3. Retention Policy Summary
 
-| Table | Active Window | Archive After | Delete After | Legal Hold? |
-|---|---|---|---|---|
-| `attendance_records` | 3 months | 12 months | 5 years | No |
-| `student_responses` | 12 months | 1 academic year | 3 years | No |
-| `notifications` | 2 months | 6 months | 2 years | No |
-| `communication_history` | 3 months | 6 months | 3 years | No |
-| `activity_logs` | 1 month | 3 months | 1 year | No |
-| `audit_logs` | 6 months | 1 year | **7 years** | **Yes** |
-| `login_sessions` | 1 month | 3 months | 1 year | No |
+| Table                   | Active Window | Archive After   | Delete After | Legal Hold? |
+| ----------------------- | ------------- | --------------- | ------------ | ----------- |
+| `attendance_records`    | 3 months      | 12 months       | 5 years      | No          |
+| `student_responses`     | 12 months     | 1 academic year | 3 years      | No          |
+| `notifications`         | 2 months      | 6 months        | 2 years      | No          |
+| `communication_history` | 3 months      | 6 months        | 3 years      | No          |
+| `activity_logs`         | 1 month       | 3 months        | 1 year       | No          |
+| `audit_logs`            | 6 months      | 1 year          | **7 years**  | **Yes**     |
+| `login_sessions`        | 1 month       | 3 months        | 1 year       | No          |
 
 ---
 
@@ -170,6 +171,7 @@ Only tables that are projected to exceed **10 Lakh rows within the first year** 
 At launch scale (1-2 institutes, < 1,000 students), partitioning adds unnecessary complexity. All tables operate as standard single-partition tables.
 
 **When to activate partitioning:**
+
 - Any hot table exceeds **10 Lakh rows**, OR
 - Any query on a hot table exceeds **1 second mean execution time** (measured via `pg_stat_statements`)
 
@@ -200,6 +202,7 @@ CREATE TABLE attendance_records_2026_08
 ### 4.3 Automatic Partition Management
 
 Use a pg-boss scheduled job (or `pg_partman` extension if available on Supabase) to:
+
 1. **Auto-create** next month's partition 7 days before month end
 2. **Auto-detach** partitions older than the active window
 3. **Auto-archive** detached partitions to a separate `_archive` schema
@@ -261,4 +264,4 @@ Archive Schema (PostgreSQL)
 
 ---
 
-*Last updated: July 8, 2026 — This document applies only to hot tables identified in database-access-strategy.md. Cold and warm tables do not need lifecycle management.*
+_Last updated: July 8, 2026 — This document applies only to hot tables identified in database-access-strategy.md. Cold and warm tables do not need lifecycle management._

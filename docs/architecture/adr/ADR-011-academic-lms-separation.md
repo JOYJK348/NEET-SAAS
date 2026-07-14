@@ -2,7 +2,7 @@
 
 ## Context and Problem Statement
 
-Initially, all academic schedules and digital learning contents (timetables, classes, study materials, video recordings, assignments) were designed inside a single unified `03-academic` domain. 
+Initially, all academic schedules and digital learning contents (timetables, classes, study materials, video recordings, assignments) were designed inside a single unified `03-academic` domain.
 
 As the platform scales to handle extensive Learning Management System (LMS) capabilities, keeping curriculum resources, student progress tracking, live streams, and recorded videos inside Academic violates the Domain-Driven Design (DDD) Single Responsibility Principle. It risks turning the Academic schema into a "monster domain," degrading table indexing performance and causing merge conflicts across engineering teams.
 

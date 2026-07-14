@@ -1,33 +1,41 @@
 # POST /api/v1/auth/logout
 
 ### Purpose
+
 Revokes the current session's refresh token.
 
 ### Permission
+
 None (Active session required).
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: None
-*   Tenant Isolation: Not Applicable
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes.
+
+- Authentication Required: Yes
+- Required RBAC Permission: None
+- Tenant Isolation: Not Applicable
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes.
 
 ### Request Headers
-*   `Authorization`: Bearer `<jwt_token>` (Required).
+
+- `Authorization`: Bearer `<jwt_token>` (Required).
 
 ### Request DTO
+
 None.
 
 ### Business Rules
-*   Revokes the active refresh token matching the JWT's `jti` (JWT ID claim).
-*   Evicts the token session mapping from Redis cache immediately.
+
+- Revokes the active refresh token matching the JWT's `jti` (JWT ID claim).
+- Evicts the token session mapping from Redis cache immediately.
 
 ### Database Tables Affected
-*   `refresh_tokens` (Update)
+
+- `refresh_tokens` (Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,
@@ -46,19 +54,24 @@ None.
 # POST /api/v1/auth/logout-all
 
 ### Purpose
+
 Terminates all active sessions for the user account.
 
 ### Permission
+
 None (Active session required).
 
 ### Business Rules
-*   Updates all active `refresh_tokens` matching the current user ID to `is_revoked = true`.
-*   Bulk evicts all user keys from Redis cache.
+
+- Updates all active `refresh_tokens` matching the current user ID to `is_revoked = true`.
+- Bulk evicts all user keys from Redis cache.
 
 ### Database Tables Affected
-*   `refresh_tokens` (Update)
+
+- `refresh_tokens` (Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

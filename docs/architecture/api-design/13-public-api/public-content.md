@@ -7,20 +7,24 @@ This document defines endpoints for querying public directories.
 ## GET /api/v1/public/courses
 
 ### Purpose
+
 Exposes the list of active courses offered by the institute to the public website.
 
 ### Permission
+
 None (Public).
 
 ### Security Notes
-*   Authentication Required: No
-*   Required RBAC Permission: None
-*   Tenant Isolation: Enforced via `X-Tenant-ID` header.
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: No
+- Required RBAC Permission: None
+- Tenant Isolation: Enforced via `X-Tenant-ID` header.
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

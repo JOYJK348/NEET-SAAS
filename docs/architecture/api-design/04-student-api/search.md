@@ -7,34 +7,41 @@ This document defines advanced query filters and indexing strategies for student
 ## GET /api/v1/students/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to retrieve active student records.
 
 ### Permission
+
 `student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: Yes (demographics details hidden from non-admin roles).
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: Yes (demographics details hidden from non-admin roles).
 
 ### Request Parameters
-*   `filter[batchId]`: UUID (Filter by batch).
-*   `filter[status]`: String (`ACTIVE`, `SUSPENDED`, `WITHDRAWN`, `COMPLETED`).
-*   `search`: String (Fuzzy search matching name, phone, admission or roll number).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[batchId]`: UUID (Filter by batch).
+- `filter[status]`: String (`ACTIVE`, `SUSPENDED`, `WITHDRAWN`, `COMPLETED`).
+- `search`: String (Fuzzy search matching name, phone, admission or roll number).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Business Rules
-*   Branch managers can only search student profiles enrolled inside their active branch contexts.
+
+- Branch managers can only search student profiles enrolled inside their active branch contexts.
 
 ### Database Tables Affected
-*   `student_profiles` (Select)
-*   `batch_enrollments` (Select)
+
+- `student_profiles` (Select)
+- `batch_enrollments` (Select)
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

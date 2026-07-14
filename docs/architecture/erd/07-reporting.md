@@ -30,6 +30,7 @@ API Request → NestJS Service → Prisma query (JOIN across domains) → Respon
 - `report_snapshots` table **does not exist** in Phase 1 schema.
 
 **Why this is the right call for Phase 1:**
+
 - Zero infra overhead — no snapshot jobs, no stale data concerns.
 - All data is always current — no "report as of yesterday" bugs.
 - Simpler schema — no parallel data model to keep in sync.
@@ -53,11 +54,11 @@ pg-boss scheduled job → heavy SQL aggregation → INSERT INTO report_snapshots
 
 ### ✅ Included Entities
 
-| Entity | Phase | Purpose |
-|---|---|---|
-| 📊 **Dashboard Config** | Phase 1 | Per-role widget configuration (which metrics a Tenant Admin vs Tutor sees) |
-| 📸 **Report Snapshot** | Phase 2 | Cached pre-computed report payload + metadata |
-| 📅 **Analytics Event** | Phase 1 | Lightweight event tracking (page views, feature usage) for platform analytics |
+| Entity                  | Phase   | Purpose                                                                       |
+| ----------------------- | ------- | ----------------------------------------------------------------------------- |
+| 📊 **Dashboard Config** | Phase 1 | Per-role widget configuration (which metrics a Tenant Admin vs Tutor sees)    |
+| 📸 **Report Snapshot**  | Phase 2 | Cached pre-computed report payload + metadata                                 |
+| 📅 **Analytics Event**  | Phase 1 | Lightweight event tracking (page views, feature usage) for platform analytics |
 
 > **There is no `Report`, `StudentPerformanceReport`, `AttendanceReport`, or `AssessmentReport` table in Phase 1.**
 > These are **query result types** (TypeScript interfaces / API response shapes), NOT database entities.
@@ -65,15 +66,15 @@ pg-boss scheduled job → heavy SQL aggregation → INSERT INTO report_snapshots
 
 ### ❌ Excluded (Cross-Domain Source Data — queried, not owned)
 
-| Source Entity | Domain | What Reports Derive From It |
-|---|---|---|
-| `attendance_records` | Academic / Student | Attendance % per student, per batch, per period |
-| `student_enrollments` | Student | Enrollment counts, batch capacity, dropout rates |
-| `results` | Assessment | Average marks, top performers, subject-wise pass rates |
-| `student_performance` | Student | Aggregate assessment performance per subject |
-| `payments` + `fee_installments` | Fee | Collection status, outstanding dues, overdue installments |
-| `audit_logs` | System | Admin activity logs, security audit |
-| `assignment_submissions` | Learning | Assignment completion rates |
+| Source Entity                   | Domain             | What Reports Derive From It                               |
+| ------------------------------- | ------------------ | --------------------------------------------------------- |
+| `attendance_records`            | Academic / Student | Attendance % per student, per batch, per period           |
+| `student_enrollments`           | Student            | Enrollment counts, batch capacity, dropout rates          |
+| `results`                       | Assessment         | Average marks, top performers, subject-wise pass rates    |
+| `student_performance`           | Student            | Aggregate assessment performance per subject              |
+| `payments` + `fee_installments` | Fee                | Collection status, outstanding dues, overdue installments |
+| `audit_logs`                    | System             | Admin activity logs, security audit                       |
+| `assignment_submissions`        | Learning           | Assignment completion rates                               |
 
 ---
 

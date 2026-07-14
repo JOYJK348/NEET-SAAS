@@ -10,6 +10,7 @@
 ## 1. Problem Statement
 
 The Coaching Management Platform is a **SaaS product**. Multiple coaching institutes (tenants) share:
+
 - A single Railway-hosted PostgreSQL instance
 - A single NestJS backend deployment
 - A single Vercel-deployed Next.js frontend
@@ -33,14 +34,14 @@ One database, one schema. Every tenant-owned table has an `institute_id` column.
 SELECT * FROM students WHERE institute_id = 'inst_abc123';
 ```
 
-| ✅ Pros | ❌ Cons |
-|---------|---------|
-| Simple to implement | Risk of missing WHERE clause → data leak |
-| Low infrastructure cost | Requires strict discipline at query layer |
-| Works perfectly with Prisma | institute_id index required on every tenant table |
+| ✅ Pros                                                | ❌ Cons                                                  |
+| ------------------------------------------------------ | -------------------------------------------------------- |
+| Simple to implement                                    | Risk of missing WHERE clause → data leak                 |
+| Low infrastructure cost                                | Requires strict discipline at query layer                |
+| Works perfectly with Prisma                            | institute_id index required on every tenant table        |
 | Easy schema migrations (one migration for all tenants) | Shared DB means one tenant's heavy query can slow others |
-| Railway single-DB works natively | No hard isolation boundary |
-| JWT already carries institute_id (Decision 01) | |
+| Railway single-DB works natively                       | No hard isolation boundary                               |
+| JWT already carries institute_id (Decision 01)         |                                                          |
 
 ---
 
@@ -53,14 +54,14 @@ SET search_path TO inst_abc123;
 SELECT * FROM students;
 ```
 
-| ✅ Pros | ❌ Cons |
-|---------|---------|
-| Better isolation than row-level | Prisma has **zero support** for schema-per-tenant |
-| Schema-level backup per tenant | `SET search_path` per connection breaks connection pooling |
-| Cleaner DB browser view | Every migration must run N times (once per tenant) |
-| | Railway managed Postgres + pgBouncer makes this painful |
-| | Requires raw SQL for schema operations |
-| | New tenant onboarding = schema creation + migration run |
+| ✅ Pros                         | ❌ Cons                                                    |
+| ------------------------------- | ---------------------------------------------------------- |
+| Better isolation than row-level | Prisma has **zero support** for schema-per-tenant          |
+| Schema-level backup per tenant  | `SET search_path` per connection breaks connection pooling |
+| Cleaner DB browser view         | Every migration must run N times (once per tenant)         |
+|                                 | Railway managed Postgres + pgBouncer makes this painful    |
+|                                 | Requires raw SQL for schema operations                     |
+|                                 | New tenant onboarding = schema creation + migration run    |
 
 ---
 
@@ -68,14 +69,14 @@ SELECT * FROM students;
 
 Separate PostgreSQL database per institute.
 
-| ✅ Pros | ❌ Cons |
-|---------|---------|
-| Maximum isolation | $$$: Railway charges per database |
-| Easy tenant deletion | One NestJS instance → dynamic DB connections |
-| Independent backups | Connection pool management nightmare |
-| | Prisma requires separate `PrismaClient` per tenant |
-| | Migrations must run across N databases |
-| | Completely disproportionate for our scale |
+| ✅ Pros              | ❌ Cons                                            |
+| -------------------- | -------------------------------------------------- |
+| Maximum isolation    | $$$: Railway charges per database                  |
+| Easy tenant deletion | One NestJS instance → dynamic DB connections       |
+| Independent backups  | Connection pool management nightmare               |
+|                      | Prisma requires separate `PrismaClient` per tenant |
+|                      | Migrations must run across N databases             |
+|                      | Completely disproportionate for our scale          |
 
 ---
 
@@ -89,7 +90,7 @@ Separate PostgreSQL database per institute.
 Prisma's schema file is single-schema. Schema-per-tenant would force us to abandon Prisma entirely and write raw SQL for everything. That eliminates type safety, auto-completion, and migration tooling — a catastrophic tradeoff.
 
 **2. Railway infrastructure reality**
-Railway's managed PostgreSQL does not easily support per-schema connection routing. `pgBouncer` (connection pooler) breaks `SET search_path = X` because connections are reused across requests — meaning the search path set for one tenant leaks to another. This is actually *worse* than row-level in practice.
+Railway's managed PostgreSQL does not easily support per-schema connection routing. `pgBouncer` (connection pooler) breaks `SET search_path = X` because connections are reused across requests — meaning the search path set for one tenant leaks to another. This is actually _worse_ than row-level in practice.
 
 **3. JWT already delivers institute_id to every request**
 Decision 01 bakes `institute_id` into every JWT. The isolation context is already delivered to NestJS on every request. Row-level isolation is the natural continuation of this decision.
@@ -110,13 +111,13 @@ Not every table needs `institute_id`. Tables fall into three categories:
 
 These tables are owned by the platform — not by any specific institute.
 
-| Table | Why Global |
-|-------|-----------|
-| `roles` | PLATFORM_ADMIN, TENANT_ADMIN, TUTOR, STUDENT, PARENT — defined once |
-| `permissions` | Permission definitions — global |
-| `role_permissions` | Role → Permission mapping — global |
-| `subscription_plans` | Plan catalog (Basic, Pro, Enterprise) — global |
-| `platform_settings` | Platform-wide configuration |
+| Table                | Why Global                                                          |
+| -------------------- | ------------------------------------------------------------------- |
+| `roles`              | PLATFORM_ADMIN, TENANT_ADMIN, TUTOR, STUDENT, PARENT — defined once |
+| `permissions`        | Permission definitions — global                                     |
+| `role_permissions`   | Role → Permission mapping — global                                  |
+| `subscription_plans` | Plan catalog (Basic, Pro, Enterprise) — global                      |
+| `platform_settings`  | Platform-wide configuration                                         |
 
 > These tables are **read-only from a tenant's perspective**. Tenants never write to them.
 
@@ -126,11 +127,11 @@ These tables are owned by the platform — not by any specific institute.
 
 These tables ARE scoped to specific institutes but are managed by the Platform Admin, not the Tenant.
 
-| Table | `institute_id`? | Notes |
-|-------|----------------|-------|
-| `institutes` | No (IS the root) | The tenant itself |
-| `subscriptions` | `institute_id` FK | Managed by Platform Admin |
-| `platform_audit_logs` | `institute_id` FK | Platform-level audit |
+| Table                 | `institute_id`?   | Notes                     |
+| --------------------- | ----------------- | ------------------------- |
+| `institutes`          | No (IS the root)  | The tenant itself         |
+| `subscriptions`       | `institute_id` FK | Managed by Platform Admin |
+| `platform_audit_logs` | `institute_id` FK | Platform-level audit      |
 
 ---
 
@@ -138,19 +139,19 @@ These tables ARE scoped to specific institutes but are managed by the Platform A
 
 **Every single one of these tables MUST have `institute_id UUID NOT NULL` as a column and index.**
 
-| Domain | Tables |
-|--------|--------|
-| User | `users`, `login_sessions`, `password_reset_tokens`, `user_profiles` |
-| Academic | `academic_years`, `courses`, `batches`, `subjects`, `chapters`, `timetables`, `live_classes`, `recorded_classes`, `tutor_assignments` |
-| Student | `students`, `student_enrollments`, `attendance_records` |
-| Tutor | `tutors`, `tutor_subjects` |
-| Parent | `parents`, `student_parent_links` |
-| Learning | `study_materials`, `assignments`, `student_assignments` |
-| Assessment | `mock_tests`, `test_questions`, `test_results`, `student_answers` |
-| Communication | `announcements`, `notifications`, `messages` |
-| Fee | `fee_structures`, `fee_components`, `installment_plans`, `fee_discounts`, `student_fee_records`, `fee_installments`, `payments`, `payment_receipts`, `fee_reminders` |
-| Reporting | `report_snapshots`, `analytics_events` |
-| System | `audit_logs`, `system_settings` |
+| Domain        | Tables                                                                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User          | `users`, `login_sessions`, `password_reset_tokens`, `user_profiles`                                                                                                  |
+| Academic      | `academic_years`, `courses`, `batches`, `subjects`, `chapters`, `timetables`, `live_classes`, `recorded_classes`, `tutor_assignments`                                |
+| Student       | `students`, `student_enrollments`, `attendance_records`                                                                                                              |
+| Tutor         | `tutors`, `tutor_subjects`                                                                                                                                           |
+| Parent        | `parents`, `student_parent_links`                                                                                                                                    |
+| Learning      | `study_materials`, `assignments`, `student_assignments`                                                                                                              |
+| Assessment    | `mock_tests`, `test_questions`, `test_results`, `student_answers`                                                                                                    |
+| Communication | `announcements`, `notifications`, `messages`                                                                                                                         |
+| Fee           | `fee_structures`, `fee_components`, `installment_plans`, `fee_discounts`, `student_fee_records`, `fee_installments`, `payments`, `payment_receipts`, `fee_reminders` |
+| Reporting     | `report_snapshots`, `analytics_events`                                                                                                                               |
+| System        | `audit_logs`, `system_settings`                                                                                                                                      |
 
 ---
 
@@ -240,7 +241,7 @@ const GLOBAL_TABLES = new Set([
 ]);
 
 prisma.$use(async (params, next) => {
-  const tenantId = requestContext.get('institute_id');   // string | null
+  const tenantId = requestContext.get('institute_id'); // string | null
   const isPlatformAdmin = requestContext.get('is_platform_admin') === true;
   const isGlobalTable = GLOBAL_TABLES.has(params.model ?? '');
 
@@ -272,9 +273,9 @@ prisma.$use(async (params, next) => {
   if (!tenantId) {
     throw new Error(
       `[TenantMiddleware] SECURITY VIOLATION: institute_id is missing from ` +
-      `request context for model "${params.model}" action "${params.action}". ` +
-      `This query has been blocked. Check that the JWT guard ran before this query ` +
-      `and that requestContext is correctly propagated via AsyncLocalStorage.`
+        `request context for model "${params.model}" action "${params.action}". ` +
+        `This query has been blocked. Check that the JWT guard ran before this query ` +
+        `and that requestContext is correctly propagated via AsyncLocalStorage.`,
     );
   }
 
@@ -292,7 +293,9 @@ prisma.$use(async (params, next) => {
     }));
   }
 
-  if (['findFirst', 'findUnique', 'findMany', 'count', 'aggregate', 'groupBy'].includes(params.action)) {
+  if (
+    ['findFirst', 'findUnique', 'findMany', 'count', 'aggregate', 'groupBy'].includes(params.action)
+  ) {
     params.args.where = { ...params.args.where, ...tenantScope };
   }
 
@@ -322,6 +325,7 @@ prisma.$use(async (params, next) => {
 > Use Node.js `AsyncLocalStorage` to propagate the request context through async call chains.
 > Do NOT use a global singleton — it will bleed between concurrent requests.
 > NestJS middleware sets the store at the start of every request:
+>
 > ```typescript
 > // tenant-context.middleware.ts
 > export class TenantContextMiddleware implements NestMiddleware {
@@ -387,14 +391,10 @@ describe('Cross-Tenant Isolation: GET /students', () => {
     const tokenA = await loginAs(instituteA.tenantAdmin);
 
     // Try to access students using Institute A's token
-    const response = await request(app)
-      .get('/students')
-      .set('Authorization', `Bearer ${tokenA}`);
+    const response = await request(app).get('/students').set('Authorization', `Bearer ${tokenA}`);
 
     // Assert: Institute B's student must NOT appear
-    expect(response.body.data).not.toContainEqual(
-      expect.objectContaining({ id: studentB.id })
-    );
+    expect(response.body.data).not.toContainEqual(expect.objectContaining({ id: studentB.id }));
   });
 });
 ```
@@ -408,6 +408,7 @@ describe('Cross-Tenant Isolation: GET /students', () => {
 Platform Admin users do NOT have an `institute_id` in their JWT (`institute_id = null`).
 
 When a Platform Admin makes a request:
+
 - The Prisma middleware **skips** automatic `institute_id` injection — handled by `isPlatformAdmin` check in Step 2 of the Layer 1 middleware.
 - The RLS policy must be **bypassed** for Platform Admin database connections.
 - The NestJS `TenantGuard` must **skip** tenant validation.
@@ -580,29 +581,29 @@ If a single institute grows very large (unlikely in Phase 1), PostgreSQL table p
 
 ## 13. What This Decision Unblocks
 
-| Unblocked Work | Why |
-|----------------|-----|
-| **Database schema design** | Every table's structure is now known — add `institute_id NOT NULL` + index |
-| **Prisma schema file** | Can start writing `schema.prisma` with correct model patterns |
-| **NestJS service patterns** | All service methods know they receive `instituteId` from context |
-| **API design** | Every endpoint knows its query scope |
-| **Sprint 1 database setup** | Can write the initial Prisma migration |
-| **ORM selection** | Confirms Prisma as the correct choice (schema-per-tenant would have killed it) |
+| Unblocked Work              | Why                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| **Database schema design**  | Every table's structure is now known — add `institute_id NOT NULL` + index     |
+| **Prisma schema file**      | Can start writing `schema.prisma` with correct model patterns                  |
+| **NestJS service patterns** | All service methods know they receive `instituteId` from context               |
+| **API design**              | Every endpoint knows its query scope                                           |
+| **Sprint 1 database setup** | Can write the initial Prisma migration                                         |
+| **ORM selection**           | Confirms Prisma as the correct choice (schema-per-tenant would have killed it) |
 
 ---
 
 ## 14. Summary of Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Isolation strategy | Row-Level (single schema) | Prisma compatible, Railway compatible, cost-effective |
-| institute_id column | `UUID NOT NULL REFERENCES institutes(id)` | FK integrity enforced at DB level |
-| ON DELETE behavior | `RESTRICT` | Cannot delete institute while data exists |
-| Primary safety net | Prisma middleware (auto-inject) | Application-level, developer-transparent |
-| Secondary safety net | PostgreSQL RLS | Database-level, independent of application |
-| Third safety net | Integration tests | CI/CD enforcement |
-| Compound index order | `(institute_id, other_col)` | institute_id always leftmost |
-| Email uniqueness | Per-institute `@@unique([institute_id, email])` | Same email allowed across institutes |
-| Platform Admin scoping | Skip institute_id injection | Separate guard ensures only PLATFORM_ADMIN can trigger |
-| Tenant deletion | Soft-delete only (Phase 1) | Safety, reversibility |
-| New tenant onboarding | Single atomic transaction | No partial state |
+| Decision               | Choice                                          | Rationale                                              |
+| ---------------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| Isolation strategy     | Row-Level (single schema)                       | Prisma compatible, Railway compatible, cost-effective  |
+| institute_id column    | `UUID NOT NULL REFERENCES institutes(id)`       | FK integrity enforced at DB level                      |
+| ON DELETE behavior     | `RESTRICT`                                      | Cannot delete institute while data exists              |
+| Primary safety net     | Prisma middleware (auto-inject)                 | Application-level, developer-transparent               |
+| Secondary safety net   | PostgreSQL RLS                                  | Database-level, independent of application             |
+| Third safety net       | Integration tests                               | CI/CD enforcement                                      |
+| Compound index order   | `(institute_id, other_col)`                     | institute_id always leftmost                           |
+| Email uniqueness       | Per-institute `@@unique([institute_id, email])` | Same email allowed across institutes                   |
+| Platform Admin scoping | Skip institute_id injection                     | Separate guard ensures only PLATFORM_ADMIN can trigger |
+| Tenant deletion        | Soft-delete only (Phase 1)                      | Safety, reversibility                                  |
+| New tenant onboarding  | Single atomic transaction                       | No partial state                                       |

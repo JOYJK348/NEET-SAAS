@@ -29,10 +29,10 @@ database/
 ## 2. SQL Naming & Coding Standards
 
 1.  **Case Strategy**: PostgreSQL is case-insensitive.
-    *   **Tables**: Plural and `snake_case` (e.g. `role_permissions`).
-    *   **Columns**: Singular and `snake_case` (e.g. `permission_key`).
-    *   **Functions**: Prefix with `fn_` and use `snake_case` (e.g. `fn_has_permission`).
-    *   **Triggers**: Suffix with `_trigger` (e.g. `audit_logs_trigger`).
+    - **Tables**: Plural and `snake_case` (e.g. `role_permissions`).
+    - **Columns**: Singular and `snake_case` (e.g. `permission_key`).
+    - **Functions**: Prefix with `fn_` and use `snake_case` (e.g. `fn_has_permission`).
+    - **Triggers**: Suffix with `_trigger` (e.g. `audit_logs_trigger`).
 2.  **File Naming Sequence**: Tables DDL files must carry a 3-digit order sequence (e.g., `tables/001_roles.sql`) to avoid definition dependency compile failures during setups.
 
 ---
@@ -45,9 +45,9 @@ Every core business/transactional table **MUST** define the following default au
 CREATE TABLE example_table (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES institutes(id) ON DELETE RESTRICT,
-    
+
     -- Transaction payload columns here...
-    
+
     created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
     created_by UUID, -- Resolved user UUID
@@ -63,5 +63,6 @@ CREATE TABLE example_table (
 ## 4. Row-Level Security (RLS) Protocol
 
 Supabase Row-Level Security is **ENABLED** on all tables containing tenant-sensitive data.
-*   The leftmost query constraint on all select/lookups must target the tenant boundary: `tenant_id`.
-*   RLS policies must leverage the Permission Engine helper functions (e.g. `fn_has_permission`) to validate action scopes dynamically, rather than hardcoding static role strings.
+
+- The leftmost query constraint on all select/lookups must target the tenant boundary: `tenant_id`.
+- RLS policies must leverage the Permission Engine helper functions (e.g. `fn_has_permission`) to validate action scopes dynamically, rather than hardcoding static role strings.

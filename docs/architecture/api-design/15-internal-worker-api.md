@@ -10,8 +10,10 @@ This document details endpoints designed exclusively for internal background wor
 ## 1. Background Jobs Execution Loop
 
 ### POST /api/v1/internal/jobs/execute
-*   **Purpose**: Trigger the worker thread runner to grab the next pending task from the background queue and execute it.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Trigger the worker thread runner to grab the next pending task from the background queue and execute it.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -28,8 +30,10 @@ This document details endpoints designed exclusively for internal background wor
 ## 2. Transactional Notification polling
 
 ### POST /api/v1/internal/notifications/process
-*   **Purpose**: Read pending items from `notification_queue`, construct body templates, and dispatch carrier requests.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Read pending items from `notification_queue`, construct body templates, and dispatch carrier requests.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -46,8 +50,10 @@ This document details endpoints designed exclusively for internal background wor
 ## 3. Cron Scheduler loop Trigger
 
 ### POST /api/v1/internal/scheduler/run
-*   **Purpose**: Invoked by midnight system crontab to check matching active cron configurations and execute snapshots sync.
-*   **Response DTO (200 OK)**:
+
+- **Purpose**: Invoked by midnight system crontab to check matching active cron configurations and execute snapshots sync.
+- **Response DTO (200 OK)**:
+
 ```json
 {
   "success": true,

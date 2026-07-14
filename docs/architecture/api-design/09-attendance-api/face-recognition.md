@@ -7,20 +7,24 @@ This document defines verification endpoints for face detection cameras.
 ## POST /api/v1/face-recognition/verify
 
 ### Purpose
+
 Verifies a captured CCTV image frame check-in against user profile photos.
 
 ### Permission
+
 `device:integration:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `device:integration:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `device:integration:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "deviceId": "cctv_cam_009",
@@ -29,10 +33,12 @@ Verifies a captured CCTV image frame check-in against user profile photos.
 ```
 
 ### Business Rules
+
 1.  **AI Match Call**: Invokes the secure face matching engine.
 2.  **Resolution**: On success, logs a check-in event for the matched user ID.
 
 ### Response DTO
+
 ```json
 {
   "success": true,

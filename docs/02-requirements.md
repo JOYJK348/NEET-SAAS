@@ -4,6 +4,7 @@
 > **Date:** July 13, 2026
 
 ## Platform Admin
+
 - Login to platform
 - Create new tenant (institute)
 - Activate / Deactivate tenant
@@ -12,6 +13,7 @@
 - Basic platform dashboard
 
 ## Tenant Admin (Full Control — No Code Changes)
+
 - Institute Profile, Branches, Academic Years
 - Courses, Subjects, Chapters, Topics
 - Students (Admission, Profile, Documents, Medical, Parents, Batch, Status)
@@ -30,6 +32,7 @@
 - All Settings Configurable (No Developer Required)
 
 ## Tutor
+
 - Dashboard with assigned batches
 - Mark attendance
 - Upload materials
@@ -39,6 +42,7 @@
 - View student progress
 
 ## Student
+
 - Dashboard
 - Learning materials
 - Live classes + recordings
@@ -50,6 +54,7 @@
 - AI MCQ Explanation
 
 ## Parent
+
 - Dashboard
 - Child's attendance
 - Child's test results
@@ -58,12 +63,14 @@
 - Upcoming classes
 
 ## Common Features
+
 - Google Calendar (one-way sync for live classes + tests)
 - Multi-tenant isolation (RLS)
 - JWT + Refresh Token Auth
 - Cloudflare R2 storage
 
 ## Out of Scope (V2+)
+
 - WhatsApp notifications
 - OCR Evaluation
 - AI Evaluation

@@ -7,20 +7,24 @@ This document defines endpoints for mapping teaching staff (faculty) to specific
 ## POST /api/v1/staff/{id}/subjects
 
 ### Purpose
+
 Assigns a subject to a teaching staff profile.
 
 ### Permission
+
 `staff:subject:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `staff:subject:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `staff:subject:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "subjectId": "sub02a-bf99-4d6a-8d1a-6b4b5e6f7a3f"
@@ -28,12 +32,15 @@ Assigns a subject to a teaching staff profile.
 ```
 
 ### Business Rules
-*   Verifies that the target staff profile is in `ACTIVE` status before mapping subject records.
+
+- Verifies that the target staff profile is in `ACTIVE` status before mapping subject records.
 
 ### Database Tables Affected
-*   `staff_subjects` (Insert)
+
+- `staff_subjects` (Insert)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

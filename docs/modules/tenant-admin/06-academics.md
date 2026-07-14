@@ -293,7 +293,7 @@ Create Course
 
 ↓
 
-Add Subjects to Course  ← (Subjects are Course-level, created first)
+Add Subjects to Course ← (Subjects are Course-level, created first)
 
 ↓
 
@@ -305,7 +305,7 @@ Create Batches under Course
 
 ↓
 
-Create Tutor Assignments  ← (Assign Tutor + Subject + Batch)
+Create Tutor Assignments ← (Assign Tutor + Subject + Batch)
 
 ↓
 
@@ -313,7 +313,7 @@ Enroll Students into Batches
 
 ↓
 
-Prepare Timetable per Batch  ← (each session references Subject + Chapter)
+Prepare Timetable per Batch ← (each session references Subject + Chapter)
 
 ↓
 

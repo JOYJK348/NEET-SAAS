@@ -78,7 +78,7 @@ Represents an academic subject taught within a course.
 
 A Subject is defined at the **Course level**, not the Batch level. Science, Math, History, and Geography are subjects that belong to the "Regular Course" course. All batches of that course (Morning Batch, Evening Batch, Weekend Batch) share the same subjects.
 
-How a Subject is *taught per Batch* is managed through **Tutor Assignment** — which connects a specific Tutor to a Subject for a specific Batch. This keeps subject definitions clean and reusable across all batches of a course.
+How a Subject is _taught per Batch_ is managed through **Tutor Assignment** — which connects a specific Tutor to a Subject for a specific Batch. This keeps subject definitions clean and reusable across all batches of a course.
 
 ### Examples
 
@@ -235,7 +235,7 @@ Create Course
 
 ↓
 
-Create Subjects under Course  ← (Subjects are course-level, created before Batch)
+Create Subjects under Course ← (Subjects are course-level, created before Batch)
 
 ↓
 
@@ -247,7 +247,7 @@ Create Batches under Course
 
 ↓
 
-Create Tutor Assignments  ← (Assign Tutor + Subject + Batch)
+Create Tutor Assignments ← (Assign Tutor + Subject + Batch)
 
 ↓
 
@@ -255,7 +255,7 @@ Enroll Students into Batches
 
 ↓
 
-Prepare Timetable per Batch  ← (references Subject + Chapter per session)
+Prepare Timetable per Batch ← (references Subject + Chapter per session)
 
 ↓
 

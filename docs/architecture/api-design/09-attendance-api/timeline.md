@@ -7,20 +7,24 @@ This document defines endpoints for retrieving a user's chronological attendance
 ## GET /api/v1/students/{id}/attendance-timeline
 
 ### Purpose
+
 Retrieves a chronological sequence of clock-ins, daily roll-calls, leaves, and corrections for a student.
 
 ### Permission
+
 `attendance:student:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `attendance:student:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Enforced
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `attendance:student:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Enforced
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

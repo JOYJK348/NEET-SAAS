@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking modifications to templa
 ## GET /api/v1/comms/templates/{id}/audit
 
 ### Purpose
+
 Retrieves action audit trails for a communication template.
 
 ### Permission
+
 `template:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `template:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `template:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

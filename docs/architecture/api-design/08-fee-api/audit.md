@@ -7,20 +7,24 @@ This document defines audit query endpoints for tracking financial ledger overri
 ## GET /api/v1/invoices/{id}/audit
 
 ### Purpose
+
 Retrieves ledger adjustment audit trails (e.g. manual status changes, refund overrides, waiver authorizations).
 
 ### Permission
+
 `fee:audit:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:audit:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:audit:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

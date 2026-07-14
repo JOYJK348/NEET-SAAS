@@ -7,20 +7,24 @@ This document defines endpoints for managing student health and medical profiles
 ## POST /api/v1/students/{id}/medical
 
 ### Purpose
+
 Registers or updates student medical alert records.
 
 ### Permission
+
 `student:medical:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `student:medical:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `student:medical:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "bloodGroup": "O+",
@@ -32,13 +36,16 @@ Registers or updates student medical alert records.
 ```
 
 ### Business Rules
-*   Acts as a 1:1 metadata profile details page for the student.
-*   Enforces secure access policies (restricted strictly to branch managers, health officers, and class instructors).
+
+- Acts as a 1:1 metadata profile details page for the student.
+- Enforces secure access policies (restricted strictly to branch managers, health officers, and class instructors).
 
 ### Database Tables Affected
-*   `student_medical_profiles` (Insert / Update)
+
+- `student_medical_profiles` (Insert / Update)
 
 ### Response DTO
+
 ```json
 {
   "success": true,

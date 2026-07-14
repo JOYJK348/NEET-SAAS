@@ -5,6 +5,7 @@ import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
 
 describe('ResponseInterceptor', () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let interceptor: ResponseInterceptor<any>;
 
   const mockResponse = {
@@ -37,6 +38,7 @@ describe('ResponseInterceptor', () => {
       ],
     }).compile();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     interceptor = module.get<ResponseInterceptor<any>>(ResponseInterceptor);
   });
 

@@ -7,26 +7,31 @@ This document defines advanced filters for background jobs and system files.
 ## GET /api/v1/background-jobs/search
 
 ### Purpose
+
 Exposes a criteria-based search query API to filter background jobs.
 
 ### Permission
+
 `system:job:read`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `system:job:read`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `system:job:read`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request Parameters
-*   `filter[status]`: String (`PENDING`, `PROCESSING`, `SUCCESS`, `FAILED`).
-*   `search`: String (Fuzzy search matching correlationId).
-*   `page`: Positive Integer.
-*   `limit`: Integer.
+
+- `filter[status]`: String (`PENDING`, `PROCESSING`, `SUCCESS`, `FAILED`).
+- `search`: String (Fuzzy search matching correlationId).
+- `page`: Positive Integer.
+- `limit`: Integer.
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

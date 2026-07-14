@@ -1,12 +1,15 @@
 # GET /api/v1/auth/health
 
 ### Purpose
+
 Authentications service container health check.
 
 ### Permission
+
 None (Public).
 
 ### Response DTO (200 OK)
+
 ```json
 {
   "success": true,

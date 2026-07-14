@@ -7,35 +7,42 @@ This document defines endpoints for managing merit scholarships.
 ## POST /api/v1/students/{id}/scholarships
 
 ### Purpose
+
 Grants a scholarship reduction allocation to a student.
 
 ### Permission
+
 `fee:scholarship:write`
 
 ### Security Notes
-*   Authentication Required: Yes
-*   Required RBAC Permission: `fee:scholarship:write`
-*   Tenant Isolation: Enforced
-*   Branch Isolation: Not Applicable
-*   RLS Validation: Enforced
-*   Sensitive Fields Masked: No.
+
+- Authentication Required: Yes
+- Required RBAC Permission: `fee:scholarship:write`
+- Tenant Isolation: Enforced
+- Branch Isolation: Not Applicable
+- RLS Validation: Enforced
+- Sensitive Fields Masked: No.
 
 ### Request DTO
+
 ```json
 {
   "scholarshipName": "NEET Meritorious Scholarship",
-  "reductionPercentage": 25.00,
+  "reductionPercentage": 25.0,
   "remarks": "Scored >95% in Admission test."
 }
 ```
 
 ### Business Rules
-*   Applies a percentage deduction to the student's next invoice generation flow checks.
+
+- Applies a percentage deduction to the student's next invoice generation flow checks.
 
 ### Database Tables Affected
-*   `student_scholarships` (Insert)
+
+- `student_scholarships` (Insert)
 
 ### Response DTO (201 Created)
+
 ```json
 {
   "success": true,

@@ -12,6 +12,7 @@
 The Communication domain is the **delivery layer** of the platform. It owns no academic or financial data — it is exclusively responsible for getting the right message to the right user through the right channel at the right time.
 
 Three message types are supported:
+
 - **Announcement** — admin-created broadcasts (e.g., "Holiday on Monday", "Parent meeting this Saturday")
 - **Notification** — system-generated event-driven messages (e.g., "Ravi marked absent", "Fee overdue", "Result published")
 - **Reminder** — scheduled future messages (e.g., "Fee due in 3 days", "Test tomorrow")
@@ -24,25 +25,25 @@ The key architectural principle: **Communication is always a consumer, never a p
 
 ### ✅ Included Entities
 
-| Entity | Purpose |
-|---|---|
-| 📢 **Announcement** | Admin-created institute-wide or group-targeted broadcast |
-| 🔔 **Notification** | System-generated event-driven message to specific users |
-| ⏰ **Reminder** | Scheduled future notification (delivered via `pg-boss` job) |
-| 👥 **Recipient Group** | Named group of users by role/batch/course for targeting |
-| 📡 **Communication Channel** | Delivery method: IN_APP / EMAIL / SMS / PUSH |
+| Entity                       | Purpose                                                                |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| 📢 **Announcement**          | Admin-created institute-wide or group-targeted broadcast               |
+| 🔔 **Notification**          | System-generated event-driven message to specific users                |
+| ⏰ **Reminder**              | Scheduled future notification (delivered via `pg-boss` job)            |
+| 👥 **Recipient Group**       | Named group of users by role/batch/course for targeting                |
+| 📡 **Communication Channel** | Delivery method: IN_APP / EMAIL / SMS / PUSH                           |
 | 📋 **Communication History** | Immutable delivery log — one row per message per channel per recipient |
 
 ### ❌ Excluded (Cross-Domain Triggers — Communication reacts to these)
 
-| Event Source | Domain | Triggers |
-|---|---|---|
-| Student marked absent | Student / Academic | Parent notified via notification |
-| Fee installment overdue | Fee | Parent + Student reminder dispatched |
-| Assessment result published | Assessment | Student + Parent notified |
-| New batch created | Academic | Assigned students/tutors notified |
-| Assignment published | Learning | Batch students notified |
-| New Tenant Admin onboarded | System | Welcome email dispatched |
+| Event Source                | Domain             | Triggers                             |
+| --------------------------- | ------------------ | ------------------------------------ |
+| Student marked absent       | Student / Academic | Parent notified via notification     |
+| Fee installment overdue     | Fee                | Parent + Student reminder dispatched |
+| Assessment result published | Assessment         | Student + Parent notified            |
+| New batch created           | Academic           | Assigned students/tutors notified    |
+| Assignment published        | Learning           | Batch students notified              |
+| New Tenant Admin onboarded  | System             | Welcome email dispatched             |
 
 ---
 
@@ -107,19 +108,19 @@ erDiagram
 
 ## 🔗 Relationship Summary
 
-| Parent Entity | Child / Reference | Cardinality | Notes |
-|---|---|---|---|
-| Institute | Announcement | 1:N | — |
-| Institute | Notification | 1:N | System-generated |
-| Institute | Recipient Group | 1:N | Admin-defined groupings |
-| Announcement | Recipient Group | M:N | Via `announcement_recipient_groups` junction |
-| Recipient Group | User | M:N | Via `recipient_group_users` junction |
-| Notification | User | M:N | Via `notification_recipients` junction |
-| Reminder | User | M:N | Via `reminder_recipients` junction |
-| Announcement | Communication History | 1:N | One history row per channel per recipient |
-| Notification | Communication History | 1:N | One history row per channel per recipient |
-| Reminder | Communication History | 1:N | One history row per channel per recipient |
-| Communication History | Communication Channel | N:1 | Which channel was used |
+| Parent Entity         | Child / Reference     | Cardinality | Notes                                        |
+| --------------------- | --------------------- | ----------- | -------------------------------------------- |
+| Institute             | Announcement          | 1:N         | —                                            |
+| Institute             | Notification          | 1:N         | System-generated                             |
+| Institute             | Recipient Group       | 1:N         | Admin-defined groupings                      |
+| Announcement          | Recipient Group       | M:N         | Via `announcement_recipient_groups` junction |
+| Recipient Group       | User                  | M:N         | Via `recipient_group_users` junction         |
+| Notification          | User                  | M:N         | Via `notification_recipients` junction       |
+| Reminder              | User                  | M:N         | Via `reminder_recipients` junction           |
+| Announcement          | Communication History | 1:N         | One history row per channel per recipient    |
+| Notification          | Communication History | 1:N         | One history row per channel per recipient    |
+| Reminder              | Communication History | 1:N         | One history row per channel per recipient    |
+| Communication History | Communication Channel | N:1         | Which channel was used                       |
 
 ---
 
@@ -215,12 +216,12 @@ CREATE INDEX idx_comm_history_recipient        ON communication_history (institu
 
 ## 🔌 Junction Tables
 
-| Junction Table | Connects | Purpose |
-|---|---|---|
+| Junction Table                  | Connects                       | Purpose                              |
+| ------------------------------- | ------------------------------ | ------------------------------------ |
 | `announcement_recipient_groups` | Announcement ↔ Recipient Group | Which groups receive an announcement |
-| `recipient_group_users` | Recipient Group ↔ User | Which users are in a group |
-| `notification_recipients` | Notification ↔ User | Direct delivery targets |
-| `reminder_recipients` | Reminder ↔ User | Scheduled delivery targets |
+| `recipient_group_users`         | Recipient Group ↔ User         | Which users are in a group           |
+| `notification_recipients`       | Notification ↔ User            | Direct delivery targets              |
+| `reminder_recipients`           | Reminder ↔ User                | Scheduled delivery targets           |
 
 ---
 

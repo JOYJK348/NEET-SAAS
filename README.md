@@ -68,20 +68,20 @@ Education Core Platform
 
 Each domain defines its entities, relationships, and ERD structures:
 
-| Domain | Entity Specs | ERD Models |
-| :--- | :--- | :--- |
-| **01. Institute** | [Institute Specs](docs/architecture/entities/01-institute-management.md) | [Institute ERD](docs/architecture/erd/01-institute.md) |
-| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md) | [User ERD](docs/architecture/erd/02-user.md) |
-| **02a. Student** | [Student Specs](docs/architecture/entities/02a-student-management.md) | [Student ERD](docs/architecture/erd/02a-student.md) |
-| **02b. Tutor** | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md) | [Tutor ERD](docs/architecture/erd/02b-tutor.md) |
-| **02c. Parent** | [Parent Specs](docs/architecture/entities/02c-parent-management.md) | [Parent ERD](docs/architecture/erd/02c-parent.md) |
-| **03. Academic** | [Academic Specs](docs/architecture/entities/03-academic-management.md) | [Academic ERD](docs/architecture/erd/03-academic.md) |
-| **04. Learning** | [Learning Specs](docs/architecture/entities/04-learning-management.md) | [Learning ERD](docs/architecture/erd/04-learning.md) |
-| **05. Assessment** | [Assessment Specs](docs/architecture/entities/05-assessment-management.md) | [Assessment ERD](docs/architecture/erd/05-assessment.md) |
-| **06. Communication** | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication ERD](docs/architecture/erd/06-communication.md) |
-| **07. Reporting** | [Reporting Specs](docs/architecture/entities/07-reporting-management.md) | [Reporting ERD](docs/architecture/erd/07-reporting.md) |
-| **08. System** | [System Specs](docs/architecture/entities/08-system-management.md) | [System ERD](docs/architecture/erd/08-system.md) |
-| **09. Fee Management** | [Fee Specs](docs/architecture/entities/09-fee-management.md) | [Fee ERD](docs/architecture/erd/09-fee-management.md) |
+| Domain                  | Entity Specs                                                                     | ERD Models                                                     |
+| :---------------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------- |
+| **01. Institute**       | [Institute Specs](docs/architecture/entities/01-institute-management.md)         | [Institute ERD](docs/architecture/erd/01-institute.md)         |
+| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md)                   | [User ERD](docs/architecture/erd/02-user.md)                   |
+| **02a. Student**        | [Student Specs](docs/architecture/entities/02a-student-management.md)            | [Student ERD](docs/architecture/erd/02a-student.md)            |
+| **02b. Tutor**          | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md)                | [Tutor ERD](docs/architecture/erd/02b-tutor.md)                |
+| **02c. Parent**         | [Parent Specs](docs/architecture/entities/02c-parent-management.md)              | [Parent ERD](docs/architecture/erd/02c-parent.md)              |
+| **03. Academic**        | [Academic Specs](docs/architecture/entities/03-academic-management.md)           | [Academic ERD](docs/architecture/erd/03-academic.md)           |
+| **04. Learning**        | [Learning Specs](docs/architecture/entities/04-learning-management.md)           | [Learning ERD](docs/architecture/erd/04-learning.md)           |
+| **05. Assessment**      | [Assessment Specs](docs/architecture/entities/05-assessment-management.md)       | [Assessment ERD](docs/architecture/erd/05-assessment.md)       |
+| **06. Communication**   | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication ERD](docs/architecture/erd/06-communication.md) |
+| **07. Reporting**       | [Reporting Specs](docs/architecture/entities/07-reporting-management.md)         | [Reporting ERD](docs/architecture/erd/07-reporting.md)         |
+| **08. System**          | [System Specs](docs/architecture/entities/08-system-management.md)               | [System ERD](docs/architecture/erd/08-system.md)               |
+| **09. Billing**         | [Fee Specs](docs/architecture/entities/09-fee-management.md)                     | [Fee ERD](docs/architecture/erd/09-fee-management.md)          |
 
 ---
 
@@ -90,7 +90,9 @@ Each domain defines its entities, relationships, and ERD structures:
 The system boundary organizes business portals according to operational roles. Modules are grouped and numbered sequentially based on layout navigation flow:
 
 ### 🏢 Platform Administrator Portal
-*Managed by Platform Owner to configure and monitor tenants.*
+
+_Managed by Platform Owner to configure and monitor tenants._
+
 - [01-navigation.md](docs/modules/platform-admin/01-navigation.md): Main platform portal index.
 - [02-dashboard.md](docs/modules/platform-admin/02-dashboard.md): Global overview indicators.
 - [03-institutes.md](docs/modules/platform-admin/03-institutes.md): Onboarding and status controls.
@@ -99,7 +101,9 @@ The system boundary organizes business portals according to operational roles. M
 - [06-workflow.md](docs/modules/platform-admin/06-workflow.md): Automated provisioning systems.
 
 ### 🏫 Tenant Administrator Portal
-*Managed by coaching institute owner or operational staffs.*
+
+_Managed by coaching institute owner or operational staffs._
+
 - [01-navigation.md](docs/modules/tenant-admin/01-navigation.md): Portal layout index.
 - [02-dashboard.md](docs/modules/tenant-admin/02-dashboard.md): Daily stats & metrics.
 - [03-students.md](docs/modules/tenant-admin/03-students.md): Enrolling and profile management.
@@ -108,7 +112,7 @@ The system boundary organizes business portals according to operational roles. M
 - [06-academics.md](docs/modules/tenant-admin/06-academics.md): Courses, parallel Batches, and Course-level Subjects.
 - [07-mock-tests.md](docs/modules/tenant-admin/07-mock-tests.md): Test creations, evaluations, and results.
 - [08-study-materials.md](docs/modules/tenant-admin/08-study-materials.md): Content folders, tags, and chapter links.
-- [09-fee-management.md](docs/modules/tenant-admin/09-fee-management.md): Fee structures, installment plans, payments, and immutable receipts.
+- [09-billing.md](docs/modules/tenant-admin/09-billing.md): Fee structures, installment plans, payments, and immutable receipts.
 - [10-reports.md](docs/modules/tenant-admin/10-reports.md): Custom data extraction and analytics dashboards.
 - [11-settings.md](docs/modules/tenant-admin/11-settings.md): Tenant custom assets, working hours, and branding configurations.
 - [12-workflow.md](docs/modules/tenant-admin/12-workflow.md): Batch triggers, auto-notifications, and lifecycle events.
