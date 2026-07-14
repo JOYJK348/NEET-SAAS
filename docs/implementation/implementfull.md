@@ -131,7 +131,7 @@ Machi, here is the complete, production-grade **17-Sheet Project Management Work
 | **S0B-001** | Config | ConfigModule + Zod environment validation (split config files) | Critical | 2 | 2 | 0 | Done | develop | develop | — | Split typed config schema |
 | **S0B-002** | Context | Request Context (AsyncLocalStorage rich context Middleware) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Tenant/User rich context |
 | **S0B-003** | Logger | LoggerModule (Pino Integration with Context Enrichment) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Structured request logging |
-| **S0B-004** | Valid | Validation Pipe + DTO Standardizations | Critical | 2 | 0 | 0 | Not Started | — | — | — | Transform & Whitelist DTOs |
+| **S0B-004** | Valid | Validation Pipe + DTO Standardizations | Critical | 2 | 2 | 0 | Done | develop | develop | — | Transform & Whitelist DTOs |
 | **S0B-005** | Filter | Global Exception Filter (standardized errors + requestId + DB error masking) | Critical | 3 | 0 | 0 | Not Started | — | — | — | Mask sensitive stack traces |
 | **S0B-006** | Intercept | Response Interceptor (success response wrapping) | Critical | 2 | 0 | 0 | Not Started | — | — | — | Wrap unified return body |
 | **S0B-007** | Prisma | PrismaModule + PrismaService (common/prisma) | Critical | 3 | 0 | 0 | Not Started | — | — | — | Prisma client setup |
