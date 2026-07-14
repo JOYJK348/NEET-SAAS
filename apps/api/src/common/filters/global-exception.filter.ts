@@ -1,0 +1,90 @@
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import { Response } from 'express';
+import { RequestContextService } from '../middleware/request-context.service';
+
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(GlobalExceptionFilter.name);
+
+  constructor(private readonly requestContextService: RequestContextService) {}
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const context = this.requestContextService.get();
+
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let code = 'INTERNAL_SERVER_ERROR';
+    let message = 'An unexpected error occurred';
+    let errors: any[] = [];
+
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse: any = exception.getResponse();
+      code =
+        exception.name
+          .replace('Exception', '')
+          .replace(/([A-Z])/g, '_$1')
+          .toUpperCase()
+          .replace(/^_/, '') || 'BAD_REQUEST';
+
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        message = exceptionResponse.message || exception.message;
+        const rawCode = exceptionResponse.error || code;
+        code = String(rawCode).replace(/\s+/g, '_').toUpperCase();
+
+        // Check if custom structured validation errors array is present
+        if (Array.isArray(exceptionResponse)) {
+          code = 'VALIDATION_ERROR';
+          message = 'Validation failed';
+          errors = exceptionResponse;
+        } else if (Array.isArray(exceptionResponse.message)) {
+          code = 'VALIDATION_ERROR';
+          message = 'Validation failed';
+          errors = exceptionResponse.message.map((msg: string) => {
+            const field = msg.split(' ')[0] || 'field';
+            return { field, message: msg };
+          });
+        }
+      } else {
+        message = exceptionResponse || exception.message;
+      }
+    } else {
+      // Mask Prisma / SQL database stack details on client response
+      const err = exception as any;
+      if (
+        err?.code &&
+        typeof err.code === 'string' &&
+        err.code.startsWith('P')
+      ) {
+        status = HttpStatus.BAD_REQUEST;
+        code = 'DB_ERROR';
+        message = 'Database operation failed';
+      }
+    }
+
+    // Log the detailed exception trace using Pino logger
+    this.logger.error(
+      `[Exception] ${status} - ${code} - ${message}`,
+      exception instanceof Error ? exception.stack : JSON.stringify(exception),
+    );
+
+    response.status(status).json({
+      success: false,
+      timestamp: new Date().toISOString(),
+      requestId: context?.requestId || 'system',
+      code,
+      message,
+      errors,
+    });
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
+  }
+}
