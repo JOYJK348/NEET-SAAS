@@ -108,6 +108,12 @@ export class TokenService {
     return expiresAt;
   }
 
+  getRefreshCookieName(): string {
+    return (
+      this.configService.get<string>('jwt.refreshCookieName') || 'refresh_token'
+    );
+  }
+
   private getPrivateKey(): string {
     return this.decodeBase64Pem(
       this.configService.get<string>('jwt.privateKey'),
@@ -117,12 +123,6 @@ export class TokenService {
   private getAccessTokenExpiresIn(): number {
     return (
       this.configService.get<number>('jwt.accessTokenExpiresInSeconds') || 900
-    );
-  }
-
-  private getRefreshCookieName(): string {
-    return (
-      this.configService.get<string>('jwt.refreshCookieName') || 'refresh_token'
     );
   }
 

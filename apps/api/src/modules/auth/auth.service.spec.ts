@@ -112,6 +112,7 @@ describe('AuthService', () => {
         .mockReturnValue(new Date('2026-07-21T00:00:00.000Z')),
       generateAccessToken: jest.fn().mockResolvedValue('access-token'),
       setRefreshCookie: jest.fn(),
+      clearRefreshCookie: jest.fn(),
       getAccessTokenExpiresInSeconds: jest.fn().mockReturnValue(900),
     };
 
@@ -233,5 +234,160 @@ describe('AuthService', () => {
         response,
       ),
     ).rejects.toBeInstanceOf(HttpException);
+  });
+
+  it('refreshes tokens successfully and rotates the session hash', async () => {
+    const session = {
+      id: 'session-1',
+      userId: user.id,
+      tenantId: 'tenant-1',
+      isRevoked: false,
+      status: 'ACTIVE',
+      expiresAt: new Date('2026-07-21T00:00:00.000Z'),
+      userIdusers: user,
+    };
+    sessionService.validateRefreshToken = jest.fn().mockResolvedValue(session);
+    sessionService.rotateRefreshToken = jest
+      .fn()
+      .mockResolvedValue({ count: 1 });
+    tokenService.hashRefreshToken
+      .mockReturnValueOnce('incoming-refresh-hash')
+      .mockReturnValueOnce('next-refresh-hash');
+    tokenService.generateRefreshToken.mockReturnValue('next-refresh-token');
+
+    const result = await service.refresh('incoming-refresh-token', response);
+
+    expect(result).toEqual({
+      accessToken: 'access-token',
+      expiresIn: 900,
+    });
+    expect(sessionService.validateRefreshToken).toHaveBeenCalledWith(
+      'incoming-refresh-hash',
+    );
+    expect(sessionService.rotateRefreshToken).toHaveBeenCalledWith(
+      {
+        sessionId: 'session-1',
+        currentRefreshTokenHash: 'incoming-refresh-hash',
+        refreshTokenHash: 'next-refresh-hash',
+        expiresAt: new Date('2026-07-21T00:00:00.000Z'),
+      },
+      prismaService,
+    );
+    expect(tokenService.setRefreshCookie).toHaveBeenCalledWith(
+      response,
+      'next-refresh-token',
+    );
+  });
+
+  it('rejects refresh when cookie is missing', async () => {
+    await expect(service.refresh(undefined, response)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('rejects expired refresh tokens', async () => {
+    sessionService.validateRefreshToken = jest.fn().mockResolvedValue({
+      id: 'session-1',
+      tenantId: 'tenant-1',
+      isRevoked: false,
+      status: 'ACTIVE',
+      expiresAt: new Date('2026-01-01T00:00:00.000Z'),
+      userIdusers: user,
+    });
+
+    await expect(
+      service.refresh('expired-refresh-token', response),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects revoked refresh sessions', async () => {
+    sessionService.validateRefreshToken = jest.fn().mockResolvedValue({
+      id: 'session-1',
+      tenantId: 'tenant-1',
+      isRevoked: true,
+      status: 'REVOKED',
+      expiresAt: new Date('2026-07-21T00:00:00.000Z'),
+      userIdusers: user,
+    });
+
+    await expect(
+      service.refresh('revoked-refresh-token', response),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('logs out current session and clears the refresh cookie', async () => {
+    sessionService.revokeSession = jest.fn().mockResolvedValue({});
+
+    const result = await service.logout(
+      {
+        sub: user.id,
+        sessionId: 'session-1',
+        tenantId: 'tenant-1',
+        roleCode: 'TENANT_ADMIN',
+        forcePasswordChange: false,
+      },
+      response,
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(sessionService.revokeSession).toHaveBeenCalledWith('session-1');
+    expect(tokenService.clearRefreshCookie).toHaveBeenCalledWith(response);
+  });
+
+  it('logs out all user sessions and clears the refresh cookie', async () => {
+    sessionService.revokeAllSessions = jest
+      .fn()
+      .mockResolvedValue({ count: 2 });
+
+    const result = await service.logoutAll(
+      {
+        sub: user.id,
+        sessionId: 'session-1',
+        tenantId: 'tenant-1',
+        roleCode: 'TENANT_ADMIN',
+        forcePasswordChange: false,
+      },
+      response,
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(sessionService.revokeAllSessions).toHaveBeenCalledWith(user.id);
+    expect(tokenService.clearRefreshCookie).toHaveBeenCalledWith(response);
+  });
+
+  it('returns active sessions without exposing refresh token hashes', async () => {
+    const lastActiveAt = new Date('2026-07-15T10:00:00.000Z');
+    const expiresAt = new Date('2026-07-21T10:00:00.000Z');
+    sessionService.getUserSessions = jest.fn().mockResolvedValue([
+      {
+        id: 'session-1',
+        deviceName: 'Chrome Windows',
+        browserName: 'Chrome',
+        ipAddress: '127.0.0.1',
+        lastActiveAt,
+        expiresAt,
+      },
+    ]);
+
+    const result = await service.sessions({
+      sub: user.id,
+      sessionId: 'session-1',
+      tenantId: 'tenant-1',
+      roleCode: 'TENANT_ADMIN',
+      forcePasswordChange: false,
+    });
+
+    expect(result).toEqual([
+      {
+        sessionId: 'session-1',
+        deviceName: 'Chrome Windows',
+        browserName: 'Chrome',
+        ipAddress: '127.0.0.1',
+        lastActiveAt,
+        expiresAt,
+        isCurrentSession: true,
+      },
+    ]);
+    expect(result[0]).not.toHaveProperty('refreshTokenHash');
   });
 });

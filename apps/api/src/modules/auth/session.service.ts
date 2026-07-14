@@ -14,6 +14,13 @@ export interface CreateLoginSessionInput {
   deviceName?: string;
 }
 
+export interface RotateRefreshTokenInput {
+  sessionId: string;
+  currentRefreshTokenHash: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
+}
+
 @Injectable()
 export class SessionService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -39,6 +46,94 @@ export class SessionService {
         isRevoked: false,
         lastActiveAt: new Date(),
         expiresAt: input.expiresAt,
+      },
+    });
+  }
+
+  validateRefreshToken(refreshTokenHash: string) {
+    return this.prismaService.userSessions.findFirst({
+      where: {
+        refreshTokenHash,
+        isRevoked: false,
+        status: 'ACTIVE',
+      },
+      include: { userIdusers: true },
+    });
+  }
+
+  rotateRefreshToken(
+    input: RotateRefreshTokenInput,
+    prisma: Prisma.TransactionClient = this.prismaService,
+  ) {
+    return prisma.userSessions.updateMany({
+      where: {
+        id: input.sessionId,
+        refreshTokenHash: input.currentRefreshTokenHash,
+        isRevoked: false,
+        status: 'ACTIVE',
+      },
+      data: {
+        refreshTokenHash: input.refreshTokenHash,
+        lastActiveAt: new Date(),
+        expiresAt: input.expiresAt,
+      },
+    });
+  }
+
+  revokeSession(
+    sessionId: string,
+    prisma: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const now = new Date();
+
+    return prisma.userSessions.update({
+      where: { id: sessionId },
+      data: {
+        isRevoked: true,
+        status: 'REVOKED',
+        revokedAt: now,
+        loggedOutAt: now,
+      },
+    });
+  }
+
+  revokeAllSessions(
+    userId: string,
+    prisma: Prisma.TransactionClient = this.prismaService,
+  ) {
+    const now = new Date();
+
+    return prisma.userSessions.updateMany({
+      where: {
+        userId,
+        isRevoked: false,
+        status: 'ACTIVE',
+      },
+      data: {
+        isRevoked: true,
+        status: 'REVOKED',
+        revokedAt: now,
+        loggedOutAt: now,
+      },
+    });
+  }
+
+  getUserSessions(userId: string) {
+    return this.prismaService.userSessions.findMany({
+      where: {
+        userId,
+        isRevoked: false,
+        status: 'ACTIVE',
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { lastActiveAt: 'desc' },
+      select: {
+        id: true,
+        deviceName: true,
+        browserName: true,
+        ipAddress: true,
+        lastActiveAt: true,
+        expiresAt: true,
       },
     });
   }

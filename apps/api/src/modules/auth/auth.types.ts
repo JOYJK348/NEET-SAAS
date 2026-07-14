@@ -48,3 +48,22 @@ export interface LoginSuccessResponse {
 }
 
 export type LoginResponse = LoginSuccessResponse | LoginTenantSelectionResponse;
+
+export interface RefreshResponse {
+  accessToken: string;
+  expiresIn: number;
+}
+
+export interface AuthSuccessResponse {
+  success: true;
+}
+
+export interface AuthSessionResponse {
+  sessionId: string;
+  deviceName: string;
+  browserName: string;
+  ipAddress: string;
+  lastActiveAt: Date;
+  expiresAt: Date;
+  isCurrentSession: boolean;
+}

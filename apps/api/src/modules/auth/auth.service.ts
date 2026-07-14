@@ -16,6 +16,10 @@ import type {
   LoginRequestContext,
   LoginResponse,
   LoginTenantOption,
+  RefreshResponse,
+  AuthenticatedRequestUser,
+  AuthSessionResponse,
+  AuthSuccessResponse,
 } from './auth.types';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -121,22 +125,125 @@ export class AuthService {
     };
   }
 
-  refresh(): never {
-    throw new NotImplementedException(
-      'Refresh flow will be implemented in S1-005',
+  async refresh(
+    refreshToken: string | undefined,
+    response: Response,
+  ): Promise<RefreshResponse> {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token cookie is missing');
+    }
+
+    const refreshTokenHash = this.tokenService.hashRefreshToken(refreshToken);
+    const session =
+      await this.sessionService.validateRefreshToken(refreshTokenHash);
+
+    if (!session) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (session.isRevoked || session.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
+    if (session.expiresAt <= new Date()) {
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    const user = session.userIdusers;
+
+    if (!user) {
+      throw new UnauthorizedException('Session user was not found');
+    }
+
+    this.assertUserCanLogin(user);
+
+    const roleContext = await this.resolveRoleContext(
+      user.id,
+      session.tenantId ?? undefined,
     );
+
+    if (roleContext.tenantSelectionRequired) {
+      throw new ForbiddenException('Tenant context is required');
+    }
+
+    const nextRefreshToken = this.tokenService.generateRefreshToken();
+    const nextRefreshTokenHash =
+      this.tokenService.hashRefreshToken(nextRefreshToken);
+    const nextRefreshTokenExpiresAt =
+      this.tokenService.getRefreshTokenExpiresAt();
+
+    const accessToken = await this.prismaService.$transaction(
+      async (prisma) => {
+        const rotationResult = await this.sessionService.rotateRefreshToken(
+          {
+            sessionId: session.id,
+            currentRefreshTokenHash: refreshTokenHash,
+            refreshTokenHash: nextRefreshTokenHash,
+            expiresAt: nextRefreshTokenExpiresAt,
+          },
+          prisma,
+        );
+
+        if (rotationResult.count !== 1) {
+          throw new UnauthorizedException('Refresh token has already rotated');
+        }
+
+        return this.tokenService.generateAccessToken({
+          sub: user.id,
+          sessionId: session.id,
+          tenantId: session.tenantId,
+          roleCode: roleContext.roleCode,
+          forcePasswordChange: user.forcePasswordChange,
+        });
+      },
+    );
+
+    this.tokenService.setRefreshCookie(response, nextRefreshToken);
+
+    return {
+      accessToken,
+      expiresIn: this.tokenService.getAccessTokenExpiresInSeconds(),
+    };
   }
 
-  logout(): never {
-    throw new NotImplementedException(
-      'Logout flow will be implemented in S1-005',
-    );
+  getRefreshCookieName(): string {
+    return this.tokenService.getRefreshCookieName();
   }
 
-  logoutAll(): never {
-    throw new NotImplementedException(
-      'Logout-all flow will be implemented in S1-005',
-    );
+  async logout(
+    currentUser: AuthenticatedRequestUser,
+    response: Response,
+  ): Promise<AuthSuccessResponse> {
+    await this.sessionService.revokeSession(currentUser.sessionId);
+    this.tokenService.clearRefreshCookie(response);
+
+    return { success: true };
+  }
+
+  async logoutAll(
+    currentUser: AuthenticatedRequestUser,
+    response: Response,
+  ): Promise<AuthSuccessResponse> {
+    await this.sessionService.revokeAllSessions(currentUser.sub);
+    this.tokenService.clearRefreshCookie(response);
+
+    return { success: true };
+  }
+
+  async sessions(
+    currentUser: AuthenticatedRequestUser,
+  ): Promise<AuthSessionResponse[]> {
+    const sessions = await this.sessionService.getUserSessions(currentUser.sub);
+
+    return sessions.map((session) => ({
+      sessionId: session.id,
+      deviceName: session.deviceName,
+      browserName: session.browserName,
+      ipAddress: session.ipAddress,
+      lastActiveAt: session.lastActiveAt,
+      expiresAt: session.expiresAt,
+      isCurrentSession: session.id === currentUser.sessionId,
+    }));
   }
 
   me(): never {
