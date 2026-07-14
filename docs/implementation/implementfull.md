@@ -139,7 +139,7 @@ Machi, here is the complete, production-grade **17-Sheet Project Management Work
 | **S0B-009** | Security | Security, Global Prefix & API Versioning (main.ts setup) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Global express middlewares |
 | **S0B-010** | Swagger | Swagger Configuration (common/swagger) | Critical | 2 | 2 | 0 | Done | develop | develop | — | API docs specifications |
 | **S0B-011** | Health | Enhanced Health Checks (Terminus live/ready/health checks) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Database/Redis terminuses |
-| **S0B-012** | Testing | Integration Tests + CI Pipeline Verification | High | 3 | 0 | 0 | Not Started | — | — | — | Verify endpoints behavior |
+| **S0B-012** | Testing | Integration Tests + CI Pipeline Verification | High | 3 | 3 | 0 | Done | develop | develop | — | Verify endpoints behavior |
 
 ### Acceptance Criteria
 *   [ ] All request actions carrying invalid tenant ID headers are rejected with 400 Bad Request.
