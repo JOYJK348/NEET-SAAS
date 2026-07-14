@@ -96,6 +96,18 @@ export class TokenService {
     );
   }
 
+  getAccessTokenExpiresInSeconds(): number {
+    return this.getAccessTokenExpiresIn();
+  }
+
+  getRefreshTokenExpiresAt(): Date {
+    const days =
+      this.configService.get<number>('jwt.refreshTokenExpiresInDays') || 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + days);
+    return expiresAt;
+  }
+
   private getPrivateKey(): string {
     return this.decodeBase64Pem(
       this.configService.get<string>('jwt.privateKey'),
@@ -106,14 +118,6 @@ export class TokenService {
     return (
       this.configService.get<number>('jwt.accessTokenExpiresInSeconds') || 900
     );
-  }
-
-  private getRefreshTokenExpiresAt(): Date {
-    const days =
-      this.configService.get<number>('jwt.refreshTokenExpiresInDays') || 7;
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + days);
-    return expiresAt;
   }
 
   private getRefreshCookieName(): string {

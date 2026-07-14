@@ -2,8 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PasswordService } from './password.service';
+import { SessionService } from './session.service';
 import { TokenService } from './token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -13,12 +16,15 @@ function decodeBase64Pem(value: string | undefined): string {
 
 @Module({
   imports: [
+    PrismaModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        privateKey: decodeBase64Pem(configService.get<string>('jwt.privateKey')),
+        privateKey: decodeBase64Pem(
+          configService.get<string>('jwt.privateKey'),
+        ),
         publicKey: decodeBase64Pem(configService.get<string>('jwt.publicKey')),
         signOptions: {
           algorithm: 'RS256',
@@ -29,7 +35,20 @@ function decodeBase64Pem(value: string | undefined): string {
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TokenService, JwtStrategy],
-  exports: [AuthService, TokenService, JwtModule, PassportModule],
+  providers: [
+    AuthService,
+    PasswordService,
+    SessionService,
+    TokenService,
+    JwtStrategy,
+  ],
+  exports: [
+    AuthService,
+    PasswordService,
+    SessionService,
+    TokenService,
+    JwtModule,
+    PassportModule,
+  ],
 })
 export class AuthModule {}
