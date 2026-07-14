@@ -63,4 +63,3 @@ export class RequestContextService {
     return this.permissions?.includes(permission) || false;
   }
 }
-

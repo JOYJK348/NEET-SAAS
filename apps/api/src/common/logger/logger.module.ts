@@ -34,14 +34,16 @@ import { RequestContextModule } from '../middleware/request-context.module';
               : undefined,
           autoLogging: true,
           serializers: {
-            req: (req) => ({
+            /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+            req: (req: any) => ({
               method: req.method,
               url: req.url,
               ip: req.ip,
             }),
-            res: (res) => ({
+            res: (res: any) => ({
               statusCode: res.statusCode,
             }),
+            /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
           },
         },
       }),

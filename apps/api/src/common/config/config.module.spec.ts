@@ -18,6 +18,8 @@ describe('EnvValidation', () => {
       PORT: '3500',
     };
 
-    expect(() => validate(invalidConfig)).toThrow('Environment validation failed');
+    expect(() => validate(invalidConfig)).toThrow(
+      'Environment validation failed',
+    );
   });
 });

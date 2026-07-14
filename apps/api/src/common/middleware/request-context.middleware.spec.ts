@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { RequestContextService } from './request-context.service';
 import { RequestContextMiddleware } from './request-context.middleware';
 import { Request, Response } from 'express';
@@ -29,7 +30,10 @@ describe('RequestContextMiddleware', () => {
       expect(context).toBeDefined();
       expect(context?.requestId).toBe('test-req-123');
       expect(context?.tenantId).toBe('tenant-789');
-      expect(mockResponse.setHeader).toHaveBeenCalledWith('x-request-id', 'test-req-123');
+      expect(mockResponse.setHeader).toHaveBeenCalledWith(
+        'x-request-id',
+        'test-req-123',
+      );
       done();
     };
 

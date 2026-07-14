@@ -10,10 +10,12 @@ export class RequestContextMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction): void {
     const requestId = (req.headers['x-request-id'] as string) || randomUUID();
-    const correlationId = (req.headers['x-correlation-id'] as string) || requestId;
+    const correlationId =
+      (req.headers['x-correlation-id'] as string) || requestId;
     const tenantId = req.headers['x-tenant-id'] as string | undefined;
     const branchId = req.headers['x-branch-id'] as string | undefined;
-    const academicYearId = req.headers['x-academic-year-id'] as string | undefined;
+    const academicYearId = req.headers['x-academic-year-id'] as
+      string | undefined;
     const timezone = req.headers['x-timezone'] as string | undefined;
     const locale = req.headers['x-locale'] as string | undefined;
 
