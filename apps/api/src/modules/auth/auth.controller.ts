@@ -7,11 +7,14 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
+import { ForcePasswordChangeGuard } from './guards/force-password-change.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { TenantGuard } from './guards/tenant.guard';
 import type { AuthenticatedRequestUser } from './auth.types';
 
 type RequestWithCookies = Request & {
@@ -49,7 +52,8 @@ export class AuthController {
     return this.authService.refresh(this.getRefreshCookie(request), response);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, TenantGuard, ForcePasswordChangeGuard)
   @Post('logout')
   logout(
     @CurrentUser() currentUser: AuthenticatedRequestUser,
@@ -58,7 +62,8 @@ export class AuthController {
     return this.authService.logout(currentUser, response);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, TenantGuard, ForcePasswordChangeGuard)
   @Post('logout-all')
   logoutAll(
     @CurrentUser() currentUser: AuthenticatedRequestUser,
@@ -67,7 +72,8 @@ export class AuthController {
     return this.authService.logoutAll(currentUser, response);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, TenantGuard, ForcePasswordChangeGuard)
   @Get('sessions')
   sessions(@CurrentUser() currentUser: AuthenticatedRequestUser) {
     return this.authService.sessions(currentUser);

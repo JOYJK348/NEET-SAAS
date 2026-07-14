@@ -8,7 +8,11 @@ import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { SessionService } from './session.service';
 import { TokenService } from './token.service';
+import { ForcePasswordChangeGuard } from './guards/force-password-change.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { PermissionsGuard } from './guards/permissions.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { TenantGuard } from './guards/tenant.guard';
 
 function decodeBase64Pem(value: string | undefined): string {
   return value ? Buffer.from(value, 'base64').toString('utf8') : '';
@@ -41,12 +45,20 @@ function decodeBase64Pem(value: string | undefined): string {
     SessionService,
     TokenService,
     JwtStrategy,
+    TenantGuard,
+    ForcePasswordChangeGuard,
+    RolesGuard,
+    PermissionsGuard,
   ],
   exports: [
     AuthService,
     PasswordService,
     SessionService,
     TokenService,
+    TenantGuard,
+    ForcePasswordChangeGuard,
+    RolesGuard,
+    PermissionsGuard,
     JwtModule,
     PassportModule,
   ],
