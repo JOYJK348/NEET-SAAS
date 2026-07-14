@@ -137,7 +137,7 @@ Machi, here is the complete, production-grade **17-Sheet Project Management Work
 | **S0B-007** | Prisma | PrismaModule + PrismaService (common/prisma) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Prisma client setup |
 | **S0B-008** | Redis | RedisModule + RedisService (common/redis with get/set/del/ttl abstractions) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Cache abstraction service |
 | **S0B-009** | Security | Security, Global Prefix & API Versioning (main.ts setup) | Critical | 3 | 3 | 0 | Done | develop | develop | — | Global express middlewares |
-| **S0B-010** | Swagger | Swagger Configuration (common/swagger) | Critical | 2 | 0 | 0 | Not Started | — | — | — | API docs specifications |
+| **S0B-010** | Swagger | Swagger Configuration (common/swagger) | Critical | 2 | 2 | 0 | Done | develop | develop | — | API docs specifications |
 | **S0B-011** | Health | Enhanced Health Checks (Terminus live/ready/health checks) | Critical | 3 | 0 | 0 | Not Started | — | — | — | Database/Redis terminuses |
 | **S0B-012** | Testing | Integration Tests + CI Pipeline Verification | High | 3 | 0 | 0 | Not Started | — | — | — | Verify endpoints behavior |
 
