@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../common/utils/tenant-scoped-prisma';
 import {
@@ -13,6 +17,10 @@ import {
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { StudentResponseDto } from './dto/student-response.dto';
+import {
+  validateAge,
+  validateAcademicStatusTransition,
+} from './students.validation';
 import { randomUUID } from 'node:crypto';
 import { hashSync } from 'bcrypt';
 
@@ -36,37 +44,45 @@ export class StudentsService {
     tenantId: string,
     userId: string,
   ): Promise<StudentResponseDto> {
+    const email = dto.email.trim().toLowerCase();
+
+    await this.checkDuplicateEmail(email, tenantId);
+    await this.checkDuplicateStudentCode(dto.studentCode, tenantId);
+    validateAge(new Date(dto.dateOfBirth));
+
     const placeholderHash = hashSync(randomUUID(), 8);
 
-    const user = await this.prisma.users.create({
-      data: {
-        email: dto.email.trim().toLowerCase(),
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        userType: 'STUDENT',
-        status: 'ACTIVE',
-        tenantId,
-        branchId: '',
-        passwordHash: placeholderHash,
-        forcePasswordChange: true,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-    });
+    const profile = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.users.create({
+        data: {
+          email,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          userType: 'STUDENT',
+          status: 'ACTIVE',
+          tenantId,
+          branchId: '',
+          passwordHash: placeholderHash,
+          forcePasswordChange: true,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
 
-    const profile = await this.prisma.studentProfiles.create({
-      data: {
-        userId: user.id,
-        tenantId,
-        studentCode: dto.studentCode,
-        dateOfBirth: new Date(dto.dateOfBirth),
-        gender: dto.gender,
-        bloodGroup: dto.bloodGroup,
-        academicStatus: dto.academicStatus,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-      include: { userIdusers: true },
+      return tx.studentProfiles.create({
+        data: {
+          userId: user.id,
+          tenantId,
+          studentCode: dto.studentCode,
+          dateOfBirth: new Date(dto.dateOfBirth),
+          gender: dto.gender,
+          bloodGroup: dto.bloodGroup,
+          academicStatus: dto.academicStatus,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+        include: { userIdusers: true },
+      });
     });
 
     return this.toResponse(profile);
@@ -121,6 +137,24 @@ export class StudentsService {
       throw new NotFoundException('Student not found');
     }
 
+    if (
+      dto.studentCode !== undefined &&
+      dto.studentCode !== (existing as any).studentCode
+    ) {
+      await this.checkDuplicateStudentCode(dto.studentCode, tenantId, id);
+    }
+
+    if (dto.dateOfBirth !== undefined) {
+      validateAge(new Date(dto.dateOfBirth));
+    }
+
+    if (dto.academicStatus !== undefined) {
+      validateAcademicStatusTransition(
+        (existing as any).academicStatus,
+        dto.academicStatus,
+      );
+    }
+
     const userData: Record<string, unknown> = {};
     if (dto.firstName !== undefined) userData.firstName = dto.firstName;
     if (dto.lastName !== undefined) userData.lastName = dto.lastName;
@@ -173,6 +207,48 @@ export class StudentsService {
     });
 
     return profile ? this.toResponse(profile) : null;
+  }
+
+  private async checkDuplicateEmail(
+    email: string,
+    tenantId: string,
+    excludeUserId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.users.findFirst({
+      where: {
+        email,
+        tenantId,
+        deletedAt: null,
+        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        'A student with this email already exists in this tenant',
+      );
+    }
+  }
+
+  private async checkDuplicateStudentCode(
+    studentCode: string,
+    tenantId: string,
+    excludeUserId?: string,
+  ): Promise<void> {
+    const existing = await this.prisma.studentProfiles.findFirst({
+      where: {
+        studentCode,
+        tenantId,
+        deletedAt: null,
+        ...(excludeUserId ? { userId: { not: excludeUserId } } : {}),
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        'A student with this code already exists in this tenant',
+      );
+    }
   }
 
   private toResponse(profile: any): StudentResponseDto {
