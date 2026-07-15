@@ -9,6 +9,7 @@ import { LoggerModule } from './common/logger/logger.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { RedisModule } from './common/redis/redis.module';
     LoggerModule,
     PrismaModule,
     RedisModule,
+    AuthModule,
     HealthModule,
   ],
   controllers: [],
