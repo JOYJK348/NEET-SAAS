@@ -800,8 +800,8 @@ model Institutes {
   createdBy                        String
   updatedAt                        DateTime                       @default(now())
   updatedBy                        String
-  deletedAt                        DateTime
-  deletedBy                        String
+  deletedAt                        DateTime?
+  deletedBy                        String?
   version                          Int                            @default(1)
   branchess                        Branches[]                     @relation("tenant_id_to_institutes")
   academic_yearss                  AcademicYears[]                @relation("tenant_id_to_institutes")
@@ -986,8 +986,8 @@ model Branches {
   createdBy   String
   updatedAt   DateTime   @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int        @default(1)
   tenant      Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1014,8 +1014,8 @@ model AcademicYears {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1037,8 +1037,8 @@ model Departments {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1058,8 +1058,8 @@ model BranchDepartments {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1080,8 +1080,8 @@ model Designations {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1106,8 +1106,8 @@ model Courses {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1132,8 +1132,8 @@ model Subjects {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1158,8 +1158,8 @@ model CourseSubjects {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1183,8 +1183,8 @@ model Chapters {
   createdBy         String
   updatedAt         DateTime   @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int        @default(1)
   tenant            Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1212,8 +1212,8 @@ model Topics {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1242,8 +1242,8 @@ model BatchDeliveryTypes {
   createdBy          String
   updatedAt          DateTime           @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int                @default(1)
   tenant             Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1273,8 +1273,8 @@ model Batches {
   createdBy          String
   updatedAt          DateTime        @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int             @default(1)
   tenant             Institutes      @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -1303,8 +1303,8 @@ model Users {
   createdBy                            String
   updatedAt                            DateTime                       @default(now())
   updatedBy                            String
-  deletedAt                            DateTime
-  deletedBy                            String
+  deletedAt                            DateTime?
+  deletedBy                            String?
   version                              Int                            @default(1)
   user_sessionss                       UserSessions[]                 @relation("user_sessions_user_id_to_users")
   auth_eventss                         AuthEvents[]                   @relation("auth_events_user_id_to_users")
@@ -1540,8 +1540,8 @@ model Roles {
   updatedAt                         DateTime             @default(now())
   createdBy                         String
   updatedBy                         String
-  deletedAt                         DateTime
-  deletedBy                         String
+  deletedAt                         DateTime?
+  deletedBy                         String?
   version                           Int                  @default(1)
   metadata                          Json
   role_permissionss                 RolePermissions[]    @relation("role_permissions_role_id_to_roles")
@@ -1571,8 +1571,8 @@ model Permissions {
   updatedAt                                      DateTime                 @default(now())
   createdBy                                      String
   updatedBy                                      String
-  deletedAt                                      DateTime
-  deletedBy                                      String
+  deletedAt                                      DateTime?
+  deletedBy                                      String?
   version                                        Int                      @default(1)
   metadata                                       Json
   role_permissionss                              RolePermissions[]        @relation("role_permissions_permission_id_to_permissions")
@@ -1595,8 +1595,8 @@ model RolePermissions {
   updatedAt               DateTime               @default(now())
   createdBy               String
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int                    @default(1)
   metadata                Json
   permission_conditionss  PermissionConditions[] @relation("permission_conditions_role_permission_id_to_role_permissions")
@@ -1622,8 +1622,8 @@ model UserRoles {
   updatedAt        DateTime @default(now())
   createdBy        String
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int      @default(1)
   metadata         Json
   roleIdroles      Roles?   @relation("user_roles_role_id_to_roles", fields: [roleId], references: [id], onDelete: SetNull)
@@ -1651,8 +1651,8 @@ model Menus {
   createdBy     String
   updatedAt     DateTime     @default(now())
   updatedBy     String
-  deletedAt     DateTime
-  deletedBy     String
+  deletedAt     DateTime?
+  deletedBy     String?
   version       Int          @default(1)
   menuss        Menus[]      @relation("menus_parent_id_to_menus")
   parentIdmenus Menus?       @relation("menus_parent_id_to_menus", fields: [parentId], references: [id], onDelete: SetNull)
@@ -1669,8 +1669,8 @@ model MenuPermissions {
   updatedAt               DateTime     @default(now())
   createdBy               String
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int          @default(1)
   metadata                Json
   menuIdmenu_master       MenuMaster?  @relation("menu_permissions_menu_id_to_menu_master", fields: [menuId], references: [id], onDelete: SetNull)
@@ -1756,8 +1756,8 @@ model StaffProfiles {
   createdBy                 String
   updatedAt                 DateTime                 @default(now())
   updatedBy                 String
-  deletedAt                 DateTime
-  deletedBy                 String
+  deletedAt                 DateTime?
+  deletedBy                 String?
   version                   Int                      @default(1)
   staff_departmentss        StaffDepartments[]       @relation("staff_departments_staff_profile_id_to_staff_profiles")
   staff_subjectss           StaffSubjects[]          @relation("staff_subjects_staff_profile_id_to_staff_profiles")
@@ -1789,8 +1789,8 @@ model StudentProfiles {
   createdBy                   String
   updatedAt                   DateTime                 @default(now())
   updatedBy                   String
-  deletedAt                   DateTime
-  deletedBy                   String
+  deletedAt                   DateTime?
+  deletedBy                   String?
   version                     Int                      @default(1)
   profileVersion              Int                      @default(1)
   lastProfileUpdatedAt        DateTime                 @default(now())
@@ -1821,8 +1821,8 @@ model ParentProfiles {
   createdBy        String
   updatedAt        DateTime         @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int              @default(1)
   student_parentss StudentParents[] @relation("student_parents_parent_profile_id_to_parent_profiles")
   userIdusers      Users?           @relation("parent_profiles_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -1842,8 +1842,8 @@ model StudentParents {
   createdBy                      String
   updatedAt                      DateTime                   @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int                        @default(1)
   studentProfileIstudent_profile StudentProfiles?           @relation("student_parents_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   parentProfileIdparent_profiles ParentProfiles?            @relation("student_parents_parent_profile_id_to_parent_profiles", fields: [parentProfileId], references: [userId], onDelete: SetNull)
@@ -1869,8 +1869,8 @@ model StudentAdmissions {
   admissionDate                  DateTime            @default(now())
   admissionStatus                AdmissionStatusEnum
   remarks                        String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   createdAt                      DateTime            @default(now())
   createdBy                      String
   updatedAt                      DateTime            @default(now())
@@ -1901,8 +1901,8 @@ model StudentBatchEnrollments {
   createdBy          String
   updatedAt          DateTime        @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int             @default(1)
   tenant             Institutes      @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers     Users?          @relation("student_batch_enrollments_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -1925,8 +1925,8 @@ model StaffDepartments {
   createdBy                    String
   updatedAt                    DateTime       @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int            @default(1)
   staffProfileIdstaff_profiles StaffProfiles? @relation("staff_departments_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
   tenant                       Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -1947,8 +1947,8 @@ model StaffSubjects {
   createdBy                    String
   updatedAt                    DateTime       @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int            @default(1)
   staffProfileIdstaff_profiles StaffProfiles? @relation("staff_subjects_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
   tenant                       Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -1973,8 +1973,8 @@ model StudentDocuments {
   createdBy                      String
   updatedAt                      DateTime         @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   studentProfileIstudent_profile StudentProfiles? @relation("student_documents_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -1999,8 +1999,8 @@ model StaffBatchAssignments {
   createdBy                    String
   updatedAt                    DateTime       @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int            @default(1)
   staffProfileIdstaff_profiles StaffProfiles? @relation("staff_batch_assignments_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
   tenant                       Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2025,8 +2025,8 @@ model StudentMedicalProfiles {
   createdBy                      String
   updatedAt                      DateTime         @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   studentProfileIstudent_profile StudentProfiles? @relation("student_medical_profiles_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2050,8 +2050,8 @@ model StaffQualifications {
   createdBy                    String
   updatedAt                    DateTime       @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int            @default(1)
   staffProfileIdstaff_profiles StaffProfiles? @relation("staff_qualifications_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
   tenant                       Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2075,8 +2075,8 @@ model EmergencyContacts {
   createdBy                      String
   updatedAt                      DateTime         @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   studentProfileIstudent_profile StudentProfiles? @relation("emergency_contacts_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2120,8 +2120,8 @@ model StudentStatusHistory {
   createdBy                      String
   updatedAt                      DateTime         @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   studentProfileIstudent_profile StudentProfiles? @relation("student_status_history_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2144,8 +2144,8 @@ model PersonIdentifiers {
   createdBy                      String
   updatedAt                      DateTime         @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   studentProfileIstudent_profile StudentProfiles? @relation("person_identifiers_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2177,8 +2177,8 @@ model AttendanceSessions {
   createdBy                    String
   updatedAt                    DateTime                    @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int                         @default(1)
   attendance_recordss          AttendanceRecords[]         @relation("attendance_records_attendance_session_id_to_attendance_sessions")
   tenant                       Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2206,8 +2206,8 @@ model AttendanceRecords {
   createdBy                      String
   updatedAt                      DateTime                @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int                     @default(1)
   attendance_adjustmentss        AttendanceAdjustments[] @relation("attendance_adjustments_attendance_record_id_to_attendance_records")
   attendanceSessiattendance_sess AttendanceSessions?     @relation("attendance_records_attendance_session_id_to_attendance_sessions", fields: [attendanceSessionId], references: [id], onDelete: SetNull)
@@ -2239,8 +2239,8 @@ model LeaveRequests {
   createdBy          String
   updatedAt          DateTime           @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int                @default(1)
   leave_attachmentss LeaveAttachments[] @relation("leave_attachments_leave_request_id_to_leave_requests")
   tenant             Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2289,8 +2289,8 @@ model LeaveAttachments {
   createdBy                    String
   updatedAt                    DateTime       @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int            @default(1)
   leaveRequestIdleave_requests LeaveRequests? @relation("leave_attachments_leave_request_id_to_leave_requests", fields: [leaveRequestId], references: [id], onDelete: SetNull)
   tenant                       Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -2343,8 +2343,8 @@ model Exams {
   createdBy               String
   updatedAt               DateTime              @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   tenant                  Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   publishedByusers        Users?                @relation("exams_published_by_to_users", fields: [publishedBy], references: [id], onDelete: SetNull)
   resultsPublishedByusers Users?                @relation("exams_results_published_by_to_users", fields: [resultsPublishedBy], references: [id], onDelete: SetNull)
@@ -2372,8 +2372,8 @@ model ExamSections {
   createdBy                String
   updatedAt                DateTime   @default(now())
   updatedBy                String
-  deletedAt                DateTime
-  deletedBy                String
+  deletedAt                DateTime?
+  deletedBy                String?
   version                  Int        @default(1)
   tenant                   Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers           Users?     @relation("exam_sections_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2401,8 +2401,8 @@ model ExamQuestions {
   createdBy      String
   updatedAt      DateTime               @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int                    @default(1)
   tenant         Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers Users?                 @relation("exam_questions_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2426,8 +2426,8 @@ model QuestionPapers {
   status           String     @default("DRAFT")
   version          Int        @default(1)
   publishedVersion Int
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   createdAt        DateTime   @default(now())
   createdBy        String
   updatedAt        DateTime   @default(now())
@@ -2450,8 +2450,8 @@ model QuestionPaperQuestions {
   marks          Decimal
   negativeMarks  Decimal
   displayOrder   Int      @default(1)
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   createdAt      DateTime @default(now())
   createdBy      String
   updatedAt      DateTime @default(now())
@@ -2490,8 +2490,8 @@ model ExamRegistrations {
   createdBy             String
   updatedAt             DateTime               @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int                    @default(1)
   tenant                Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers        Users?                 @relation("exam_registrations_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2532,8 +2532,8 @@ model ExamAttempts {
   createdBy             String
   updatedAt             DateTime          @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int               @default(1)
   tenant                Institutes        @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers        Users?            @relation("exam_attempts_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2562,8 +2562,8 @@ model ExamAnswers {
   createdBy        String
   updatedAt        DateTime             @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                  @default(1)
   tenant           Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   evaluatedByusers Users?               @relation("exam_answers_evaluated_by_to_users", fields: [evaluatedBy], references: [id], onDelete: SetNull)
@@ -2607,8 +2607,8 @@ model ExamResults {
   createdBy             String
   updatedAt             DateTime         @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int              @default(1)
   tenant                Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   reEvaluatedByusers    Users?           @relation("exam_results_re_evaluated_by_to_users", fields: [reEvaluatedBy], references: [id], onDelete: SetNull)
@@ -2659,8 +2659,8 @@ model ExamDocuments {
   createdBy        String
   updatedAt        DateTime             @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                  @default(1)
   tenant           Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers   Users?               @relation("exam_documents_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2699,8 +2699,8 @@ model Questions {
   createdBy            String
   updatedAt            DateTime               @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int                    @default(1)
   tenant               Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   lockedByusers        Users?                 @relation("questions_locked_by_to_users", fields: [lockedBy], references: [id], onDelete: SetNull)
@@ -2725,8 +2725,8 @@ model QuestionOptions {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers Users?     @relation("question_options_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2755,8 +2755,8 @@ model QuestionExplanations {
   createdBy        String
   updatedAt        DateTime   @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int        @default(1)
   tenant           Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   verifiedByusers  Users?     @relation("question_explanations_verified_by_to_users", fields: [verifiedBy], references: [id], onDelete: SetNull)
@@ -2782,8 +2782,8 @@ model QuestionTags {
   createdBy      String
   updatedAt      DateTime    @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int         @default(1)
   tenant         Institutes  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers Users?      @relation("question_tags_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2803,8 +2803,8 @@ model QuestionTagMappings {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers Users?     @relation("question_tag_mappings_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2846,8 +2846,8 @@ model QuestionAttachments {
   createdBy       String
   updatedAt       DateTime           @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int                @default(1)
   tenant          Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers  Users?             @relation("question_attachments_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2871,8 +2871,8 @@ model QuestionReviews {
   createdBy       String
   updatedAt       DateTime         @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int              @default(1)
   tenant          Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   reviewerIdusers Users?           @relation("question_reviews_reviewer_id_to_users", fields: [reviewerId], references: [id], onDelete: SetNull)
@@ -2904,8 +2904,8 @@ model QuestionUsage {
   difficultyTrend   Json
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @default(now())
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int        @default(1)
   tenant            Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   deletedByusers    Users?     @relation("question_usage_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
@@ -2938,8 +2938,8 @@ model QuestionImportJobs {
   createdBy         String
   updatedAt         DateTime               @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int                    @default(1)
   tenant            Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers    Users?                 @relation("question_import_jobs_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -2974,8 +2974,8 @@ model LearningMaterials {
   keywords          String[]
   aiMetadata        Json
   searchVector      String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   createdAt         DateTime                   @default(now())
   createdBy         String
   updatedAt         DateTime                   @default(now())
@@ -3019,8 +3019,8 @@ model MaterialAttachments {
   fileSize        BigInt
   mimeType        String
   caption         String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   createdAt       DateTime                   @default(now())
   createdBy       String
   updatedAt       DateTime                   @default(now())
@@ -3044,8 +3044,8 @@ model LearningPaths {
   difficulty     QuestionDifficultyEnum
   estimatedDays  Int
   status         LearningPathStatusEnum
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   createdAt      DateTime               @default(now())
   createdBy      String
   updatedAt      DateTime               @default(now())
@@ -3067,8 +3067,8 @@ model LearningPathMaterials {
   displayOrder    Int        @default(1)
   unlockAfterDays Int        @default(0)
   isMandatory     Boolean    @default(true)
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   createdAt       DateTime   @default(now())
   createdBy       String
   updatedAt       DateTime   @default(now())
@@ -3097,8 +3097,8 @@ model StudentLearningProgress {
   lastPosition       Int
   timeSpentSeconds   Int                @default(0)
   status             ProgressStatusEnum
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   createdAt          DateTime           @default(now())
   createdBy          String
   updatedAt          DateTime           @default(now())
@@ -3123,8 +3123,8 @@ model LearningBookmarks {
   pageNumber     Int
   videoTimestamp Int
   notes          String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   createdAt      DateTime   @default(now())
   createdBy      String
   updatedAt      DateTime   @default(now())
@@ -3151,8 +3151,8 @@ model LearningNotes {
   pageNumber     Int
   videoTimestamp Int
   aiSummary      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   createdAt      DateTime   @default(now())
   createdBy      String
   updatedAt      DateTime   @default(now())
@@ -3177,8 +3177,8 @@ model MaterialDiscussions {
   authorId                       String
   comment                        String
   status                         DiscussionStatusEnum
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   createdAt                      DateTime              @default(now())
   createdBy                      String
   updatedAt                      DateTime              @default(now())
@@ -3206,8 +3206,8 @@ model MaterialAssignments {
   marks          Decimal
   submissionType String     @default("TEXT")
   instructions   String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   createdAt      DateTime   @default(now())
   createdBy      String
   updatedAt      DateTime   @default(now())
@@ -3239,8 +3239,8 @@ model AssignmentSubmissions {
   submittedByAi      Boolean    @default(false)
   lateSubmission     Boolean    @default(false)
   storageObjectId    String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   createdAt          DateTime   @default(now())
   createdBy          String
   updatedAt          DateTime   @default(now())
@@ -3303,8 +3303,8 @@ model LiveClasses {
   createdBy           String
   updatedAt           DateTime            @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int                 @default(1)
   tenant              Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3325,8 +3325,8 @@ model LiveClassInstructors {
   createdBy                    String
   updatedAt                    DateTime            @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int                 @default(1)
   tenant                       Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   staffProfileIdstaff_profiles StaffProfiles?      @relation("live_class_instructors_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
@@ -3353,8 +3353,8 @@ model LiveClassSessions {
   createdBy           String
   updatedAt           DateTime             @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int                  @default(1)
   tenant              Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3379,8 +3379,8 @@ model LiveClassParticipants {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3409,8 +3409,8 @@ model LiveClassAttendance {
   createdBy              String
   updatedAt              DateTime             @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int                  @default(1)
   tenant                 Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   markedByusers          Users?               @relation("live_class_attendance_marked_by_to_users", fields: [markedBy], references: [id], onDelete: SetNull)
@@ -3439,8 +3439,8 @@ model LiveClassRecordings {
   createdBy             String
   updatedAt             DateTime            @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int                 @default(1)
   tenant                Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3466,8 +3466,8 @@ model LiveClassResources {
   createdBy       String
   updatedAt       DateTime         @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int              @default(1)
   tenant          Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   uploadedByusers Users?           @relation("live_class_resources_uploaded_by_to_users", fields: [uploadedBy], references: [id], onDelete: SetNull)
@@ -3493,8 +3493,8 @@ model LiveClassChatMessages {
   createdBy                      String
   updatedAt                      DateTime                @default(now())
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int                     @default(1)
   live_class_chat_messagess      LiveClassChatMessages[] @relation("live_class_chat_messages_reply_to_message_id_to_live_class_chat_messages")
   tenant                         Institutes              @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
@@ -3524,8 +3524,8 @@ model LiveClassPolls {
   createdBy               String
   updatedAt               DateTime       @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int            @default(1)
   tenant                  Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3544,8 +3544,8 @@ model LiveClassPollResponses {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3568,8 +3568,8 @@ model LiveClassWhiteboardSnapshots {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   capturedByusers Users?     @relation("live_class_whiteboard_snapshots_captured_by_to_users", fields: [capturedBy], references: [id], onDelete: SetNull)
@@ -3592,8 +3592,8 @@ model LiveClassRaiseHands {
   createdBy               String
   updatedAt               DateTime            @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int                 @default(1)
   tenant                  Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   respondedByusers        Users?              @relation("live_class_raise_hands_responded_by_to_users", fields: [respondedBy], references: [id], onDelete: SetNull)
@@ -3615,8 +3615,8 @@ model LiveClassBreakoutRooms {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3634,8 +3634,8 @@ model BreakoutRoomParticipants {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3654,8 +3654,8 @@ model LiveClassEvents {
   createdBy        String
   updatedAt        DateTime               @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                    @default(1)
   tenant           Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers Users?                 @relation("live_class_events_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -3680,8 +3680,8 @@ model FeeStructures {
   createdBy      String
   updatedAt      DateTime               @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int                    @default(1)
   tenant         Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3705,8 +3705,8 @@ model FeeStructureItems {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3731,8 +3731,8 @@ model StudentFeeAssignments {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   assignedByusers    Users?     @relation("student_fee_assignments_assigned_by_to_users", fields: [assignedBy], references: [id], onDelete: SetNull)
@@ -3753,8 +3753,8 @@ model FeeInstallments {
   createdBy         String
   updatedAt         DateTime   @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int        @default(1)
   tenant            Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3780,8 +3780,8 @@ model StudentFeeInstallments {
   createdBy              String
   updatedAt              DateTime              @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int                   @default(1)
   tenant                 Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3805,8 +3805,8 @@ model FeePayments {
   createdBy               String
   updatedAt               DateTime          @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int               @default(1)
   tenant                  Institutes        @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   receivedByusers         Users?            @relation("fee_payments_received_by_to_users", fields: [receivedBy], references: [id], onDelete: SetNull)
@@ -3830,8 +3830,8 @@ model PaymentTransactions {
   createdBy            String
   updatedAt            DateTime              @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int                   @default(1)
   tenant               Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3852,8 +3852,8 @@ model PaymentRefunds {
   createdBy       String
   updatedAt       DateTime         @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int              @default(1)
   tenant          Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   approvedByusers Users?           @relation("payment_refunds_approved_by_to_users", fields: [approvedBy], references: [id], onDelete: SetNull)
@@ -3876,8 +3876,8 @@ model FeeDiscounts {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3900,8 +3900,8 @@ model StudentFeeDiscounts {
   createdBy              String
   updatedAt              DateTime   @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int        @default(1)
   tenant                 Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   approvedByusers        Users?     @relation("student_fee_discounts_approved_by_to_users", fields: [approvedBy], references: [id], onDelete: SetNull)
@@ -3923,8 +3923,8 @@ model FeePenalties {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3948,8 +3948,8 @@ model StudentFeePenalties {
   createdBy               String
   updatedAt               DateTime   @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int        @default(1)
   tenant                  Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   waivedByusers           Users?     @relation("student_fee_penalties_waived_by_to_users", fields: [waivedBy], references: [id], onDelete: SetNull)
@@ -3969,8 +3969,8 @@ model FeeReceipts {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -3991,8 +3991,8 @@ model Scholarships {
   createdBy             String
   updatedAt             DateTime   @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int        @default(1)
   tenant                Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4011,8 +4011,8 @@ model FeeWaivers {
   createdBy               String
   updatedAt               DateTime   @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int        @default(1)
   tenant                  Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   approvedByusers         Users?     @relation("fee_waivers_approved_by_to_users", fields: [approvedBy], references: [id], onDelete: SetNull)
@@ -4037,8 +4037,8 @@ model PaymentReconciliation {
   createdBy         String
   updatedAt         DateTime                 @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int                      @default(1)
   tenant            Institutes               @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   reconciledByusers Users?                   @relation("payment_reconciliation_reconciled_by_to_users", fields: [reconciledBy], references: [id], onDelete: SetNull)
@@ -4060,8 +4060,8 @@ model FeeNotifications {
   createdBy               String
   updatedAt               DateTime                   @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int                        @default(1)
   tenant                  Institutes                 @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4081,8 +4081,8 @@ model FeeAuditLogs {
   createdBy          String
   updatedAt          DateTime              @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int                   @default(1)
   tenant             Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers   Users?                @relation("fee_audit_logs_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -4103,8 +4103,8 @@ model FeeAdjustments {
   createdBy              String
   updatedAt              DateTime           @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int                @default(1)
   tenant                 Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   adjustedByusers        Users?             @relation("fee_adjustments_adjusted_by_to_users", fields: [adjustedBy], references: [id], onDelete: SetNull)
@@ -4124,8 +4124,8 @@ model PaymentAllocations {
   createdBy               String
   updatedAt               DateTime   @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int        @default(1)
   tenant                  Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4148,8 +4148,8 @@ model FeeCollectionClosures {
   createdBy         String
   updatedAt         DateTime          @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int               @default(1)
   tenant            Institutes        @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   cashierIdusers    Users?            @relation("fee_collection_closures_cashier_id_to_users", fields: [cashierId], references: [id], onDelete: SetNull)
@@ -4168,8 +4168,8 @@ model FeeCollectionCenters {
   createdBy String
   updatedAt DateTime   @default(now())
   updatedBy String
-  deletedAt DateTime
-  deletedBy String
+  deletedAt DateTime?
+  deletedBy String?
   version   Int        @default(1)
   tenant    Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4190,8 +4190,8 @@ model FinancialPeriodsMapping {
   createdBy String
   updatedAt DateTime   @default(now())
   updatedBy String
-  deletedAt DateTime
-  deletedBy String
+  deletedAt DateTime?
+  deletedBy String?
   version   Int        @default(1)
   tenant    Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4213,8 +4213,8 @@ model NotificationTemplates {
   createdBy       String
   updatedAt       DateTime                    @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int                         @default(1)
   tenant          Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4236,8 +4236,8 @@ model NotificationTemplateVersions {
   createdBy              String
   updatedAt              DateTime   @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int        @default(1)
   tenant                 Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   approvedByusers        Users?     @relation("notification_template_versions_approved_by_to_users", fields: [approvedBy], references: [id], onDelete: SetNull)
@@ -4260,8 +4260,8 @@ model NotificationCampaigns {
   createdBy              String
   updatedAt              DateTime           @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int                @default(1)
   tenant                 Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4280,8 +4280,8 @@ model NotificationCampaignTargets {
   createdBy              String
   updatedAt              DateTime   @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int        @default(1)
   tenant                 Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   recipientUserIdusers   Users?     @relation("notification_campaign_targets_recipient_user_id_to_users", fields: [recipientUserId], references: [id], onDelete: SetNull)
@@ -4309,8 +4309,8 @@ model NotificationQueue {
   createdBy              String
   updatedAt              DateTime                    @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int                         @default(1)
   tenant                 Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   recipientUserIdusers   Users?                      @relation("notification_queue_recipient_user_id_to_users", fields: [recipientUserId], references: [id], onDelete: SetNull)
@@ -4336,8 +4336,8 @@ model NotificationDeliveries {
   createdBy           String
   updatedAt           DateTime           @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int                @default(1)
   tenant              Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4371,8 +4371,8 @@ model NotificationPreferences {
   createdBy   String
   updatedAt   DateTime                    @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int                         @default(1)
   tenant      Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers Users?                      @relation("notification_preferences_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -4390,8 +4390,8 @@ model NotificationSubscriptions {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers  Users?     @relation("notification_subscriptions_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -4413,8 +4413,8 @@ model NotificationLogs {
   createdBy            String
   updatedAt            DateTime                    @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int                         @default(1)
   tenant               Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   recipientUserIdusers Users?                      @relation("notification_logs_recipient_user_id_to_users", fields: [recipientUserId], references: [id], onDelete: SetNull)
@@ -4436,8 +4436,8 @@ model SmsProviders {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4459,8 +4459,8 @@ model EmailProviders {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4482,8 +4482,8 @@ model WhatsappProviders {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4504,8 +4504,8 @@ model PushDevices {
   createdBy    String
   updatedAt    DateTime           @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int                @default(1)
   tenant       Institutes         @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers  Users?             @relation("push_devices_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -4528,8 +4528,8 @@ model PushNotifications {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4551,8 +4551,8 @@ model Announcements {
   createdBy          String
   updatedAt          DateTime             @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int                  @default(1)
   tenant             Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByUserusers Users?               @relation("announcements_created_by_user_to_users", fields: [createdByUser], references: [id], onDelete: SetNull)
@@ -4570,8 +4570,8 @@ model AnnouncementReads {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers    Users?     @relation("announcement_reads_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -4592,8 +4592,8 @@ model WebhookEvents {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4612,8 +4612,8 @@ model WebhookDeliveries {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4632,8 +4632,8 @@ model CommunicationAuditLogs {
   createdBy        String
   updatedAt        DateTime                        @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                             @default(1)
   tenant           Institutes                      @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers Users?                          @relation("communication_audit_logs_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -4653,8 +4653,8 @@ model NotificationAttachments {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4672,8 +4672,8 @@ model NotificationVariables {
   createdBy    String
   updatedAt    DateTime   @default(now())
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int        @default(1)
   tenant       Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4694,8 +4694,8 @@ model NotificationRetryQueue {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4713,8 +4713,8 @@ model CommunicationRateLimits {
   createdBy          String
   updatedAt          DateTime   @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int        @default(1)
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4734,8 +4734,8 @@ model ProviderFailovers {
   createdBy                    String
   updatedAt                    DateTime                    @default(now())
   updatedBy                    String
-  deletedAt                    DateTime
-  deletedBy                    String
+  deletedAt                    DateTime?
+  deletedBy                    String?
   version                      Int                         @default(1)
   tenant                       Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4755,8 +4755,8 @@ model DashboardDefinitions {
   createdBy   String
   updatedAt   DateTime                @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int                     @default(1)
   tenant      Institutes              @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4781,8 +4781,8 @@ model DashboardWidgets {
   createdBy             String
   updatedAt             DateTime       @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int            @default(1)
   tenant                Institutes     @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4802,8 +4802,8 @@ model ReportDefinitions {
   createdBy        String
   updatedAt        DateTime   @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int        @default(1)
   tenant           Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4826,8 +4826,8 @@ model ReportExecutions {
   createdBy          String
   updatedAt          DateTime         @default(now())
   updatedBy          String
-  deletedAt          DateTime
-  deletedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
   version            Int              @default(1)
   tenant             Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   generatedByusers   Users?           @relation("report_executions_generated_by_to_users", fields: [generatedBy], references: [id], onDelete: SetNull)
@@ -4848,8 +4848,8 @@ model KpiDefinitions {
   createdBy         String
   updatedAt         DateTime   @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int        @default(1)
   tenant            Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4870,8 +4870,8 @@ model KpiSnapshots {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4896,8 +4896,8 @@ model StudentAnalytics {
   createdBy               String
   updatedAt               DateTime   @default(now())
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int        @default(1)
   tenant                  Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4917,8 +4917,8 @@ model BranchAnalytics {
   createdBy              String
   updatedAt              DateTime   @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int        @default(1)
   tenant                 Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4939,8 +4939,8 @@ model FinancialAnalytics {
   createdBy              String
   updatedAt              DateTime   @default(now())
   updatedBy              String
-  deletedAt              DateTime
-  deletedBy              String
+  deletedAt              DateTime?
+  deletedBy              String?
   version                Int        @default(1)
   tenant                 Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4960,8 +4960,8 @@ model AnalyticsRefreshJobs {
   createdBy           String
   updatedAt           DateTime             @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int                  @default(1)
   tenant              Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -4980,8 +4980,8 @@ model AnalyticsAuditLogs {
   createdBy        String
   updatedAt        DateTime                @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                     @default(1)
   tenant           Institutes              @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers Users?                  @relation("analytics_audit_logs_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -5003,8 +5003,8 @@ model AiProviders {
   createdBy            String
   updatedAt            DateTime   @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int        @default(1)
   tenant               Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5027,8 +5027,8 @@ model AiModels {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5051,8 +5051,8 @@ model AiPrompts {
   createdBy     String
   updatedAt     DateTime   @default(now())
   updatedBy     String
-  deletedAt     DateTime
-  deletedBy     String
+  deletedAt     DateTime?
+  deletedBy     String?
   version       Int        @default(1)
   tenant        Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5071,8 +5071,8 @@ model AiConversations {
   createdBy   String
   updatedAt   DateTime   @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int        @default(1)
   tenant      Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers Users?     @relation("ai_conversations_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -5093,8 +5093,8 @@ model AiMessages {
   createdBy            String
   updatedAt            DateTime            @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int                 @default(1)
   tenant               Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5117,8 +5117,8 @@ model AiRequests {
   createdBy            String
   updatedAt            DateTime            @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int                 @default(1)
   tenant               Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByUserusers Users?              @relation("ai_requests_triggered_by_user_to_users", fields: [triggeredByUser], references: [id], onDelete: SetNull)
@@ -5138,8 +5138,8 @@ model AiGeneratedContent {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5157,8 +5157,8 @@ model AiFeedback {
   createdBy   String
   updatedAt   DateTime   @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int        @default(1)
   tenant      Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers Users?     @relation("ai_feedback_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -5177,8 +5177,8 @@ model AiUsageLogs {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   userIdusers    Users?     @relation("ai_usage_logs_user_id_to_users", fields: [userId], references: [id], onDelete: SetNull)
@@ -5198,8 +5198,8 @@ model AiAuditLogs {
   createdBy        String
   updatedAt        DateTime         @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int              @default(1)
   tenant           Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers Users?           @relation("ai_audit_logs_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -5220,8 +5220,8 @@ model TenantSettings {
   createdBy             String
   updatedAt             DateTime   @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int        @default(1)
   tenant                Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5243,8 +5243,8 @@ model FeatureFlags {
   createdBy         String
   updatedAt         DateTime @default(now())
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int      @default(1)
   metadata          Json
 
@@ -5267,8 +5267,8 @@ model StorageObjects {
   createdBy        String
   updatedAt        DateTime   @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int        @default(1)
   tenant           Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   ownerUserIdusers Users?     @relation("storage_objects_owner_user_id_to_users", fields: [ownerUserId], references: [id], onDelete: SetNull)
@@ -5290,8 +5290,8 @@ model FileUploads {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5310,8 +5310,8 @@ model BackgroundJobs {
   createdBy      String
   updatedAt      DateTime                @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int                     @default(1)
   tenant         Institutes              @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5333,8 +5333,8 @@ model JobExecutions {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5354,8 +5354,8 @@ model SchedulerJobs {
   createdBy      String
   updatedAt      DateTime   @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int        @default(1)
   tenant         Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5377,8 +5377,8 @@ model SchedulerHistory {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5402,8 +5402,8 @@ model ApiKeys {
   createdBy      String
   updatedAt      DateTime @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int      @default(1)
   metadata       Json
 
@@ -5425,8 +5425,8 @@ model ApiLogs {
   createdBy       String
   updatedAt       DateTime   @default(now())
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int        @default(1)
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5447,8 +5447,8 @@ model SystemHealthLogs {
   createdBy            String
   updatedAt            DateTime   @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int        @default(1)
   tenant               Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5470,8 +5470,8 @@ model ErrorLogs {
   createdBy           String
   updatedAt           DateTime   @default(now())
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int        @default(1)
   tenant              Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   resolvedByUserusers Users?     @relation("error_logs_resolved_by_user_to_users", fields: [resolvedByUser], references: [id], onDelete: SetNull)
@@ -5489,8 +5489,8 @@ model SystemConfigurations {
   createdBy   String
   updatedAt   DateTime   @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int        @default(1)
   tenant      Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
 
@@ -5508,8 +5508,8 @@ model PlatformEvents {
   createdBy            String
   updatedAt            DateTime   @default(now())
   updatedBy            String
-  deletedAt            DateTime
-  deletedBy            String
+  deletedAt            DateTime?
+  deletedBy            String?
   version              Int        @default(1)
   tenant               Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByUserusers Users?     @relation("platform_events_triggered_by_user_to_users", fields: [triggeredByUser], references: [id], onDelete: SetNull)
@@ -5529,8 +5529,8 @@ model PlatformAuditLogs {
   createdBy        String
   updatedAt        DateTime               @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int                    @default(1)
   tenant           Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   triggeredByusers Users?                 @relation("platform_audit_logs_triggered_by_to_users", fields: [triggeredBy], references: [id], onDelete: SetNull)
@@ -5555,8 +5555,8 @@ model MenuGroups {
   updatedAt       DateTime     @default(now())
   createdBy       String
   updatedBy       String
-  deletedAt       DateTime
-  deletedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
   version         Int          @default(1)
   metadata        Json
   menu_masters    MenuMaster[] @relation("menu_master_menu_group_id_to_menu_groups")
@@ -5593,8 +5593,8 @@ model MenuMaster {
   updatedAt               DateTime             @default(now())
   createdBy               String
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int                  @default(1)
   metadata                Json
   menu_permissionss       MenuPermissions[]    @relation("menu_permissions_menu_id_to_menu_master")
@@ -5618,8 +5618,8 @@ model PermissionGroups {
   updatedAt    DateTime      @default(now())
   createdBy    String
   updatedBy    String
-  deletedAt    DateTime
-  deletedBy    String
+  deletedAt    DateTime?
+  deletedBy    String?
   version      Int           @default(1)
   metadata     Json
   permissionss Permissions[] @relation("permissions_permission_group_id_to_permission_groups")
@@ -5640,8 +5640,8 @@ model RoleMenuVisibility {
   updatedAt         DateTime    @default(now())
   createdBy         String
   updatedBy         String
-  deletedAt         DateTime
-  deletedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
   version           Int         @default(1)
   metadata          Json
   roleIdroles       Roles?      @relation("role_menu_visibility_role_id_to_roles", fields: [roleId], references: [id], onDelete: SetNull)
@@ -5660,8 +5660,8 @@ model RoleTemplates {
   updatedAt               DateTime     @default(now())
   createdBy               String
   updatedBy               String
-  deletedAt               DateTime
-  deletedBy               String
+  deletedAt               DateTime?
+  deletedBy               String?
   version                 Int          @default(1)
   metadata                Json
   permissionIdpermissions Permissions? @relation("role_templates_permission_id_to_permissions", fields: [permissionId], references: [id], onDelete: SetNull)
@@ -5679,8 +5679,8 @@ model PermissionDependencies {
   updatedAt                  DateTime     @default(now())
   createdBy                  String
   updatedBy                  String
-  deletedAt                  DateTime
-  deletedBy                  String
+  deletedAt                  DateTime?
+  deletedBy                  String?
   version                    Int          @default(1)
   metadata                   Json
   permissionIdpermissions    Permissions? @relation("permission_dependencies_permission_id_to_permissions", fields: [permissionId], references: [id], onDelete: SetNull)
@@ -5699,8 +5699,8 @@ model RoleInheritance {
   updatedAt           DateTime @default(now())
   createdBy           String
   updatedBy           String
-  deletedAt           DateTime
-  deletedBy           String
+  deletedAt           DateTime?
+  deletedBy           String?
   version             Int      @default(1)
   metadata            Json
   roleIdroles         Roles?   @relation("role_inheritance_role_id_to_roles", fields: [roleId], references: [id], onDelete: SetNull)
@@ -5720,8 +5720,8 @@ model PermissionConditions {
   updatedAt                      DateTime         @default(now())
   createdBy                      String
   updatedBy                      String
-  deletedAt                      DateTime
-  deletedBy                      String
+  deletedAt                      DateTime?
+  deletedBy                      String?
   version                        Int              @default(1)
   metadata                       Json
   rolePermissionIrole_permission RolePermissions? @relation("permission_conditions_role_permission_id_to_role_permissions", fields: [rolePermissionId], references: [id], onDelete: SetNull)
@@ -5745,8 +5745,8 @@ model Workflows {
   createdBy             String
   updatedAt             DateTime              @default(now())
   updatedBy             String
-  deletedAt             DateTime
-  deletedBy             String
+  deletedAt             DateTime?
+  deletedBy             String?
   version               Int                   @default(1)
   metadata              Json
   workflow_stepss       WorkflowSteps[]       @relation("workflow_steps_workflow_id_to_workflows")
@@ -5807,8 +5807,8 @@ model WorkflowSteps {
   createdBy                                 String
   updatedAt                                 DateTime              @default(now())
   updatedBy                                 String
-  deletedAt                                 DateTime
-  deletedBy                                 String
+  deletedAt                                 DateTime?
+  deletedBy                                 String?
   version                                   Int                   @default(1)
   metadata                                  Json
   workflow_stepss                           WorkflowSteps[]       @relation("workflow_steps_escalation_step_id_to_workflow_steps")
@@ -5848,8 +5848,8 @@ model WorkflowRequests {
   createdBy                           String
   updatedAt                           DateTime                          @default(now())
   updatedBy                           String
-  deletedAt                           DateTime
-  deletedBy                           String
+  deletedAt                           DateTime?
+  deletedBy                           String?
   version                             Int                               @default(1)
   metadata                            Json
   workflow_historys                   WorkflowHistory[]                 @relation("workflow_history_request_id_to_workflow_requests")
@@ -5906,8 +5906,8 @@ model WorkflowComments {
   createdBy                  String
   updatedAt                  DateTime          @default(now())
   updatedBy                  String
-  deletedAt                  DateTime
-  deletedBy                  String
+  deletedAt                  DateTime?
+  deletedBy                  String?
   version                    Int               @default(1)
   metadata                   Json
   requestIdworkflow_requests WorkflowRequests? @relation("workflow_comments_request_id_to_workflow_requests", fields: [requestId], references: [id], onDelete: SetNull)
@@ -5929,8 +5929,8 @@ model WorkflowAttachments {
   createdBy                  String
   updatedAt                  DateTime          @default(now())
   updatedBy                  String
-  deletedAt                  DateTime
-  deletedBy                  String
+  deletedAt                  DateTime?
+  deletedBy                  String?
   version                    Int               @default(1)
   metadata                   Json
   requestIdworkflow_requests WorkflowRequests? @relation("workflow_attachments_request_id_to_workflow_requests", fields: [requestId], references: [id], onDelete: SetNull)
@@ -5955,8 +5955,8 @@ model WorkflowNotifications {
   errorLog                   String
   createdAt                  DateTime          @default(now())
   processedAt                DateTime
-  deletedAt                  DateTime
-  deletedBy                  String
+  deletedAt                  DateTime?
+  deletedBy                  String?
   version                    Int               @default(1)
   metadata                   Json
   requestIdworkflow_requests WorkflowRequests? @relation("workflow_notifications_request_id_to_workflow_requests", fields: [requestId], references: [id], onDelete: SetNull)
@@ -5978,8 +5978,8 @@ model WorkflowDelegations {
   createdBy      String
   updatedAt      DateTime @default(now())
   updatedBy      String
-  deletedAt      DateTime
-  deletedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
   version        Int      @default(1)
   metadata       Json
 
@@ -6002,8 +6002,8 @@ model WorkflowEscalations {
   createdBy                     String
   updatedAt                     DateTime          @default(now())
   updatedBy                     String
-  deletedAt                     DateTime
-  deletedBy                     String
+  deletedAt                     DateTime?
+  deletedBy                     String?
   version                       Int               @default(1)
   metadata                      Json
   requestIdworkflow_requests    WorkflowRequests? @relation("workflow_escalations_request_id_to_workflow_requests", fields: [requestId], references: [id], onDelete: SetNull)
@@ -6028,8 +6028,8 @@ model WorkflowTransitions {
   createdBy                  String
   updatedAt                  DateTime         @default(now())
   updatedBy                  String
-  deletedAt                  DateTime
-  deletedBy                  String
+  deletedAt                  DateTime?
+  deletedBy                  String?
   version                    Int              @default(1)
   metadata                   Json
   workflowIdworkflows        Workflows?       @relation("workflow_transitions_workflow_id_to_workflows", fields: [workflowId], references: [id], onDelete: SetNull)
@@ -6071,8 +6071,8 @@ model PolicyCategories {
   createdBy        String
   updatedAt        DateTime         @default(now())
   updatedBy        String
-  deletedAt        DateTime
-  deletedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
   version          Int              @default(1)
   metadata         Json
   policy_settingss PolicySettings[] @relation("policy_settings_category_code_to_policy_categories")
@@ -6097,8 +6097,8 @@ model PolicySettings {
   createdBy                     String
   updatedAt                     DateTime          @default(now())
   updatedBy                     String
-  deletedAt                     DateTime
-  deletedBy                     String
+  deletedAt                     DateTime?
+  deletedBy                     String?
   version                       Int               @default(1)
   metadata                      Json
   categoryCodepolicy_categories PolicyCategories? @relation("policy_settings_category_code_to_policy_categories", fields: [categoryCode], references: [code], onDelete: SetNull)
@@ -6138,8 +6138,8 @@ model SystemSettings {
   createdBy   String
   updatedAt   DateTime @default(now())
   updatedBy   String
-  deletedAt   DateTime
-  deletedBy   String
+  deletedAt   DateTime?
+  deletedBy   String?
   version     Int      @default(1)
   metadata    Json
 }

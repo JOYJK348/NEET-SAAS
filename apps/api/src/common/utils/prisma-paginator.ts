@@ -54,6 +54,50 @@ export async function paginate<T>(
   };
 }
 
+export async function paginateAndMap<TInput, TOutput>(
+  model: {
+    count: (args: unknown) => Promise<number>;
+    findMany: (args: unknown) => Promise<TInput[]>;
+  },
+  args: {
+    where: Record<string, unknown>;
+    orderBy: Record<string, 'asc' | 'desc'>;
+    include?: Record<string, unknown>;
+  },
+  query: QueryParamsDto,
+  tenantId: string,
+  mapper: (item: TInput) => TOutput,
+): Promise<PaginatedResult<TOutput>> {
+  const page = query.page || 1;
+  const limit = query.limit || 20;
+  const skip = (page - 1) * limit;
+
+  const [total, data] = await Promise.all([
+    model.count({ where: args.where }),
+    model.findMany({
+      where: args.where,
+      orderBy: args.orderBy,
+      skip,
+      take: limit,
+      ...(args.include ? { include: args.include } : {}),
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    data: data.map(mapper),
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
+    },
+  };
+}
+
 export function buildPrismaOrderBy(
   sortBy?: string,
   sortOrder?: 'asc' | 'desc',
