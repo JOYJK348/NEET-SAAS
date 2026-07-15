@@ -27,12 +27,11 @@ enum AdjustmentTypeEnum {
 }
 
 enum AdmissionStatusEnum {
-  ENQUIRY
+  PENDING
+  CONFIRMED
   ACTIVE
-  ON_HOLD
-  DROPPED
   COMPLETED
-  ALUMNI
+  CANCELLED
 }
 
 enum AiAuditEventEnum {
@@ -832,6 +831,7 @@ model Institutes {
   emergency_contactss              EmergencyContacts[]            @relation("tenant_id_to_institutes")
   staff_employment_historys        StaffEmploymentHistory[]       @relation("tenant_id_to_institutes")
   student_status_historys          StudentStatusHistory[]         @relation("tenant_id_to_institutes")
+  admission_status_historys        AdmissionStatusHistory[]       @relation("tenant_id_to_institutes")
   person_identifierss              PersonIdentifiers[]            @relation("tenant_id_to_institutes")
   attendance_sessionss             AttendanceSessions[]           @relation("tenant_id_to_institutes")
   attendance_recordss              AttendanceRecords[]            @relation("tenant_id_to_institutes")
@@ -1360,6 +1360,10 @@ model Users {
   person_identifierss                  PersonIdentifiers[]            @relation("person_identifiers_created_by_to_users")
   person_identifiers_updated_by        PersonIdentifiers[]            @relation("person_identifiers_updated_by_to_users")
   person_identifiers_deleted_by        PersonIdentifiers[]            @relation("person_identifiers_deleted_by_to_users")
+  admission_status_history_changedBys  AdmissionStatusHistory[]       @relation("admission_status_history_changed_by_to_users")
+  admission_status_history_created_by  AdmissionStatusHistory[]       @relation("admission_status_history_created_by_to_users")
+  admission_status_history_updated_by  AdmissionStatusHistory[]       @relation("admission_status_history_updated_by_to_users")
+  admission_status_history_deleted_by  AdmissionStatusHistory[]       @relation("admission_status_history_deleted_by_to_users")
   attendance_sessionss                 AttendanceSessions[]           @relation("attendance_sessions_published_by_to_users")
   attendance_sessions_locked_by        AttendanceSessions[]           @relation("attendance_sessions_locked_by_to_users")
   attendance_sessions_created_by       AttendanceSessions[]           @relation("attendance_sessions_created_by_to_users")
@@ -1866,10 +1870,10 @@ model StudentAdmissions {
   academicYearId                 String
   courseId                       String
   branchId                       String
-  feeStructureId                 String
+  feeStructureId                 String?
   admissionDate                  DateTime            @default(now())
   admissionStatus                AdmissionStatusEnum
-  remarks                        String
+  remarks                        String?
   deletedAt                      DateTime?
   deletedBy                      String?
   createdAt                      DateTime            @default(now())
@@ -1887,6 +1891,35 @@ model StudentAdmissions {
   @@unique([tenantId, admissionNumber])
   @@index([tenantId, branchId])
   @@index([tenantId, academicYearId, admissionStatus])
+  @@index([tenantId, studentProfileId, academicYearId, admissionStatus])
+  admission_status_historys AdmissionStatusHistory[] @relation("admission_status_history_admission_id_to_student_admissions")
+}
+
+model AdmissionStatusHistory {
+  id              String              @id @default(uuid())
+  tenantId        String
+  admissionId     String
+  fromStatus      AdmissionStatusEnum
+  toStatus        AdmissionStatusEnum
+  changedAt       DateTime            @default(now())
+  changedBy       String
+  reason          String?
+  createdAt       DateTime            @default(now())
+  createdBy       String
+  updatedAt       DateTime            @default(now())
+  updatedBy       String
+  deletedAt       DateTime?
+  deletedBy       String?
+  version         Int                 @default(1)
+  tenant          Institutes          @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
+  admission       StudentAdmissions?  @relation("admission_status_history_admission_id_to_student_admissions", fields: [admissionId], references: [id], onDelete: SetNull)
+  changedByusers  Users?              @relation("admission_status_history_changed_by_to_users", fields: [changedBy], references: [id], onDelete: SetNull)
+  createdByusers  Users?              @relation("admission_status_history_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByusers  Users?              @relation("admission_status_history_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByusers  Users?              @relation("admission_status_history_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, id])
+  @@index([tenantId, admissionId])
 }
 
 model StudentBatchEnrollments {
