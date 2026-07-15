@@ -15,7 +15,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit(): void {
-    const host = this.configService.get<string>('redis.host') || 'localhost';
+    if (!this.configService.get<boolean>('redis.enabled')) {
+      this.logger.warn('Redis is disabled — skipping connection');
+      return;
+    }
+
+    const host = this.configService.get<string>('redis.host') || '';
     const port = this.configService.get<number>('redis.port') || 6379;
     const password = this.configService.get<string>('redis.password');
 
@@ -25,19 +30,17 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       password,
       lazyConnect: true,
       maxRetriesPerRequest: 3,
+      retryStrategy: () => null,
     });
 
     this.redisClient.on('connect', () => {
       this.logger.log('Successfully connected to Redis');
     });
 
-    this.redisClient.on('error', (err) => {
-      this.logger.error('Redis client error:', err);
-    });
+    this.redisClient.on('error', () => {});
 
-    // Fire lazy connection
     this.redisClient.connect().catch((err) => {
-      this.logger.error('Failed to initiate Redis connection:', err);
+      this.logger.error('Failed to initiate Redis connection:', String(err));
     });
   }
 
