@@ -11,6 +11,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PeopleModule } from './modules/people/people.module';
+import { StudentsModule } from './modules/students/students.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PeopleModule } from './modules/people/people.module';
     RedisModule,
     AuthModule,
     PeopleModule,
+    StudentsModule,
     HealthModule,
   ],
   controllers: [],

@@ -42,8 +42,8 @@ export async function seedTenant(): Promise<void> {
       currency: 'INR',
       createdBy: SYSTEM_USER_ID,
       updatedBy: SYSTEM_USER_ID,
-      deletedAt: DEFAULT_DELETED_AT,
-      deletedBy: SYSTEM_USER_ID,
+      deletedAt: null,
+      deletedBy: null,
     },
   });
 }
@@ -75,8 +75,8 @@ export async function seedBranch(): Promise<void> {
       status: 'ACTIVE',
       createdBy: SYSTEM_USER_ID,
       updatedBy: SYSTEM_USER_ID,
-      deletedAt: DEFAULT_DELETED_AT,
-      deletedBy: SYSTEM_USER_ID,
+      deletedAt: null,
+      deletedBy: null,
     },
   });
 }
@@ -109,8 +109,8 @@ export async function seedUsers(roleIds: Map<string, string>): Promise<void> {
       passwordHash,
       createdBy: SYSTEM_USER_ID,
       updatedBy: SYSTEM_USER_ID,
-      deletedAt: DEFAULT_DELETED_AT,
-      deletedBy: SYSTEM_USER_ID,
+      deletedAt: null,
+      deletedBy: null,
     },
   });
 
@@ -138,8 +138,8 @@ export async function seedUsers(roleIds: Map<string, string>): Promise<void> {
       passwordHash,
       createdBy: SYSTEM_USER_ID,
       updatedBy: SYSTEM_USER_ID,
-      deletedAt: DEFAULT_DELETED_AT,
-      deletedBy: SYSTEM_USER_ID,
+      deletedAt: null,
+      deletedBy: null,
     },
   });
 
@@ -173,8 +173,8 @@ async function assignRole(userId: string, roleId: string): Promise<void> {
         createdBy: SYSTEM_USER_ID,
         updatedBy: SYSTEM_USER_ID,
         metadata: {},
-        deletedAt: DEFAULT_DELETED_AT,
-        deletedBy: SYSTEM_USER_ID,
+        deletedAt: null,
+        deletedBy: null,
       },
     });
   }
