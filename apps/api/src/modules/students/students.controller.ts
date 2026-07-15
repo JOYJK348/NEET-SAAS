@@ -41,8 +41,12 @@ export class StudentsController {
     description: 'Student created',
     type: StudentResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed (invalid age, invalid date format)',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 409, description: 'Duplicate student code or email' })
   create(
     @Body() dto: CreateStudentDto,
     @CurrentUser() user: AuthenticatedRequestUser,
@@ -98,8 +102,13 @@ export class StudentsController {
     description: 'Student updated',
     type: StudentResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Student not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation failed (invalid age, invalid status transition)',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Student not found' })
+  @ApiResponse({ status: 409, description: 'Duplicate student code' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateStudentDto,
