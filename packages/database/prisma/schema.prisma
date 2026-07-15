@@ -1321,6 +1321,8 @@ model Users {
   parent_profiles_updated_by           ParentProfiles[]               @relation("parent_profiles_updated_by_to_users")
   parent_profiles_deleted_by           ParentProfiles[]               @relation("parent_profiles_deleted_by_to_users")
   student_parentss                     StudentParents[]               @relation("student_parents_created_by_to_users")
+  student_parents_updated_by           StudentParents[]               @relation("student_parents_updated_by_to_users")
+  student_parents_deleted_by           StudentParents[]               @relation("student_parents_deleted_by_to_users")
   student_admissionss                  StudentAdmissions[]            @relation("student_admissions_created_by_to_users")
   student_admissions_updated_by        StudentAdmissions[]            @relation("student_admissions_updated_by_to_users")
   student_admissions_deleted_by        StudentAdmissions[]            @relation("student_admissions_deleted_by_to_users")
@@ -1769,6 +1771,9 @@ model StaffProfiles {
   createdByusers            Users?                   @relation("staff_profiles_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByusers            Users?                   @relation("staff_profiles_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   deletedByusers            Users?                   @relation("staff_profiles_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, employeeCode])
+  @@index([tenantId, employmentStatus])
 }
 
 model StudentProfiles {
@@ -1802,6 +1807,9 @@ model StudentProfiles {
   createdByusers              Users?                   @relation("student_profiles_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByusers              Users?                   @relation("student_profiles_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   deletedByusers              Users?                   @relation("student_profiles_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, studentCode])
+  @@index([tenantId, academicStatus])
 }
 
 model ParentProfiles {
@@ -1832,12 +1840,21 @@ model StudentParents {
   isPrimaryGuardian              Boolean                    @default(false)
   createdAt                      DateTime                   @default(now())
   createdBy                      String
+  updatedAt                      DateTime                   @default(now())
+  updatedBy                      String
+  deletedAt                      DateTime
+  deletedBy                      String
+  version                        Int                        @default(1)
   studentProfileIstudent_profile StudentProfiles?           @relation("student_parents_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   parentProfileIdparent_profiles ParentProfiles?            @relation("student_parents_parent_profile_id_to_parent_profiles", fields: [parentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes                 @relation("tenant_id_to_institutes", fields: [tenantId], references: [id], onDelete: Restrict)
   createdByusers                 Users?                     @relation("student_parents_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByusers                 Users?                     @relation("student_parents_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  deletedByusers                 Users?                     @relation("student_parents_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   @@id([studentProfileId, parentProfileId])
+  @@index([tenantId, parentProfileId])
+  @@index([tenantId, studentProfileId, isPrimaryGuardian])
 }
 
 model StudentAdmissions {
@@ -1867,6 +1884,8 @@ model StudentAdmissions {
 
   @@unique([tenantId, id])
   @@unique([tenantId, admissionNumber])
+  @@index([tenantId, branchId])
+  @@index([tenantId, academicYearId, admissionStatus])
 }
 
 model StudentBatchEnrollments {
@@ -1891,6 +1910,8 @@ model StudentBatchEnrollments {
   deletedByusers     Users?          @relation("student_batch_enrollments_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, id])
+  @@index([tenantId, batchId, status])
+  @@index([tenantId, studentAdmissionId, batchId])
 }
 
 model StaffDepartments {
@@ -1988,6 +2009,8 @@ model StaffBatchAssignments {
   deletedByusers               Users?         @relation("staff_batch_assignments_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, id])
+  @@index([tenantId, batchId])
+  @@index([tenantId, staffProfileId, batchId])
 }
 
 model StudentMedicalProfiles {
@@ -2010,6 +2033,8 @@ model StudentMedicalProfiles {
   createdByusers                 Users?           @relation("student_medical_profiles_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedByusers                 Users?           @relation("student_medical_profiles_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   deletedByusers                 Users?           @relation("student_medical_profiles_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, studentProfileId])
 }
 
 model StaffQualifications {
@@ -2059,8 +2084,9 @@ model EmergencyContacts {
   updatedByusers                 Users?           @relation("emergency_contacts_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
   deletedByusers                 Users?           @relation("emergency_contacts_deleted_by_to_users", fields: [deletedBy], references: [id], onDelete: SetNull)
 
-  @@unique([email])
+  @@unique([tenantId, email])
   @@unique([tenantId, id])
+  @@index([tenantId, studentProfileId])
 }
 
 model StaffEmploymentHistory {
