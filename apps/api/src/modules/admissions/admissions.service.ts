@@ -15,7 +15,11 @@ import { AdmissionResponseDto } from './dto/admission-response.dto';
 import { UpdateAdmissionStatusDto } from './dto/update-admission-status.dto';
 import { AdmissionHistoryResponseDto } from './dto/admission-history-response.dto';
 import { AdmissionNumberGenerator } from './utils/admission-number-generator';
-import { validateAdmissionStatusTransition } from './admissions.validation';
+import {
+  validateAdmissionStatusTransition,
+  validateTerminalState,
+  validateActiveAdmission,
+} from './admissions.validation';
 import { paginateAndMap } from '../../common/utils/prisma-paginator';
 import { AdmissionStatusEnum } from '@prisma/client';
 
@@ -175,9 +179,19 @@ export class AdmissionsService {
       throw new NotFoundException('Admission not found');
     }
 
+    validateTerminalState(admission.admissionStatus);
     validateAdmissionStatusTransition(admission.admissionStatus, dto.status);
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.status === AdmissionStatusEnum.ACTIVE) {
+        await validateActiveAdmission(
+          admission.studentProfileId,
+          tenantId,
+          admission.academicYearId,
+          { excludeAdmissionId: admissionId, prisma: tx },
+        );
+      }
+
       const result = await tx.studentAdmissions.update({
         where: { id: admissionId },
         data: {
