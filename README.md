@@ -42,6 +42,67 @@ Navigate directly to our structured documentation categories:
 
 ---
 
+## 🏛️ System Domain Architecture
+
+```
+Education Management Platform
+   │
+   ├── Institute (Tenant Root)
+   │
+   ├── Authentication
+   ├── People
+   │     ├── Student
+   │     ├── Staff
+   │     └── Parent
+   │
+   ├── Academic
+   ├── Attendance
+   ├── Learning
+   ├── Exams
+   ├── Fees
+   ├── Communication
+   ├── AI Services
+   └── Platform
+```
+
+---
+
+## 🗄️ Database Overview
+
+| Category      | Count |
+| :------------ | ----: |
+| Prisma Models |  214+ |
+| Tables        |  214+ |
+| Domains       |    13 |
+| API Endpoints |  360+ |
+| Migrations    |     4 |
+| ADR Documents |    19 |
+| Test Cases    |   49+ |
+
+---
+
+## 🗃️ Domain Model & ERD Index
+
+Every business domain has a dedicated Entity Relationship Diagram (ERD), entity specification, database design notes, and API implementation guide.
+
+| Domain                | Entity Specification                                             | ERD                                              | API Spec                                   | Status |
+| :-------------------- | :--------------------------------------------------------------- | :----------------------------------------------- | :----------------------------------------- | :----: |
+| **🏢 Institute**      | [Spec](docs/03-database/entities/01-institute-management.md)     | [ERD](docs/03-database/erd/01-institute.md)      | [API](docs/04-api/system/README.md)        |   ✅   |
+| **👤 Authentication** | [Spec](docs/03-database/entities/02-user-management.md)          | [ERD](docs/03-database/erd/02-user.md)           | [API](docs/04-api/auth/README.md)          |   ✅   |
+| **👨‍🎓 Student**        | [Spec](docs/03-database/entities/02a-student-management.md)      | [ERD](docs/03-database/erd/02a-student.md)       | [API](docs/04-api/students/README.md)      |   🚧   |
+| **👨‍🏫 Staff**          | [Spec](docs/03-database/entities/02b-tutor-management.md)        | [ERD](docs/03-database/erd/02b-tutor.md)         | [API](docs/04-api/users/README.md)         |   ⏳   |
+| **👨‍👩‍👧 Parent**         | [Spec](docs/03-database/entities/02c-parent-management.md)       | [ERD](docs/03-database/erd/02c-parent.md)        | [API](docs/04-api/students/README.md)      |   ⏳   |
+| **📚 Academic**       | [Spec](docs/03-database/entities/03-academic-management.md)      | [ERD](docs/03-database/erd/03-academic.md)       | [API](docs/04-api/academics/README.md)     |   ⏳   |
+| **⏱️ Attendance**     | [Spec](docs/03-database/entities/08-system-management.md)        | [ERD](docs/03-database/erd/08-system.md)         | [API](docs/04-api/attendance/README.md)    |   ⏳   |
+| **🧪 Exams**          | [Spec](docs/03-database/entities/05-assessment-management.md)    | [ERD](docs/03-database/erd/05-assessment.md)     | [API](docs/04-api/assessments/README.md)   |   ⏳   |
+| **💰 Fees**           | [Spec](docs/03-database/entities/09-fee-management.md)           | [ERD](docs/03-database/erd/09-fee-management.md) | [API](docs/04-api/fees/README.md)          |   ⏳   |
+| **🎥 Learning**       | [Spec](docs/03-database/entities/04-learning-management.md)      | [ERD](docs/03-database/erd/04-learning.md)       | [API](docs/04-api/lms/README.md)           |   ⏳   |
+| **📢 Communication**  | [Spec](docs/03-database/entities/06-communication-management.md) | [ERD](docs/03-database/erd/06-communication.md)  | [API](docs/04-api/communication/README.md) |   ⏳   |
+| **🤖 AI Services**    | [Spec](docs/03-database/entities/08-system-management.md)        | [ERD](docs/03-database/erd/08-system.md)         | [API](docs/04-api/13-ai-admin-api.md)      |   ⏳   |
+| **⚙️ Platform**       | [Spec](docs/03-database/entities/08-system-management.md)        | [ERD](docs/03-database/erd/08-system.md)         | [API](docs/04-api/14-platform-api.md)      |   ⏳   |
+
+---
+
 ## 🏛️ Documentation Categories Index
 
 Explore the folders inside [`docs/`](docs/README.md) organizing all specifications:
@@ -118,4 +179,4 @@ pnpm lint
 pnpm --filter api test:e2e
 ```
 
-Refer to the complete **[Developer Onboarding Manual](docs/08-contributing/README.md)** for branch protocols andConventional Commit guidelines before opening pull requests!
+Refer to the complete **[Developer Onboarding Manual](docs/08-contributing/README.md)** for branch protocols and Conventional Commit guidelines before opening pull requests!
