@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PeopleModule } from './modules/people/people.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
+import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enrollments.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AdmissionsModule } from './modules/admissions/admissions.module';
     PeopleModule,
     StudentsModule,
     AdmissionsModule,
+    BatchEnrollmentsModule,
     HealthModule,
   ],
   controllers: [],
