@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { PeopleModule } from '../people/people.module';
-import { AdmissionsController } from './admissions.controller';
+import { AdmissionsStudentController } from './admissions-student.controller';
+import { AdmissionItemController } from './admission-item.controller';
 import { AdmissionsService } from './admissions.service';
 import { AdmissionNumberGenerator } from './utils/admission-number-generator';
 
 @Module({
   imports: [PeopleModule],
-  controllers: [AdmissionsController],
+  controllers: [AdmissionsStudentController, AdmissionItemController],
   providers: [AdmissionsService, AdmissionNumberGenerator],
   exports: [AdmissionsService],
 })

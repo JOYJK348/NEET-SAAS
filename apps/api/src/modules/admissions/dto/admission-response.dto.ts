@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AdmissionStatusEnum } from '@prisma/client';
 
 export class AdmissionResponseDto {
@@ -40,4 +40,16 @@ export class AdmissionResponseDto {
     example: '2026-07-16T12:00:00.000Z',
   })
   createdAt: Date;
+
+  @ApiProperty({
+    description: 'Updated timestamp',
+    example: '2026-07-16T12:00:00.000Z',
+  })
+  updatedAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'Status history record count',
+    example: 2,
+  })
+  historyCount?: number;
 }
