@@ -12,6 +12,7 @@ import { RedisModule } from './common/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PeopleModule } from './modules/people/people.module';
 import { StudentsModule } from './modules/students/students.module';
+import { AdmissionsModule } from './modules/admissions/admissions.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { StudentsModule } from './modules/students/students.module';
     AuthModule,
     PeopleModule,
     StudentsModule,
+    AdmissionsModule,
     HealthModule,
   ],
   controllers: [],
