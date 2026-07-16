@@ -40,6 +40,8 @@ All fundamental architectural decisions, safety guards, and system scoping detai
 - 🗄️ **[Partition & Archive Strategy](docs/architecture/partition-archive-strategy.md):** Lifecycle rules for high-volume database tables.
 - 🎯 **[V1 Scope Freeze](docs/v1-scope-freeze.md):** Complete V1 MVP specification and sprint plan.
 - 🧩 **[Profile System](docs/architecture/13-profile-system.md):** Generic platform configuration for any educational vertical.
+- 🔌 **[API Master Register Index](docs/architecture/api-design/00-api-index.md):** The 362+ planned endpoints index.
+- 📘 **[API Design Conventions Guide](docs/architecture/api-design/01-api-design-conventions.md):** REST parameters, filtering protocols, and error response standards.
 
 ---
 
@@ -66,22 +68,22 @@ Education Core Platform
       └── NEET Coaching V1 (first implementation)
 ```
 
-Each domain defines its entities, relationships, and ERD structures:
+Each domain defines its entities, relationships, ERD structures, and API endpoints:
 
-| Domain                  | Entity Specs                                                                     | ERD Models                                                     |
-| :---------------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------- |
-| **01. Institute**       | [Institute Specs](docs/architecture/entities/01-institute-management.md)         | [Institute ERD](docs/architecture/erd/01-institute.md)         |
-| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md)                   | [User ERD](docs/architecture/erd/02-user.md)                   |
-| **02a. Student**        | [Student Specs](docs/architecture/entities/02a-student-management.md)            | [Student ERD](docs/architecture/erd/02a-student.md)            |
-| **02b. Tutor**          | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md)                | [Tutor ERD](docs/architecture/erd/02b-tutor.md)                |
-| **02c. Parent**         | [Parent Specs](docs/architecture/entities/02c-parent-management.md)              | [Parent ERD](docs/architecture/erd/02c-parent.md)              |
-| **03. Academic**        | [Academic Specs](docs/architecture/entities/03-academic-management.md)           | [Academic ERD](docs/architecture/erd/03-academic.md)           |
-| **04. Learning**        | [Learning Specs](docs/architecture/entities/04-learning-management.md)           | [Learning ERD](docs/architecture/erd/04-learning.md)           |
-| **05. Assessment**      | [Assessment Specs](docs/architecture/entities/05-assessment-management.md)       | [Assessment ERD](docs/architecture/erd/05-assessment.md)       |
-| **06. Communication**   | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication ERD](docs/architecture/erd/06-communication.md) |
-| **07. Reporting**       | [Reporting Specs](docs/architecture/entities/07-reporting-management.md)         | [Reporting ERD](docs/architecture/erd/07-reporting.md)         |
-| **08. System**          | [System Specs](docs/architecture/entities/08-system-management.md)               | [System ERD](docs/architecture/erd/08-system.md)               |
-| **09. Billing**         | [Fee Specs](docs/architecture/entities/09-fee-management.md)                     | [Fee ERD](docs/architecture/erd/09-fee-management.md)          |
+| Domain                  | Entity Specs                                                                     | ERD Models                                                     | API Spec / Endpoint Catalog                                                      |
+| :---------------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------- | :------------------------------------------------------------------------------- |
+| **01. Institute**       | [Institute Specs](docs/architecture/entities/01-institute-management.md)         | [Institute ERD](docs/architecture/erd/01-institute.md)         | [System API](docs/architecture/api-design/11-system-api/README.md)               |
+| **02. User (Identity)** | [User Specs](docs/architecture/entities/02-user-management.md)                   | [User ERD](docs/architecture/erd/02-user.md)                   | [Auth API](docs/architecture/api-design/02-auth-api/README.md)                   |
+| **02a. Student**        | [Student Specs](docs/architecture/entities/02a-student-management.md)            | [Student ERD](docs/architecture/erd/02a-student.md)            | [Student API](docs/architecture/api-design/04-student-api/README.md)             |
+| **02b. Tutor**          | [Tutor Specs](docs/architecture/entities/02b-tutor-management.md)                | [Tutor ERD](docs/architecture/erd/02b-tutor.md)                | [Tutor API](docs/architecture/api-design/03-user-api/README.md)                  |
+| **02c. Parent**         | [Parent Specs](docs/architecture/entities/02c-parent-management.md)              | [Parent ERD](docs/architecture/erd/02c-parent.md)              | [Student API](docs/architecture/api-design/04-student-api/README.md)             |
+| **03. Academic**        | [Academic Specs](docs/architecture/entities/03-academic-management.md)           | [Academic ERD](docs/architecture/erd/03-academic.md)           | [Academic API](docs/architecture/api-design/05-academic-api/README.md)           |
+| **04. Learning**        | [Learning Specs](docs/architecture/entities/04-learning-management.md)           | [Learning ERD](docs/architecture/erd/04-learning.md)           | [LMS API](docs/architecture/api-design/07-lms-api/README.md)                     |
+| **05. Assessment**      | [Assessment Specs](docs/architecture/entities/05-assessment-management.md)       | [Assessment ERD](docs/architecture/erd/05-assessment.md)       | [Assessment API](docs/architecture/api-design/06-assessment-api/README.md)       |
+| **06. Communication**   | [Communication Specs](docs/architecture/entities/06-communication-management.md) | [Communication ERD](docs/architecture/erd/06-communication.md) | [Communication API](docs/architecture/api-design/10-communication-api/README.md) |
+| **07. Reporting**       | [Reporting Specs](docs/architecture/entities/07-reporting-management.md)         | [Reporting ERD](docs/architecture/erd/07-reporting.md)         | [Analytics API](docs/architecture/api-design/12-analytics-api/README.md)         |
+| **08. System**          | [System Specs](docs/architecture/entities/08-system-management.md)               | [System ERD](docs/architecture/erd/08-system.md)               | [System API](docs/architecture/api-design/11-system-api/README.md)               |
+| **09. Fee Management**  | [Fee Specs](docs/architecture/entities/09-fee-management.md)                     | [Fee ERD](docs/architecture/erd/09-fee-management.md)          | [Fee API](docs/architecture/api-design/08-fee-api/README.md)                     |
 
 ---
 
