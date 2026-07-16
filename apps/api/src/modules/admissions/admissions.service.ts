@@ -1,13 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import {
+  PaginatedResult,
+  QueryParamsDto,
+} from '../../common/dto/query-params.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../common/utils/tenant-scoped-prisma';
 import { CreateAdmissionDto } from './dto/create-admission.dto';
 import { AdmissionResponseDto } from './dto/admission-response.dto';
+import { UpdateAdmissionStatusDto } from './dto/update-admission-status.dto';
+import { AdmissionHistoryResponseDto } from './dto/admission-history-response.dto';
 import { AdmissionNumberGenerator } from './utils/admission-number-generator';
+import { validateAdmissionStatusTransition } from './admissions.validation';
+import { paginateAndMap } from '../../common/utils/prisma-paginator';
 import { AdmissionStatusEnum } from '@prisma/client';
 
 const ACTIVE_ADMISSION_STATUSES: AdmissionStatusEnum[] = [
@@ -78,6 +87,153 @@ export class AdmissionsService {
     });
 
     return this.toResponse(admission);
+  }
+
+  async findAll(
+    studentId: string,
+    tenantId: string,
+    query: QueryParamsDto,
+  ): Promise<PaginatedResult<AdmissionResponseDto>> {
+    await this.validateStudent(studentId, tenantId);
+
+    const where = {
+      ...this.tenantScoped.buildWhere(tenantId, {
+        studentProfileId: studentId,
+      }),
+    };
+
+    return paginateAndMap(
+      this.prisma.studentAdmissions,
+      {
+        where,
+        orderBy: { createdAt: 'desc' as const },
+      },
+      query,
+      tenantId,
+      (admission: any) => this.toResponse(admission),
+    );
+  }
+
+  async findCurrent(
+    studentId: string,
+    tenantId: string,
+  ): Promise<AdmissionResponseDto> {
+    await this.validateStudent(studentId, tenantId);
+
+    const priorityOrder: AdmissionStatusEnum[] = [
+      AdmissionStatusEnum.ACTIVE,
+      AdmissionStatusEnum.CONFIRMED,
+      AdmissionStatusEnum.PENDING,
+    ];
+
+    for (const status of priorityOrder) {
+      const admission = await this.prisma.studentAdmissions.findFirst({
+        where: this.tenantScoped.buildWhere(tenantId, {
+          studentProfileId: studentId,
+          admissionStatus: status,
+        }),
+      });
+
+      if (admission) {
+        return this.toResponse(admission);
+      }
+    }
+
+    throw new NotFoundException('No current active admission found');
+  }
+
+  async findOne(
+    admissionId: string,
+    tenantId: string,
+  ): Promise<AdmissionResponseDto> {
+    const admission = await this.prisma.studentAdmissions.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { id: admissionId }),
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+
+    const historyCount = await this.prisma.admissionStatusHistory.count({
+      where: { admissionId, tenantId },
+    });
+
+    return { ...this.toResponse(admission), historyCount };
+  }
+
+  async updateStatus(
+    admissionId: string,
+    dto: UpdateAdmissionStatusDto,
+    tenantId: string,
+    userId: string,
+  ): Promise<AdmissionResponseDto> {
+    const admission = await this.prisma.studentAdmissions.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { id: admissionId }),
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+
+    validateAdmissionStatusTransition(admission.admissionStatus, dto.status);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.studentAdmissions.update({
+        where: { id: admissionId },
+        data: {
+          admissionStatus: dto.status,
+          updatedBy: userId,
+          ...(dto.remarks !== undefined ? { remarks: dto.remarks } : {}),
+        },
+      });
+
+      await tx.admissionStatusHistory.create({
+        data: {
+          tenantId,
+          admissionId,
+          fromStatus: admission.admissionStatus,
+          toStatus: dto.status,
+          reason: dto.reason || null,
+          changedAt: new Date(),
+          changedBy: userId,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+
+      return result;
+    });
+
+    return this.toResponse(updated);
+  }
+
+  async getHistory(
+    admissionId: string,
+    tenantId: string,
+  ): Promise<AdmissionHistoryResponseDto[]> {
+    const admission = await this.prisma.studentAdmissions.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { id: admissionId }),
+    });
+
+    if (!admission) {
+      throw new NotFoundException('Admission not found');
+    }
+
+    const history = await this.prisma.admissionStatusHistory.findMany({
+      where: { admissionId, tenantId, deletedAt: null },
+      orderBy: { changedAt: 'asc' },
+    });
+
+    return history.map((h: any) => ({
+      id: h.id,
+      admissionId: h.admissionId,
+      fromStatus: h.fromStatus,
+      toStatus: h.toStatus,
+      reason: h.reason,
+      changedBy: h.changedBy,
+      changedAt: h.changedAt,
+      createdAt: h.createdAt,
+    }));
   }
 
   private async validateStudent(
@@ -168,6 +324,7 @@ export class AdmissionsService {
     admissionStatus: AdmissionStatusEnum;
     admissionDate: Date;
     createdAt: Date;
+    updatedAt: Date;
   }): AdmissionResponseDto {
     return {
       id: admission.id,
@@ -179,6 +336,7 @@ export class AdmissionsService {
       admissionStatus: admission.admissionStatus,
       admissionDate: admission.admissionDate,
       createdAt: admission.createdAt,
+      updatedAt: admission.updatedAt,
     };
   }
 }
