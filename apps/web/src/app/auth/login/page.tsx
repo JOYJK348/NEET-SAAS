@@ -12,9 +12,11 @@ import {
   AlertCircle,
   GraduationCap,
   Target,
-  TrendingUp,
   Building2,
   Bot,
+  Contact,
+  DollarSign,
+  Users,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -40,28 +42,40 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const features = [
   {
-    name: 'NEET Practice',
-    description: 'Mock tests & previous year questions',
-    icon: Target,
+    name: 'Unified Academics',
+    description: 'Manage branches, batches, courses, schedules, and subject allocations',
+    icon: Building2,
     color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400',
   },
   {
-    name: 'Student Analytics',
-    description: 'Performance insights for students & parents',
-    icon: TrendingUp,
+    name: 'Structured Mock Testing',
+    description: 'Configure tests, handle bulk OMR scan uploads, evaluate, and publish keys',
+    icon: Target,
+    color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400',
+  },
+  {
+    name: 'Student & Parent Portals',
+    description: 'Instant progress monitoring, dashboard, and performance scorecards',
+    icon: Users,
     color: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400',
   },
   {
-    name: 'Academy Management',
-    description: 'Admissions, batches & fee management',
-    icon: Building2,
+    name: 'AI-Powered Doubts Mentor',
+    description: 'Automatic doubt clearing, concepts explanation, and performance analytics',
+    icon: Bot,
+    color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400',
+  },
+  {
+    name: 'Admissions & CRM',
+    description: 'Track applications, documents verification, and registration queues',
+    icon: Contact,
     color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400',
   },
   {
-    name: 'AI Mentor',
-    description: 'Instant doubts & concept explanations',
-    icon: Bot,
-    color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400',
+    name: 'Smart Fee Billing',
+    description: 'Set custom structures, track installment plans, overdue reminders, and receipts',
+    icon: DollarSign,
+    color: 'text-rose-600 bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400',
   },
 ];
 
@@ -168,8 +182,8 @@ function LoginForm() {
                     <feature.icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-foreground">{feature.name}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{feature.description}</p>
+                    <span className="text-sm font-bold text-white">{feature.name}</span>
+                    <p className="text-xs text-purple-200/90 mt-0.5">{feature.description}</p>
                   </div>
                 </div>
               ))}
@@ -182,7 +196,7 @@ function LoginForm() {
           className="login-page__form-section bg-gradient-to-br from-accent/30 via-background to-secondary/30 dark:from-muted/20 dark:via-background dark:to-secondary/10"
           role="main"
         >
-          <div className="login-page__card shadow-2xl border border-border/80 bg-white/95 dark:bg-card/95 backdrop-blur-md">
+          <div className="login-page__card shadow-2xl border border-secondary bg-secondary dark:bg-zinc-900/95 backdrop-blur-md">
             <div className="login-page__header">
               <h2 className="login-page__title">Welcome back</h2>
               <p className="login-page__subtitle">Sign in to your account to continue</p>

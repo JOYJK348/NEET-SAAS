@@ -149,40 +149,40 @@
 
 @layer components {
   .login-page {
-    @apply min-h-screen bg-background;
+    @apply min-h-screen lg:h-screen lg:overflow-hidden bg-background;
   }
   .login-page__layout {
-    @apply min-h-screen flex;
+    @apply min-h-screen lg:h-full flex;
   }
   .login-page__brand {
-    @apply hidden lg:flex lg:w-3/5 flex-col items-center justify-center p-12 lg:p-20 bg-primary-light;
+    @apply hidden lg:flex lg:w-3/5 flex-col items-center justify-center p-12 lg:p-20 bg-gradient-to-br from-indigo-950 via-[#7c3aed] to-purple-900 text-white relative overflow-hidden;
   }
   .login-page__brand-content {
-    @apply max-w-xl w-full text-center lg:text-left;
+    @apply max-w-xl w-full text-left relative z-10;
   }
   .login-page__logo {
-    @apply inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-6;
+    @apply inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 text-white border border-white/20 mb-6;
   }
   .login-page__name {
-    @apply text-4xl lg:text-5xl font-bold text-foreground tracking-tight mb-3;
+    @apply text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-3 leading-tight;
   }
   .login-page__tagline {
-    @apply text-lg lg:text-xl text-muted-foreground mb-10 max-w-lg;
+    @apply text-lg lg:text-xl text-purple-100/90 mb-10 max-w-lg font-medium;
   }
   .login-page__features {
     @apply grid grid-cols-2 gap-4 lg:gap-6;
   }
   .login-page__feature {
-    @apply flex items-center gap-3 p-4 rounded-xl bg-white border border-border text-left transition-subtle hover:shadow-sm;
+    @apply flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 text-left transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-md hover:-translate-y-0.5;
   }
   .login-page__feature-icon {
-    @apply flex-shrink-0 w-10 h-10 rounded-xl bg-primary-light text-primary flex items-center justify-center;
+    @apply flex-shrink-0 w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center;
   }
   .login-page__feature-text {
-    @apply text-sm font-medium text-foreground;
+    @apply text-sm font-semibold text-white;
   }
   .login-page__form-section {
-    @apply flex-1 flex items-center justify-center p-6 lg:p-12;
+    @apply flex-1 flex items-center justify-center p-6 lg:p-12 lg:h-full lg:overflow-y-auto;
   }
   .login-page__card {
     @apply w-full max-w-lg card-premium p-6 lg:p-10 shadow-xl;
@@ -279,31 +279,31 @@
     @apply fixed bottom-4 left-1/2 -translate-x-1/2 text-xs text-muted-foreground;
   }
   .login-page__mobile-brand {
-    @apply lg:hidden flex flex-col items-center justify-center p-8 pb-4 bg-primary-light;
+    @apply lg:hidden flex flex-col items-center justify-center p-8 pb-6 bg-gradient-to-br from-indigo-950 via-[#7c3aed] to-purple-900 text-white w-full;
   }
   .login-page__mobile-brand-content {
     @apply max-w-xl w-full text-center;
   }
   .login-page__mobile-logo {
-    @apply inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground mb-4;
+    @apply inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 text-white border border-white/20 mb-4;
   }
   .login-page__mobile-name {
-    @apply text-3xl font-bold text-foreground tracking-tight mb-2;
+    @apply text-2xl font-bold text-white tracking-tight mb-2;
   }
   .login-page__mobile-tagline {
-    @apply text-base text-muted-foreground mb-8 max-w-lg;
+    @apply text-sm text-purple-100/90 mb-6 max-w-lg;
   }
   .login-page__mobile-features {
     @apply grid grid-cols-2 gap-3 w-full max-w-xl;
   }
   .login-page__mobile-feature {
-    @apply flex items-center gap-2 p-3 rounded-xl bg-white border border-border text-left transition-subtle;
+    @apply flex items-center gap-2 p-3 rounded-xl bg-white/5 border border-white/10 text-left transition-all;
   }
   .login-page__mobile-feature-icon {
-    @apply flex-shrink-0 w-8 h-8 rounded-xl bg-primary-light text-primary flex items-center justify-center;
+    @apply flex-shrink-0 w-8 h-8 rounded-xl bg-white/10 text-white flex items-center justify-center;
   }
   .login-page__mobile-feature-text {
-    @apply text-xs font-medium text-foreground;
+    @apply text-xs font-semibold text-white;
   }
   .caps-lock-warning {
     @apply absolute right-11 top-1/2 -translate-y-1/2 text-xs text-warning flex items-center gap-1;
