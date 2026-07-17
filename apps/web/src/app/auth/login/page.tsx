@@ -1,40 +1,84 @@
 'use client';
 
 import { useState, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+  Lock,
+  AlertCircle,
+  GraduationCap,
+  Target,
+  TrendingUp,
+  Building2,
+  Bot,
+} from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
+import { z } from 'zod';
 import { useAuth } from '@/providers/auth-provider';
-import { loginSchema, type LoginFormData } from '@/lib/validations/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Loader2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { Loading } from '@/components/ui/loading';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .min(8, 'Password must be at least 8 characters'),
+  rememberMe: z.boolean().optional(),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
+const features = [
+  {
+    name: 'NEET Practice',
+    description: 'Mock tests & previous year questions',
+    icon: Target,
+    color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400',
+  },
+  {
+    name: 'Student Analytics',
+    description: 'Performance insights for students & parents',
+    icon: TrendingUp,
+    color: 'text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400',
+  },
+  {
+    name: 'Academy Management',
+    description: 'Admissions, batches & fee management',
+    icon: Building2,
+    color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400',
+  },
+  {
+    name: 'AI Mentor',
+    description: 'Instant doubts & concept explanations',
+    icon: Bot,
+    color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400',
+  },
+];
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -46,167 +90,264 @@ function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
+    setError(null);
+
     try {
-      await login(data.email, data.password);
-      toast.success('Welcome back!', { description: 'You have been successfully logged in.' });
+      await login(data.email, data.password, data.rememberMe);
+      toast.success('Welcome back!', { description: 'You have been signed in successfully.' });
       router.push(callbackUrl);
       router.refresh();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Invalid email or password';
-      toast.error('Login failed', { description: message });
+    } catch (err: unknown) {
+      let errorMessage = 'Invalid email or password. Please try again.';
+      if (err && typeof err === 'object') {
+        if (
+          'response' in err &&
+          err.response &&
+          typeof err.response === 'object' &&
+          'data' in err.response
+        ) {
+          const responseData = err.response.data as { message?: string | string[] };
+          if (responseData && responseData.message) {
+            errorMessage = Array.isArray(responseData.message)
+              ? responseData.message[0]
+              : responseData.message;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+      }
+      setError(errorMessage);
+      toast.error('Sign in failed', { description: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const isLoadingOrSubmitting = isLoading || isSubmitting;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>Sign in to your account to continue</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  className="pl-10"
-                  {...register('email')}
-                  disabled={isSubmitting || authLoading}
-                  aria-invalid={!!errors.email}
-                  aria-describedby={errors.email ? 'email-error' : undefined}
-                />
-              </div>
-              {errors.email && (
-                <p id="email-error" className="text-sm text-red-500" role="alert">
-                  {errors.email.message}
-                </p>
-              )}
+    <div className="login-page bg-gradient-to-br from-slate-50 via-gray-100 to-slate-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+      <div className="login-page__layout flex-col lg:flex-row">
+        {/* Mobile Header - Branding on top for mobile */}
+        <div className="login-page__mobile-brand">
+          <div className="login-page__mobile-brand-content">
+            <div className="login-page__mobile-logo">
+              <GraduationCap className="h-8 w-8" aria-hidden="true" />
+            </div>
+            <h1 className="login-page__mobile-name">NEET Academy Management Platform</h1>
+            <p className="login-page__mobile-tagline">
+              AI-Powered Platform for Modern NEET Coaching Institutes
+            </p>
+            <div className="login-page__mobile-features" role="list" aria-label="Platform features">
+              {features.map((feature, index) => (
+                <div key={index} className="login-page__mobile-feature">
+                  <div className="login-page__mobile-feature-icon">
+                    <feature.icon className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <span className="login-page__mobile-feature-text">{feature.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Branding (Desktop only, now on right due to flex-row-reverse) */}
+        <aside className="login-page__brand" aria-label="Brand information">
+          <div className="login-page__brand-content">
+            <div className="login-page__logo">
+              <GraduationCap className="h-10 w-10" aria-hidden="true" />
+            </div>
+            <h1 className="login-page__name">NEET Academy Management Platform</h1>
+            <p className="login-page__tagline">
+              AI-Powered Platform for Modern NEET Coaching Institutes
+            </p>
+            <div className="login-page__features" role="list" aria-label="Platform features">
+              {features.map((feature, index) => (
+                <div key={index} className="login-page__feature">
+                  <div className="login-page__feature-icon">
+                    <feature.icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-foreground">{feature.name}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">{feature.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Left Panel - Login Form (Desktop only, now on left due to flex-row-reverse) */}
+        <main
+          className="login-page__form-section bg-gradient-to-br from-accent/30 via-background to-secondary/30 dark:from-muted/20 dark:via-background dark:to-secondary/10"
+          role="main"
+        >
+          <div className="login-page__card shadow-2xl border border-border/80 bg-white/95 dark:bg-card/95 backdrop-blur-md">
+            <div className="login-page__header">
+              <h2 className="login-page__title">Welcome back</h2>
+              <p className="login-page__subtitle">Sign in to your account to continue</p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  {...register('password')}
-                  disabled={isSubmitting || authLoading}
-                  aria-invalid={!!errors.password}
-                  aria-describedby={errors.password ? 'password-error' : undefined}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+            <div className="pt-0">
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                  <div>
+                    <AlertTitle className="text-sm font-medium">Sign in failed</AlertTitle>
+                    <AlertDescription className="text-sm">{error}</AlertDescription>
+                  </div>
+                </Alert>
+              )}
+
+              <form onSubmit={handleSubmit(onSubmit)} className="login-page__form" noValidate>
+                <div className="login-page__field">
+                  <Label htmlFor="email" className="login-page__label">
+                    Email address
+                  </Label>
+                  <div className="login-page__input-wrapper">
+                    <Mail className="login-page__input-icon" aria-hidden="true" />
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      className={cn('pl-12 pr-4', errors.email && 'input-error')}
+                      disabled={isLoadingOrSubmitting}
+                      aria-invalid={errors.email ? 'true' : 'false'}
+                      aria-describedby={errors.email ? 'email-error' : undefined}
+                      {...register('email')}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p
+                      id="email-error"
+                      className="text-sm text-red-600 dark:text-red-400"
+                      role="alert"
+                    >
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="login-page__field">
+                  <div className="login-page__field-options">
+                    <Label htmlFor="password" className="login-page__label">
+                      Password
+                    </Label>
+                    <Link href="/auth/forgot-password" className="login-page__forgot-link">
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="login-page__input-wrapper">
+                    <Lock className="login-page__input-icon" aria-hidden="true" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                      className={cn('pl-12 pr-12', errors.password && 'input-error')}
+                      disabled={isLoadingOrSubmitting}
+                      aria-invalid={errors.password ? 'true' : 'false'}
+                      aria-describedby={errors.password ? 'password-error' : undefined}
+                      {...register('password')}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="login-page__toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
+                      disabled={isLoadingOrSubmitting}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </Button>
+                  </div>
+                  {errors.password && (
+                    <p
+                      id="password-error"
+                      className="text-sm text-red-600 dark:text-red-400"
+                      role="alert"
+                    >
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="login-page__field-options">
+                  <div className="login-page__checkbox-wrapper">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      className="login-page__checkbox"
+                      {...register('rememberMe')}
+                      disabled={isLoadingOrSubmitting}
+                    />
+                    <Label
+                      htmlFor="rememberMe"
+                      className="login-page__checkbox-label cursor-pointer"
+                    >
+                      Remember me
+                    </Label>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="login-page__submit"
+                  disabled={isLoadingOrSubmitting || !isValid}
+                  aria-busy={isLoadingOrSubmitting}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p id="password-error" className="text-sm text-red-500" role="alert">
-                  {errors.password.message}
-                </p>
-              )}
+                  {isLoadingOrSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
+                      Signing in...
+                    </>
+                  ) : (
+                    'Sign in'
+                  )}
+                </Button>
+              </form>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  {...register('rememberMe')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-gray-600 dark:text-gray-400">Remember me</span>
-              </label>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              disabled={isSubmitting || authLoading}
-            >
-              {isSubmitting || authLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign in'
-              )}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <div className="relative w-full">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500">Or continue with</span>
+            <div className="items-center p-6 flex flex-col space-y-4 pt-6 border-t border-border mt-6">
+              <p className="text-center text-xs text-muted-foreground">
+                By signing in, you agree to our{' '}
+                <Link href="/terms" className="text-primary hover:text-primary/80 underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-primary hover:text-primary/80 underline">
+                  Privacy Policy
+                </Link>
+              </p>
+              <p className="text-center text-xs text-muted-foreground">v1.0.0</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" type="button" className="w-full">
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              Google
-            </Button>
-            <Button variant="outline" type="button" className="w-full">
-              <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z" />
-              </svg>
-              GitHub
-            </Button>
-          </div>
-        </CardFooter>
-      </Card>
-      <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-        Don&apos;t have an account?{' '}
-        <Link href="/auth/register" className="text-primary font-medium hover:underline">
-          Sign up
-        </Link>
-      </p>
+        </main>
+      </div>
     </div>
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   return (
-    <Suspense fallback={<Loading message="Loading login form..." />}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"
+            aria-label="Loading..."
+          />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
+}
+
+export default function LoginPage() {
+  return <LoginPageContent />;
 }

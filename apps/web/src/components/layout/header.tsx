@@ -17,9 +17,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTheme } from 'next-themes';
 
-export function Header() {
+interface HeaderProps {
+  isMobile: boolean;
+  setIsMobileOpen: (open: boolean) => void;
+}
+
+export function Header({ isMobile, setIsMobileOpen }: HeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -38,15 +42,18 @@ export function Header() {
       <div className="flex h-full items-center justify-between px-4 lg:px-6">
         {/* Left side - Mobile menu button and breadcrumbs */}
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
+          {/* Mobile menu button - only show on mobile */}
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          )}
 
           {/* Breadcrumbs */}
           <nav className="hidden md:flex items-center gap-2 text-sm" aria-label="Breadcrumb">

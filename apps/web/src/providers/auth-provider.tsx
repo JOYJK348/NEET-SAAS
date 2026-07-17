@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshToken, logoutStore, setTokens, router]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
     try {
       const data = await api.post<{ user: User; accessToken: string; refreshToken: string }>(
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         { email, password },
       );
       const { user, accessToken, refreshToken } = data;
-      setAuth(user, accessToken, refreshToken);
+      setAuth(user, accessToken, refreshToken, rememberMe);
     } catch (error) {
       setLoading(false);
       throw error;

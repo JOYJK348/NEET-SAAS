@@ -10,13 +10,18 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  Calendar,
   DollarSign,
   Settings,
-  Bell,
   LogOut,
   Menu,
   X,
+  Building2,
+  GraduationCap,
+  Target,
+  TrendingUp,
+  Megaphone,
+  BookMarked,
+  Contact,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -30,21 +35,39 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Students', href: '/dashboard/students', icon: Users },
-  { name: 'Admissions', href: '/dashboard/admissions', icon: BookOpen },
-  { name: 'Batches', href: '/dashboard/batches', icon: Calendar },
-  { name: 'Attendance', href: '/dashboard/attendance', icon: Calendar },
-  { name: 'Fees', href: '/dashboard/fees', icon: DollarSign },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-];
+interface SidebarProps {
+  isMobile: boolean;
+  isMobileOpen: boolean;
+  setIsMobileOpen: (open: boolean) => void;
+}
 
-export function Sidebar() {
+export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
+
+  const navigation =
+    user?.roleCode === 'PLATFORM_ADMIN'
+      ? [
+          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+          { name: 'Institutes', href: '/dashboard/institutes', icon: Building2 },
+          { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users },
+          { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign },
+          { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+        ]
+      : [
+          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+          { name: 'Students', href: '/dashboard/students', icon: Users },
+          { name: 'Parents', href: '/dashboard/parents', icon: Contact },
+          { name: 'Tutors', href: '/dashboard/tutors', icon: GraduationCap },
+          { name: 'Academics', href: '/dashboard/academics', icon: BookOpen },
+          { name: 'Mock Tests', href: '/dashboard/mock-tests', icon: Target },
+          { name: 'Study Materials', href: '/dashboard/study-materials', icon: BookMarked },
+          { name: 'Announcements', href: '/dashboard/announcements', icon: Megaphone },
+          { name: 'Billing', href: '/dashboard/billing', icon: DollarSign },
+          { name: 'Reports & Analytics', href: '/dashboard/reports', icon: TrendingUp },
+          { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+        ];
 
   return (
     <>
@@ -60,7 +83,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out',
+          'fixed left-0 top-0 z-50 h-screen flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out',
           isCollapsed ? 'w-16' : 'w-64',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
@@ -145,22 +168,6 @@ export function Sidebar() {
             <div className="space-y-1 mt-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start gap-3 px-3 py-2">
-                    <Bell className="h-4 w-4" aria-hidden="true" />
-                    <span>Notifications</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-center text-gray-500">
-                    No new notifications
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     className="w-full justify-start gap-3 px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -183,11 +190,6 @@ export function Sidebar() {
             </div>
           ) : (
             <div className="space-y-1 mt-4">
-              <Button variant="ghost" size="icon" className="w-full justify-center" asChild>
-                <Link href="/dashboard/notifications" title="Notifications">
-                  <Bell className="h-5 w-5" aria-hidden="true" />
-                </Link>
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -202,16 +204,18 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile menu button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed bottom-4 left-4 z-50 lg:hidden"
-        onClick={() => setIsMobileOpen(true)}
-        aria-label="Open menu"
-      >
-        <Menu className="h-6 w-6" aria-hidden="true" />
-      </Button>
+      {/* Mobile menu button - only show on mobile */}
+      {isMobile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="fixed bottom-4 left-4 z-50 lg:hidden"
+          onClick={() => setIsMobileOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6" aria-hidden="true" />
+        </Button>
+      )}
 
       {/* Close button for mobile */}
       {isMobileOpen && (

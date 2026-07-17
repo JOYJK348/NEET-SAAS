@@ -60,8 +60,14 @@ class ApiClient {
       async (error: AxiosError) => {
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-        // Handle 401 Unauthorized - attempt token refresh
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isAuthRequest =
+          originalRequest.url?.includes('/auth/login') ||
+          originalRequest.url?.includes('/auth/register') ||
+          originalRequest.url?.includes('/login') ||
+          originalRequest.url?.includes('/register');
+
+        // Handle 401 Unauthorized - attempt token refresh (except for login/register requests)
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
           if (this.isRefreshing) {
             // Queue the request while token is being refreshed
             return new Promise((resolve, reject) => {
