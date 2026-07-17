@@ -83,8 +83,8 @@ export async function seedRoles(): Promise<void> {
         tenantId: DEMO_TENANT_ID,
         createdBy: SYSTEM_USER_ID,
         updatedBy: SYSTEM_USER_ID,
-        deletedAt: DEFAULT_DELETED_AT,
-        deletedBy: SYSTEM_USER_ID,
+        deletedAt: null,
+        deletedBy: null,
       },
     });
   }
