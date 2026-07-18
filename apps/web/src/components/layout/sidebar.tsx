@@ -58,6 +58,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       : [
           { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
           { name: 'Students', href: '/dashboard/students', icon: Users },
+          { name: 'Admissions', href: '/dashboard/admissions', icon: Target },
           { name: 'Parents', href: '/dashboard/parents', icon: Contact },
           { name: 'Tutors', href: '/dashboard/tutors', icon: GraduationCap },
           { name: 'Academics', href: '/dashboard/academics', icon: BookOpen },
