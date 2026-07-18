@@ -100,6 +100,7 @@ export const studentServiceKeys = {
   list: (filters: StudentFilters) => [...studentServiceKeys.lists(), filters] as const,
   details: () => [...studentServiceKeys.all, 'detail'] as const,
   detail: (id: string) => [...studentServiceKeys.details(), id] as const,
+  timeline: (studentId: string) => [...studentServiceKeys.detail(studentId), 'timeline'] as const,
   stats: () => [...studentServiceKeys.all, 'stats'] as const,
   batches: () => [...studentServiceKeys.all, 'batches'] as const,
   courses: () => [...studentServiceKeys.all, 'courses'] as const,

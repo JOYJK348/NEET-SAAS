@@ -40,7 +40,7 @@ function StudentDetailContent() {
   const router = useRouter();
   const id = (params?.id as string) || null;
 
-  const { student, isLoading, error, refetch } = useStudent(id);
+  const { student, isLoading, error } = useStudent(id);
   const { events: timelineEvents, isLoading: timelineLoading } = useStudentTimeline(id);
   const { archiveStudent, isArchiving } = useArchiveStudent();
 
@@ -57,11 +57,10 @@ function StudentDetailContent() {
     if (success) {
       toast({ title: 'Student archived successfully' });
       setShowArchiveDialog(false);
-      refetch();
     } else {
       toast({ title: 'Failed to archive student', variant: 'destructive' });
     }
-  }, [id, archiveStudent, refetch]);
+  }, [id, archiveStudent]);
 
   if (isLoading) {
     return (

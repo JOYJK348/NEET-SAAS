@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Student,
   StudentListItem,
@@ -12,17 +13,21 @@ import {
 import type { PaginatedResponse } from '@/types/api';
 import { studentService, studentServiceKeys } from '@/features/students/services/student-service';
 
-/**
- * Custom hooks for student management
- *
- * These hooks provide a clean API for components to interact with student data.
- * They are designed to be easily replaceable with React Query hooks when
- * integrating with a real API.
- */
+const STALE = {
+  list: 30 * 1000,
+  detail: 60 * 1000,
+  stats: 60 * 1000,
+  timeline: 30 * 1000,
+  reference: 5 * 60 * 1000,
+};
 
-// ============================================
-// Student List Hook
-// ============================================
+const GC = {
+  list: 5 * 60 * 1000,
+  detail: 30 * 60 * 1000,
+  stats: 5 * 60 * 1000,
+  timeline: 5 * 60 * 1000,
+  reference: 30 * 60 * 1000,
+};
 
 export interface UseStudentsOptions {
   initialFilters?: StudentFilters;
@@ -45,51 +50,33 @@ export interface UseStudentsReturn {
   setDateRange: (from: string | undefined, to: string | undefined) => void;
   setSort: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
   clearFilters: () => void;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 export function useStudents(options: UseStudentsOptions = {}): UseStudentsReturn {
   const { initialFilters = {}, autoFetch = true } = options;
-
-  const [students, setStudents] = useState<StudentListItem[]>([]);
-  const [meta, setMeta] = useState<PaginatedResponse<StudentListItem>['meta'] | null>(null);
   const [filters, setFiltersState] = useState<StudentFilters>({
     page: 1,
     perPage: 10,
     sortBy: 'createdAt',
     sortOrder: 'desc',
+    status: 'ALL',
     ...initialFilters,
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
 
-  const fetchStudents = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await studentService.getStudents(filters);
-      setStudents(response.data);
-      setMeta(response.meta);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch students'));
-      setStudents([]);
-      setMeta(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters]);
-
-  useEffect(() => {
-    if (autoFetch) {
-      fetchStudents();
-    }
-  }, [fetchStudents, autoFetch]);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: studentServiceKeys.list(filters),
+    queryFn: () => studentService.getStudents(filters),
+    staleTime: STALE.list,
+    gcTime: GC.list,
+    enabled: autoFetch,
+  });
 
   const setFilters = useCallback(
     (newFilters: StudentFilters | ((prev: StudentFilters) => StudentFilters)) => {
       setFiltersState((prev) => {
         const next = typeof newFilters === 'function' ? newFilters(prev) : newFilters;
-        return { ...next, page: 1 }; // Reset to first page on filter change
+        return { ...next, page: 1 };
       });
     },
     [],
@@ -137,19 +124,16 @@ export function useStudents(options: UseStudentsOptions = {}): UseStudentsReturn
       perPage: 10,
       sortBy: 'createdAt',
       sortOrder: 'desc',
+      status: 'ALL',
     });
   }, []);
 
-  const refetch = useCallback(async () => {
-    await fetchStudents();
-  }, [fetchStudents]);
-
   return {
-    students,
-    meta,
+    students: data?.data ?? [],
+    meta: data?.meta ?? null,
     filters,
-    isLoading,
-    error,
+    isLoading: isPending,
+    error: error ?? null,
     setFilters,
     setPage,
     setSearch,
@@ -164,96 +148,52 @@ export function useStudents(options: UseStudentsOptions = {}): UseStudentsReturn
   };
 }
 
-// ============================================
-// Student Stats Hook
-// ============================================
-
 export interface UseStudentStatsReturn {
   stats: StudentStats | null;
   isLoading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 export function useStudentStats(): UseStudentStatsReturn {
-  const [stats, setStats] = useState<StudentStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchStats = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await studentService.getStudentStats();
-      setStats(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch stats'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: studentServiceKeys.stats(),
+    queryFn: () => studentService.getStudentStats(),
+    staleTime: STALE.stats,
+    gcTime: GC.stats,
+  });
 
   return {
-    stats,
-    isLoading,
-    error,
-    refetch: fetchStats,
+    stats: data ?? null,
+    isLoading: isPending,
+    error: error ?? null,
+    refetch,
   };
 }
-
-// ============================================
-// Single Student Hook
-// ============================================
 
 export interface UseStudentReturn {
   student: Student | null;
   isLoading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 export function useStudent(id: string | null): UseStudentReturn {
-  const [student, setStudent] = useState<Student | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetchStudent = useCallback(async () => {
-    if (!id) {
-      setStudent(null);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await studentService.getStudentById(id);
-      setStudent(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch student'));
-      setStudent(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchStudent();
-  }, [fetchStudent]);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: studentServiceKeys.detail(id ?? '__skip__'),
+    queryFn: () => studentService.getStudentById(id!),
+    staleTime: STALE.detail,
+    gcTime: GC.detail,
+    enabled: !!id,
+  });
 
   return {
-    student,
-    isLoading,
-    error,
-    refetch: fetchStudent,
+    student: data ?? null,
+    isLoading: isPending,
+    error: error ?? null,
+    refetch,
   };
 }
-
-// ============================================
-// Mutation Hooks (for create, update, delete)
-// ============================================
 
 export interface UseCreateStudentReturn {
   createStudent: (input: CreateStudentInput) => Promise<Student | null>;
@@ -262,24 +202,33 @@ export interface UseCreateStudentReturn {
 }
 
 export function useCreateStudent(): UseCreateStudentReturn {
-  const [isCreating, setIsCreating] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
 
-  const createStudent = useCallback(async (input: CreateStudentInput): Promise<Student | null> => {
-    setIsCreating(true);
-    setError(null);
-    try {
-      const student = await studentService.createStudent(input);
-      return student;
-    } catch (err) {
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (input: CreateStudentInput) => studentService.createStudent(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
       setError(err instanceof Error ? err : new Error('Failed to create student'));
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+    },
+  });
 
-  return { createStudent, isCreating, error };
+  const createStudent = useCallback(
+    async (input: CreateStudentInput): Promise<Student | null> => {
+      try {
+        setError(null);
+        return await mutateAsync(input);
+      } catch {
+        return null;
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { createStudent, isCreating: isPending, error };
 }
 
 export interface UseUpdateStudentReturn {
@@ -289,24 +238,34 @@ export interface UseUpdateStudentReturn {
 }
 
 export function useUpdateStudent(): UseUpdateStudentReturn {
-  const [isUpdating, setIsUpdating] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
 
-  const updateStudent = useCallback(async (input: UpdateStudentInput): Promise<Student | null> => {
-    setIsUpdating(true);
-    setError(null);
-    try {
-      const student = await studentService.updateStudent(input);
-      return student;
-    } catch (err) {
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (input: UpdateStudentInput) => studentService.updateStudent(input),
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.detail(input.id) });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
       setError(err instanceof Error ? err : new Error('Failed to update student'));
-      return null;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+    },
+  });
 
-  return { updateStudent, isUpdating, error };
+  const updateStudent = useCallback(
+    async (input: UpdateStudentInput): Promise<Student | null> => {
+      try {
+        setError(null);
+        return await mutateAsync(input);
+      } catch {
+        return null;
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { updateStudent, isUpdating: isPending, error };
 }
 
 export interface UseDeleteStudentReturn {
@@ -316,29 +275,34 @@ export interface UseDeleteStudentReturn {
 }
 
 export function useDeleteStudent(): UseDeleteStudentReturn {
-  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
 
-  const deleteStudent = useCallback(async (id: string): Promise<boolean> => {
-    setIsDeleting(true);
-    setError(null);
-    try {
-      const success = await studentService.deleteStudent(id);
-      return success;
-    } catch (err) {
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (id: string) => studentService.deleteStudent(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
       setError(err instanceof Error ? err : new Error('Failed to delete student'));
-      return false;
-    } finally {
-      setIsDeleting(false);
-    }
-  }, []);
+    },
+  });
 
-  return { deleteStudent, isDeleting, error };
+  const deleteStudent = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        setError(null);
+        return await mutateAsync(id);
+      } catch {
+        return false;
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { deleteStudent, isDeleting: isPending, error };
 }
-
-// ============================================
-// Archive Student Hook
-// ============================================
 
 export interface UseArchiveStudentReturn {
   archiveStudent: (id: string) => Promise<boolean>;
@@ -347,65 +311,59 @@ export interface UseArchiveStudentReturn {
 }
 
 export function useArchiveStudent(): UseArchiveStudentReturn {
-  const [isArchiving, setIsArchiving] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
 
-  const archiveStudent = useCallback(async (id: string): Promise<boolean> => {
-    setIsArchiving(true);
-    setError(null);
-    try {
-      const success = await studentService.archiveStudent(id);
-      return success;
-    } catch (err) {
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (id: string) => studentService.archiveStudent(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.timeline(id) });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
       setError(err instanceof Error ? err : new Error('Failed to archive student'));
-      return false;
-    } finally {
-      setIsArchiving(false);
-    }
-  }, []);
+    },
+  });
 
-  return { archiveStudent, isArchiving, error };
+  const archiveStudent = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        setError(null);
+        return await mutateAsync(id);
+      } catch {
+        return false;
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { archiveStudent, isArchiving: isPending, error };
 }
-
-// ============================================
-// Timeline Events Hook
-// ============================================
 
 export interface UseStudentTimelineReturn {
   events: TimelineEvent[];
   isLoading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 export function useStudentTimeline(studentId: string | null): UseStudentTimelineReturn {
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const { data, isPending, error, refetch } = useQuery({
+    queryKey: studentServiceKeys.timeline(studentId ?? '__skip__'),
+    queryFn: () => studentService.getTimelineEvents(studentId!),
+    staleTime: STALE.timeline,
+    gcTime: GC.timeline,
+    enabled: !!studentId,
+  });
 
-  const fetchTimeline = useCallback(async () => {
-    if (!studentId) {
-      setEvents([]);
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await studentService.getTimelineEvents(studentId);
-      setEvents(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch timeline'));
-      setEvents([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [studentId]);
-
-  useEffect(() => {
-    fetchTimeline();
-  }, [fetchTimeline]);
-
-  return { events, isLoading, error, refetch: fetchTimeline };
+  return {
+    events: data ?? [],
+    isLoading: isPending,
+    error: error ?? null,
+    refetch,
+  };
 }
 
 export interface UseBulkUpdateStatusReturn {
@@ -418,29 +376,35 @@ export interface UseBulkUpdateStatusReturn {
 }
 
 export function useBulkUpdateStatus(): UseBulkUpdateStatusReturn {
-  const [isUpdating, setIsUpdating] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
 
-  const bulkUpdateStatus = useCallback(async (ids: string[], status: StudentStatus) => {
-    setIsUpdating(true);
-    setError(null);
-    try {
-      const result = await studentService.bulkUpdateStatus(ids, status);
-      return result;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update status'));
-      return { success: 0, failed: ids.length };
-    } finally {
-      setIsUpdating(false);
-    }
-  }, []);
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: ({ ids, status }: { ids: string[]; status: StudentStatus }) =>
+      studentService.bulkUpdateStatus(ids, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err : new Error('Failed to bulk update status'));
+    },
+  });
 
-  return { bulkUpdateStatus, isUpdating, error };
+  const bulkUpdateStatus = useCallback(
+    async (ids: string[], status: StudentStatus) => {
+      try {
+        setError(null);
+        return await mutateAsync({ ids, status });
+      } catch {
+        return { success: 0, failed: ids.length };
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { bulkUpdateStatus, isUpdating: isPending, error };
 }
-
-// ============================================
-// Batches & Courses Hooks (for filters)
-// ============================================
 
 export interface UseBatchesReturn {
   batches: { id: string; name: string }[];
@@ -449,29 +413,18 @@ export interface UseBatchesReturn {
 }
 
 export function useBatches(): UseBatchesReturn {
-  const [batches, setBatches] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data, isPending, error } = useQuery({
+    queryKey: studentServiceKeys.batches(),
+    queryFn: () => studentService.getBatches(),
+    staleTime: STALE.reference,
+    gcTime: GC.reference,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    studentService
-      .getBatches()
-      .then((data) => {
-        if (mounted) setBatches(data);
-      })
-      .catch((err) => {
-        if (mounted) setError(err instanceof Error ? err : new Error('Failed to fetch batches'));
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return { batches, isLoading, error };
+  return {
+    batches: data ?? [],
+    isLoading: isPending,
+    error: error ?? null,
+  };
 }
 
 export interface UseCoursesReturn {
@@ -481,33 +434,32 @@ export interface UseCoursesReturn {
 }
 
 export function useCourses(): UseCoursesReturn {
-  const [courses, setCourses] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data, isPending, error } = useQuery({
+    queryKey: studentServiceKeys.courses(),
+    queryFn: () => studentService.getCourses(),
+    staleTime: STALE.reference,
+    gcTime: GC.reference,
+  });
 
-  useEffect(() => {
-    let mounted = true;
-    studentService
-      .getCourses()
-      .then((data) => {
-        if (mounted) setCourses(data);
-      })
-      .catch((err) => {
-        if (mounted) setError(err instanceof Error ? err : new Error('Failed to fetch courses'));
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return { courses, isLoading, error };
+  return {
+    courses: data ?? [],
+    isLoading: isPending,
+    error: error ?? null,
+  };
 }
 
-// ============================================
-// React Query Keys Export (for future integration)
-// ============================================
+export function usePrefetchStudentDetail() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (id: string) => {
+      queryClient.prefetchQuery({
+        queryKey: studentServiceKeys.detail(id),
+        queryFn: () => studentService.getStudentById(id),
+        staleTime: STALE.detail,
+      });
+    },
+    [queryClient],
+  );
+}
 
 export { studentServiceKeys };

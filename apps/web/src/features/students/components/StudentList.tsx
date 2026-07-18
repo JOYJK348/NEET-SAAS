@@ -7,6 +7,7 @@ interface StudentListProps {
   onView: (student: any) => void;
   onEdit: (student: any) => void;
   onStatusChange: (student: any, status: any) => void;
+  onPrefetch?: (id: string) => void;
   isLoading?: boolean;
 }
 
@@ -15,6 +16,7 @@ export function StudentList({
   onView,
   onEdit,
   onStatusChange,
+  onPrefetch,
   isLoading = false,
 }: StudentListProps) {
   if (isLoading) {
@@ -55,6 +57,7 @@ export function StudentList({
           onView={onView}
           onEdit={onEdit}
           onStatusChange={onStatusChange}
+          onPrefetch={onPrefetch}
         />
       ))}
     </div>

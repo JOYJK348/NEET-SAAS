@@ -41,6 +41,7 @@ interface StudentTableProps {
   onView: (student: any) => void;
   onEdit: (student: any) => void;
   onStatusChange: (student: any, status: any) => void;
+  onPrefetch?: (id: string) => void;
   isLoading?: boolean;
 }
 
@@ -52,6 +53,7 @@ export function StudentTable({
   onView,
   onEdit,
   onStatusChange,
+  onPrefetch,
   isLoading = false,
 }: StudentTableProps) {
   const columns: Column<any>[] = [
@@ -246,6 +248,9 @@ export function StudentTable({
             <tr
               key={student.id}
               className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              onMouseEnter={() => onPrefetch?.(student.id)}
+              onFocus={() => onPrefetch?.(student.id)}
+              tabIndex={0}
             >
               {columns.map((col) => (
                 <td key={String(col.key)} className={cn('px-4 py-4', col.className)}>

@@ -12,7 +12,14 @@ import { format } from 'date-fns';
 
 import { StudentStatus, StudentFilters } from '@/features/students/types/student';
 import { studentService } from '@/features/students/services/student-service';
-import { useStudentStats, useBatches, useCourses } from '@/features/students/hooks/use-students';
+import {
+  useStudents,
+  useStudentStats,
+  useUpdateStudent,
+  useBatches,
+  useCourses,
+  usePrefetchStudentDetail,
+} from '@/features/students/hooks/use-students';
 import { StudentTable } from '@/features/students/components/StudentTable';
 import { StudentList } from '@/features/students/components/StudentList';
 import { StudentSearch } from '@/features/students/components/StudentSearch';
@@ -21,35 +28,33 @@ import { StudentPagination } from '@/features/students/components/StudentPaginat
 import { StudentSkeleton } from '@/features/students/components/StudentSkeleton';
 import { StudentEmptyState } from '@/features/students/components/StudentEmptyState';
 import { StudentErrorState } from '@/features/students/components/StudentErrorState';
-import type { PaginationMeta } from '@/types/api';
-
-const DEFAULT_PAGE_SIZE = 10;
+import { toast } from '@/hooks/use-toast';
 
 function StudentsContent() {
   const router = useRouter();
-  const [students, setStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
-    total: 0,
-    lastPage: 1,
-  });
-  const [sortKey, setSortKey] = useState<string>('admissionDate');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '' as StudentStatus | '' | 'ALL',
-    course: '',
-    batch: '',
-  });
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-  const [isMobile, setIsMobile] = useState(false);
-
+  const {
+    students,
+    meta,
+    isLoading,
+    error,
+    filters,
+    setSearch,
+    setStatus,
+    setCourse,
+    setBatch,
+    setPage,
+    setSort,
+    clearFilters,
+    refetch,
+  } = useStudents();
   const { stats: studentStats, isLoading: statsLoading } = useStudentStats();
+  const { updateStudent } = useUpdateStudent();
   const { batches: batchOptions } = useBatches();
   const { courses: courseOptions } = useCourses();
+  const prefetchStudent = usePrefetchStudentDetail();
+
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -59,42 +64,6 @@ function StudentsContent() {
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
-
-  const loadStudents = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const apiFilters: StudentFilters = {
-        search: filters.search || undefined,
-        status:
-          filters.status === 'ALL' || filters.status === ''
-            ? undefined
-            : (filters.status as StudentStatus),
-        courseId: filters.course || undefined,
-        batchId: filters.batch || undefined,
-        page: pagination.page,
-        perPage: pagination.pageSize,
-        sortBy: sortKey,
-        sortOrder: sortOrder,
-      };
-      const result = await studentService.getStudents(apiFilters);
-      setStudents(result.data);
-      setPagination((prev) => ({
-        ...prev,
-        total: result.meta.total,
-        lastPage: result.meta.lastPage,
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load students');
-      setStudents([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, pagination.page, pagination.pageSize, sortKey, sortOrder]);
-
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
 
   const courses = useMemo(() => {
     return [...courseOptions].sort((a, b) => a.name.localeCompare(b.name));
@@ -116,55 +85,63 @@ function StudentsContent() {
     };
   }, [studentStats]);
 
-  const handleSearch = useCallback((search: string) => {
-    setFilters((prev) => ({ ...prev, search }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  const handleSearch = useCallback(
+    (search: string) => {
+      setSearch(search);
+    },
+    [setSearch],
+  );
 
-  const handleStatusChange = useCallback((status: StudentStatus | 'ALL') => {
-    setFilters((prev) => ({ ...prev, status }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  const handleStatusChange = useCallback(
+    (status: StudentStatus | 'ALL') => {
+      setStatus(status);
+    },
+    [setStatus],
+  );
 
-  const handleCourseChange = useCallback((course: string) => {
-    setFilters((prev) => ({ ...prev, course }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  const handleCourseChange = useCallback(
+    (course: string) => {
+      setCourse(course);
+    },
+    [setCourse],
+  );
 
-  const handleBatchChange = useCallback((batch: string) => {
-    setFilters((prev) => ({ ...prev, batch }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  const handleBatchChange = useCallback(
+    (batch: string) => {
+      setBatch(batch);
+    },
+    [setBatch],
+  );
 
   const handleClearFilters = useCallback(() => {
-    setFilters({ search: '', status: '', course: '', batch: '' });
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+    clearFilters();
+  }, [clearFilters]);
 
   const handleSort = useCallback(
     (key: string) => {
-      setSortOrder((prev) => (key === sortKey && prev === 'asc' ? 'desc' : 'asc'));
-      setSortKey(key);
+      const newOrder = key === filters.sortBy && filters.sortOrder === 'asc' ? 'desc' : 'asc';
+      setSort(key, newOrder);
     },
-    [sortKey],
+    [filters.sortBy, filters.sortOrder, setSort],
   );
 
-  const handlePageChange = useCallback((page: number) => {
-    setPagination((prev) => ({ ...prev, page }));
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setPage(page);
+    },
+    [setPage],
+  );
+
+  const handlePageSizeChange = useCallback(() => {
+    // page size changes not currently exposed through the hook
   }, []);
 
-  const handlePageSizeChange = useCallback((size: number) => {
-    setPagination((prev) => ({ ...prev, pageSize: size, page: 1 }));
-  }, []);
-
-  const handleStatusUpdate = useCallback(async (student: any, status: StudentStatus) => {
-    try {
-      await studentService.updateStudent({ id: student.id, status });
-      setStudents((prev) => prev.map((s) => (s.id === student.id ? { ...s, status } : s)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status');
-    }
-  }, []);
+  const handleStatusUpdate = useCallback(
+    async (student: any, status: StudentStatus) => {
+      await updateStudent({ id: student.id, status });
+    },
+    [updateStudent],
+  );
 
   const handleView = useCallback(
     (student: any) => {
@@ -188,12 +165,9 @@ function StudentsContent() {
     try {
       const apiFilters: StudentFilters = {
         search: filters.search || undefined,
-        status:
-          filters.status === 'ALL' || filters.status === ''
-            ? undefined
-            : (filters.status as StudentStatus),
-        courseId: filters.course || undefined,
-        batchId: filters.batch || undefined,
+        status: filters.status === 'ALL' ? undefined : filters.status,
+        courseId: filters.courseId || undefined,
+        batchId: filters.batchId || undefined,
       };
       const result = await studentService.getStudents(apiFilters);
       const csvContent = [
@@ -218,14 +192,23 @@ function StudentsContent() {
       a.download = `students-${format(new Date(), 'yyyy-MM-dd')}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to export students');
+    } catch {
+      toast({
+        title: 'Export failed',
+        description: 'Failed to export students.',
+        variant: 'destructive',
+      });
     }
   }, [filters]);
 
-  const hasActiveFilters = !!(filters.status || filters.course || filters.batch || filters.search);
+  const hasActiveFilters = !!(
+    (filters.status && filters.status !== 'ALL') ||
+    filters.courseId ||
+    filters.batchId ||
+    filters.search
+  );
 
-  if (isLoading) {
+  if (isLoading && !meta) {
     return (
       <DashboardLayout>
         <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
@@ -243,7 +226,7 @@ function StudentsContent() {
     );
   }
 
-  if (error && students.length === 0) {
+  if (error && students.length === 0 && !meta) {
     return (
       <DashboardLayout>
         <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
@@ -255,7 +238,10 @@ function StudentsContent() {
               </p>
             </div>
           </div>
-          <StudentErrorState message={error} onRetry={loadStudents} />
+          <StudentErrorState
+            message={error?.message ?? 'Failed to load students'}
+            onRetry={refetch}
+          />
         </div>
       </DashboardLayout>
     );
@@ -326,18 +312,18 @@ function StudentsContent() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 min-w-0">
               <StudentSearch
-                value={filters.search}
+                value={filters.search || ''}
                 onChange={handleSearch}
                 onClear={() => handleSearch('')}
               />
             </div>
             <div className="w-full sm:w-auto">
               <StudentFiltersComponent
-                status={filters.status as StudentStatus | 'ALL'}
+                status={(filters.status as StudentStatus | 'ALL') || 'ALL'}
                 onStatusChange={handleStatusChange}
-                course={filters.course}
+                course={filters.courseId || ''}
                 onCourseChange={handleCourseChange}
-                batch={filters.batch}
+                batch={filters.batchId || ''}
                 onBatchChange={handleBatchChange}
                 courses={courses}
                 batches={batches}
@@ -358,13 +344,9 @@ function StudentsContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
-              Showing{' '}
-              <span className="font-medium">{(pagination.page - 1) * pagination.pageSize + 1}</span>{' '}
-              to{' '}
-              <span className="font-medium">
-                {Math.min(pagination.page * pagination.pageSize, pagination.total)}
-              </span>{' '}
-              of <span className="font-medium">{pagination.total}</span> students
+              Showing <span className="font-medium">{meta?.from ?? 0}</span> to{' '}
+              <span className="font-medium">{meta?.to ?? 0}</span> of{' '}
+              <span className="font-medium">{meta?.total ?? 0}</span> students
             </span>
             {hasActiveFilters && <span className="text-sm font-medium">(filtered)</span>}
           </div>
@@ -396,20 +378,21 @@ function StudentsContent() {
             <>
               <StudentTable
                 students={students}
-                sortBy={sortKey}
-                sortOrder={sortOrder}
+                sortBy={filters.sortBy ?? 'admissionDate'}
+                sortOrder={(filters.sortOrder as 'asc' | 'desc') ?? 'desc'}
                 onSort={handleSort}
                 onView={handleView}
                 onEdit={handleEdit}
                 onStatusChange={handleStatusUpdate}
+                onPrefetch={prefetchStudent}
                 isLoading={isLoading}
               />
-              {students.length > 0 && (
+              {students.length > 0 && meta && meta.lastPage > 1 && (
                 <StudentPagination
-                  currentPage={pagination.page}
-                  totalPages={pagination.lastPage}
-                  totalItems={pagination.total}
-                  itemsPerPage={pagination.pageSize}
+                  currentPage={meta.currentPage}
+                  totalPages={meta.lastPage}
+                  totalItems={meta.total}
+                  itemsPerPage={meta.perPage}
                   onPageChange={handlePageChange}
                   onItemsPerPageChange={handlePageSizeChange}
                 />
@@ -421,6 +404,7 @@ function StudentsContent() {
               onView={handleView}
               onEdit={handleEdit}
               onStatusChange={handleStatusUpdate}
+              onPrefetch={prefetchStudent}
               isLoading={isLoading}
             />
           )}

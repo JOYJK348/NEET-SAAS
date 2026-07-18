@@ -25,6 +25,7 @@ interface StudentCardProps {
   onView?: (student: any) => void;
   onDelete?: (student: any) => void;
   onStatusChange?: (student: any, status: StudentStatus) => void;
+  onPrefetch?: (id: string) => void;
   selected?: boolean;
   onSelect?: (student: any, selected: boolean) => void;
 }
@@ -35,6 +36,7 @@ export function StudentCard({
   onView,
   onDelete,
   onStatusChange,
+  onPrefetch,
   selected,
   onSelect,
 }: StudentCardProps) {
@@ -63,6 +65,9 @@ export function StudentCard({
   return (
     <Card
       className={`w-full transition-all duration-200 ${selected ? 'ring-2 ring-purple-500 dark:ring-purple-400' : ''}`}
+      onMouseEnter={() => onPrefetch?.(student.id)}
+      onFocus={() => onPrefetch?.(student.id)}
+      tabIndex={0}
     >
       <CardContent className="p-4">
         {/* Header with avatar, name, student ID, and status */}
