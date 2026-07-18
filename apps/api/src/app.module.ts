@@ -10,6 +10,10 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { PrismaModule } from './common/prisma/prisma.module';
 import { RedisModule } from './common/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PeopleModule } from './modules/people/people.module';
+import { StudentsModule } from './modules/students/students.module';
+import { AdmissionsModule } from './modules/admissions/admissions.module';
+import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enrollments.module';
 
 @Module({
   imports: [
@@ -19,6 +23,10 @@ import { AuthModule } from './modules/auth/auth.module';
     PrismaModule,
     RedisModule,
     AuthModule,
+    PeopleModule,
+    StudentsModule,
+    AdmissionsModule,
+    BatchEnrollmentsModule,
     HealthModule,
   ],
   controllers: [],

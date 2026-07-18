@@ -109,8 +109,8 @@ export async function seedPermissionGroups(): Promise<Map<string, string>> {
         createdBy: SYSTEM_USER_ID,
         updatedBy: SYSTEM_USER_ID,
         metadata: {},
-        deletedAt: DEFAULT_DELETED_AT,
-        deletedBy: SYSTEM_USER_ID,
+        deletedAt: null,
+        deletedBy: null,
       },
     });
     groupIdMap.set(group.code, result.id);
@@ -156,8 +156,8 @@ export async function seedPermissions(groupIdMap: Map<string, string>): Promise<
           createdBy: SYSTEM_USER_ID,
           updatedBy: SYSTEM_USER_ID,
           metadata: {},
-          deletedAt: DEFAULT_DELETED_AT,
-          deletedBy: SYSTEM_USER_ID,
+          deletedAt: null,
+          deletedBy: null,
         },
       });
     }
