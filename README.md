@@ -1,11 +1,10 @@
-# Education Management Platform (CMP) 🚀
+# NEET SaaS Platform 🚀
 
-Welcome to the central engineering portal for the **Education Management Platform (CMP)**.
+Welcome to the central engineering portal for the **NEET SaaS Platform**.
 
-This repository houses the complete multi-tenant Software-as-a-Service (SaaS) **Education Core Platform** designed to power any educational vertical (NEET coaching, JEE training, UPSC academies, schools, colleges, and corporate learning) through a unified configuration-driven profile engine.
+This repository houses a complete multi-tenant Software-as-a-Service (SaaS) platform purpose-built for NEET coaching centers to manage students, tutors, batches, exams, fees, and learning content — with a configuration-driven architecture extensible to other educational verticals.
 
-**Target Profile (V1):** NEET Coaching Center  
-**Long-term Vision:** Generic education platform where vertical-specific business rules are configured dynamically rather than through database schema alterations.
+**Target Users:** NEET coaching institutes, students, tutors, and parents.
 
 ---
 
