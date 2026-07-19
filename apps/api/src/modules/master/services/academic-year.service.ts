@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -21,9 +25,7 @@ export class AcademicYearService {
   ) {}
 
   async create(dto: CreateAcademicYearDto, tenantId: string, userId: string) {
-    if (dto.isCurrent) {
-      await this.clearCurrentFlag(tenantId);
-    }
+    if (dto.isCurrent) await this.clearCurrentFlag(tenantId);
     return this.prisma.academicYears.create({
       data: {
         tenantId,
@@ -70,9 +72,7 @@ export class AcademicYearService {
     userId: string,
   ) {
     await this.findOne(id, tenantId);
-    if (dto.isCurrent) {
-      await this.clearCurrentFlag(tenantId);
-    }
+    if (dto.isCurrent) await this.clearCurrentFlag(tenantId);
     return this.prisma.academicYears.update({
       where: { tenantId_id: { tenantId, id } },
       data: { ...dto, updatedBy: userId },
@@ -81,6 +81,13 @@ export class AcademicYearService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    const batchCount = await this.prisma.batches.count({
+      where: { tenantId, academicYearId: id, deletedAt: null },
+    });
+    if (batchCount > 0)
+      throw new ConflictException(
+        'Cannot delete academic year: it has active batches',
+      );
     await this.tenantScoped.softDelete(
       this.prisma.academicYears,
       id,

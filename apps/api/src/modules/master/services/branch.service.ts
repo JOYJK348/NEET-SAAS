@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -47,9 +51,8 @@ export class BranchService {
     query: QueryParamsDto,
   ): Promise<PaginatedResult<any>> {
     const where: any = this.tenantScoped.buildWhere(tenantId);
-    if (query.search) {
+    if (query.search)
       where.OR = buildPrismaSearch(query.search, SEARCH_FIELDS)?.OR;
-    }
     return paginate({
       model: this.prisma.branches,
       where,
@@ -82,6 +85,13 @@ export class BranchService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    const batchCount = await this.prisma.batches.count({
+      where: { tenantId, branchId: id, deletedAt: null },
+    });
+    if (batchCount > 0)
+      throw new ConflictException(
+        'Cannot delete branch: it has active batches',
+      );
     await this.tenantScoped.softDelete(
       this.prisma.branches,
       id,

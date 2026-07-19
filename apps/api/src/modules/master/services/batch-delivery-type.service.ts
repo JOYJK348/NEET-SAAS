@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -24,9 +28,7 @@ export class BatchDeliveryTypeService {
     tenantId: string,
     userId: string,
   ) {
-    if (dto.isDefault) {
-      await this.clearDefaultFlag(tenantId);
-    }
+    if (dto.isDefault) await this.clearDefaultFlag(tenantId);
     return this.prisma.batchDeliveryTypes.create({
       data: {
         tenantId,
@@ -86,6 +88,13 @@ export class BatchDeliveryTypeService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    const batchCount = await this.prisma.batches.count({
+      where: { tenantId, deliveryTypeId: id, deletedAt: null },
+    });
+    if (batchCount > 0)
+      throw new ConflictException(
+        'Cannot delete delivery type: it is used by active batches',
+      );
     await this.tenantScoped.softDelete(
       this.prisma.batchDeliveryTypes,
       id,

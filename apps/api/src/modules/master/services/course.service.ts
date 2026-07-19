@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -46,9 +50,8 @@ export class CourseService {
     query: QueryParamsDto,
   ): Promise<PaginatedResult<any>> {
     const where: any = this.tenantScoped.buildWhere(tenantId);
-    if (query.search) {
+    if (query.search)
       where.OR = buildPrismaSearch(query.search, SEARCH_FIELDS)?.OR;
-    }
     return paginate({
       model: this.prisma.courses,
       where,
@@ -81,6 +84,20 @@ export class CourseService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    const subjectCount = await this.prisma.courseSubjects.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (subjectCount > 0)
+      throw new ConflictException(
+        'Cannot delete course: it has subjects mapped to it',
+      );
+    const batchCount = await this.prisma.batches.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (batchCount > 0)
+      throw new ConflictException(
+        'Cannot delete course: it has active batches',
+      );
     await this.tenantScoped.softDelete(
       this.prisma.courses,
       id,

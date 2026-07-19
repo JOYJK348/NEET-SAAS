@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import { CreateCourseSubjectDto } from '../dto/create-course-subject.dto';
@@ -11,6 +15,16 @@ export class CourseSubjectService {
   ) {}
 
   async create(dto: CreateCourseSubjectDto, tenantId: string, userId: string) {
+    const existing = await this.prisma.courseSubjects.findFirst({
+      where: {
+        tenantId,
+        courseId: dto.courseId,
+        subjectId: dto.subjectId,
+        deletedAt: null,
+      },
+    });
+    if (existing)
+      throw new ConflictException('Subject is already mapped to this course');
     return this.prisma.courseSubjects.create({
       data: {
         tenantId,
@@ -26,7 +40,6 @@ export class CourseSubjectService {
         createdBy: userId,
         updatedBy: userId,
       },
-      include: { tenant: false },
     });
   }
 
@@ -43,6 +56,13 @@ export class CourseSubjectService {
     });
     if (!mapping)
       throw new NotFoundException('Course-subject mapping not found');
+    const chapterCount = await this.prisma.chapters.count({
+      where: { tenantId, courseSubjectId: id, deletedAt: null },
+    });
+    if (chapterCount > 0)
+      throw new ConflictException(
+        'Cannot remove subject: it has chapters defined for this course',
+      );
     await this.tenantScoped.softDelete(
       this.prisma.courseSubjects,
       id,

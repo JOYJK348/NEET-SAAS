@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -83,6 +87,11 @@ export class ChapterService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    const topicCount = await this.prisma.topics.count({
+      where: { tenantId, chapterId: id, deletedAt: null },
+    });
+    if (topicCount > 0)
+      throw new ConflictException('Cannot delete chapter: it has topics');
     await this.tenantScoped.softDelete(
       this.prisma.chapters,
       id,
