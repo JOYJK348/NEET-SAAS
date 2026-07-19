@@ -4,13 +4,15 @@ Machi, here is the complete, production-grade **17-Sheet Project Management Work
 
 ---
 
+> **Note on Sprint Numbering:** The workbook tabs below reflect the feature-domain plan (Platform, Master Setup, Identity, Academics, etc.). Actual sprint execution followed a different sequence (see [Sprint History docs](../01-sprints/sprint-04-frontend-platform.md)). The [Sprint Roadmap](#tab-01--sprint-roadmap) has been updated to map actual completed sprints.
+
 ## WORKBOOK TAB DIRECTORY
 
 - **TAB 00:** [Dashboard](#tab-00--dashboard)
 - **TAB 01:** [Sprint Roadmap](#tab-01--sprint-roadmap)
-- **TAB 02:** [Sprint 0A — Workspace Setup](#tab-02--sprint-0a--workspace-setup)
-- **TAB 03:** [Sprint 0B — Platform Foundation](#tab-03--sprint-0b--platform-foundation)
-- **TAB 04:** [Sprint 0C — UI Foundation](#tab-04--sprint-0c--ui-foundation)
+- **TAB 02:** [Sprint 0A — Workspace Setup](#tab-02--sprint-0a--workspace-setup) ✅
+- **TAB 03:** [Sprint 0B — Platform Foundation](#tab-03--sprint-0b--platform-foundation) ✅
+- **TAB 04:** [Sprint 0C — UI Foundation](#tab-04--sprint-0c--ui-foundation) ✅
 - **TAB 05:** [Sprint 1 — 14 Platform](#tab-05--sprint-1--14-platform)
 - **TAB 06:** [Sprint 2 — 01 Master Setup](#tab-06--sprint-2--01-master-setup)
 - **TAB 07:** [Sprint 3 — 04 Identity & People](#tab-07--sprint-3--04-identity--people)
@@ -39,7 +41,7 @@ _Copy to Sheet: `00_dashboard`_
 | **Active Bugs Count**              | `=COUNTIF('15 Bugs'!G:G, "Open")`                                                            | `0`          |   Stable    |
 | **Resolved Bugs Count**            | `=COUNTIF('15 Bugs'!G:G, "Resolved")`                                                        | —            |  Tracking   |
 | **Release Quality Gate Readiness** | `=COUNTIF('16 Release Checklist'!C:C, "Verified") / COUNTA('16 Release Checklist'!C:C)`      | `100.0%`     |   Pending   |
-| **Current Active Sprint**          | `Sprint 0A`                                                                                  | —            |   Active    |
+| **Current Active Sprint**          | `Sprint 5 — Master Data`                                                                     | —            |   Active    |
 
 ---
 
@@ -49,14 +51,14 @@ _Copy to Sheet: `01_sprint_roadmap`_
 
 | Sprint | Name                   | Duration | Progress | Status      | Dependencies | Owner |
 | :----- | :--------------------- | :------: | :------: | :---------- | :----------- | :---- |
-| **0A** | Workspace Setup        |  3 Days  |    0%    | Active      | None         | Jay   |
-| **0B** | Platform Foundation    |  7 Days  |    0%    | Not Started | Sprint 0A    | Jay   |
-| **0C** | UI Foundation          |  7 Days  |    0%    | Not Started | Sprint 0B    | Jay   |
-| **1**  | Platform Admin         |  7 Days  |    0%    | Not Started | Sprint 0C    | Jay   |
-| **2**  | Tenant Setup & Master  |  7 Days  |    0%    | Not Started | Sprint 1     | Jay   |
-| **3**  | Identity & People      | 14 Days  |    0%    | Not Started | Sprint 2     | Jay   |
-| **4**  | Academics (Attendance) |  7 Days  |    0%    | Not Started | Sprint 3     | Jay   |
-| **5**  | Learning               |  7 Days  |    0%    | Not Started | Sprint 4     | Jay   |
+| **0A** | Workspace Setup        |  3 Days  |   100%   | Completed   | None         | Jay   |
+| **0B** | Platform Foundation    |  7 Days  |   100%   | Completed   | Sprint 0A    | Jay   |
+| **0C** | UI Foundation          |  7 Days  |   100%   | Completed   | Sprint 0B    | Jay   |
+| **1**  | Auth & Identity (BE)   |  7 Days  |   100%   | Completed   | Sprint 0B    | Jay   |
+| **2**  | People & Students (BE) | 14 Days  |   100%   | Completed   | Sprint 1     | Jay   |
+| **3**  | Frontend Platform UI   | 14 Days  |   100%   | Completed   | Sprint 2     | Jay   |
+| **4**  | Responsive Polish      |  7 Days  |   100%   | Completed   | Sprint 3     | Jay   |
+| **5**  | Master Data            |  7 Days  |    0%    | Active      | Sprint 4     | Jay   |
 | **6**  | Live Classes           | 14 Days  |    0%    | Not Started | Sprint 5     | Jay   |
 | **7**  | Assessments & QB       | 14 Days  |    0%    | Not Started | Sprint 6     | Jay   |
 | **8**  | Fees & Billing         | 14 Days  |    0%    | Not Started | Sprint 3     | Jay   |
@@ -176,7 +178,7 @@ _Columns: `Task ID`, `Phase`, `Task Description`, `Priority`, `Estimate (hrs)`, 
 - **Duration:** 7 Days
 - **Expected Deliverables:** UI client containing token handling interceptor, global navigation frame layouts, dynamic theme toggle selector, and atomic components library.
 - **Version:** `v0.3` | **Release Date:** 2026-08-07
-- **Owner:** Jay | **Progress:** `=COUNTIF(F11:F22, "Done") / COUNTA(F11:F22)`
+- **Owner:** Jay | **Progress:** `100%`
 - **Expected Output:** Tables: `0` \| APIs: `0` \| Pages: `5` \| Components: `16` \| Workers: `0` \| Queues: `0`
 - **Dependencies:** Sprint 0B
 - **Risks:** UI design system inconsistencies in responsive frame limits on mobile.
@@ -185,20 +187,20 @@ _Columns: `Task ID`, `Phase`, `Task Description`, `Priority`, `Estimate (hrs)`, 
 
 _Columns: `Task ID`, `Phase`, `Task Description`, `Priority`, `Estimate (hrs)`, `Actual (hrs)`, `Variance`, `Status`, `Git Branch`, `PR Link`, `Issue Link`, `Remarks`_
 
-| Task ID     | Phase    | Task Description                                   | Priority | Estimate (hrs) | Actual (hrs) | Variance | Status      | Git Branch | PR Link | Issue Link | Remarks               |
-| :---------- | :------- | :------------------------------------------------- | :------: | :------------: | :----------: | :------: | :---------- | :--------- | :------ | :--------- | :-------------------- |
-| **S0C-001** | Frontend | Setup Axios client with refresh tokens interceptor | Critical |       2        |      0       |    0     | Not Started | —          | —       | —          | Client interceptor    |
-| **S0C-002** | Frontend | Configure React Query Client provider wrapper      | Critical |       1        |      0       |    0     | Not Started | —          | —       | —          | Local caching setup   |
-| **S0C-003** | Frontend | Initialize global Zustand stores (auth, theme)     | Critical |       2        |      0       |    0     | Not Started | —          | —       | —          | Save active session   |
-| **S0C-004** | Frontend | Write Next.js middleware.ts path checkers          | Critical |       3        |      0       |    0     | Not Started | —          | —       | —          | Redirect filters      |
-| **S0C-005** | Frontend | Build shared atomic components (Button, Input)     |   High   |       4        |      0       |    0     | Not Started | —          | —       | —          | UI primitives setup   |
-| **S0C-006** | Frontend | Build shared data display layouts (Table, Modal)   |   High   |       4        |      0       |    0     | Not Started | —          | —       | —          | Primitive modals UI   |
-| **S0C-007** | Frontend | Integrate toast notification banners wrapper       |   High   |       2        |      0       |    0     | Not Started | —          | —       | —          | Alert UI banner       |
-| **S0C-008** | Frontend | Build Platform Admin shell layout dashboard        |  Medium  |       2        |      0       |    0     | Not Started | —          | —       | —          | Super-admin dashboard |
-| **S0C-009** | Frontend | Build Tenant Admin shell containing sidebar layout | Critical |       3        |      0       |    0     | Not Started | —          | —       | —          | Admin portal layout   |
-| **S0C-010** | Frontend | Build Faculty Portal dashboard shell frame         |   High   |       2        |      0       |    0     | Not Started | —          | —       | —          | Tutor portal layout   |
-| **S0C-011** | Frontend | Build Student Portal dashboard shell frame         |   High   |       2        |      0       |    0     | Not Started | —          | —       | —          | Student portal layout |
-| **S0C-012** | Frontend | Build Parent Portal dashboard shell frame          |   High   |       2        |      0       |    0     | Not Started | —          | —       | —          | Parent portal layout  |
+| Task ID     | Phase    | Task Description                                   | Priority | Estimate (hrs) | Actual (hrs) | Variance | Status | Git Branch | PR Link | Issue Link | Remarks              |
+| :---------- | :------- | :------------------------------------------------- | :------: | :------------: | :----------: | :------: | :----- | :--------- | :------ | :--------- | :------------------- |
+| **S0C-001** | Frontend | Setup Axios client with refresh tokens interceptor | Critical |       2        |      2       |    0     | Done   | develop    | —       | —          | Client interceptor   |
+| **S0C-002** | Frontend | Configure React Query Client provider wrapper      | Critical |       1        |      1       |    0     | Done   | develop    | —       | —          | Local caching setup  |
+| **S0C-003** | Frontend | Initialize global Zustand stores (auth, theme)     | Critical |       2        |      2       |    0     | Done   | develop    | —       | —          | Save active session  |
+| **S0C-004** | Frontend | Write Next.js middleware.ts path checkers          | Critical |       3        |      2       |    0     | Done   | develop    | —       | —          | Redirect filters     |
+| **S0C-005** | Frontend | Build shared atomic components (Button, Input)     |   High   |       4        |      4       |    0     | Done   | develop    | —       | —          | UI primitives setup  |
+| **S0C-006** | Frontend | Build shared data display layouts (Table, Modal)   |   High   |       4        |      4       |    0     | Done   | develop    | —       | —          | Primitive modals UI  |
+| **S0C-007** | Frontend | Integrate toast notification banners wrapper       |   High   |       2        |      1       |    0     | Done   | develop    | —       | —          | Alert UI banner      |
+| **S0C-008** | Frontend | Build Platform Admin shell layout dashboard        |  Medium  |       2        |      2       |    0     | Done   | develop    | —       | —          | Super-admin shell    |
+| **S0C-009** | Frontend | Build Tenant Admin shell containing sidebar layout | Critical |       3        |      3       |    0     | Done   | develop    | —       | —          | Admin portal layout  |
+| **S0C-010** | Frontend | Build Faculty Portal dashboard shell frame         |   High   |       2        |      1       |    0     | Done   | develop    | —       | —          | Tutor portal shell   |
+| **S0C-011** | Frontend | Build Student Portal dashboard shell frame         |   High   |       2        |      2       |    0     | Done   | develop    | —       | —          | Student portal shell |
+| **S0C-012** | Frontend | Build Parent Portal dashboard shell frame          |   High   |       2        |      1       |    0     | Done   | develop    | —       | —          | Parent portal shell  |
 
 ### Acceptance Criteria
 
