@@ -122,9 +122,12 @@ class ApiClient {
             return this.client(originalRequest);
           } catch (refreshError) {
             const isCancel = axios.isCancel(refreshError);
+            const isAxiosErr = axios.isAxiosError(refreshError);
             const errorPayload = refreshError as AxiosError;
-            const isNetworkError = !errorPayload.response;
+
+            const isNetworkError = isAxiosErr && !errorPayload.response;
             const isServerError =
+              isAxiosErr &&
               errorPayload.response &&
               errorPayload.response.status &&
               errorPayload.response.status >= 500;
