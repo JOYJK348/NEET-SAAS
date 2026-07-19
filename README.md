@@ -52,9 +52,7 @@ These files detail the system standards, database boundaries, and security rules
 - 🏛️ **[Database Access Strategy](docs/architecture/database-access-strategy.md)** — The global database constitution rules.
 - 🎯 **[V1 Scope Freeze](docs/v1-scope-freeze.md)** — Complete V1 MVP specification and sprint plan.
 - 🧩 **[Profile System](docs/architecture/13-profile-system.md)** — Generic platform configuration for any educational vertical.
-- 📦 **[Shared Kernel Specs](docs/architecture/14-shared-kernel.md)** — Utility packages shared across NestJS backend and Next.js frontend.
 - 🔌 **[API Master Register Index](docs/architecture/api-design/00-api-index.md)** — The 362+ planned endpoints index.
-- 📘 **[API Design Conventions Guide](docs/architecture/api-design/01-api-design-conventions.md)** — REST parameters, filtering protocols, and error response standards.
 
 ---
 
