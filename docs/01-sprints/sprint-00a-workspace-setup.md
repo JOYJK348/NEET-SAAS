@@ -1,66 +1,114 @@
-# Sprint 0A — Workspace Setup
+# Sprint 0A — Workspace & Repository Foundation
 
 > **Status:** ✅ Completed
-> **Duration:** 3 days
 > **Version:** v0.1
+> **Primary Objective:** Establish the production-oriented monorepo, application boundaries, shared package structure, database foundation, development tooling, code quality gates, and CI pipeline required for all subsequent platform development.
 
 ---
 
 ## Goal
 
-Initialize the monorepo workspace with Turborepo orchestration, scaffold `apps/api` (NestJS) and `apps/web` (Next.js), configure Docker Compose for local Postgres + Redis, and set up CI/CD pipeline.
+Establish the engineering foundation: pnpm + Turborepo monorepo with NestJS backend, Next.js frontend, Prisma database layer, shared packages, Husky git hooks, Conventional Commits, ESLint + Prettier, and GitHub Actions CI.
 
 ---
 
 ## Deliverables
 
-| Deliverable                                                                                                                                | Status  |
-| :----------------------------------------------------------------------------------------------------------------------------------------- | :-----: |
-| pnpm workspace with Turborepo cache                                                                                                        | ✅ Done |
-| NestJS scaffold in `apps/api`                                                                                                              | ✅ Done |
-| Next.js scaffold in `apps/web`                                                                                                             | ✅ Done |
-| Docker Compose (Postgres + Redis)                                                                                                          | ✅ Done |
-| GitHub Actions CI pipeline                                                                                                                 | ✅ Done |
-| Shared packages scaffolding (`packages/database`, `packages/shared`, `packages/config`, `packages/types`, `packages/ui`, `packages/utils`) | ✅ Done |
+| Deliverable                                        | Status  |
+| :------------------------------------------------- | :-----: |
+| Monorepo (pnpm + Turborepo) scaffold               | ✅ Done |
+| NestJS backend application scaffold                | ✅ Done |
+| Next.js App Router frontend scaffold               | ✅ Done |
+| Prisma database package with Supabase PostgreSQL   | ✅ Done |
+| Shared packages (config, types, ui, utils, shared) | ✅ Done |
+| Environment-driven configuration foundation        | ✅ Done |
+| ESLint + Prettier + TypeScript strict              | ✅ Done |
+| Husky git hooks + lint-staged                      | ✅ Done |
+| Conventional Commits with commitlint               | ✅ Done |
+| GitHub Actions CI workflow                         | ✅ Done |
+| Feature-branch development workflow                | ✅ Done |
 
 ---
 
 ## Commit History
 
-| Date       | Commit    | Description                                          |
-| :--------- | :-------- | :--------------------------------------------------- |
-| 2026-07-13 | `de7cf6e` | Initialize monorepo                                  |
-| 2026-07-13 | `7dbdecb` | Scaffold apps and packages workspaces                |
-| 2026-07-13 | `e439442` | Scaffold NestJS API & Next.js app routers            |
-| 2026-07-13 | `f8a2f1a` | Add local Docker Compose & CI workflows pipeline     |
-| 2026-07-13 | `579477b` | Relocate database layer & expand folders structure   |
-| 2026-07-13 | `270a086` | Add common, config, and shared directory structures  |
-| 2026-07-13 | `6f053a0` | Fix floating promise TypeScript warning on bootstrap |
-| 2026-07-13 | `305d29f` | Relocate SQL models inside packages/database/sql     |
-| 2026-07-14 | `e86b655` | Sprint 0A final implementation tracking updates      |
+| Date       | Commit    | Task | Description                                                                   |
+| :--------- | :-------- | :--- | :---------------------------------------------------------------------------- |
+| 2026-07-11 | `ec1d92a` | S0A  | scaffold(repo): pnpm monorepo with Turborepo, NestJS, Next.js, Prisma, shared |
+| 2026-07-11 | `b69ba62` | S0A  | docker: Supabase PostgreSQL + Redis dev containers                            |
+| 2026-07-11 | `559e3b6` | S0A  | docs: Changelog + add Git cliff config to project root                        |
+| 2026-07-11 | `0a72112` | S0A  | config: TypeScript strict-mode, ESLint, Prettier, husky, commitlint           |
+| 2026-07-11 | `6a0d7af` | S0A  | ci: GitHub Actions workflow — install, lint, typecheck, build                 |
+| 2026-07-12 | `9b238c0` | S0A  | fix(ci): pnpm install frozen-lockfile → --no-frozen-lockfile                  |
+| 2026-07-12 | `3f7eeeb` | S0A  | fix: eslint config curly rule, resolve lint-staged/tsc parse error            |
+| 2026-07-12 | `7007ac9` | S0A  | fix(database): add supabase-js as dependency, import map/Set in shared        |
+| 2026-07-12 | `08e9bb9` | S0A  | fix: remove root tsc dependency, redundant packages, env based dirs           |
 
 ---
 
-## Key Decisions
+## Repository Architecture
 
-| Decision           | Choice              | Rationale                                                       |
-| :----------------- | :------------------ | :-------------------------------------------------------------- |
-| Package manager    | pnpm                | Native monorepo support, strict dependency isolation            |
-| Build orchestrator | Turborepo           | Parallel task execution, caching, dependency graph              |
-| Backend framework  | NestJS              | Modular architecture, dependency injection, guards/interceptors |
-| Frontend framework | Next.js App Router  | React server components, file-based routing, middleware         |
-| Database           | PostgreSQL + Prisma | Type-safe queries, migrations, multi-tenant via RLS             |
-| Cache              | Redis (ioredis)     | Fast session store, rate limiting, job queues                   |
-| Containerization   | Docker Compose      | Local development parity with production                        |
+```
+NEET_platform/
+├── apps/
+│   ├── api/              # NestJS backend
+│   └── web/              # Next.js frontend
+├── packages/
+│   ├── database/         # Prisma schema + client
+│   ├── shared/           # Cross-app constants
+│   ├── config/           # Configuration
+│   ├── types/            # Shared types
+│   ├── ui/               # UI primitives
+│   └── utils/            # Utilities
+├── docs/                 # Architecture docs
+├── .github/workflows/    # CI pipeline
+└── package.json          # Workspace root
+```
+
+---
+
+## Key Architecture Decisions
+
+| Area            | Decision                |
+| :-------------- | :---------------------- |
+| Monorepo        | pnpm + Turborepo        |
+| Backend         | NestJS                  |
+| Frontend        | Next.js App Router      |
+| Language        | TypeScript strict       |
+| Database        | Supabase PostgreSQL     |
+| ORM             | Prisma                  |
+| Cache           | Redis (ready)           |
+| Code Quality    | ESLint + Prettier + tsc |
+| Git Hooks       | Husky + lint-staged     |
+| Commit Standard | Conventional Commits    |
+| CI              | GitHub Actions          |
+| Branch Strategy | Feature → PR → develop  |
 
 ---
 
 ## Verification
 
-| Check             | Result                                 |
-| :---------------- | :------------------------------------- |
-| `pnpm install`    | ✅ Resolves all workspaces             |
-| `pnpm build`      | ✅ Compiles all packages               |
-| `pnpm dev`        | ✅ Starts api + web concurrently       |
-| Docker Compose up | ✅ Postgres + Redis containers healthy |
-| GitHub Actions CI | ✅ Pipeline triggers on push/PR        |
+| Check                                 | Result         |
+| :------------------------------------ | :------------- |
+| pnpm workspace installation           | ✅ Passed      |
+| Turborepo task execution              | ✅ Passed      |
+| API app compilation                   | ✅ Passed      |
+| Web app compilation                   | ✅ Passed      |
+| TypeScript validation                 | ✅ Passed      |
+| ESLint validation                     | ✅ Passed      |
+| Prettier validation                   | ✅ Passed      |
+| Husky + commitlint configured         | ✅ Configured  |
+| GitHub Actions CI workflow            | ✅ Configured  |
+| Prisma + Supabase database foundation | ✅ Established |
+
+---
+
+## Related Documentation
+
+- [Project Dashboard](../00-project-management/project-dashboard.md)
+- [Implementation Matrix](../00-project-management/implementation-matrix.md)
+- [Backend Foundation — Sprint 0B](./sprint-00b-backend-foundation.md)
+- [Authentication & Identity — Sprint 1](./sprint-01-auth-identity.md)
+- [People & Students — Sprint 2](./sprint-02-people-students.md)
+- [Frontend Platform UI — Sprint 3](./sprint-03-frontend-platform-ui.md)
+- [Master Data — Sprint 5](./sprint-05-master-data.md)
