@@ -163,8 +163,6 @@
 
 - [Implementation Workbook](../implementation/implementfull.md)
 - [V1 Scope Freeze](../v1-scope-freeze.md)
-- [Sprint Roadmap](../04-sprint-plan.md)
-- [API Design Index](../architecture/api-design/00-api-index.md)
 - [Sprint 0A — Workspace Setup](../01-sprints/sprint-00a-workspace-setup.md)
 - [Sprint 0B — Backend Foundation](../01-sprints/sprint-00b-backend-foundation.md)
 - [Sprint 01 — Auth & Identity Backend](../01-sprints/sprint-01-auth-identity.md)
