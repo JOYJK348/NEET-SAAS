@@ -48,8 +48,6 @@ These files detail the system standards, database boundaries, and security rules
 
 - 📑 **[Project Overview](docs/00-project-overview.md)** — Business specifications and long-term vision.
 - 💬 **[Meeting Notes Index](docs/01-meeting-notes.md)** — Chronological log of stakeholder alignments and choices.
-- 🎯 **[Product Requirements](docs/02-requirements.md)** — Functional and non-functional specifications.
-- ⚡ **[Decisions Register](docs/03-decisions.md)** — Architecture Decisions Register (ADR) mapping ORM, Jobs, and Caching.
 - 🔑 **[Authentication Architecture](docs/architecture/auth-architecture.md)** — JWT + Supabase Auth management, silent HttpOnly Cookie refresh rotation, and session invalidation workflow.
 - 🛡️ **[Multi-Tenancy Isolation Strategy](docs/architecture/multitenancy-strategy.md)** — Row-level database partitioning scoped on `institute_id` with 3-layer security (Prisma middleware, PostgreSQL RLS, and Integration tests).
 - 📈 **[Sprint Roadmap & Planning](docs/04-sprint-plan.md)** — Sprint goals and deliverables index.
