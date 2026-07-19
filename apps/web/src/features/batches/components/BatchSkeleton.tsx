@@ -24,18 +24,22 @@ export function BatchSkeleton({ variant = 'table', count = 5, className }: Batch
             key={i}
             className="bg-white border border-gray-200 dark:border-gray-700 rounded-xl p-4 animate-pulse"
           >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                <div className="h-3 w-1/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                  <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                </div>
+                <div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse flex-shrink-0" />
               </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="h-3 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-              <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-3 w-1/3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="flex gap-2 pt-1">
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="flex-1" />
+                <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
             </div>
           </div>
         ))}

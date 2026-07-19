@@ -2,8 +2,15 @@
 
 import { useCallback, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
@@ -37,6 +44,7 @@ function CreateBatchContent() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<BatchFormData>({
     resolver: zodResolver(batchFormSchema),
@@ -128,36 +136,56 @@ function CreateBatchContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="courseId">Course *</Label>
-                <select
-                  id="courseId"
-                  className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  {...register('courseId')}
-                >
-                  <option value="">Select a course</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="courseId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="courseId"
+                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                      >
+                        <SelectValue placeholder="Select a course" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Select a course</SelectItem>
+                        {courses.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.courseId && (
                   <p className="text-sm text-red-500">{errors.courseId.message}</p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="branchId">Branch *</Label>
-                <select
-                  id="branchId"
-                  className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  {...register('branchId')}
-                >
-                  <option value="">Select a branch</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="branchId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="branchId"
+                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                      >
+                        <SelectValue placeholder="Select a branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Select a branch</SelectItem>
+                        {branches.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.branchId && (
                   <p className="text-sm text-red-500">{errors.branchId.message}</p>
                 )}
@@ -168,36 +196,56 @@ function CreateBatchContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="academicYearId">Academic Year *</Label>
-                <select
-                  id="academicYearId"
-                  className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  {...register('academicYearId')}
-                >
-                  <option value="">Select academic year</option>
-                  {years.map((y) => (
-                    <option key={y.id} value={y.id}>
-                      {y.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="academicYearId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="academicYearId"
+                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                      >
+                        <SelectValue placeholder="Select academic year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Select academic year</SelectItem>
+                        {years.map((y) => (
+                          <SelectItem key={y.id} value={y.id}>
+                            {y.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.academicYearId && (
                   <p className="text-sm text-red-500">{errors.academicYearId.message}</p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="deliveryTypeId">Delivery Type *</Label>
-                <select
-                  id="deliveryTypeId"
-                  className="flex h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  {...register('deliveryTypeId')}
-                >
-                  <option value="">Select delivery type</option>
-                  {deliveryTypes.map((dt) => (
-                    <option key={dt.id} value={dt.id}>
-                      {dt.name} ({dt.attendanceMode})
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="deliveryTypeId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="deliveryTypeId"
+                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                      >
+                        <SelectValue placeholder="Select delivery type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Select delivery type</SelectItem>
+                        {deliveryTypes.map((dt) => (
+                          <SelectItem key={dt.id} value={dt.id}>
+                            {dt.name} ({dt.attendanceMode})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.deliveryTypeId && (
                   <p className="text-sm text-red-500">{errors.deliveryTypeId.message}</p>
                 )}

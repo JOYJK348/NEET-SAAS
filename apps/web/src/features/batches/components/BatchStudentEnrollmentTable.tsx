@@ -56,10 +56,10 @@ export function BatchStudentEnrollmentTable({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Student Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                   Phone
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -79,8 +79,12 @@ export function BatchStudentEnrollmentTable({
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {student.studentName}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{student.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{student.phone}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                    {student.email}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                    {student.phone}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {formatBatchDate(student.joinedAt)}
                   </td>

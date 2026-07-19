@@ -57,6 +57,7 @@ export function BatchTable({
       key: 'courseName',
       header: 'Course',
       sortable: true,
+      className: 'hidden lg:table-cell',
       render: (_, batch) => (
         <span className="text-gray-600 dark:text-gray-300">{batch.courseName}</span>
       ),
@@ -65,6 +66,7 @@ export function BatchTable({
       key: 'branchName',
       header: 'Branch',
       sortable: true,
+      className: 'hidden lg:table-cell',
       render: (_, batch) => (
         <span className="text-gray-600 dark:text-gray-300">{batch.branchName}</span>
       ),
@@ -89,6 +91,7 @@ export function BatchTable({
       key: 'startDate',
       header: 'Start Date',
       sortable: true,
+      className: 'hidden lg:table-cell',
       render: (_, batch) => (
         <span className="text-gray-600 dark:text-gray-300">
           {format(new Date(batch.startDate), 'MMM d, yyyy')}
@@ -99,6 +102,7 @@ export function BatchTable({
       key: 'endDate',
       header: 'End Date',
       sortable: true,
+      className: 'hidden lg:table-cell',
       render: (_, batch) => (
         <span className="text-gray-600 dark:text-gray-300">
           {format(new Date(batch.endDate), 'MMM d, yyyy')}

@@ -62,13 +62,13 @@ export function BatchStaffAssignmentTable({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Staff Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                   Subject
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Effective From
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
                   Effective To
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -82,11 +82,13 @@ export function BatchStaffAssignmentTable({
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {assignment.staffName}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{assignment.subject}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                    {assignment.subject}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {formatBatchDate(assignment.effectiveFrom)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
                     {assignment.effectiveTo ? formatBatchDate(assignment.effectiveTo) : '—'}
                   </td>
                   <td className="px-4 py-3">

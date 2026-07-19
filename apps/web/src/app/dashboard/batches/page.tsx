@@ -151,16 +151,20 @@ function BatchesContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Batches</h1>
-          <p className="text-sm text-gray-500">Manage course batches and sections</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Batches</h1>
+          <p className="text-sm sm:text-base text-gray-500">Manage course batches and sections</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-xl h-11 px-5" onClick={handleExport}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto gap-2 rounded-xl h-11 px-5"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
           <Button
-            className="rounded-xl h-11 px-5 bg-purple-600 hover:bg-purple-700 text-white"
+            className="w-full sm:w-auto gap-2 rounded-xl h-11 px-5 bg-purple-600 hover:bg-purple-700 text-white"
             onClick={handleCreate}
           >
             <Plus className="h-4 w-4 mr-2" />

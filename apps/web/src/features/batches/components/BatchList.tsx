@@ -26,16 +26,21 @@ export function BatchList({
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="animate-pulse">
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700" />
-                <div className="flex-1 space-y-3">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
-                  <div className="flex gap-2">
-                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-20" />
-                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-24" />
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
                   </div>
+                  <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-20 flex-shrink-0" />
+                </div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                <div className="flex gap-2 pt-1">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                  <div className="flex-1" />
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded" />
                 </div>
               </div>
             </div>

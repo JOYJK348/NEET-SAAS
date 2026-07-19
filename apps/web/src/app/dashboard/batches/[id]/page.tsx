@@ -136,11 +136,11 @@ function BatchDetailContent() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {!isTerminal && (
             <Button
               variant="outline"
-              className="rounded-xl h-11 px-5"
+              className="w-full sm:w-auto rounded-xl h-11 px-5"
               onClick={() => router.push(`/dashboard/batches/${batch.id}/edit`)}
             >
               <Pencil className="h-4 w-4 mr-2" />
@@ -150,7 +150,7 @@ function BatchDetailContent() {
           {!isTerminal && (
             <Button
               variant="outline"
-              className="rounded-xl h-11 px-5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              className="w-full sm:w-auto rounded-xl h-11 px-5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               onClick={() => setShowArchiveDialog(true)}
               disabled={isArchiving}
             >
