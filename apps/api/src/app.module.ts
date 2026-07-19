@@ -14,6 +14,7 @@ import { PeopleModule } from './modules/people/people.module';
 import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
 import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enrollments.module';
+import { MasterModule } from './modules/master/master.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enroll
     StudentsModule,
     AdmissionsModule,
     BatchEnrollmentsModule,
+    MasterModule,
     HealthModule,
   ],
   controllers: [],
