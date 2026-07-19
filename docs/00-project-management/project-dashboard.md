@@ -66,13 +66,13 @@
 
 ### 🏢 Platform Admin (Super Admin)
 
-| Feature                   |     Status     | Notes                        |
-| :------------------------ | :------------: | :--------------------------- |
-| Dashboard                 | ⏳ Not Started | Global KPIs, tenant overview |
-| Tenant Management         | ⏳ Not Started | CRUD, onboarding workflow    |
-| Subscriptions & Licensing | ⏳ Not Started | Plans, quotas, billing       |
-| Global Settings           | ⏳ Not Started | Feature flags, policies      |
-| Automation Jobs           | ⏳ Not Started | Cron, workflows              |
+| Feature                   |     Status     | Notes                                   |
+| :------------------------ | :------------: | :-------------------------------------- |
+| Dashboard                 |    ✅ Done     | Global KPIs, tenant management overview |
+| Tenant Management         | ⏳ Not Started | CRUD, onboarding workflow               |
+| Subscriptions & Licensing | ⏳ Not Started | Plans, quotas, billing                  |
+| Global Settings           | ⏳ Not Started | Feature flags, policies                 |
+| Automation Jobs           | ⏳ Not Started | Cron, workflows                         |
 
 ### 🏫 Tenant Admin (Institute Admin)
 
