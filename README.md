@@ -216,10 +216,16 @@ The layout configuration rules for the different frontends mapping roles:
 
 ## 📅 Sprint History & Tracking
 
-Completed and active sprints are documented with full task matrices, acceptance criteria, and deliverables:
+Every sprint is documented with full task matrices, commit history, deliverables, and verification results:
 
-- 📗 **[Sprint 04 — Frontend Platform](docs/01-sprints/sprint-04-frontend-platform.md)** — Auth UI, Dashboard, Students, Admissions, Batches, Responsive Polish.
-- 📘 **[Sprint 05 — Master Data](docs/01-sprints/sprint-05-master-data.md)** — Branches, Courses, Subjects, Topics, Academic Years, Delivery Types (Current).
+| Sprint | Name                                                                                 |    Status     |                            Doc                            |
+| :----- | :----------------------------------------------------------------------------------- | :-----------: | :-------------------------------------------------------: |
+| **0A** | Workspace Setup (Monorepo, Docker, CI)                                               |    ✅ Done    |   [View](docs/01-sprints/sprint-00a-workspace-setup.md)   |
+| **0B** | Backend Foundation (NestJS, Prisma, Redis, Health)                                   |    ✅ Done    | [View](docs/01-sprints/sprint-00b-backend-foundation.md)  |
+| **1**  | Auth & Identity Backend (JWT, RBAC, Sessions)                                        |    ✅ Done    |    [View](docs/01-sprints/sprint-01-auth-identity.md)     |
+| **2**  | People & Students Backend (Profiles, Admissions, Batch)                              |    ✅ Done    |   [View](docs/01-sprints/sprint-02-people-students.md)    |
+| **3**  | Frontend Platform UI (Auth UI, Dashboard, Students, Admissions, Batches, Responsive) |    ✅ Done    | [View](docs/01-sprints/sprint-03-frontend-platform-ui.md) |
+| **5**  | **Master Data (Branches, Courses, Subjects, Topics)**                                | **🔄 Active** |     [View](docs/01-sprints/sprint-05-master-data.md)      |
 
 ---
 

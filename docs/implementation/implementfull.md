@@ -4,7 +4,7 @@ Machi, here is the complete, production-grade **17-Sheet Project Management Work
 
 ---
 
-> **Note on Sprint Numbering:** The workbook tabs below reflect the feature-domain plan (Platform, Master Setup, Identity, Academics, etc.). Actual sprint execution followed a different sequence (see [Sprint History docs](../01-sprints/sprint-04-frontend-platform.md)). The [Sprint Roadmap](#tab-01--sprint-roadmap) has been updated to map actual completed sprints.
+> **Note on Sprint Numbering:** The workbook tabs below reflect the feature-domain plan (Platform, Master Setup, Identity, Academics, etc.). Actual sprint execution followed a different sequence (see [Sprint History docs](../01-sprints/sprint-03-frontend-platform-ui.md)). The [Sprint Roadmap](#tab-01--sprint-roadmap) has been updated to map actual completed sprints.
 
 ## WORKBOOK TAB DIRECTORY
 
