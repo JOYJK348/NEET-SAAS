@@ -11,19 +11,38 @@ This repository houses the complete multi-tenant Software-as-a-Service (SaaS) **
 
 ## 🏆 Project Progress & Roadmap
 
-We are executing a multi-phased roadmap spanning structural foundation, database provisioning, API contracts, and portal integrations.
+We are executing a multi-phased roadmap spanning structural foundation, database provisioning, API contracts, portal integrations, and master data configuration.
 
-- 📊 **[Full Implementation Matrix](docs/implementation/implementfull.md)** — Track every single sprint goal, database schema migration status, and component task list.
+### 📋 Project Management
+
+- 📊 **[Project Dashboard](docs/00-project-management/project-dashboard.md)** — Overall progress, active sprints, key metrics.
+- 📊 **[Full Implementation Workbook](docs/implementation/implementfull.md)** — 18-tab master workbook with per-sprint task matrices, bugs, release checklist, risks, and change log.
+- 🎯 **[Implementation Matrix](docs/00-project-management/implementation-matrix.md)** — Master feature tracking with unique IDs, statuses, and version mapping.
 - 🏁 **[V1 Scope Freeze Agreement](docs/v1-scope-freeze.md)** — Core V1 MVP product features, limits, and milestone definitions.
 - 📈 **[Sprint Roadmap & Planning](docs/04-sprint-plan.md)** — High-level chronological planning.
 
-### Current Milestone Status (Sprint 0 - Sprint 3)
+### Completed Milestones
 
-- **Sprint 0A (Monorepo Setup)**: Turborepo orchestration, workspaces linking (`apps/api`, `apps/web`, `packages/database`, `packages/shared`), Docker compose integration. [Status: **100% COMPLETE**]
-- **Sprint 0B (NestJS Platform Foundation)**: Type-safe Config validation (Zod), AsyncLocalStorage request tracing, Pino logs formatter, global exceptions parser, global response interceptor, Prisma integration module, Redis connection pools, Helmet/CORS security, Swagger, and Terminus live/ready health checks. [Status: **100% COMPLETE**]
-- **Sprint 1 (Admissions & Onboarding)**: Institute onboarding, course/batch configuration, student profiles, and parent link setups. [Status: **100% COMPLETE**]
-- **Sprint 2 (Academic Engine)**: Tutors registry, Subjects maps, Chapter topics tree, live class schedules. [Status: **100% COMPLETE**]
-- **Sprint 3.1 & 3.2 (Assessments & LMS Core)**: Question banks, mock test configurations, study material library, CBT exams. [Status: **100% COMPLETE**]
+| Sprint        | Name                                                                |       Status       |
+| :------------ | :------------------------------------------------------------------ | :----------------: |
+| **Sprint 0A** | Workspace Setup (Monorepo, Turborepo, Docker)                       |      ✅ Done       |
+| **Sprint 0B** | Backend Foundation (NestJS, Prisma, Redis, Auth, Security)          |      ✅ Done       |
+| **Sprint 0C** | Frontend Foundation (Next.js, Auth UI, Dashboard, Components)       |      ✅ Done       |
+| **Sprint 1**  | Auth & Identity Backend (JWT, RBAC, Refresh Tokens, Sessions)       |      ✅ Done       |
+| **Sprint 2**  | People & Students Backend (Profiles, Admissions, Batch Enrollments) |      ✅ Done       |
+| **Sprint 3**  | Frontend Platform UI (Students, Admissions, Batches, Responsive)    |      ✅ Done       |
+| **Sprint 4**  | Responsive Polish & Bug Fixes                                       |      ✅ Done       |
+| **Sprint 5**  | **Master Data (Branches, Courses, Subjects, Topics)**               | **🔄 In Progress** |
+
+### Upcoming Milestones
+
+| Sprint        | Name                             |     Status     |
+| :------------ | :------------------------------- | :------------: |
+| **Sprint 6**  | Learning (Materials, Homework)   | ⏳ Not Started |
+| **Sprint 7**  | Live Classes (Jitsi, Recordings) | ⏳ Not Started |
+| **Sprint 8**  | Assessments & Question Bank      | ⏳ Not Started |
+| **Sprint 9**  | Billing & Payments               | ⏳ Not Started |
+| **Sprint 10** | Communication, Analytics & AI    | ⏳ Not Started |
 
 ---
 
@@ -192,6 +211,21 @@ The layout configuration rules for the different frontends mapping roles:
 - [Reporting Dashboard](docs/modules/tenant-admin/10-reports.md)
 - [Branding & Hours settings](docs/modules/tenant-admin/11-settings.md)
 - [Notification triggers](docs/modules/tenant-admin/12-workflow.md)
+
+---
+
+## 📅 Sprint History & Tracking
+
+Every sprint is documented with full task matrices, commit history, deliverables, and verification results:
+
+| Sprint | Name                                                                                 |    Status     |                            Doc                            |
+| :----- | :----------------------------------------------------------------------------------- | :-----------: | :-------------------------------------------------------: |
+| **0A** | Workspace Setup (Monorepo, Docker, CI)                                               |    ✅ Done    |   [View](docs/01-sprints/sprint-00a-workspace-setup.md)   |
+| **0B** | Backend Foundation (NestJS, Prisma, Redis, Health)                                   |    ✅ Done    | [View](docs/01-sprints/sprint-00b-backend-foundation.md)  |
+| **1**  | Auth & Identity Backend (JWT, RBAC, Sessions)                                        |    ✅ Done    |    [View](docs/01-sprints/sprint-01-auth-identity.md)     |
+| **2**  | People & Students Backend (Profiles, Admissions, Batch)                              |    ✅ Done    |   [View](docs/01-sprints/sprint-02-people-students.md)    |
+| **3**  | Frontend Platform UI (Auth UI, Dashboard, Students, Admissions, Batches, Responsive) |    ✅ Done    | [View](docs/01-sprints/sprint-03-frontend-platform-ui.md) |
+| **5**  | **Master Data (Branches, Courses, Subjects, Topics)**                                | **🔄 Active** |     [View](docs/01-sprints/sprint-05-master-data.md)      |
 
 ---
 
