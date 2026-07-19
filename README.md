@@ -77,36 +77,6 @@ The system enforces type-safe entity definitions. Each domain is completely spec
 
 ---
 
-## 🖥️ Portal Navigation Layouts
-
-The layout configuration rules for the different frontends mapping roles:
-
-### 🏢 Platform Owner Portal
-
-- [Navigation Index](docs/modules/platform-admin/01-navigation.md)
-- [Global Dashboard Widgets](docs/modules/platform-admin/02-dashboard.md)
-- [Tenants Boarding](docs/modules/platform-admin/03-institutes.md)
-- [Licensing & Subscriptions](docs/modules/platform-admin/04-subscriptions.md)
-- [Global Settings & Policy](docs/modules/platform-admin/05-settings.md)
-- [Platform Automation Jobs](docs/modules/platform-admin/06-workflow.md)
-
-### 🏫 Institute Administrator Portal
-
-- [Navigation Index](docs/modules/tenant-admin/01-navigation.md)
-- [Daily Metrics & KPI Dashboard](docs/modules/tenant-admin/02-dashboard.md)
-- [Student Management System](docs/modules/tenant-admin/03-students.md)
-- [Guardian Profiles Mappings](docs/modules/tenant-admin/04-parents.md)
-- [Tutors Onboarding & Workload Board](docs/modules/tenant-admin/05-tutors.md)
-- [Academics Curricula Configuration](docs/modules/tenant-admin/06-academics.md)
-- [Mock Exam Creator & Results Board](docs/modules/tenant-admin/07-mock-tests.md)
-- [Study Material Cataloging](docs/modules/tenant-admin/08-study-materials.md)
-- [Fee Management Ledger](docs/modules/tenant-admin/09-billing.md)
-- [Reporting Dashboard](docs/modules/tenant-admin/10-reports.md)
-- [Branding & Hours settings](docs/modules/tenant-admin/11-settings.md)
-- [Notification triggers](docs/modules/tenant-admin/12-workflow.md)
-
----
-
 ## 📅 Sprint History & Tracking
 
 Every sprint is documented with full task matrices, commit history, deliverables, and verification results:
