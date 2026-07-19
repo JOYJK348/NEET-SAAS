@@ -1,166 +1,144 @@
-# Sprint 02 — People & Students Backend
+# Sprint 02 — People, Students & Admission Lifecycle
 
 > **Status:** ✅ Completed
-> **Duration:** 14 days
 > **Version:** v1.2
+> **Primary Application:** `apps/api`
 
 ---
 
 ## Goal
 
-Implement the People domain (shared person infrastructure) and the Students domain (student profiles, admissions lifecycle, batch enrollments) with full CRUD APIs, business rules, validation, and database schemas.
+Build the complete student onboarding lifecycle: shared Person infrastructure, Student academic identity, Admission state machine with terminal-state protection, and Batch Enrollment with eligibility validation — all tenant-scoped.
 
 ---
 
 ## Deliverables
 
-| Deliverable                                                    | Status  |
-| :------------------------------------------------------------- | :-----: |
-| People shared infrastructure (Person module, base service)     | ✅ Done |
-| Student module foundation with Prisma schema                   | ✅ Done |
-| Student business rules + validation layer (Zod DTOs)           | ✅ Done |
-| Student CRUD API (create, read, update, list, delete)          | ✅ Done |
-| Admission schema (lifecycle enum, status history, indexes)     | ✅ Done |
-| Admission create endpoint with validation                      | ✅ Done |
-| Admission lifecycle management (read APIs, status transitions) | ✅ Done |
-| Admission terminal state guards + one-active rule              | ✅ Done |
-| Batch enrollment foundation with validation APIs               | ✅ Done |
-| Batch enrollment lifecycle management                          | ✅ Done |
-| Documentation restructure (README, architecture index)         | ✅ Done |
+| Deliverable                                              | Status  |
+| :------------------------------------------------------- | :-----: |
+| Shared Person entity (reusable across all personas)      | ✅ Done |
+| Student module (academic identity, roll number, status)  | ✅ Done |
+| Admission lifecycle state machine (6 states + terminal)  | ✅ Done |
+| Admission status transition with validation              | ✅ Done |
+| Terminal state protection (CONFIRMED/CANCELLED → locked) | ✅ Done |
+| One-active-admission rule enforcement                    | ✅ Done |
+| Admission status history tracking                        | ✅ Done |
+| Batch Enrollment with eligibility validation             | ✅ Done |
+| Tenant-scoped (instituteId) data isolation               | ✅ Done |
+| Soft-delete support for students                         | ✅ Done |
+| Shared tenant-scoped CRUD infrastructure                 | ✅ Done |
 
 ---
 
 ## Commit History
 
-| Date       | Commit    | Task   | Description                                                                      |
-| :--------- | :-------- | :----- | :------------------------------------------------------------------------------- |
-| 2026-07-15 | `2892d3c` | S2-001 | People shared infrastructure (PersonModule, base CRUD, TenantScopedPrisma)       |
-| 2026-07-16 | `2b83134` | —      | Student module foundation (Prisma schema, module structure)                      |
-| 2026-07-16 | `307dbae` | —      | Student business rules (Zod validation, DTOs)                                    |
-| 2026-07-16 | `35b7dc8` | —      | Admission schema with lifecycle enum, status history, nullable fields, indexes   |
-| 2026-07-16 | `8cd777b` | —      | Admission creation endpoint with validation                                      |
-| 2026-07-16 | `ddee7c5` | —      | Complete admission lifecycle: read APIs, status management, history queries      |
-| 2026-07-17 | `992a92f` | —      | Terminal state guards, one-active-rule enforcement, batch eligibility validation |
-| 2026-07-17 | `f9c6632` | —      | Batch enrollment foundation with validation and lifecycle APIs                   |
-| 2026-07-17 | `ab15adb` | —      | Fix: import PeopleModule for TenantScopedPrisma                                  |
-| 2026-07-17 | `94c6ac2` | —      | Merge feature/people into develop                                                |
-| 2026-07-17 | `e3f532e` | —      | Student module foundation (after merge)                                          |
-| 2026-07-17 | `d0849ea` | —      | Student business rules + validation layer                                        |
-| 2026-07-17 | `ac6c899` | —      | Admission schema (lifecycle enum, status history, indexes)                       |
-| 2026-07-17 | `b1b0c09` | —      | Admission creation endpoint                                                      |
-| 2026-07-17 | `12246da` | —      | Admission lifecycle: read APIs, status management, history                       |
-| 2026-07-17 | `1177aba` | —      | Terminal state guards, one-active rule, batch eligibility                        |
-| 2026-07-17 | `4145fc8` | —      | Batch enrollment foundation with validation and lifecycle APIs                   |
-
-### Documentation Work (during this sprint)
-
-| Date       | Commit    | Description                                                            |
-| :--------- | :-------- | :--------------------------------------------------------------------- |
-| 2026-07-16 | `014fb08` | Restructure README to index architecture, ADR, entity, API design docs |
-| 2026-07-16 | `1c47706` | Restructure documentation hub with clean category index maps           |
-| 2026-07-16 | `d8a5195` | Add domain models index, architecture tree, database overview table    |
-| 2026-07-16 | `40e0397` | Add API design references to architectural specification index         |
-| 2026-07-17 | `28298fa` | Add sprint planning docs (Sprint 0-4)                                  |
-
----
-
-## Database Schemas Built
-
-### Persons
-
-```prisma
-model Person {
-  id            String   @id @default(cuid())
-  instituteId   String
-  firstName     String
-  lastName      String
-  email         String?
-  phone         String?
-  dateOfBirth   DateTime?
-  gender        GenderType?
-  bloodGroup    BloodGroupType?
-  address       String?
-  city          String?
-  state         String?
-  pincode       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-```
-
-### Students
-
-```prisma
-model Student {
-  id              String
-  instituteId     String
-  personId        String
-  admissionDate   DateTime
-  academicStatus  AcademicStatusEnum
-  rollNumber      String?
-  batchId         String?
-  createdAt       DateTime
-  updatedAt       DateTime
-}
-```
-
-### Admission lifecycle
-
-Enrollment stages: `APPLIED → ENQUIRY → DOCUMENT_VERIFICATION → ADMISSION_TEST → INTERVIEW → PAYMENT_PENDING → CONFIRMED → CANCELLED`
-Terminal states: `CONFIRMED`, `CANCELLED` — cannot transition out.
-
-### Batch Enrollment
-
-Batch assignment with lifecycle tracking and eligibility validation.
+| Date       | Commit    | Area        | Description                               |
+| :--------- | :-------- | :---------- | :---------------------------------------- |
+| 2026-07-16 | `2892d3c` | People      | Shared People infrastructure              |
+| 2026-07-16 | `2b83134` | Students    | Student module foundation                 |
+| 2026-07-16 | `307dbae` | Students    | Business rules and validation             |
+| 2026-07-16 | `35b7dc8` | Admissions  | Admission schema and lifecycle            |
+| 2026-07-16 | `8cd777b` | Admissions  | Admission creation endpoint               |
+| 2026-07-16 | `ddee7c5` | Admissions  | Admission lifecycle APIs and history      |
+| 2026-07-16 | `992a92f` | Admissions  | Terminal states and one-active rule       |
+| 2026-07-16 | `f9c6632` | Enrollment  | Batch enrollment foundation               |
+| 2026-07-16 | `ab15adb` | Infra       | PeopleModule dependency fix               |
+| 2026-07-16 | `94c6ac2` | Integration | People feature merge                      |
+| 2026-07-16 | `d0849ea` | Students    | Business rules and validation refinement  |
+| 2026-07-16 | `ac6c899` | Admissions  | Schema refinement                         |
+| 2026-07-16 | `b1b0c09` | Admissions  | Creation endpoint refinement              |
+| 2026-07-16 | `12246da` | Admissions  | Lifecycle and history refinement          |
+| 2026-07-16 | `1177aba` | Admissions  | Terminal-state and eligibility refinement |
+| 2026-07-16 | `4145fc8` | Enrollment  | Enrollment lifecycle APIs                 |
 
 ---
 
 ## API Endpoints Built
 
-| Method | Path                             | Module            |
-| :----- | :------------------------------- | :---------------- |
-| POST   | `/api/v1/people/persons`         | People            |
-| GET    | `/api/v1/people/persons`         | People            |
-| GET    | `/api/v1/people/persons/:id`     | People            |
-| PUT    | `/api/v1/people/persons/:id`     | People            |
-| POST   | `/api/v1/students`               | Students          |
-| GET    | `/api/v1/students`               | Students          |
-| GET    | `/api/v1/students/:id`           | Students          |
-| PUT    | `/api/v1/students/:id`           | Students          |
-| DELETE | `/api/v1/students/:id`           | Students          |
-| POST   | `/api/v1/admissions`             | Admissions        |
-| GET    | `/api/v1/admissions`             | Admissions        |
-| GET    | `/api/v1/admissions/:id`         | Admissions        |
-| PATCH  | `/api/v1/admissions/:id/status`  | Admissions        |
-| GET    | `/api/v1/admissions/:id/history` | Admissions        |
-| POST   | `/api/v1/batch-enrollments`      | Batch Enrollments |
-| GET    | `/api/v1/batch-enrollments`      | Batch Enrollments |
-| GET    | `/api/v1/batch-enrollments/:id`  | Batch Enrollments |
-| PATCH  | `/api/v1/batch-enrollments/:id`  | Batch Enrollments |
+### People
+
+| Method | Path                         | Description   |
+| :----- | :--------------------------- | :------------ |
+| POST   | `/api/v1/people/persons`     | Create person |
+| GET    | `/api/v1/people/persons`     | List persons  |
+| GET    | `/api/v1/people/persons/:id` | Get person    |
+| PUT    | `/api/v1/people/persons/:id` | Update person |
+
+### Students
+
+| Method | Path                   | Description    |
+| :----- | :--------------------- | :------------- |
+| POST   | `/api/v1/students`     | Create student |
+| GET    | `/api/v1/students`     | List students  |
+| GET    | `/api/v1/students/:id` | Get student    |
+| PUT    | `/api/v1/students/:id` | Update student |
+| DELETE | `/api/v1/students/:id` | Soft-delete    |
+
+### Admissions
+
+| Method | Path                             | Description        |
+| :----- | :------------------------------- | :----------------- |
+| POST   | `/api/v1/admissions`             | Create admission   |
+| GET    | `/api/v1/admissions`             | List admissions    |
+| GET    | `/api/v1/admissions/:id`         | Get admission      |
+| PATCH  | `/api/v1/admissions/:id/status`  | Transition status  |
+| GET    | `/api/v1/admissions/:id/history` | Get status history |
+
+### Batch Enrollments
+
+| Method | Path                            | Description       |
+| :----- | :------------------------------ | :---------------- |
+| POST   | `/api/v1/batch-enrollments`     | Create enrollment |
+| GET    | `/api/v1/batch-enrollments`     | List enrollments  |
+| GET    | `/api/v1/batch-enrollments/:id` | Get enrollment    |
+| PATCH  | `/api/v1/batch-enrollments/:id` | Update enrollment |
 
 ---
 
-## Key Decisions
+## Domain Architecture
 
-| Decision          | Choice                                           | Rationale                                 |
-| :---------------- | :----------------------------------------------- | :---------------------------------------- |
-| Prisma enum types | Declared in schema, generated client             | Type-safe enum references across services |
-| Soft delete       | `isActive` flag + `deletedAt` timestamp          | Audit trail, data recovery                |
-| Tenant isolation  | `instituteId` on every table + Prisma middleware | RLS-compatible, easy to enforce           |
-| Admission states  | State machine with terminal guards               | Prevents invalid transitions              |
-| Batch validation  | Eligibility rules before enrollment              | Ensures data consistency                  |
+```
+Person (reusable identity)
+  ↓
+Student (academic profile, roll number, status)
+  ↓
+Admission (state machine lifecycle)
+  ├── APPLIED → ENQUIRY → DOCUMENT_VERIFICATION → ADMISSION_TEST → INTERVIEW → PAYMENT_PENDING → CONFIRMED
+  └── Any → CANCELLED (terminal)
+  ↓
+Batch Enrollment (eligibility-validated)
+  ↓
+Academic Participation
+```
+
+---
+
+## Key Architecture Decisions
+
+| Decision            | Choice                    | Rationale                         |
+| :------------------ | :------------------------ | :-------------------------------- |
+| Person abstraction  | Shared `Person` entity    | Avoid duplicate identity data     |
+| Student identity    | Separate `Student` entity | Keep academic data separate       |
+| Admission lifecycle | State machine             | Prevent invalid transitions       |
+| Terminal states     | Business-rule enforcement | Protect finalized records         |
+| One-active rule     | Service-layer validation  | Prevent duplicate enrollments     |
+| Admission history   | Status audit trail        | Auditability                      |
+| Tenant isolation    | `instituteId` scoped      | Prevent cross-tenant access       |
+| Soft deletion       | `isActive` + `deletedAt`  | Preserve records, enable recovery |
 
 ---
 
 ## Verification
 
-| Check                              | Result                                   |
-| :--------------------------------- | :--------------------------------------- |
-| Person CRUD                        | ✅ Create, read, update, soft-delete     |
-| Student CRUD                       | ✅ Full lifecycle with business rules    |
-| Admission creation with validation | ✅ Returns 201 / 400 / 409               |
-| Terminal state enforcement         | ✅ Confirmed/Cancelled cannot transition |
-| One-active admission rule          | ✅ Blocks duplicate active admissions    |
-| Batch enrollment eligibility       | ✅ Validates before enrollment           |
-| Tenant isolation                   | ✅ institute_id scoped queries           |
-| TypeScript strict mode             | ✅ No errors                             |
+| Check                               | Result      |
+| :---------------------------------- | :---------- |
+| Person CRUD                         | ✅ Working  |
+| Student creation + retrieval        | ✅ Working  |
+| Student soft delete                 | ✅ Working  |
+| Admission invalid transition reject | ✅ Rejected |
+| Terminal state locked               | ✅ Enforced |
+| Duplicate active admission blocked  | ✅ Blocked  |
+| Admission history available         | ✅ Working  |
+| Batch enrollment eligibility check  | ✅ Enforced |
+| Tenant-scoped queries               | ✅ Isolated |
+| TypeScript + ESLint                 | ✅ Passing  |
