@@ -92,12 +92,12 @@ Every sprint is documented with full task matrices, commit history, deliverables
 
 ---
 
-## 🛠️ Onboarding, Workflow & Standards
+## Onboarding, Workflow & Standards
 
 For new engineers joining the team, follow these governance guidelines to ensure architectural consistency:
 
-- 📑 **[Engineering Design Plan](docs/implementation/00-implementation-plan.md)** — Code layout structure and deployment plans.
-- 🔄 **[Local Git Workflow & Branching](docs/implementation/01-development-workflow.md)** — Conventional Commit guidelines and PR processes.
-- 📐 **[Code Formatting & Quality Standards](docs/implementation/02-coding-standards.md)** — ESLint rules, TypeScript conventions, and naming protocols.
-- ✅ **[Definition of Done (DoD) Checklist](docs/implementation/03-definition-of-done.md)** — Mandatory checks before merging any pull request.
-- 🔒 **[Quality Gates & Security Audits](docs/implementation/04-quality-gates.md)** — Pre-commit audits and CI pipeline checks.
+- **[Engineering Design Plan](docs/implementation/00-implementation-plan.md)** — Code layout structure and deployment plans.
+- **[Local Git Workflow & Branching](docs/implementation/01-development-workflow.md)** — Conventional Commit guidelines and PR processes.
+- **[Code Formatting & Quality Standards](docs/implementation/02-coding-standards.md)** — ESLint rules, TypeScript conventions, and naming protocols.
+- **[Definition of Done (DoD) Checklist](docs/implementation/03-definition-of-done.md)** — Mandatory checks before merging any pull request.
+- **[Quality Gates & Security Audits](docs/implementation/04-quality-gates.md)** — Pre-commit audits and CI pipeline checks.
