@@ -2,81 +2,150 @@
 
 > Central overview of the Education Management Platform (CMP) engineering progress.
 
+**Project Start:** Jul 6, 2026  
+**Target Finish:** Sep 1, 2026  
 **Last Updated:** 2026-07-19  
-**Data Source:** [Implementation Workbook](../implementation/implementfull.md), Git History  
 **Owner:** Jay
 
 ---
 
 ## Overall Status
 
-| Metric                    | Value                             |
-| :------------------------ | :-------------------------------- |
-| **Total Sprints Planned** | 15 (S0A–S10)                      |
-| **Sprints Completed**     | 5 (S0A, S0B, S0C, S1, S2, S3, S4) |
-| **Current Sprint**        | S5 — Master Data                  |
-| **Overall Progress**      | ~40%                              |
-| **Active Bugs**           | 2                                 |
-| **Pending Blockers**      | 0                                 |
+| Metric            | Value                             |
+| :---------------- | :-------------------------------- |
+| **Total Sprints** | 12 (S0A–S11)                      |
+| **Completed**     | 7 (S0A, S0B, S0C, S1, S2, S3, S4) |
+| **Project Start** | Jul 6, 2026                       |
+| **Current**       | S5 — Master Data                  |
+| **Progress**      | ~40%                              |
+| **Days Elapsed**  | 13 of 57                          |
+| **Active Bugs**   | 2                                 |
+| **Blockers**      | 0                                 |
 
 ---
 
 ## Sprint Completion Summary
 
-| Sprint | Name                   |    Status     | Duration   | Target Date | Key Deliverables                                                                                                                                                          |
-| :----- | :--------------------- | :-----------: | :--------- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| S0A    | Workspace Setup        |    ✅ Done    | 1 day      | Jul 13      | Monorepo, Turborepo, pnpm workspaces, NestJS scaffold, Next.js scaffold, Docker Compose (Postgres + Redis), GitHub Actions CI                                             |
-| S0B    | Backend Foundation     |    ✅ Done    | 2 days     | Jul 15      | NestJS platform (Config, Context, Logger, Validation, Exceptions, Interceptors, Prisma, Redis, Security, Swagger, Health Checks, Integration Tests)                       |
-| S0C    | UI Foundation          |    ✅ Done    | 1 day      | Jul 17      | Axios client + refresh interceptor, React Query, Zustand stores, Next.js middleware, UI component library (Button, Input, Table, Modal, Toast), 5 portal dashboard shells |
-| S1     | Auth & Identity (BE)   |    ✅ Done    | 1 day      | Jul 15      | JWT asymmetric auth, refresh token rotation, RBAC guards, permission seeding, session management, Swagger docs, integration tests                                         |
-| S2     | People & Students (BE) |    ✅ Done    | 3 days     | Jul 17      | Person profiles, Student CRUD, Admissions lifecycle, Batch enrollments, Business rules, Validation layer, DB schemas + indexes                                            |
-| S3     | Frontend Platform UI   |    ✅ Done    | 3 days     | Jul 19      | Frontend auth pages, Dashboard layout, Students management UI, Admissions wizard UI, Batch management UI, React Query migration                                           |
-| S4     | Responsive Polish      |    ✅ Done    | 1 day      | Jul 19      | Responsive audit (6 High + 3 Medium fixes), Radix Select migration, skeleton fixes, button stacking, column hiding on data tables                                         |
-| **S5** | **Master Data**        | **🔄 Active** | **7 days** | **Jul 26**  | **Branches, Courses, Subjects, Chapters, Topics, Academic Years, Delivery Types — BE + FE**                                                                               |
-| S6     | Learning               |  ⏳ Planned   | 5 days     | Aug 2       | Study materials, Homework, Assignments                                                                                                                                    |
-| S7     | Live Classes           |  ⏳ Planned   | 7 days     | Aug 9       | Jitsi meetings, Recordings, Video player                                                                                                                                  |
-| S8     | Assessments & QB       |  ⏳ Planned   | 7 days     | Aug 16      | Question bank, MCQ auto-grader, Exams                                                                                                                                     |
-| S9     | Billing                |  ⏳ Planned   | 7 days     | Aug 23      | Fee structures, Payments, Receipts                                                                                                                                        |
-| S10    | Comms, Analytics & AI  |  ⏳ Planned   | 7 days     | Aug 30      | Notifications, Dashboards, AI assistant                                                                                                                                   |
-| S11    | Production Go-Live     |  ⏳ Planned   | 2 days     | Sep 1       | QA hardening, Deploy, Load testing                                                                                                                                        |
+| Sprint  | Name                   |    Status     |  Duration  |   Start    |   Target   | Key Deliverables                                                                                                                                    |
+| :------ | :--------------------- | :-----------: | :--------: | :--------: | :--------: | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **S0A** | Workspace Setup        |    ✅ Done    |   1 day    |   Jul 6    |   Jul 13   | Monorepo, Turborepo, pnpm workspaces, NestJS scaffold, Next.js scaffold, Docker Compose (Postgres + Redis), GitHub Actions CI                       |
+| **S0B** | Backend Foundation     |    ✅ Done    |   2 days   |   Jul 6    |   Jul 15   | NestJS platform (Config, Context, Logger, Validation, Exceptions, Interceptors, Prisma, Redis, Security, Swagger, Health Checks, Integration Tests) |
+| **S0C** | UI Foundation          |    ✅ Done    |   1 day    |   Jul 6    |   Jul 17   | Axios client + refresh interceptor, React Query, Zustand stores, Next.js middleware, UI component library (5 portal dashboard shells)               |
+| **S1**  | Auth & Identity (BE)   |    ✅ Done    |   1 day    |   Jul 6    |   Jul 15   | JWT asymmetric auth, refresh token rotation, RBAC guards, permission seeding, session management, Swagger docs, integration tests                   |
+| **S2**  | People & Students (BE) |    ✅ Done    |   3 days   |   Jul 6    |   Jul 17   | Person profiles, Student CRUD, Admissions lifecycle, Batch enrollments, Business rules, Validation layer, DB schemas + indexes                      |
+| **S3**  | Frontend Platform UI   |    ✅ Done    |   3 days   |   Jul 6    |   Jul 19   | Auth pages, Dashboard layout, Students/Admissions/Batch management UI, React Query migration                                                        |
+| **S4**  | Responsive Polish      |    ✅ Done    |   1 day    |   Jul 6    |   Jul 19   | Responsive audit (6 High + 3 Medium fixes), Radix Select migration, skeleton/button/table fixes                                                     |
+| **S5**  | **Master Data**        | **🔄 Active** | **7 days** | **Jul 20** | **Jul 26** | **Branches, Courses, Subjects, Chapters, Topics, Academic Years, Delivery Types — BE + FE**                                                         |
+| **S6**  | Learning               |  ⏳ Planned   |   5 days   |   Jul 27   |   Aug 2    | Study materials, Homework, Assignments                                                                                                              |
+| **S7**  | Live Classes           |  ⏳ Planned   |   7 days   |   Aug 3    |   Aug 9    | Jitsi meetings, Recordings, Video player                                                                                                            |
+| **S8**  | Assessments & QB       |  ⏳ Planned   |   7 days   |   Aug 10   |   Aug 16   | Question bank, Manual grading workflow, Exams                                                                                                       |
+| **S9**  | Billing                |  ⏳ Planned   |   7 days   |   Aug 17   |   Aug 23   | Fee structures, Payments, Receipts                                                                                                                  |
+| **S10** | Comms, Analytics & AI  |  ⏳ Planned   |   7 days   |   Aug 24   |   Aug 30   | Notifications, Dashboards, AI assistant                                                                                                             |
+| **S11** | Production Go-Live     |  ⏳ Planned   |   2 days   |   Aug 31   |   Sep 1    | QA hardening, Deploy, Load testing                                                                                                                  |
 
 ---
 
 ## Backend Module Status
 
-| Module              |     Status     | APIs                                                 |
-| :------------------ | :------------: | :--------------------------------------------------- |
-| `health`            |    ✅ Done     | GET /health, GET /live, GET /ready                   |
-| `auth`              |    ✅ Done     | Login, Logout, Refresh, MFA, Session management      |
-| `people`            |    ✅ Done     | Person CRUD, Profile management                      |
-| `students`          |    ✅ Done     | Student CRUD, Admission lifecycle, Status management |
-| `admissions`        |    ✅ Done     | Admission create, Eligibility, Batch validation      |
-| `batch-enrollments` |    ✅ Done     | Batch enrollment lifecycle, Validation               |
-| `master`            | 🔄 In Progress | Branches, Courses, Subjects, Topics, Academic Years  |
-| `platform`          | ⏳ Scaffolded  | Tenant management, Subscriptions, Feature flags      |
-| `attendance`        | ⏳ Scaffolded  | Sessions, Records, Leave                             |
-| `learning`          | ⏳ Scaffolded  | Materials, Assignments                               |
-| `live`              | ⏳ Scaffolded  | Live classes, Recordings                             |
-| `billing`           | ⏳ Scaffolded  | Fee structures, Payments                             |
-| `ai`                | ⏳ Scaffolded  | AI doubt solver                                      |
-| `analytics`         | ⏳ Scaffolded  | Dashboards, Reports                                  |
+| Module              |     Status     | APIs Built                            | Notes                                     |
+| :------------------ | :------------: | :------------------------------------ | :---------------------------------------- |
+| `health`            |    ✅ Done     | GET /health, /live, /ready            | Terminus checks (DB, Redis, disk, memory) |
+| `auth`              |    ✅ Done     | Login, Logout, Refresh, MFA, Sessions | JWT RS256, refresh rotation, RBAC         |
+| `people`            |    ✅ Done     | Person CRUD                           | Shared person infrastructure              |
+| `students`          |    ✅ Done     | Student CRUD                          | Full lifecycle with business rules        |
+| `admissions`        |    ✅ Done     | Create, Status, History, Eligibility  | State machine with terminal guards        |
+| `batch-enrollments` |    ✅ Done     | Enroll, Validate, Lifecycle           | Batch eligibility validation              |
+| `master`            | 🔄 In Progress | Branches, Courses, Subjects           | Sprint 5 — BE + FE                        |
+| `platform`          | ⏳ Scaffolded  | —                                     | Tenant mgmt, subscriptions, feature flags |
+| `attendance`        | ⏳ Scaffolded  | —                                     | Sessions, Records, Leave                  |
+| `learning`          | ⏳ Scaffolded  | —                                     | Materials, Assignments                    |
+| `live`              | ⏳ Scaffolded  | —                                     | Live classes, Recordings                  |
+| `billing`           | ⏳ Scaffolded  | —                                     | Fee structures, Payments                  |
+| `ai`                | ⏳ Scaffolded  | —                                     | AI doubt solver                           |
+| `analytics`         | ⏳ Scaffolded  | —                                     | Dashboards, Reports                       |
 
 ---
 
-## Frontend Feature Status
+## Portal-wise Status
 
-| Feature                                     | Route           |     Status     |
-| :------------------------------------------ | :-------------- | :------------: |
-| Auth (Login, Register, Forgot Password)     | `/auth/*`       |    ✅ Done     |
-| Dashboard (Admin, Faculty, Student, Parent) | `/dashboard/*`  |    ✅ Done     |
-| Student Management                          | `/students/*`   |    ✅ Done     |
-| Admissions Management                       | `/admissions/*` |    ✅ Done     |
-| Batch Management                            | `/batches/*`    |    ✅ Done     |
-| Master Data (Branches, Courses, Subjects)   | `/master/*`     | 🔄 In Progress |
-| Learning Materials                          | —               |   ⏳ Planned   |
-| Live Classes                                | —               |   ⏳ Planned   |
-| Assessments                                 | —               |   ⏳ Planned   |
-| Billing                                     | —               |   ⏳ Planned   |
+### 🏢 Platform Admin (Super Admin)
+
+| Feature                   |     Status     | Notes                        |
+| :------------------------ | :------------: | :--------------------------- |
+| Dashboard                 | ⏳ Not Started | Global KPIs, tenant overview |
+| Tenant Management         | ⏳ Not Started | CRUD, onboarding workflow    |
+| Subscriptions & Licensing | ⏳ Not Started | Plans, quotas, billing       |
+| Global Settings           | ⏳ Not Started | Feature flags, policies      |
+| Automation Jobs           | ⏳ Not Started | Cron, workflows              |
+
+### 🏫 Tenant Admin (Institute Admin)
+
+| Feature                |       Status       | Notes                                   |
+| :--------------------- | :----------------: | :-------------------------------------- |
+| Dashboard              |   ✅ Shell Done    | Daily metrics, KPI widgets pending      |
+| **Student Management** |    **✅ Done**     | **List, detail, CRUD**                  |
+| **Admissions**         |    **✅ Done**     | **Wizard, status management, history**  |
+| **Batch Management**   |    **✅ Done**     | **Cards, detail, configuration**        |
+| Parents                |   ⏳ Not Started   | Guardian profiles, mapping              |
+| Tutors                 |   ⏳ Not Started   | Onboarding, workload board              |
+| **Master Data**        | **🔄 In Progress** | **Branches, Courses, Subjects, Topics** |
+| Mock Tests             |   ⏳ Not Started   | Manual grading only (no auto-grade)     |
+| Study Materials        |   ⏳ Not Started   | Upload, cataloging                      |
+| Fee Management         |   ⏳ Not Started   | Structures, ledger, receipts            |
+| Reports                |   ⏳ Not Started   | Performance, attendance                 |
+| Settings               |   ⏳ Not Started   | Branding, hours                         |
+| Notifications          |   ⏳ Not Started   | Triggers, templates                     |
+
+### 👨‍🏫 Tutor Portal
+
+| Feature         |     Status     | Notes                      |
+| :-------------- | :------------: | :------------------------- |
+| Dashboard       | ✅ Shell Done  | Schedule, upcoming classes |
+| My Batches      | ⏳ Not Started | Batch list, student roster |
+| Attendance      | ⏳ Not Started | Mark, view history         |
+| Study Materials | ⏳ Not Started | Upload, organize           |
+| Live Classes    | ⏳ Not Started | Schedule, host Jitsi       |
+| Assessments     | ⏳ Not Started | Create, grade manually     |
+| Homework        | ⏳ Not Started | Assign, evaluate           |
+
+### 🎓 Student Portal
+
+| Feature         |     Status     | Notes                                    |
+| :-------------- | :------------: | :--------------------------------------- |
+| Dashboard       | ✅ Shell Done  | Overview, upcoming                       |
+| My Batches      | ⏳ Not Started | Batch info, timetable                    |
+| Study Materials | ⏳ Not Started | View, download                           |
+| Live Classes    | ⏳ Not Started | Join, recordings                         |
+| Mock Tests      | ⏳ Not Started | Take test, view results (manual grading) |
+| Fee & Payments  | ⏳ Not Started | Ledger, pay online                       |
+| Attendance      | ⏳ Not Started | View history                             |
+
+### 👪 Parent Portal
+
+| Feature        |     Status     | Notes                      |
+| :------------- | :------------: | :------------------------- |
+| Dashboard      | ✅ Shell Done  | Child overview, alerts     |
+| Child Progress | ⏳ Not Started | Attendance, marks, reports |
+| Fee Payments   | ⏳ Not Started | Ledger, pay online         |
+| Communication  | ⏳ Not Started | Messages, notifications    |
+
+---
+
+## Frontend Routes Built
+
+| Route                   | Page              | Status  |
+| :---------------------- | :---------------- | :-----: |
+| `/auth/login`           | Login             | ✅ Done |
+| `/auth/register`        | Register          | ✅ Done |
+| `/auth/forgot-password` | Forgot Password   | ✅ Done |
+| `/auth/reset-password`  | Reset Password    | ✅ Done |
+| `/dashboard`            | Main Dashboard    | ✅ Done |
+| `/students`             | Student List      | ✅ Done |
+| `/students/:id`         | Student Detail    | ✅ Done |
+| `/admissions`           | Admissions List   | ✅ Done |
+| `/admissions/new`       | Admissions Wizard | ✅ Done |
+| `/batches`              | Batch List        | ✅ Done |
+| `/batches/:id`          | Batch Detail      | ✅ Done |
 
 ---
 
@@ -88,8 +157,8 @@
 | ESLint pass rate       | ✅ 100%         |  100%  |
 | Build success rate     | ✅ 100%         |  100%  |
 | Test coverage          | ⏳ Not measured | > 85%  |
-| API endpoints built    | ~30             |  362+  |
-| Frontend routes        | 5               |  40+   |
+| API endpoints built    | ~20+            |  362+  |
+| Frontend routes        | 11              |  40+   |
 | Active bugs            | 2               |   0    |
 
 ---
@@ -99,7 +168,6 @@
 - [Implementation Workbook](../implementation/implementfull.md)
 - [V1 Scope Freeze](../v1-scope-freeze.md)
 - [Sprint Roadmap](../04-sprint-plan.md)
-- [Architecture Docs](../architecture/auth-architecture.md)
 - [API Design Index](../architecture/api-design/00-api-index.md)
 - [Sprint 0A — Workspace Setup](../01-sprints/sprint-00a-workspace-setup.md)
 - [Sprint 0B — Backend Foundation](../01-sprints/sprint-00b-backend-foundation.md)

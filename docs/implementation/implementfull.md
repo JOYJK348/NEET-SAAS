@@ -49,22 +49,22 @@ _Copy to Sheet: `00_dashboard`_
 
 _Copy to Sheet: `01_sprint_roadmap`_
 
-| Sprint | Name                   | Duration | Progress | Target | Status      | Dependencies | Owner |
-| :----- | :--------------------- | :------: | :------: | :----- | :---------- | :----------- | :---- |
-| **0A** | Workspace Setup        |  1 Day   |   100%   | Jul 13 | Completed   | None         | Jay   |
-| **0B** | Platform Foundation    |  2 Days  |   100%   | Jul 15 | Completed   | Sprint 0A    | Jay   |
-| **0C** | UI Foundation          |  1 Day   |   100%   | Jul 17 | Completed   | Sprint 0B    | Jay   |
-| **1**  | Auth & Identity (BE)   |  1 Day   |   100%   | Jul 15 | Completed   | Sprint 0B    | Jay   |
-| **2**  | People & Students (BE) |  3 Days  |   100%   | Jul 17 | Completed   | Sprint 1     | Jay   |
-| **3**  | Frontend Platform UI   |  3 Days  |   100%   | Jul 19 | Completed   | Sprint 2     | Jay   |
-| **4**  | Responsive Polish      |  1 Day   |   100%   | Jul 19 | Completed   | Sprint 3     | Jay   |
-| **5**  | Master Data            |  7 Days  |    0%    | Jul 26 | Active      | Sprint 4     | Jay   |
-| **6**  | Learning               |  5 Days  |    0%    | Aug 2  | Not Started | Sprint 5     | Jay   |
-| **7**  | Live Classes           |  7 Days  |    0%    | Aug 9  | Not Started | Sprint 6     | Jay   |
-| **8**  | Assessments & QB       |  7 Days  |    0%    | Aug 16 | Not Started | Sprint 7     | Jay   |
-| **9**  | Billing                |  7 Days  |    0%    | Aug 23 | Not Started | Sprint 3     | Jay   |
-| **10** | Comms, Analytics & AI  |  7 Days  |    0%    | Aug 30 | Not Started | Sprint 8     | Jay   |
-| **11** | Production Go-Live     |  2 Days  |    0%    | Sep 1  | Not Started | All Sprints  | Jay   |
+| Sprint | Name                   | Duration | Progress | Start  | Target | Status      | Dependencies | Owner |
+| :----- | :--------------------- | :------: | :------: | :----- | :----- | :---------- | :----------- | :---- |
+| **0A** | Workspace Setup        |  1 Day   |   100%   | Jul 6  | Jul 13 | Completed   | None         | Jay   |
+| **0B** | Backend Foundation     |  2 Days  |   100%   | Jul 6  | Jul 15 | Completed   | Sprint 0A    | Jay   |
+| **0C** | UI Foundation          |  1 Day   |   100%   | Jul 6  | Jul 17 | Completed   | Sprint 0B    | Jay   |
+| **1**  | Auth & Identity (BE)   |  1 Day   |   100%   | Jul 6  | Jul 15 | Completed   | Sprint 0B    | Jay   |
+| **2**  | People & Students (BE) |  3 Days  |   100%   | Jul 6  | Jul 17 | Completed   | Sprint 1     | Jay   |
+| **3**  | Frontend Platform UI   |  3 Days  |   100%   | Jul 6  | Jul 19 | Completed   | Sprint 2     | Jay   |
+| **4**  | Responsive Polish      |  1 Day   |   100%   | Jul 6  | Jul 19 | Completed   | Sprint 3     | Jay   |
+| **5**  | Master Data            |  7 Days  |    0%    | Jul 20 | Jul 26 | Active      | Sprint 4     | Jay   |
+| **6**  | Learning               |  5 Days  |    0%    | Jul 27 | Aug 2  | Not Started | Sprint 5     | Jay   |
+| **7**  | Live Classes           |  7 Days  |    0%    | Aug 3  | Aug 9  | Not Started | Sprint 6     | Jay   |
+| **8**  | Assessments & QB       |  7 Days  |    0%    | Aug 10 | Aug 16 | Not Started | Sprint 7     | Jay   |
+| **9**  | Billing                |  7 Days  |    0%    | Aug 17 | Aug 23 | Not Started | Sprint 8     | Jay   |
+| **10** | Comms, Analytics & AI  |  7 Days  |    0%    | Aug 24 | Aug 30 | Not Started | Sprint 9     | Jay   |
+| **11** | Production Go-Live     |  2 Days  |    0%    | Aug 31 | Sep 1  | Not Started | All Sprints  | Jay   |
 
 ---
 
