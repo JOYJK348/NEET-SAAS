@@ -1,14 +1,14 @@
-# Sprint 01 — Auth & Identity Backend
+# Sprint 01 — Authentication & Identity Backend
 
 > **Status:** ✅ Completed
-> **Duration:** 7 days
 > **Version:** v1.0
+> **Primary Application:** `apps/api`
 
 ---
 
 ## Goal
 
-Implement the complete authentication and authorization backend: JWT asymmetric authentication, refresh token rotation, RBAC guard pipeline, role/permission seeding, Swagger documentation, and integration test suite.
+Implement the complete authentication and authorization backend: JWT asymmetric authentication (RS256), refresh token rotation with HttpOnly cookies, RBAC guard pipeline (role + permission checks), Prisma auth schema, idempotent seeder, Swagger documentation, and integration test suite.
 
 ---
 
@@ -61,6 +61,8 @@ Implement the complete authentication and authorization backend: JWT asymmetric 
 | GET    | `/api/v1/auth/sessions`     | List active sessions                                                |
 | DELETE | `/api/v1/auth/sessions/:id` | Invalidate specific session                                         |
 
+---
+
 ## Auth Architecture
 
 ```
@@ -87,6 +89,31 @@ Route → RolesGuard / PermissionsGuard
   → Check required roles/permissions
   → Allow/deny based on RBAC matrix
 ```
+
+### Identity Data Model
+
+```
+User
+ ├── Sessions (persisted, revocable)
+ ├── User Roles → Roles → Role Permissions → Permissions
+ └── Authentication (bcrypt hash, RS256 tokens)
+```
+
+---
+
+## Key Architecture Decisions
+
+| Area             | Decision                | Rationale                            |
+| :--------------- | :---------------------- | :----------------------------------- |
+| JWT Algorithm    | RS256 (asymmetric)      | Private signing, public verification |
+| Access Token TTL | 15 minutes              | Short-lived to reduce compromise     |
+| Refresh Token    | Rotated on each use     | Prevents indefinite reuse            |
+| Refresh Storage  | HttpOnly cookie         | Inaccessible to JavaScript           |
+| Password Storage | bcrypt                  | Industry-standard hashing            |
+| Authorization    | RBAC + Permission guard | Role-level + granular control        |
+| Session State    | Persisted in DB         | Enables revocation & audit           |
+
+---
 
 ## Verification
 
