@@ -50,7 +50,6 @@ These files detail the system standards, database boundaries, and security rules
 - 💬 **[Meeting Notes Index](docs/01-meeting-notes.md)** — Chronological log of stakeholder alignments and choices.
 - 🔑 **[Authentication Architecture](docs/architecture/auth-architecture.md)** — JWT + Supabase Auth management, silent HttpOnly Cookie refresh rotation, and session invalidation workflow.
 - 🏛️ **[Database Access Strategy](docs/architecture/database-access-strategy.md)** — The global database constitution rules.
-- 🗄️ **[Partition & Archive Strategy](docs/architecture/partition-archive-strategy.md)** — Lifecycle rules for high-volume database tables.
 - 🎯 **[V1 Scope Freeze](docs/v1-scope-freeze.md)** — Complete V1 MVP specification and sprint plan.
 - 🧩 **[Profile System](docs/architecture/13-profile-system.md)** — Generic platform configuration for any educational vertical.
 - 📦 **[Shared Kernel Specs](docs/architecture/14-shared-kernel.md)** — Utility packages shared across NestJS backend and Next.js frontend.
