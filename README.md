@@ -77,32 +77,6 @@ The system enforces type-safe entity definitions. Each domain is completely spec
 
 ---
 
-## 🔌 API Endpoint Design Specs
-
-Every route, HTTP status code, query parameter, DTO shape, validation schema, and controller interface has been designed and cataloged prior to implementation:
-
-- 📘 **[API Design Conventions Guide](docs/architecture/api-design/01-api-design-conventions.md)** — HTTP methods, REST standards, error formatting rules, and sorting/filtering guidelines.
-- 📇 **[API Register Master Index](docs/architecture/api-design/00-api-index.md)** — Index of all 362+ planned endpoints in the system.
-
-### Domain-Specific API Portals:
-
-- 🔑 **[Authentication APIs Index](docs/architecture/api-design/02-auth-api/README.md)** — Endpoints for Login, Logout, MFA, password updates, session refresh, active token invalidation, and session audit logs.
-- 👥 **[User HR APIs Index](docs/architecture/api-design/03-user-api/README.md)** — Staff onboarding, work shifts, tutor profiling, roles updates.
-- 🎓 **[Student APIs Index](docs/architecture/api-design/04-student-api/README.md)** — Enrolments, admissions lifecycle, guardian mapping, cohort movements.
-- 🏫 **[Academic APIs Index](docs/architecture/api-design/05-academic-api/README.md)** — Course configs, parallel batch triggers, tutor batch mappings, timetable configurations.
-- 📝 **[Assessment APIs Index](docs/architecture/api-design/06-assessment-api/README.md)** — MCQ bank ingestion, template creations, test schedules, answer keys validation, results processing.
-- 📹 **[LMS Content APIs Index](docs/architecture/api-design/07-lms-api/README.md)** — Video class configurations, R2 uploads, PDF books libraries, chapters/topics tree setup.
-- 💳 **[Billing APIs Index](docs/architecture/api-design/08-fee-api/README.md)** — Installments schedule, tax invoice generation, adjustments ledger, and immutable transaction receipts.
-- ⏱️ **[Attendance APIs Index](docs/architecture/api-design/09-attendance-api/README.md)** — Clock-in/out records, leave requests, shift configurations.
-- 📢 **[Communication APIs Index](docs/architecture/api-design/10-communication-api/README.md)** — Email notifications templates, SMS queue alerts, push settings.
-- 🔧 **[System APIs Index](docs/architecture/api-design/11-system-api/README.md)** — System uploads, bucket health status, and live/ready indicators.
-- 📊 **[Analytics APIs Index](docs/architecture/api-design/12-analytics-api/README.md)** — Performance data exports, dashboards read model triggers.
-- 🤖 **[AI Capabilities Spec](docs/architecture/api-design/13-ai-admin-api.md)** — Prompts register and AI token consumption checks.
-- ⚙️ **[Platform Administration Specs](docs/architecture/api-design/14-platform-api.md)** — Tenant licensing, feature flag overrides.
-- ⚙️ **[Internal Worker Orchestrator Specs](docs/architecture/api-design/15-internal-worker-api.md)** — Cron engines, queues pollers.
-
----
-
 ## 🖥️ Portal Navigation Layouts
 
 The layout configuration rules for the different frontends mapping roles:
