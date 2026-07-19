@@ -2,8 +2,6 @@
 
 > Central overview of the Education Management Platform (CMP) engineering progress.
 
-**Project Start:** Jul 6, 2026  
-**Target Finish:** Sep 1, 2026  
 **Last Updated:** 2026-07-19  
 **Owner:** Jay
 
@@ -15,10 +13,8 @@
 | :---------------- | :-------------------------------- |
 | **Total Sprints** | 12 (S0A–S11)                      |
 | **Completed**     | 7 (S0A, S0B, S0C, S1, S2, S3, S4) |
-| **Project Start** | Jul 6, 2026                       |
 | **Current**       | S5 — Master Data                  |
 | **Progress**      | ~40%                              |
-| **Days Elapsed**  | 13 of 57                          |
 | **Active Bugs**   | 2                                 |
 | **Blockers**      | 0                                 |
 
@@ -26,22 +22,22 @@
 
 ## Sprint Completion Summary
 
-| Sprint  | Name                   |    Status     |  Duration  |   Start    |   Target   | Key Deliverables                                                                                                                                    |
-| :------ | :--------------------- | :-----------: | :--------: | :--------: | :--------: | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **S0A** | Workspace Setup        |    ✅ Done    |   1 day    |   Jul 6    |   Jul 13   | Monorepo, Turborepo, pnpm workspaces, NestJS scaffold, Next.js scaffold, Docker Compose (Postgres + Redis), GitHub Actions CI                       |
-| **S0B** | Backend Foundation     |    ✅ Done    |   2 days   |   Jul 6    |   Jul 15   | NestJS platform (Config, Context, Logger, Validation, Exceptions, Interceptors, Prisma, Redis, Security, Swagger, Health Checks, Integration Tests) |
-| **S0C** | UI Foundation          |    ✅ Done    |   1 day    |   Jul 6    |   Jul 17   | Axios client + refresh interceptor, React Query, Zustand stores, Next.js middleware, UI component library (5 portal dashboard shells)               |
-| **S1**  | Auth & Identity (BE)   |    ✅ Done    |   1 day    |   Jul 6    |   Jul 15   | JWT asymmetric auth, refresh token rotation, RBAC guards, permission seeding, session management, Swagger docs, integration tests                   |
-| **S2**  | People & Students (BE) |    ✅ Done    |   3 days   |   Jul 6    |   Jul 17   | Person profiles, Student CRUD, Admissions lifecycle, Batch enrollments, Business rules, Validation layer, DB schemas + indexes                      |
-| **S3**  | Frontend Platform UI   |    ✅ Done    |   3 days   |   Jul 6    |   Jul 19   | Auth pages, Dashboard layout, Students/Admissions/Batch management UI, React Query migration                                                        |
-| **S4**  | Responsive Polish      |    ✅ Done    |   1 day    |   Jul 6    |   Jul 19   | Responsive audit (6 High + 3 Medium fixes), Radix Select migration, skeleton/button/table fixes                                                     |
-| **S5**  | **Master Data**        | **🔄 Active** | **7 days** | **Jul 20** | **Jul 26** | **Branches, Courses, Subjects, Chapters, Topics, Academic Years, Delivery Types — BE + FE**                                                         |
-| **S6**  | Learning               |  ⏳ Planned   |   5 days   |   Jul 27   |   Aug 2    | Study materials, Homework, Assignments                                                                                                              |
-| **S7**  | Live Classes           |  ⏳ Planned   |   7 days   |   Aug 3    |   Aug 9    | Jitsi meetings, Recordings, Video player                                                                                                            |
-| **S8**  | Assessments & QB       |  ⏳ Planned   |   7 days   |   Aug 10   |   Aug 16   | Question bank, Manual grading workflow, Exams                                                                                                       |
-| **S9**  | Billing                |  ⏳ Planned   |   7 days   |   Aug 17   |   Aug 23   | Fee structures, Payments, Receipts                                                                                                                  |
-| **S10** | Comms, Analytics & AI  |  ⏳ Planned   |   7 days   |   Aug 24   |   Aug 30   | Notifications, Dashboards, AI assistant                                                                                                             |
-| **S11** | Production Go-Live     |  ⏳ Planned   |   2 days   |   Aug 31   |   Sep 1    | QA hardening, Deploy, Load testing                                                                                                                  |
+| Sprint  | Name                   |    Status     | Key Deliverables                                                                                                                                    |
+| :------ | :--------------------- | :-----------: | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **S0A** | Workspace Setup        |    ✅ Done    | Monorepo, Turborepo, pnpm workspaces, NestJS scaffold, Next.js scaffold, Docker Compose (Postgres + Redis), GitHub Actions CI                       |
+| **S0B** | Backend Foundation     |    ✅ Done    | NestJS platform (Config, Context, Logger, Validation, Exceptions, Interceptors, Prisma, Redis, Security, Swagger, Health Checks, Integration Tests) |
+| **S0C** | UI Foundation          |    ✅ Done    | Axios client + refresh interceptor, React Query, Zustand stores, Next.js middleware, UI component library (5 portal dashboard shells)               |
+| **S1**  | Auth & Identity (BE)   |    ✅ Done    | JWT asymmetric auth, refresh token rotation, RBAC guards, permission seeding, session management, Swagger docs, integration tests                   |
+| **S2**  | People & Students (BE) |    ✅ Done    | Person profiles, Student CRUD, Admissions lifecycle, Batch enrollments, Business rules, Validation layer, DB schemas + indexes                      |
+| **S3**  | Frontend Platform UI   |    ✅ Done    | Auth pages, Dashboard layout, Students/Admissions/Batch management UI, React Query migration                                                        |
+| **S4**  | Responsive Polish      |    ✅ Done    | Responsive audit (6 High + 3 Medium fixes), Radix Select migration, skeleton/button/table fixes                                                     |
+| **S5**  | **Master Data**        | **🔄 Active** | **Branches, Courses, Subjects, Chapters, Topics, Academic Years, Delivery Types — BE + FE**                                                         |
+| **S6**  | Learning               |  ⏳ Planned   | Study materials, Homework, Assignments                                                                                                              |
+| **S7**  | Live Classes           |  ⏳ Planned   | Jitsi meetings, Recordings, Video player                                                                                                            |
+| **S8**  | Assessments & QB       |  ⏳ Planned   | Question bank, Manual grading workflow, Exams                                                                                                       |
+| **S9**  | Billing                |  ⏳ Planned   | Fee structures, Payments, Receipts                                                                                                                  |
+| **S10** | Comms, Analytics & AI  |  ⏳ Planned   | Notifications, Dashboards, AI assistant                                                                                                             |
+| **S11** | Production Go-Live     |  ⏳ Planned   | QA hardening, Deploy, Load testing                                                                                                                  |
 
 ---
 
