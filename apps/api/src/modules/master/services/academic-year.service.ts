@@ -73,9 +73,21 @@ export class AcademicYearService {
   ) {
     await this.findOne(id, tenantId);
     if (dto.isCurrent) await this.clearCurrentFlag(tenantId);
+
+    const updateData: Record<string, unknown> = {
+      ...dto,
+      updatedBy: userId,
+    };
+    if (dto.startDate) {
+      updateData['startDate'] = new Date(dto.startDate);
+    }
+    if (dto.endDate) {
+      updateData['endDate'] = new Date(dto.endDate);
+    }
+
     return this.prisma.academicYears.update({
       where: { tenantId_id: { tenantId, id } },
-      data: { ...dto, updatedBy: userId },
+      data: updateData,
     });
   }
 

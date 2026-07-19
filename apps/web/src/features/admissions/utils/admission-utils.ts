@@ -17,13 +17,11 @@ export function getStatusBadgeVariant(
   }
 }
 
+import { formatDateOnly, formatDateTime as centralFormatDateTime } from '@/lib/date-utils';
+
 export function formatDate(dateString: string): string {
   try {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDateOnly(dateString, 'MMM d, yyyy');
   } catch {
     return dateString;
   }
@@ -31,13 +29,7 @@ export function formatDate(dateString: string): string {
 
 export function formatDateTime(dateString: string): string {
   try {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return centralFormatDateTime(dateString, 'MMM d, yyyy h:mm a');
   } catch {
     return dateString;
   }

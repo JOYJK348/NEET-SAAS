@@ -19,12 +19,14 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   rememberMe: boolean;
+  hasHydrated: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
   setUser: (user: User) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setRememberMe: (rememberMe: boolean) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 const customDynamicStorage = {
@@ -66,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
       rememberMe: false,
+      hasHydrated: false,
       setAuth: (user, accessToken, refreshToken, rememberMe = false) =>
         set({
           user,
@@ -88,10 +91,14 @@ export const useAuthStore = create<AuthState>()(
         }),
       setLoading: (isLoading) => set({ isLoading }),
       setRememberMe: (rememberMe) => set({ rememberMe }),
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => customDynamicStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

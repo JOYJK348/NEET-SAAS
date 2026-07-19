@@ -7,6 +7,12 @@ import axios, {
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipGlobalToast?: boolean;
+  }
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 class ApiClient {
@@ -31,12 +37,16 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor - attach access token
+    // Request interceptor - attach access token and tenant context
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        const accessToken = useAuthStore.getState().accessToken;
+        const state = useAuthStore.getState();
+        const accessToken = state.accessToken;
         if (accessToken && config.headers) {
           config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        if (state.user?.tenantId && config.headers) {
+          config.headers['x-tenant-id'] = state.user.tenantId;
         }
         return config;
       },
@@ -111,7 +121,22 @@ class ApiClient {
 
             return this.client(originalRequest);
           } catch (refreshError) {
-            // Refresh failed - logout user
+            const isCancel = axios.isCancel(refreshError);
+            const errorPayload = refreshError as AxiosError;
+            const isNetworkError = !errorPayload.response;
+            const isServerError =
+              errorPayload.response &&
+              errorPayload.response.status &&
+              errorPayload.response.status >= 500;
+
+            if (isCancel || isNetworkError || isServerError) {
+              // Aborted request, network dropout, or server error - reject queue without logging out
+              this.failedQueue.forEach(({ reject }) => reject(refreshError));
+              this.failedQueue = [];
+              return Promise.reject(refreshError);
+            }
+
+            // Refresh genuinely failed (e.g. 400/401 token invalidation) - logout user
             this.failedQueue.forEach(({ reject }) => reject(refreshError));
             this.failedQueue = [];
 
@@ -126,7 +151,10 @@ class ApiClient {
         }
 
         // Global error handling
-        this.handleGlobalError(error);
+        const skipGlobalToast = originalRequest?.skipGlobalToast;
+        if (!skipGlobalToast) {
+          this.handleGlobalError(error);
+        }
 
         return Promise.reject(error);
       },
@@ -157,9 +185,15 @@ class ApiClient {
           description: message || 'The requested resource was not found',
         });
         break;
-      case 409:
-        toast.error('Conflict', { description: message });
+      case 409: {
+        const isCourseDependency =
+          typeof message === 'string' && message.startsWith('Cannot delete course:');
+        const displayMessage = isCourseDependency
+          ? 'This course cannot be deleted because it is currently being used by active batches, admissions, exams, learning materials, or fee structures. Please remove or archive those dependencies first.'
+          : message;
+        toast.error('Conflict', { description: displayMessage });
         break;
+      }
       case 429:
         toast.error('Too Many Requests', { description: 'Please try again later' });
         break;

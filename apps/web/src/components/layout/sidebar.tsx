@@ -23,6 +23,7 @@ import {
   Megaphone,
   BookMarked,
   Contact,
+  Calendar,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,11 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           { name: 'Announcements', href: '/dashboard/announcements', icon: Megaphone },
           { name: 'Billing', href: '/dashboard/billing', icon: DollarSign },
           { name: 'Reports & Analytics', href: '/dashboard/reports', icon: TrendingUp },
+          { name: 'Branches', href: '/tenant-admin/branches', icon: Building2 },
+          { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar },
+          { name: 'Courses', href: '/tenant-admin/courses', icon: BookOpen },
+          { name: 'Subjects', href: '/tenant-admin/subjects', icon: BookMarked },
+          { name: 'Delivery Types', href: '/tenant-admin/batch-delivery-types', icon: Layers },
           { name: 'Settings', href: '/dashboard/settings', icon: Settings },
         ];
 

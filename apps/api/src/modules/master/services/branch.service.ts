@@ -77,9 +77,20 @@ export class BranchService {
     userId: string,
   ) {
     await this.findOne(id, tenantId);
+
+    const { branchType, ...updateData } = dto;
+    const updatePayload: Record<string, any> = {
+      ...updateData,
+      updatedBy: userId,
+    };
+
+    if (branchType) {
+      updatePayload.branchType = branchType as any;
+    }
+
     return this.prisma.branches.update({
       where: { tenantId_id: { tenantId, id } },
-      data: { ...dto, updatedBy: userId },
+      data: updatePayload,
     });
   }
 

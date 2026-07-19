@@ -1,25 +1,13 @@
 import type { BatchStatus } from '@/features/batches/types/batch';
 
+import { formatDateOnly, formatDateTime as centralFormatDateTime } from '@/lib/date-utils';
+
 export function formatBatchDate(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return formatDateOnly(dateString, 'MMM d, yyyy');
 }
 
 export function formatDateTime(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return centralFormatDateTime(dateString, 'MMM d, yyyy h:mm a');
 }
 
 export function calculateUtilizationRate(enrolled: number, capacity: number): number {

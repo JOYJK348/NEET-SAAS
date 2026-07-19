@@ -59,16 +59,33 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = exceptionResponse || exception.message;
       }
     } else {
-      // Mask Prisma / SQL database stack details on client response
-      const err = exception as { code?: string };
+      // Translate Prisma / SQL database constraint errors into clean HTTP responses
+      const err = exception as {
+        code?: string;
+        meta?: Record<string, unknown>;
+      };
       if (
         err?.code &&
         typeof err.code === 'string' &&
         err.code.startsWith('P')
       ) {
-        status = HttpStatus.BAD_REQUEST;
-        code = 'DB_ERROR';
-        message = 'Database operation failed';
+        if (err.code === 'P2002') {
+          status = HttpStatus.CONFLICT;
+          code = 'UNIQUE_CONSTRAINT_VIOLATION';
+          const fields = Array.isArray(err.meta?.target)
+            ? err.meta.target.join(', ')
+            : 'field';
+          message = `A record with this ${fields} already exists.`;
+        } else if (err.code === 'P2003') {
+          status = HttpStatus.CONFLICT;
+          code = 'FOREIGN_KEY_CONSTRAINT_VIOLATION';
+          message =
+            'Cannot perform this action: this record is referenced by other active items.';
+        } else {
+          status = HttpStatus.BAD_REQUEST;
+          code = 'DB_ERROR';
+          message = 'Database operation failed';
+        }
       }
     }
 
@@ -80,6 +97,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     response.status(status).json({
       success: false,
+      statusCode: status,
       timestamp: new Date().toISOString(),
       requestId: context?.requestId || 'system',
       code,

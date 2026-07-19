@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateBranchDto {
@@ -31,6 +31,13 @@ export class UpdateBranchDto {
   @IsString()
   @MaxLength(20)
   phone?: string;
+
+  @ApiPropertyOptional({
+    enum: ['HEAD_OFFICE', 'CAMPUS', 'FRANCHISE', 'ONLINE'],
+  })
+  @IsOptional()
+  @IsEnum(['HEAD_OFFICE', 'CAMPUS', 'FRANCHISE', 'ONLINE'])
+  branchType?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

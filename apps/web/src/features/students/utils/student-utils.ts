@@ -13,26 +13,14 @@ export function calculateAge(dateOfBirth: string): number {
   return age;
 }
 
+import { formatDateOnly, formatDateTime as centralFormatDateTime } from '@/lib/date-utils';
+
 export function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+  return formatDateOnly(dateString, 'MMM d, yyyy');
 }
 
 export function formatDateTime(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return centralFormatDateTime(dateString, 'MMM d, yyyy h:mm a');
 }
 
 export function formatPhone(phone: string): string {

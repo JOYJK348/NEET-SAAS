@@ -24,6 +24,7 @@ const ROLE_PERMISSION_MAPS: RolePermissionMap[] = [
       'communication.send', 'communication.templates', 'communication.campaigns', 'communication.read',
       'analytics.read', 'analytics.create', 'analytics.export', 'analytics.manage',
       'ai.read', 'ai.use', 'ai.manage',
+      'branches.read', 'branches.create', 'branches.update', 'branches.delete',
     ],
   },
   {
@@ -39,6 +40,7 @@ const ROLE_PERMISSION_MAPS: RolePermissionMap[] = [
       'communication.send',
       'analytics.read',
       'ai.read', 'ai.use',
+      'branches.read', 'branches.update',
     ],
   },
   {

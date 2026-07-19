@@ -94,6 +94,11 @@ const PERMISSION_DEFINITIONS: PermissionDef[] = [
   { groupCode: 'PLATFORM', key: 'platform.maintenance', resource: 'platform', action: 'maintenance', description: 'Platform maintenance mode', scope: 'PLATFORM' },
   { groupCode: 'PLATFORM', key: 'platform.jobs', resource: 'platform', action: 'jobs', description: 'Manage background jobs', scope: 'PLATFORM' },
   { groupCode: 'PLATFORM', key: 'platform.tenants', resource: 'platform', action: 'tenants', description: 'Manage tenants', scope: 'PLATFORM' },
+
+  { groupCode: 'PLATFORM', key: 'branches.read', resource: 'branches', action: 'read', description: 'View branches' },
+  { groupCode: 'PLATFORM', key: 'branches.create', resource: 'branches', action: 'create', description: 'Create branches' },
+  { groupCode: 'PLATFORM', key: 'branches.update', resource: 'branches', action: 'update', description: 'Update branches' },
+  { groupCode: 'PLATFORM', key: 'branches.delete', resource: 'branches', action: 'delete', description: 'Delete branches' },
 ];
 
 export async function seedPermissionGroups(): Promise<Map<string, string>> {

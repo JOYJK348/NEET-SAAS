@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading,
     accessToken,
     refreshToken,
+    hasHydrated,
   } = useAuthStore();
 
   const router = useRouter();
@@ -112,6 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check auth status on mount and route changes
   useEffect(() => {
+    if (!hasHydrated) return;
+
     const checkAuth = async () => {
       if (accessToken && !isAuthenticated) {
         try {
@@ -133,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
   }, [
+    hasHydrated,
     pathname,
     accessToken,
     isAuthenticated,
@@ -148,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated,
-        isLoading,
+        isLoading: isLoading || !hasHydrated,
         login,
         register,
         logout,

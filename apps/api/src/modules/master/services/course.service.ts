@@ -84,20 +84,67 @@ export class CourseService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+
+    // Check CourseSubject mappings
     const subjectCount = await this.prisma.courseSubjects.count({
       where: { tenantId, courseId: id, deletedAt: null },
     });
-    if (subjectCount > 0)
+    if (subjectCount > 0) {
       throw new ConflictException(
         'Cannot delete course: it has subjects mapped to it',
       );
+    }
+
+    // Check Batches
     const batchCount = await this.prisma.batches.count({
       where: { tenantId, courseId: id, deletedAt: null },
     });
-    if (batchCount > 0)
+    if (batchCount > 0) {
       throw new ConflictException(
         'Cannot delete course: it has active batches',
       );
+    }
+
+    // Check Student Admissions
+    const admissionCount = await this.prisma.studentAdmissions.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (admissionCount > 0) {
+      throw new ConflictException(
+        'Cannot delete course: it has student admissions mapped to it',
+      );
+    }
+
+    // Check Exams
+    const examCount = await this.prisma.exams.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (examCount > 0) {
+      throw new ConflictException(
+        'Cannot delete course: it has exams mapped to it',
+      );
+    }
+
+    // Check Learning Materials
+    const materialCount = await this.prisma.learningMaterials.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (materialCount > 0) {
+      throw new ConflictException(
+        'Cannot delete course: it has learning materials mapped to it',
+      );
+    }
+
+    // Check Fee Structures
+    const feeCount = await this.prisma.feeStructures.count({
+      where: { tenantId, courseId: id, deletedAt: null },
+    });
+    if (feeCount > 0) {
+      throw new ConflictException(
+        'Cannot delete course: it has fee structures mapped to it',
+      );
+    }
+
     await this.tenantScoped.softDelete(
       this.prisma.courses,
       id,
