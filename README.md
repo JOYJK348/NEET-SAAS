@@ -16,10 +16,6 @@ We are executing a multi-phased roadmap spanning structural foundation, database
 ### 📋 Project Management
 
 - 📊 **[Project Dashboard](docs/00-project-management/project-dashboard.md)** — Overall progress, active sprints, key metrics.
-- 📊 **[Full Implementation Workbook](docs/implementation/implementfull.md)** — 18-tab master workbook with per-sprint task matrices, bugs, release checklist, risks, and change log.
-- 🎯 **[Implementation Matrix](docs/00-project-management/implementation-matrix.md)** — Master feature tracking with unique IDs, statuses, and version mapping.
-- 🏁 **[V1 Scope Freeze Agreement](docs/v1-scope-freeze.md)** — Core V1 MVP product features, limits, and milestone definitions.
-- 📈 **[Sprint Roadmap & Planning](docs/04-sprint-plan.md)** — High-level chronological planning.
 
 ### Completed Milestones
 
