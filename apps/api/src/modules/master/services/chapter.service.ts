@@ -18,6 +18,7 @@ import {
 } from '../../../common/dto/query-params.dto';
 import { CreateChapterDto } from '../dto/create-chapter.dto';
 import { UpdateChapterDto } from '../dto/update-chapter.dto';
+import { ReorderChaptersDto } from '../dto/reorder.dto';
 
 const SEARCH_FIELDS = ['name', 'shortName', 'code'];
 
@@ -166,5 +167,38 @@ export class ChapterService {
       tenantId,
       userId,
     );
+  }
+
+  async reorder(dto: ReorderChaptersDto, tenantId: string, userId: string) {
+    const subject = await this.prisma.courseSubjects.findFirst({
+      where: { id: dto.courseSubjectId, tenantId, deletedAt: null },
+    });
+    if (!subject) throw new BadRequestException('Course subject not found');
+
+    const chapterIds = dto.items.map((i) => i.id);
+    const existing = await this.prisma.chapters.findMany({
+      where: {
+        tenantId,
+        courseSubjectId: dto.courseSubjectId,
+        id: { in: chapterIds },
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (existing.length !== chapterIds.length) {
+      throw new BadRequestException(
+        'One or more chapters do not belong to this subject',
+      );
+    }
+
+    await Promise.all(
+      dto.items.map((item) =>
+        this.prisma.chapters.update({
+          where: { tenantId_id: { tenantId, id: item.id } },
+          data: { displayOrder: item.displayOrder, updatedBy: userId },
+        }),
+      ),
+    );
+    return { success: true };
   }
 }

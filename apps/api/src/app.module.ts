@@ -15,6 +15,7 @@ import { StudentsModule } from './modules/students/students.module';
 import { AdmissionsModule } from './modules/admissions/admissions.module';
 import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enrollments.module';
 import { MasterModule } from './modules/master/master.module';
+import { LearningModule } from './modules/learning/learning.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { MasterModule } from './modules/master/master.module';
     AdmissionsModule,
     BatchEnrollmentsModule,
     MasterModule,
+    LearningModule,
     HealthModule,
   ],
   controllers: [],

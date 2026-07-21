@@ -23,6 +23,7 @@ import { QueryParamsDto } from '../../../common/dto/query-params.dto';
 import { TopicService } from '../services/topic.service';
 import { CreateTopicDto } from '../dto/create-topic.dto';
 import { UpdateTopicDto } from '../dto/update-topic.dto';
+import { ReorderTopicsDto } from '../dto/reorder.dto';
 
 @ApiTags('Master — Topics')
 @ApiBearerAuth('JWT-auth')
@@ -73,6 +74,15 @@ export class TopicController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.topicService.update(id, dto, user.tenantId!, user.sub);
+  }
+
+  @Post('reorder')
+  @ApiOperation({ summary: 'Reorder topics within a chapter' })
+  reorder(
+    @Body() dto: ReorderTopicsDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.topicService.reorder(dto, user.tenantId!, user.sub);
   }
 
   @Delete(':id')

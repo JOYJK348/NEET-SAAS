@@ -604,18 +604,29 @@ export default function CourseDetailPage() {
             <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
               <BookOpen className="h-6 w-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-white font-black text-xl sm:text-2xl leading-tight">
-                {course.name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                <span className="text-[10px] font-mono font-bold text-white/90 bg-white/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  {course.code}
-                </span>
-                <span className="text-white/60 text-xs font-medium">
-                  · {course.durationMonths} Months
-                </span>
-                <span className="text-white/60 text-xs font-medium">· {course.courseType}</span>
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-white font-black text-xl sm:text-2xl leading-tight">
+                    {course.name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+                    <span className="text-[10px] font-mono font-bold text-white/90 bg-white/20 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      {course.code}
+                    </span>
+                    <span className="text-white/60 text-xs font-medium">
+                      · {course.durationMonths} Months
+                    </span>
+                    <span className="text-white/60 text-xs font-medium">· {course.courseType}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push(`/tenant-admin/courses/${courseId}/builder`)}
+                  className="flex items-center gap-2 bg-white text-[#7c3aed] rounded-xl px-5 py-2.5 font-bold text-sm shadow-md hover:shadow-lg hover:scale-[1.02] transition-all shrink-0"
+                >
+                  <Layers className="h-4 w-4" />
+                  Open Builder ↗
+                </button>
               </div>
             </div>
           </div>

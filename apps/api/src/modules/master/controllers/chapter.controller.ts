@@ -23,6 +23,7 @@ import { QueryParamsDto } from '../../../common/dto/query-params.dto';
 import { ChapterService } from '../services/chapter.service';
 import { CreateChapterDto } from '../dto/create-chapter.dto';
 import { UpdateChapterDto } from '../dto/update-chapter.dto';
+import { ReorderChaptersDto } from '../dto/reorder.dto';
 
 @ApiTags('Master — Chapters')
 @ApiBearerAuth('JWT-auth')
@@ -77,6 +78,15 @@ export class ChapterController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.chapterService.update(id, dto, user.tenantId!, user.sub);
+  }
+
+  @Post('reorder')
+  @ApiOperation({ summary: 'Reorder chapters within a subject' })
+  reorder(
+    @Body() dto: ReorderChaptersDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.chapterService.reorder(dto, user.tenantId!, user.sub);
   }
 
   @Delete(':id')

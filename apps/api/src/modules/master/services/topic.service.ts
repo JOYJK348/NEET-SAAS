@@ -18,6 +18,7 @@ import {
 } from '../../../common/dto/query-params.dto';
 import { CreateTopicDto } from '../dto/create-topic.dto';
 import { UpdateTopicDto } from '../dto/update-topic.dto';
+import { ReorderTopicsDto } from '../dto/reorder.dto';
 
 const SEARCH_FIELDS = ['name', 'shortName', 'code'];
 
@@ -163,5 +164,38 @@ export class TopicService {
       tenantId,
       userId,
     );
+  }
+
+  async reorder(dto: ReorderTopicsDto, tenantId: string, userId: string) {
+    const chapter = await this.prisma.chapters.findFirst({
+      where: { id: dto.chapterId, tenantId, deletedAt: null },
+    });
+    if (!chapter) throw new BadRequestException('Chapter not found');
+
+    const topicIds = dto.items.map((i) => i.id);
+    const existing = await this.prisma.topics.findMany({
+      where: {
+        tenantId,
+        chapterId: dto.chapterId,
+        id: { in: topicIds },
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (existing.length !== topicIds.length) {
+      throw new BadRequestException(
+        'One or more topics do not belong to this chapter',
+      );
+    }
+
+    await Promise.all(
+      dto.items.map((item) =>
+        this.prisma.topics.update({
+          where: { tenantId_id: { tenantId, id: item.id } },
+          data: { displayOrder: item.displayOrder, updatedBy: userId },
+        }),
+      ),
+    );
+    return { success: true };
   }
 }

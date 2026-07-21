@@ -187,6 +187,7 @@ model Institutes {
   system_health_logss              SystemHealthLogs[]             @relation("tenant_id_to_institutes")
   tenant_settingss                 TenantSettings[]               @relation("tenant_id_to_institutes")
   topicss                          Topics[]                       @relation("tenant_id_to_institutes")
+  topic_itemss                      TopicItems[]                   @relation("tenant_id_to_institutes")
   userss                           Users[]                        @relation("tenant_id_to_institutes")
   webhook_deliveriess              WebhookDeliveries[]            @relation("tenant_id_to_institutes")
   webhook_eventss                  WebhookEvents[]                @relation("tenant_id_to_institutes")
@@ -461,10 +462,42 @@ model Topics {
   deletedAt          DateTime?
   deletedBy          String?
   version            Int        @default(1)
-  tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  tenant             Institutes    @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  topicItems         TopicItems[]
 
   @@unique([tenantId, id])
   @@index([tenantId, chapterId, code])
+}
+
+model TopicItems {
+  id             String               @id @default(uuid())
+  tenantId       String
+  topicId        String
+  type           TopicItemType
+  title          String
+  description    String?
+  content        Json?
+  fileUrl        String?
+  externalUrl    String?
+  metadata       Json?
+  assessmentId   String?
+  status         TopicItemStatusType  @default(DRAFT)
+  displayOrder   Int                  @default(1)
+  durationMins   Int?
+  completionRule CompletionRuleType   @default(NONE)
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  createdBy      String
+  updatedAt      DateTime             @default(now())
+  updatedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
+  version        Int                  @default(1)
+  tenant         Institutes           @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  topic          Topics               @relation(fields: [topicId], references: [id])
+
+  @@unique([tenantId, id])
+  @@index([tenantId, topicId, displayOrder])
 }
 
 model BatchDeliveryTypes {
@@ -6347,4 +6380,25 @@ enum WidgetTypeEnum {
   LINE_CHART
   PIE_CHART
   DATA_TABLE
+}
+
+enum TopicItemType {
+  TEXT
+  PDF
+  LINK
+  VIDEO
+  ASSESSMENT
+}
+
+enum TopicItemStatusType {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CompletionRuleType {
+  NONE
+  OPEN
+  WATCH_80_PERCENT
+  WATCHED_FULL
 }
