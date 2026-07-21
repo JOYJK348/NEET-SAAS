@@ -35,3 +35,19 @@ export function useUnassignSubject(courseId: string) {
     },
   });
 }
+
+export function useUpdateCourseSubject(courseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: Partial<CreateCourseSubjectInput> & { isActive?: boolean };
+    }) => courseSubjectsApi.updateCourseSubject(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: courseSubjectKeys.byCourse(courseId) });
+    },
+  });
+}

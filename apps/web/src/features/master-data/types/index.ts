@@ -138,6 +138,7 @@ export interface CourseSubject {
   passingMarks: number;
   credits: number;
   plannedHours: number;
+  isActive: boolean;
   tenantId: string;
   createdAt: string;
   updatedAt: string;

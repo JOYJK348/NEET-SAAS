@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   Body,
   Controller,
@@ -5,6 +7,7 @@ import {
   Get,
   Param,
   Post,
+  Patch,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -47,5 +50,15 @@ export class CourseSubjectController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     await this.courseSubjectService.remove(id, user.tenantId!, user.sub);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update mapped course subject' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.courseSubjectService.update(id, dto, user.tenantId!, user.sub);
   }
 }

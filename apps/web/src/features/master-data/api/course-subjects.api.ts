@@ -13,4 +13,11 @@ export const courseSubjectsApi = {
   async unassignSubject(id: string): Promise<void> {
     return api.delete<void>(`/master/course-subjects/${id}`);
   },
+
+  async updateCourseSubject(
+    id: string,
+    input: Partial<CreateCourseSubjectInput> & { isActive?: boolean },
+  ): Promise<CourseSubject> {
+    return api.patch<CourseSubject>(`/master/course-subjects/${id}`, input);
+  },
 };

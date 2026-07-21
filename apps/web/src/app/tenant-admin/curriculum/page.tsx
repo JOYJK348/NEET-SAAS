@@ -203,6 +203,20 @@ export default function CurriculumPage() {
     }
   };
 
+  const handleToggleSubjectStatus = async (s: Subject) => {
+    try {
+      await updateSubjectMutation.mutateAsync({
+        id: s.id,
+        input: {
+          isActive: !s.isActive,
+        } as any,
+      });
+      toast.success(`Subject ${!s.isActive ? 'activated' : 'deactivated'} successfully`);
+    } catch (err: any) {
+      toast.error('Failed to update status');
+    }
+  };
+
   const handleSubjectFormSubmit = async (input: CreateSubjectInput) => {
     try {
       if (selectedSubject) {
@@ -481,15 +495,113 @@ export default function CurriculumPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                <SubjectTable
-                  subjects={subjectsData.data}
-                  sortBy={subjectSortBy}
-                  sortOrder={subjectSortOrder}
-                  onSort={handleSubjectSort}
-                  onEdit={handleEditSubject}
-                  onDelete={handleDeleteSubject}
-                />
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {subjectsData.data.map((s) => (
+                    <div
+                      key={s.id}
+                      className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-400 flex flex-col bg-white"
+                      style={{ minHeight: '220px' }}
+                    >
+                      {/* ── Card Hero Header ── */}
+                      <div className="relative bg-[#7c3aed] px-5 pt-5 pb-8 overflow-hidden">
+                        {/* Decorative Background Shapes */}
+                        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 blur-md" />
+                        <div className="absolute top-2 right-4 w-10 h-10 rounded-full bg-white/5" />
+
+                        {/* Top Row: Icon + Actions */}
+                        <div className="relative flex items-start justify-between mb-3">
+                          <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                            <Layers className="h-4.5 w-4.5 text-white" />
+                          </div>
+                          {/* Hover-reveal Action Buttons */}
+                          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              type="button"
+                              onClick={() => handleEditSubject(s)}
+                              className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                              title="Edit subject"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubject(s.id)}
+                              className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-400/60 transition-colors"
+                              title="Delete subject"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Subject Title */}
+                        <div className="relative">
+                          <h3 className="text-white font-bold text-base leading-tight mb-0.5 truncate">
+                            {s.name}
+                          </h3>
+                          <span className="text-[9px] font-mono font-semibold text-white/70 uppercase tracking-widest">
+                            {s.code}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ── Card Body ── */}
+                      <div className="relative flex-1 px-5 pt-4 pb-4 flex flex-col justify-between">
+                        {/* Description / DisplayName */}
+                        <div className="flex-1">
+                          <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">
+                            Display Name
+                          </p>
+                          <p className="text-xs text-gray-700 font-medium mb-4 line-clamp-2">
+                            {s.displayName || 'No display name configured.'}
+                          </p>
+                        </div>
+
+                        {/* Bottom Footer Row */}
+                        <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
+                          {/* Left: Short Name / Code */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 uppercase">
+                              {s.shortName || 'N/A'}
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-0.5 rounded border border-[#7c3aed]/20 uppercase">
+                              {s.subjectType}
+                            </span>
+                          </div>
+
+                          {/* Right: Active/Inactive Sliding Toggle */}
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleSubjectStatus(s)}
+                              className={cn(
+                                'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-hidden',
+                                s.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+                              )}
+                              title="Toggle status"
+                            >
+                              <span
+                                className={cn(
+                                  'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                                  s.isActive ? 'translate-x-3' : 'translate-x-0',
+                                )}
+                              />
+                            </button>
+                            <span
+                              className={cn(
+                                'text-[9px] font-bold uppercase tracking-wider',
+                                s.isActive ? 'text-emerald-600' : 'text-gray-500',
+                              )}
+                            >
+                              {s.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {subjectsData.meta && subjectsData.meta.lastPage > 1 && (
                   <div className="flex justify-end gap-2 pt-4">

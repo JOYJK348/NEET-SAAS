@@ -10,6 +10,7 @@ import {
   useCourseSubjects,
   useAssignSubject,
   useUnassignSubject,
+  useUpdateCourseSubject,
   courseSubjectKeys,
   courseSubjectsApi,
 } from '@/features/master-data/hooks/use-course-subjects';
@@ -53,6 +54,7 @@ import {
   Search,
 } from 'lucide-react';
 import { BranchCoursesMappingSection } from '@/features/master-data/components/courses/BranchCoursesMappingSection';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -122,6 +124,9 @@ export default function CourseDetailPage() {
   };
 
   // Hierarchy selections
+  const [curriculumLevel, setCurriculumLevel] = useState<'subjects' | 'chapters' | 'topics'>(
+    'subjects',
+  );
   const [selectedCourseSubjectId, setSelectedCourseSubjectId] = useState<string | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null);
 
@@ -285,12 +290,67 @@ export default function CourseDetailPage() {
   };
 
   // Mutation Triggers
+  const updateCourseSubjectMutation = useUpdateCourseSubject(courseId);
   const createChapterMutation = useCreateChapter(selectedCourseSubjectId || '');
   const updateChapterMutation = useUpdateChapter(selectedCourseSubjectId || '');
   const createTopicMutation = useCreateTopic(selectedChapterId || '');
   const updateTopicMutation = useUpdateTopic(selectedChapterId || '');
   const deleteChapterMutation = useDeleteChapter(selectedCourseSubjectId || '');
   const deleteTopicMutation = useDeleteTopic(selectedChapterId || '');
+
+  const [editingCourseSubject, setEditingCourseSubject] = useState<any | null>(null);
+
+  const handleToggleCourseSubjectStatus = async (cs: any) => {
+    try {
+      await updateCourseSubjectMutation.mutateAsync({
+        id: cs.id,
+        input: { isActive: !cs.isActive },
+      });
+      toast.success(`Subject mapping status updated successfully`);
+    } catch (err) {
+      toast.error('Failed to update mapping status');
+    }
+  };
+
+  const handleToggleChapterStatus = async (ch: any) => {
+    try {
+      await updateChapterMutation.mutateAsync({
+        id: ch.id,
+        input: { isActive: !ch.isActive } as any,
+      });
+      toast.success(`Chapter status updated successfully`);
+    } catch (err) {
+      toast.error('Failed to update chapter status');
+    }
+  };
+
+  const handleToggleTopicStatus = async (tp: any) => {
+    try {
+      await updateTopicMutation.mutateAsync({
+        id: tp.id,
+        input: { isActive: !tp.isActive } as any,
+      });
+      toast.success(`Topic status updated successfully`);
+    } catch (err) {
+      toast.error('Failed to update topic status');
+    }
+  };
+
+  const handleAssignOpenChange = (open: boolean) => {
+    setAssignOpen(open);
+    if (!open) {
+      setEditingCourseSubject(null);
+      resetAssign({
+        subjectId: '',
+        displayOrder: 1,
+        isMandatory: true,
+        totalMarks: 100,
+        passingMarks: 40,
+        credits: 0,
+        plannedHours: 100,
+      });
+    }
+  };
 
   const handleChapterOpenChange = (open: boolean) => {
     setChapterOpen(open);
@@ -346,24 +406,54 @@ export default function CourseDetailPage() {
     }
   }, [editingTopic, resetTopic]);
 
+  useEffect(() => {
+    if (editingCourseSubject) {
+      resetAssign({
+        subjectId: editingCourseSubject.subjectId,
+        displayOrder: editingCourseSubject.displayOrder || 1,
+        isMandatory: editingCourseSubject.isMandatory ?? true,
+        totalMarks: editingCourseSubject.totalMarks || 100,
+        passingMarks: editingCourseSubject.passingMarks || 40,
+        credits: editingCourseSubject.credits || 0,
+        plannedHours: editingCourseSubject.plannedHours || 100,
+      });
+    }
+  }, [editingCourseSubject, resetAssign]);
+
   // Submissions
   const onAssign = async (data: any) => {
     try {
-      await assignMutation.mutateAsync({
-        courseId,
-        subjectId: data.subjectId,
-        displayOrder: data.displayOrder,
-        isMandatory: data.isMandatory,
-        totalMarks: data.totalMarks,
-        passingMarks: data.passingMarks,
-        credits: data.credits,
-        plannedHours: data.plannedHours,
-      });
-      toast.success('Subject mapped to course');
+      if (editingCourseSubject) {
+        await updateCourseSubjectMutation.mutateAsync({
+          id: editingCourseSubject.id,
+          input: {
+            displayOrder: Number(data.displayOrder),
+            isMandatory: data.isMandatory,
+            totalMarks: Number(data.totalMarks),
+            passingMarks: Number(data.passingMarks),
+            credits: Number(data.credits),
+            plannedHours: Number(data.plannedHours),
+          },
+        });
+        toast.success('Subject mapping updated successfully');
+      } else {
+        await assignMutation.mutateAsync({
+          courseId,
+          subjectId: data.subjectId,
+          displayOrder: Number(data.displayOrder),
+          isMandatory: data.isMandatory,
+          totalMarks: Number(data.totalMarks),
+          passingMarks: Number(data.passingMarks),
+          credits: Number(data.credits),
+          plannedHours: Number(data.plannedHours),
+        });
+        toast.success('Subject mapped to course');
+      }
       setAssignOpen(false);
+      setEditingCourseSubject(null);
       resetAssign();
     } catch (err) {
-      toast.error('Assignment failed or duplicate mapped subject');
+      toast.error('Operation failed. Please verify marks logic and duplicates.');
     }
   };
 
@@ -555,280 +645,479 @@ export default function CourseDetailPage() {
         <div className="space-y-4 pb-8">
           {/* Curriculum Tab */}
           {activeTab === 'curriculum' && (
-            <div className="space-y-3">
-              {/* Header Bar */}
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Subjects & Chapters
-                </p>
-                <button
-                  onClick={() => setAssignOpen(true)}
-                  className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#7c3aed] px-3 py-1.5 rounded-xl shadow-sm hover:opacity-90 transition-opacity"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Map Subject
-                </button>
-              </div>
-
-              {/* Loading / Empty State */}
-              {mappingsLoading ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-sm text-gray-400">
-                  Loading curriculum...
-                </div>
-              ) : courseSubjects.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
-                  <div className="w-14 h-14 rounded-2xl bg-[#7c3aed]/10 flex items-center justify-center mx-auto mb-3">
-                    <BookOpen className="h-7 w-7 text-[#7c3aed]" />
-                  </div>
-                  <p className="font-bold text-gray-800 mb-1 text-sm">No subjects mapped yet</p>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Start by mapping a subject to build the syllabus
-                  </p>
+            <div className="space-y-4">
+              {/* ── Dynamic Breadcrumb trail ── */}
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500">
                   <button
-                    onClick={() => setAssignOpen(true)}
-                    className="text-xs font-bold text-white bg-[#7c3aed] px-4 py-2 rounded-xl"
+                    onClick={() => {
+                      setCurriculumLevel('subjects');
+                      setSelectedCourseSubjectId(null);
+                      setSelectedChapterId(null);
+                    }}
+                    className="hover:text-[#7c3aed] transition-colors"
                   >
-                    + Map First Subject
+                    Syllabus ({courseSubjects.length})
                   </button>
-                </div>
-              ) : (
-                /* Subject Cards */
-                courseSubjects.map((cs, sIdx) => {
-                  const isSubjectOpen = selectedCourseSubjectId === cs.id;
-                  const subjectName =
-                    cs.subject?.displayName || cs.subject?.name || cs.subject?.code || 'Subject';
 
-                  return (
-                    <div
-                      key={cs.id}
-                      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
-                    >
-                      {/* Subject Row */}
-                      <div
-                        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  {selectedCourseSubjectId && (
+                    <>
+                      <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <button
                         onClick={() => {
-                          setSelectedCourseSubjectId(isSubjectOpen ? null : cs.id);
+                          setCurriculumLevel('chapters');
                           setSelectedChapterId(null);
                         }}
-                        onMouseEnter={() => handleSubjectHover(cs.id)}
+                        className={cn(
+                          'hover:text-[#7c3aed] transition-colors truncate max-w-[120px]',
+                          curriculumLevel === 'chapters' && 'text-[#7c3aed]',
+                        )}
                       >
-                        <div className="w-9 h-9 rounded-xl bg-[#7c3aed] flex items-center justify-center text-white font-bold text-xs shrink-0">
-                          {cs.subject?.code?.slice(0, 3) || `S${sIdx + 1}`}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-gray-900 text-sm truncate">{subjectName}</p>
-                          <p className="text-[10px] text-gray-400">
-                            {cs.plannedHours}h planned · {cs.isMandatory ? 'Mandatory' : 'Optional'}
-                          </p>
-                        </div>
-                        <div
-                          className="flex items-center gap-2 shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={() => {
-                              setSelectedCourseSubjectId(cs.id);
-                              setChapterOpen(true);
-                            }}
-                            className="text-[10px] font-bold text-[#7c3aed] bg-[#7c3aed]/10 px-2.5 py-1 rounded-lg"
-                          >
-                            + Chapter
-                          </button>
-                          <button
-                            onClick={() => handleUnassign(cs.id)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="text-gray-400 shrink-0">
-                          {isSubjectOpen ? (
-                            <ChevronDown className="h-4 w-4 text-[#7c3aed]" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </div>
+                        {courseSubjects.find((cs) => cs.id === selectedCourseSubjectId)?.subject
+                          ?.name || 'Subject'}
+                      </button>
+                    </>
+                  )}
+
+                  {selectedChapterId && (
+                    <>
+                      <ChevronRight className="h-3 w-3 text-gray-400" />
+                      <span className="text-[#7c3aed] truncate max-w-[120px]">
+                        {chapters.find((ch) => ch.id === selectedChapterId)?.name || 'Chapter'}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Primary Level Actions */}
+                {curriculumLevel === 'subjects' && (
+                  <button
+                    onClick={() => setAssignOpen(true)}
+                    className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#7c3aed] px-3.5 py-1.5 rounded-xl shadow-xs hover:opacity-90 transition-opacity"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Map Subject
+                  </button>
+                )}
+              </div>
+
+              {/* ── LEVEL 1: Subjects Catalog Grid ── */}
+              {curriculumLevel === 'subjects' && (
+                <>
+                  {mappingsLoading ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold animate-pulse">
+                      Loading mapped subjects...
+                    </div>
+                  ) : courseSubjects.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+                      <div className="w-14 h-14 rounded-2xl bg-[#7c3aed]/10 flex items-center justify-center mx-auto mb-3">
+                        <BookOpen className="h-7 w-7 text-[#7c3aed]" />
                       </div>
+                      <p className="font-bold text-gray-800 mb-1 text-sm">No subjects mapped yet</p>
+                      <p className="text-xs text-gray-400 mb-4">
+                        Start by mapping a subject to build the syllabus
+                      </p>
+                      <button
+                        onClick={() => setAssignOpen(true)}
+                        className="text-xs font-bold text-white bg-[#7c3aed] px-4 py-2 rounded-xl"
+                      >
+                        + Map First Subject
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {courseSubjects.map((cs, sIdx) => {
+                        const subjectName =
+                          cs.subject?.displayName ||
+                          cs.subject?.name ||
+                          cs.subject?.code ||
+                          'Subject';
+                        return (
+                          <div
+                            key={cs.id}
+                            className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-400 flex flex-col bg-white border border-gray-100"
+                            style={{ minHeight: '220px' }}
+                          >
+                            {/* Card Hero Header */}
+                            <div className="relative bg-[#7c3aed] px-5 pt-5 pb-8 overflow-hidden">
+                              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 blur-md" />
+                              <div className="absolute top-2 right-4 w-10 h-10 rounded-full bg-white/5" />
 
-                      {/* Chapters Section */}
-                      {isSubjectOpen && (
-                        <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3 space-y-2">
-                          {chaptersLoading ? (
-                            <p className="text-xs text-gray-400 text-center py-3">
-                              Loading chapters...
-                            </p>
-                          ) : (
-                            <>
-                              {chapters.map((ch, cIdx) => {
-                                const isChapterOpen = selectedChapterId === ch.id;
-                                return (
-                                  <div
-                                    key={ch.id}
-                                    className="bg-white rounded-xl border border-gray-100 overflow-hidden"
+                              <div className="relative flex items-start justify-between mb-3">
+                                <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xs">
+                                  {cs.subject?.code?.slice(0, 3) || `S${sIdx + 1}`}
+                                </div>
+                                <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCourseSubject(cs);
+                                      setAssignOpen(true);
+                                    }}
+                                    className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                    title="Edit mapping parameters"
                                   >
-                                    {/* Chapter Row */}
-                                    <div
-                                      className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
-                                      onClick={() =>
-                                        setSelectedChapterId(isChapterOpen ? null : ch.id)
-                                      }
-                                      onMouseEnter={() => handleChapterHover(ch.id)}
-                                    >
-                                      <span className="w-6 h-6 rounded-lg bg-[#7c3aed]/10 text-[#7c3aed] font-bold text-[10px] flex items-center justify-center shrink-0">
-                                        {cIdx + 1}
-                                      </span>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-gray-800 truncate">
-                                          Ch {cIdx + 1}: {ch.name}
-                                        </p>
-                                        <p className="text-[9px] text-gray-400 font-mono">
-                                          {ch.code}
-                                        </p>
-                                      </div>
-                                      <div
-                                        className="flex items-center gap-1.5 shrink-0"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <button
-                                          onClick={() => {
-                                            setSelectedChapterId(ch.id);
-                                            setTopicOpen(true);
-                                          }}
-                                          className="text-[9px] font-bold text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-1 rounded-md"
-                                        >
-                                          + Topic
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            setEditingChapter(ch);
-                                            setChapterOpen(true);
-                                          }}
-                                          className="p-1 text-gray-400 hover:text-[#7c3aed] transition-colors"
-                                        >
-                                          <Edit2 className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteChapter(ch.id)}
-                                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
-                                      </div>
-                                      <div className="text-gray-400 shrink-0">
-                                        {isChapterOpen ? (
-                                          <ChevronDown className="h-3.5 w-3.5 text-[#7c3aed]" />
-                                        ) : (
-                                          <ChevronRight className="h-3.5 w-3.5" />
-                                        )}
-                                      </div>
-                                    </div>
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUnassign(cs.id)}
+                                    className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-400/60 transition-colors"
+                                    title="Unmap subject"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
 
-                                    {/* Topics Section */}
-                                    {isChapterOpen && (
-                                      <div className="border-t border-gray-100 bg-gray-50/50 px-3 py-2 space-y-1.5">
-                                        {topicsLoading ? (
-                                          <p className="text-[10px] text-gray-400 text-center py-2">
-                                            Loading topics...
-                                          </p>
-                                        ) : (
-                                          <>
-                                            {topics.map((tp, tIdx) => (
-                                              <div
-                                                key={tp.id}
-                                                className="flex items-center gap-2.5 bg-white px-3 py-2 rounded-lg border border-gray-100"
-                                              >
-                                                <span className="text-[9px] font-mono font-bold text-[#7c3aed] bg-[#7c3aed]/10 px-1.5 py-0.5 rounded shrink-0">
-                                                  {sIdx + 1}.{cIdx + 1}.{tIdx + 1}
-                                                </span>
-                                                <div className="flex-1 min-w-0">
-                                                  <p className="text-xs font-semibold text-gray-800 truncate">
-                                                    {tp.name}
-                                                  </p>
-                                                  <div className="flex items-center gap-1.5 mt-0.5">
-                                                    <span
-                                                      className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                                        tp.difficultyLevel === 'EASY'
-                                                          ? 'bg-emerald-100 text-emerald-700'
-                                                          : tp.difficultyLevel === 'MEDIUM'
-                                                            ? 'bg-amber-100 text-amber-700'
-                                                            : 'bg-rose-100 text-rose-700'
-                                                      }`}
-                                                    >
-                                                      {tp.difficultyLevel}
-                                                    </span>
-                                                    <span className="text-[9px] text-gray-400">
-                                                      {tp.plannedHours}h · {tp.plannedSessions}{' '}
-                                                      sessions
-                                                    </span>
-                                                  </div>
-                                                </div>
-                                                <div className="flex items-center gap-1 shrink-0">
-                                                  <button
-                                                    onClick={() => {
-                                                      setEditingTopic(tp);
-                                                      setTopicOpen(true);
-                                                    }}
-                                                    className="p-1 text-gray-400 hover:text-[#7c3aed] transition-colors"
-                                                  >
-                                                    <Edit2 className="h-3 w-3" />
-                                                  </button>
-                                                  <button
-                                                    onClick={() => handleDeleteTopic(tp.id)}
-                                                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                                  >
-                                                    <Trash2 className="h-3 w-3" />
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            ))}
+                              <div className="relative">
+                                <h3 className="text-white font-bold text-base leading-tight mb-0.5 truncate">
+                                  {subjectName}
+                                </h3>
+                                <span className="text-[9px] font-mono font-semibold text-white/70 uppercase tracking-widest">
+                                  {cs.subject?.code || 'CORE'}
+                                </span>
+                              </div>
+                            </div>
 
-                                            {/* Add Topic Inline Card */}
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setSelectedChapterId(ch.id);
-                                                setTopicOpen(true);
-                                              }}
-                                              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-dashed border-[#7c3aed]/30 hover:border-[#7c3aed] bg-white text-[10px] font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/5"
-                                            >
-                                              <Plus className="h-3.5 w-3.5" /> Add Topic inside
-                                              Chapter
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
+                            {/* Card Body */}
+                            <div className="relative flex-1 px-5 pt-4 pb-4 flex flex-col justify-between">
+                              <div className="flex-1">
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
+                                  Parameters
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                  <span className="text-[10px] font-semibold text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-0.5 rounded border border-[#7c3aed]/20">
+                                    ⏱ {cs.plannedHours} Hours
+                                  </span>
+                                  <span className="text-[10px] font-semibold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-150 uppercase">
+                                    {cs.isMandatory ? 'Mandatory' : 'Optional'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
+                                {/* Left: Toggle switch */}
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCourseSubjectStatus(cs)}
+                                    className={cn(
+                                      'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-hidden',
+                                      cs.isActive ? 'bg-emerald-500' : 'bg-gray-300',
                                     )}
-                                  </div>
-                                );
-                              })}
+                                    title="Toggle mapping status"
+                                  >
+                                    <span
+                                      className={cn(
+                                        'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                                        cs.isActive ? 'translate-x-3' : 'translate-x-0',
+                                      )}
+                                    />
+                                  </button>
+                                  <span
+                                    className={cn(
+                                      'text-[9px] font-bold uppercase tracking-wider',
+                                      cs.isActive ? 'text-emerald-600' : 'text-gray-500',
+                                    )}
+                                  >
+                                    {cs.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </div>
 
-                              {/* Add Chapter Inline Card */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCourseSubjectId(cs.id);
+                                    setCurriculumLevel('chapters');
+                                  }}
+                                  className="flex items-center gap-1 text-xs font-bold text-[#7c3aed] hover:opacity-75 transition-opacity group/cta"
+                                >
+                                  Manage Chapters
+                                  <ChevronRight className="h-3.5 w-3.5 group-hover/cta:translate-x-0.5 transition-transform" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Map Subject Dotted Action Card */}
+                      <button
+                        type="button"
+                        onClick={() => setAssignOpen(true)}
+                        className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
+                        style={{ minHeight: '220px' }}
+                      >
+                        <Plus className="h-6 w-6 mb-2" />
+                        Map Another Subject
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── LEVEL 2: Chapters Catalog Grid ── */}
+              {curriculumLevel === 'chapters' && selectedCourseSubjectId && (
+                <>
+                  {chaptersLoading ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold animate-pulse">
+                      Loading chapters...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {chapters.map((ch, cIdx) => (
+                        <div
+                          key={ch.id}
+                          className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-400 flex flex-col bg-white border border-gray-100"
+                          style={{ minHeight: '220px' }}
+                          onMouseEnter={() => handleChapterHover(ch.id)}
+                        >
+                          {/* Card Hero Header */}
+                          <div className="relative bg-[#7c3aed] px-5 pt-5 pb-8 overflow-hidden">
+                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 blur-md" />
+                            <div className="absolute top-2 right-4 w-10 h-10 rounded-full bg-white/5" />
+
+                            <div className="relative flex items-start justify-between mb-3">
+                              <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xs">
+                                {cIdx + 1}
+                              </div>
+                              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingChapter(ch);
+                                    setChapterOpen(true);
+                                  }}
+                                  className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                  title="Edit chapter"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteChapter(ch.id)}
+                                  className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-400/60 transition-colors"
+                                  title="Delete chapter"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="relative">
+                              <h3 className="text-white font-bold text-base leading-tight mb-0.5 truncate">
+                                {ch.name}
+                              </h3>
+                              <span className="text-[9px] font-mono font-semibold text-white/70 uppercase tracking-widest">
+                                {ch.code}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="relative flex-1 px-5 pt-4 pb-4 flex flex-col justify-between">
+                            <div className="flex-1">
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
+                                Parameters
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <span className="text-[10px] font-semibold text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-0.5 rounded border border-[#7c3aed]/20">
+                                  ⏱ {ch.plannedHours} Hours
+                                </span>
+                                <span className="text-[10px] font-semibold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-150">
+                                  Sessions: {ch.estimatedSessions}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
+                              {/* Left: Toggle switch */}
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleChapterStatus(ch)}
+                                  className={cn(
+                                    'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-hidden',
+                                    ch.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+                                  )}
+                                  title="Toggle chapter status"
+                                >
+                                  <span
+                                    className={cn(
+                                      'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                                      ch.isActive ? 'translate-x-3' : 'translate-x-0',
+                                    )}
+                                  />
+                                </button>
+                                <span
+                                  className={cn(
+                                    'text-[9px] font-bold uppercase tracking-wider',
+                                    ch.isActive ? 'text-emerald-600' : 'text-gray-500',
+                                  )}
+                                >
+                                  {ch.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedCourseSubjectId(cs.id);
-                                  setChapterOpen(true);
+                                  setSelectedChapterId(ch.id);
+                                  setCurriculumLevel('topics');
                                 }}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/5"
+                                className="flex items-center gap-1 text-xs font-bold text-[#7c3aed] hover:opacity-75 transition-opacity group/cta"
                               >
-                                <Plus className="h-4 w-4" /> Add Chapter inside Subject
+                                Manage Topics
+                                <ChevronRight className="h-3.5 w-3.5 group-hover/cta:translate-x-0.5 transition-transform" />
                               </button>
-                            </>
-                          )}
+                            </div>
+                          </div>
                         </div>
-                      )}
+                      ))}
+
+                      {/* Add Chapter Action Card */}
+                      <button
+                        type="button"
+                        onClick={() => setChapterOpen(true)}
+                        className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
+                        style={{ minHeight: '220px' }}
+                      >
+                        <Plus className="h-6 w-6 mb-2" />
+                        Add New Chapter
+                      </button>
                     </div>
-                  );
-                })
+                  )}
+                </>
               )}
 
-              {courseSubjects.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setAssignOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/5 shadow-xs"
-                >
-                  <Plus className="h-4 w-4" /> Map Another Subject to Course
-                </button>
+              {/* ── LEVEL 3: Topics Catalog Grid ── */}
+              {curriculumLevel === 'topics' && selectedChapterId && (
+                <>
+                  {topicsLoading ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold animate-pulse">
+                      Loading topics...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {topics.map((tp, tIdx) => (
+                        <div
+                          key={tp.id}
+                          className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-400 flex flex-col bg-white border border-gray-100"
+                          style={{ minHeight: '200px' }}
+                        >
+                          {/* Card Hero Header */}
+                          <div className="relative bg-[#7c3aed] px-5 pt-5 pb-8 overflow-hidden">
+                            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/10 blur-md" />
+                            <div className="absolute top-2 right-4 w-10 h-10 rounded-full bg-white/5" />
+
+                            <div className="relative flex items-start justify-between mb-3">
+                              <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-bold text-xs">
+                                {tIdx + 1}
+                              </div>
+                              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTopic(tp);
+                                    setTopicOpen(true);
+                                  }}
+                                  className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                                  title="Edit topic"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTopic(tp.id)}
+                                  className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-400/60 transition-colors"
+                                  title="Delete topic"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="relative">
+                              <h3 className="text-white font-bold text-base leading-tight mb-0.5 truncate">
+                                {tp.name}
+                              </h3>
+                              <span className="text-[9px] font-mono font-semibold text-white/70 uppercase tracking-widest">
+                                {tp.code}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Card Body */}
+                          <div className="relative flex-1 px-5 pt-4 pb-4 flex flex-col justify-between">
+                            <div>
+                              <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-0.5">
+                                Parameters
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-1">
+                                <span className="text-[10px] font-semibold text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-0.5 rounded border border-[#7c3aed]/20">
+                                  ⏱ {tp.plannedHours}h · {tp.plannedSessions}s
+                                </span>
+                                <span
+                                  className={cn(
+                                    'text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider',
+                                    tp.difficultyLevel === 'EASY'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                      : tp.difficultyLevel === 'MEDIUM'
+                                        ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                                        : 'bg-rose-50 text-rose-700 border border-rose-100',
+                                  )}
+                                >
+                                  {tp.difficultyLevel}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3.5 border-t border-gray-100">
+                              {/* Toggle switch */}
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleTopicStatus(tp)}
+                                  className={cn(
+                                    'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-hidden',
+                                    tp.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+                                  )}
+                                  title="Toggle topic status"
+                                >
+                                  <span
+                                    className={cn(
+                                      'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                                      tp.isActive ? 'translate-x-3' : 'translate-x-0',
+                                    )}
+                                  />
+                                </button>
+                                <span
+                                  className={cn(
+                                    'text-[9px] font-bold uppercase tracking-wider',
+                                    tp.isActive ? 'text-emerald-600' : 'text-gray-500',
+                                  )}
+                                >
+                                  {tp.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add Topic Action Card */}
+                      <button
+                        type="button"
+                        onClick={() => setTopicOpen(true)}
+                        className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
+                        style={{ minHeight: '200px' }}
+                      >
+                        <Plus className="h-6 w-6 mb-2" />
+                        Add New Topic
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -840,68 +1129,116 @@ export default function CourseDetailPage() {
         {/* ── DIALOGS ── */}
 
         {/* Dialog 1: Map Subject */}
-        <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl border border-border shadow-2xl">
-            <div className="bg-[#7c3aed] p-5">
-              <DialogTitle className="text-base font-bold text-white">
-                Map Subject to Course
+        <Dialog open={assignOpen} onOpenChange={handleAssignOpenChange}>
+          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl sm:rounded-3xl border border-border shadow-2xl transition-all duration-300 max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-w-full w-full">
+            {/* Mobile Drag Pill */}
+            <div className="w-12 h-1 bg-white/30 rounded-full mx-auto my-3 block sm:hidden absolute top-0 left-1/2 -translate-x-1/2" />
+
+            <div className="bg-[#7c3aed] p-6 text-white relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-white/10 blur-xl" />
+              <DialogTitle className="text-base font-extrabold tracking-tight">
+                {editingCourseSubject ? 'Edit Subject Mapping' : 'Map Subject to Syllabus'}
               </DialogTitle>
-              <DialogDescription className="text-white/70 text-xs mt-0.5">
-                Assign a subject to this course syllabus.
+              <DialogDescription className="text-white/80 text-xs mt-1">
+                {editingCourseSubject
+                  ? 'Update mapped subject academic details.'
+                  : 'Associate a core subject program to this course syllabus catalog.'}
               </DialogDescription>
             </div>
-            <form onSubmit={handleAssignSubmit(onAssign)} className="p-5 space-y-3 bg-card">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Select Subject</Label>
-                <Select onValueChange={(val) => setAssignVal('subjectId', val)}>
-                  <SelectTrigger className="h-10 rounded-xl">
-                    <SelectValue placeholder="Choose a subject..." />
+
+            <form onSubmit={handleAssignSubmit(onAssign)} className="p-6 space-y-4 bg-white">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Select Subject Catalog
+                </Label>
+                <Select
+                  value={
+                    editingCourseSubject ? (editingCourseSubject.subjectId as string) : undefined
+                  }
+                  onValueChange={(val) => setAssignVal('subjectId', val)}
+                  disabled={!!editingCourseSubject}
+                >
+                  <SelectTrigger className="h-10 rounded-xl border-gray-200">
+                    <SelectValue placeholder="Choose a master subject..." />
                   </SelectTrigger>
                   <SelectContent>
                     {allSubjects.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        <span className="font-medium">{s.name}</span>{' '}
-                        <span className="text-xs text-muted-foreground ml-1">({s.code})</span>
+                        <span className="font-semibold text-gray-800 text-xs">{s.name}</span>{' '}
+                        <span className="text-[10px] font-mono text-gray-400 font-bold">
+                          ({s.code})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {assignErrors.subjectId && (
-                  <p className="text-xs text-destructive">{assignErrors.subjectId.message}</p>
+                  <p className="text-2xs text-red-500 font-bold">
+                    {assignErrors.subjectId.message}
+                  </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Planned Hours</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regAssign('plannedHours')} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Planned Hours
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 100"
+                    {...regAssign('plannedHours')}
+                  />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Display Order</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regAssign('displayOrder')} />
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Display Order
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 1"
+                    {...regAssign('displayOrder')}
+                  />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Total Marks</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regAssign('totalMarks')} />
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Total Marks
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 100"
+                    {...regAssign('totalMarks')}
+                  />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Passing Marks</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regAssign('passingMarks')} />
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Passing Marks
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 40"
+                    {...regAssign('passingMarks')}
+                  />
                 </div>
               </div>
-              <div className="flex gap-2 pt-2 border-t border-border">
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100 max-sm:pb-6">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setAssignOpen(false)}
-                  className="flex-1 h-9 rounded-xl text-xs"
+                  onClick={() => handleAssignOpenChange(false)}
+                  className="flex-1 h-10 rounded-xl text-xs font-bold border-gray-250"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 h-9 rounded-xl text-xs bg-[#7c3aed] hover:opacity-90 text-white"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold bg-[#7c3aed] hover:opacity-90 text-white shadow-sm"
                 >
-                  Map Subject
+                  {editingCourseSubject ? 'Save Mapping' : 'Map Subject'}
                 </Button>
               </div>
             </form>
@@ -910,67 +1247,87 @@ export default function CourseDetailPage() {
 
         {/* Dialog 2: Create/Edit Chapter */}
         <Dialog open={chapterOpen} onOpenChange={handleChapterOpenChange}>
-          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl border border-border shadow-2xl">
-            <div className="bg-[#7c3aed] p-5">
-              <DialogTitle className="text-base font-bold text-white">
-                {editingChapter ? 'Edit Chapter' : 'Add Chapter'}
+          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl sm:rounded-3xl border border-border shadow-2xl transition-all duration-300 max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-w-full w-full">
+            {/* Mobile Drag Pill */}
+            <div className="w-12 h-1 bg-white/30 rounded-full mx-auto my-3 block sm:hidden absolute top-0 left-1/2 -translate-x-1/2" />
+
+            <div className="bg-[#7c3aed] p-6 text-white relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-white/10 blur-xl" />
+              <DialogTitle className="text-base font-extrabold tracking-tight">
+                {editingChapter ? 'Edit Chapter Details' : 'Create New Chapter'}
               </DialogTitle>
-              <DialogDescription className="text-white/70 text-xs mt-0.5">
+              <DialogDescription className="text-white/80 text-xs mt-1">
                 {editingChapter
-                  ? "Update this chapter's details."
-                  : 'Add a new chapter to this subject.'}
+                  ? "Update this chapter's academic details."
+                  : 'Configure a new syllabus chapter.'}
               </DialogDescription>
             </div>
-            <form onSubmit={handleChapterSubmit(onAddChapter)} className="p-5 space-y-3 bg-card">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Chapter Code</Label>
+
+            <form onSubmit={handleChapterSubmit(onAddChapter)} className="p-6 space-y-4 bg-white">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Chapter Code
+                </Label>
                 <Input
                   placeholder="e.g. PHY-CH01"
-                  className="h-9 rounded-xl font-mono text-xs"
+                  className="h-10 rounded-xl font-mono text-xs border-gray-200"
                   {...regChapter('code')}
                   disabled={!!editingChapter}
                 />
                 {chapterErrors.code && (
-                  <p className="text-xs text-destructive">{chapterErrors.code.message}</p>
+                  <p className="text-2xs text-red-500 font-bold">{chapterErrors.code.message}</p>
                 )}
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Chapter Title</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Chapter Title
+                </Label>
                 <Input
-                  placeholder="e.g. Thermodynamics"
-                  className="h-9 rounded-xl"
+                  placeholder="e.g. Thermodynamics & Heat Transfers"
+                  className="h-10 rounded-xl border-gray-200"
                   {...regChapter('name')}
                 />
                 {chapterErrors.name && (
-                  <p className="text-xs text-destructive">{chapterErrors.name.message}</p>
+                  <p className="text-2xs text-red-500 font-bold">{chapterErrors.name.message}</p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Planned Hours</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regChapter('plannedHours')} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Est. Sessions</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Planned Hours
+                  </Label>
                   <Input
                     type="number"
-                    className="h-9 rounded-xl"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 10"
+                    {...regChapter('plannedHours')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Estimated Sessions
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 8"
                     {...regChapter('estimatedSessions')}
                   />
                 </div>
               </div>
-              <div className="flex gap-2 pt-2 border-t border-border">
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100 max-sm:pb-6">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleChapterOpenChange(false)}
-                  className="flex-1 h-9 rounded-xl text-xs"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold border-gray-250"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 h-9 rounded-xl text-xs bg-[#7c3aed] hover:opacity-90 text-white"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold bg-[#7c3aed] hover:opacity-90 text-white shadow-sm"
                 >
                   {editingChapter ? 'Save Changes' : 'Create Chapter'}
                 </Button>
@@ -981,75 +1338,134 @@ export default function CourseDetailPage() {
 
         {/* Dialog 3: Create/Edit Topic */}
         <Dialog open={topicOpen} onOpenChange={handleTopicOpenChange}>
-          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl border border-border shadow-2xl">
-            <div className="bg-[#7c3aed] p-5">
-              <DialogTitle className="text-base font-bold text-white">
-                {editingTopic ? 'Edit Topic' : 'Add Topic'}
+          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl sm:rounded-3xl border border-border shadow-2xl transition-all duration-300 max-sm:fixed max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:max-w-full w-full">
+            {/* Mobile Drag Pill */}
+            <div className="w-12 h-1 bg-white/30 rounded-full mx-auto my-3 block sm:hidden absolute top-0 left-1/2 -translate-x-1/2" />
+
+            <div className="bg-[#7c3aed] p-6 text-white relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-white/10 blur-xl" />
+              <DialogTitle className="text-base font-extrabold tracking-tight">
+                {editingTopic ? 'Edit Syllabus Topic' : 'Create Lecture Topic'}
               </DialogTitle>
-              <DialogDescription className="text-white/70 text-xs mt-0.5">
+              <DialogDescription className="text-white/80 text-xs mt-1">
                 {editingTopic
-                  ? 'Update topic details.'
-                  : 'Add a new lecture topic to this chapter.'}
+                  ? 'Update settings for this syllabus concept.'
+                  : 'Configure a new syllabus lecture topic.'}
               </DialogDescription>
             </div>
-            <form onSubmit={handleTopicSubmit(onAddTopic)} className="p-5 space-y-3 bg-card">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Topic Code</Label>
+
+            <form onSubmit={handleTopicSubmit(onAddTopic)} className="p-6 space-y-4 bg-white">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Topic Code
+                </Label>
                 <Input
                   placeholder="e.g. PHY-CH01-T01"
-                  className="h-9 rounded-xl font-mono text-xs"
+                  className="h-10 rounded-xl font-mono text-xs border-gray-200"
                   {...regTopic('code')}
                   disabled={!!editingTopic}
                 />
                 {topicErrors.code && (
-                  <p className="text-xs text-destructive">{topicErrors.code.message}</p>
+                  <p className="text-2xs text-red-500 font-bold">{topicErrors.code.message}</p>
                 )}
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold">Topic Name</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Topic Name
+                </Label>
                 <Input
-                  placeholder="e.g. Newton's Laws of Motion"
-                  className="h-9 rounded-xl"
+                  placeholder="e.g. Kinetic Theory of Gases"
+                  className="h-10 rounded-xl border-gray-200"
                   {...regTopic('name')}
                 />
                 {topicErrors.name && (
-                  <p className="text-xs text-destructive">{topicErrors.name.message}</p>
+                  <p className="text-2xs text-red-500 font-bold">{topicErrors.name.message}</p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Difficulty</Label>
-                  <Select
-                    value={difficultyVal}
-                    onValueChange={(val: any) => setTopicVal('difficultyLevel', val)}
-                  >
-                    <SelectTrigger className="h-9 rounded-xl">
-                      <SelectValue placeholder="Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EASY">Easy</SelectItem>
-                      <SelectItem value="MEDIUM">Medium</SelectItem>
-                      <SelectItem value="HARD">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Planned Hours</Label>
-                  <Input type="number" className="h-9 rounded-xl" {...regTopic('plannedHours')} />
+
+              {/* Premium Card-style Difficulty Selector instead of raw dropdown */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Difficulty Level
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    {
+                      val: 'EASY',
+                      label: 'Easy',
+                      border: 'border-emerald-250',
+                      bg: 'bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-500/10',
+                    },
+                    {
+                      val: 'MEDIUM',
+                      label: 'Medium',
+                      border: 'border-amber-250',
+                      bg: 'bg-amber-50 text-amber-700 shadow-sm shadow-amber-500/10',
+                    },
+                    {
+                      val: 'HARD',
+                      label: 'Hard',
+                      border: 'border-rose-250',
+                      bg: 'bg-rose-50 text-rose-700 shadow-sm shadow-rose-500/10',
+                    },
+                  ].map((level) => {
+                    const isSelected = difficultyVal === level.val;
+                    return (
+                      <button
+                        key={level.val}
+                        type="button"
+                        onClick={() => setTopicVal('difficultyLevel', level.val as any)}
+                        className={cn(
+                          'py-2 px-3 text-xs font-extrabold rounded-xl border text-center transition-all duration-200',
+                          isSelected
+                            ? `${level.bg} ${level.border} scale-102 ring-1 ring-[#7c3aed]/10`
+                            : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50/50',
+                        )}
+                      >
+                        {level.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex gap-2 pt-2 border-t border-border">
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Planned Hours
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 4"
+                    {...regTopic('plannedHours')}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Sessions
+                  </Label>
+                  <Input
+                    type="number"
+                    className="h-10 rounded-xl border-gray-200"
+                    placeholder="e.g. 3"
+                    {...regTopic('plannedSessions')}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100 max-sm:pb-6">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleTopicOpenChange(false)}
-                  className="flex-1 h-9 rounded-xl text-xs"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold border-gray-250"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 h-9 rounded-xl text-xs bg-[#7c3aed] hover:opacity-90 text-white"
+                  className="flex-1 h-10 rounded-xl text-xs font-bold bg-[#7c3aed] hover:opacity-90 text-white shadow-sm"
                 >
                   {editingTopic ? 'Save Changes' : 'Create Topic'}
                 </Button>

@@ -4,6 +4,8 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any */
+
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import { CreateCourseSubjectDto } from '../dto/create-course-subject.dto';
@@ -121,5 +123,56 @@ export class CourseSubjectService {
       tenantId,
       userId,
     );
+  }
+
+  async update(id: string, dto: any, tenantId: string, userId: string) {
+    const mapping = await this.prisma.courseSubjects.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { id }),
+    });
+    if (!mapping)
+      throw new NotFoundException('Course-subject mapping not found');
+
+    const totalMarks =
+      dto.totalMarks !== undefined ? dto.totalMarks : mapping.totalMarks;
+    const passingMarks =
+      dto.passingMarks !== undefined ? dto.passingMarks : mapping.passingMarks;
+
+    if (
+      totalMarks !== null &&
+      passingMarks !== null &&
+      passingMarks > totalMarks
+    ) {
+      throw new BadRequestException('Passing marks cannot exceed total marks');
+    }
+
+    const updated = await this.prisma.courseSubjects.update({
+      where: { id },
+      data: {
+        displayOrder:
+          dto.displayOrder !== undefined
+            ? dto.displayOrder
+            : mapping.displayOrder,
+        isMandatory:
+          dto.isMandatory !== undefined ? dto.isMandatory : mapping.isMandatory,
+        totalMarks:
+          dto.totalMarks !== undefined ? dto.totalMarks : mapping.totalMarks,
+        passingMarks:
+          dto.passingMarks !== undefined
+            ? dto.passingMarks
+            : mapping.passingMarks,
+        plannedHours:
+          dto.plannedHours !== undefined
+            ? dto.plannedHours
+            : mapping.plannedHours,
+        isActive: dto.isActive !== undefined ? dto.isActive : mapping.isActive,
+        updatedBy: userId,
+      },
+    });
+
+    const subject = await this.prisma.subjects.findFirst({
+      where: { id: updated.subjectId, tenantId, deletedAt: null },
+    });
+
+    return { ...updated, subject };
   }
 }
