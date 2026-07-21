@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
@@ -22,39 +22,69 @@ import { SelectStudentStep } from '@/features/admissions/components/forms/Select
 import { SelectAcademicYearStep } from '@/features/admissions/components/forms/SelectAcademicYearStep';
 import { SelectCourseStep } from '@/features/admissions/components/forms/SelectCourseStep';
 import { SelectBranchStep } from '@/features/admissions/components/forms/SelectBranchStep';
+import { SelectBatchStep } from '@/features/admissions/components/forms/SelectBatchStep';
 import { ReviewConfirmStep } from '@/features/admissions/components/forms/ReviewConfirmStep';
+import { useBatchesForAdmission } from '@/features/admissions/hooks/use-admissions';
 import { toast } from '@/hooks/use-toast';
 
 const FORM_STEPS: WizardStep[] = [
   { id: 'student', title: 'Student', description: 'Select student' },
   { id: 'year', title: 'Year', description: 'Select academic year' },
   { id: 'course', title: 'Course', description: 'Select course' },
+  { id: 'batch', title: 'Batch', description: 'Select batch' },
   { id: 'branch', title: 'Branch', description: 'Select branch' },
   { id: 'review', title: 'Review', description: 'Review & confirm' },
 ];
 
 function AddAdmissionContent() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
+  const searchParams = useSearchParams();
+  const urlStudentId = searchParams.get('studentId') || '';
+
+  const [currentStep, setCurrentStep] = useState(urlStudentId ? 1 : 0);
   const [formData, setFormData] = useState({
-    studentProfileId: '',
+    studentProfileId: urlStudentId,
     academicYearId: '',
     courseId: '',
+    batchId: '',
     branchId: '',
     admissionDate: new Date().toISOString().split('T')[0],
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [fieldErrorMap, setFieldErrorMap] = useState<Record<string, string>>({});
+
+  const stepFieldMap: Record<string, number> = {
+    studentProfileId: 0,
+    academicYearId: 1,
+    courseId: 2,
+    batchId: 3,
+    branchId: 4,
+  };
+
+  const stepRequiredFields: Record<number, string[]> = {
+    0: ['studentProfileId'],
+    1: ['academicYearId'],
+    2: ['courseId'],
+    3: ['batchId'],
+    4: ['branchId'],
+  };
 
   const { createAdmission, isCreating } = useCreateAdmission();
   const { students } = useStudentsForAdmission();
   const { courses } = useCoursesForAdmission();
+  const { batches } = useBatchesForAdmission(formData.courseId);
   const { branches } = useBranchesForAdmission();
   const { years } = useAcademicYearsForAdmission();
 
   const updateFormField = useCallback((field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+    setFieldErrorMap((prev) => {
       const next = { ...prev };
       delete next[field];
       return next;
@@ -75,6 +105,9 @@ function AddAdmissionContent() {
           if (!formData.courseId) newErrors.courseId = 'Please select a course';
           break;
         case 3:
+          if (!formData.batchId) newErrors.batchId = 'Please select a batch';
+          break;
+        case 4:
           if (!formData.branchId) newErrors.branchId = 'Please select a branch';
           break;
       }
@@ -91,27 +124,93 @@ function AddAdmissionContent() {
   }, [currentStep, validateStep]);
 
   const handlePrevious = useCallback(() => {
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
-  }, []);
+    setCurrentStep((prev) => Math.max(prev - 1, urlStudentId ? 1 : 0));
+  }, [urlStudentId]);
 
   const onSubmit = useCallback(async () => {
-    const result = await createAdmission(formData);
-    if (result) {
+    try {
+      const result = await createAdmission(formData);
+      if (result) {
+        toast({
+          title: 'Admission Created',
+          description: `Admission ${result.admissionNumber} has been created successfully.`,
+        });
+        router.push(`/dashboard/admissions/${result.id}`);
+      }
+    } catch (err: any) {
+      const responseData = err.response?.data;
+      const newFieldErrors: Record<string, string> = {};
+      let firstErrorStep = -1;
+
+      // Check for structured validation errors { code: 'VALIDATION_ERROR', errors: [{ field, message }] }
+      if (responseData?.code === 'VALIDATION_ERROR' && Array.isArray(responseData.errors)) {
+        responseData.errors.forEach((e: { field: string; message: string }) => {
+          const stepIndex = stepFieldMap[e.field];
+          if (stepIndex !== undefined) {
+            newFieldErrors[e.field] = e.message;
+            if (firstErrorStep === -1 || stepIndex < firstErrorStep) {
+              firstErrorStep = stepIndex;
+            }
+          }
+        });
+
+        // Check if student inactive error came as a general message
+        if (responseData.message && firstErrorStep === -1) {
+          const msg = (responseData.message || '').toLowerCase();
+          if (msg.includes('active') || msg.includes('inactive')) {
+            newFieldErrors.studentProfileId = responseData.message;
+            firstErrorStep = 0;
+          }
+        }
+      } else if (responseData?.statusCode === 400 && Array.isArray(responseData.message)) {
+        // Plain class-validator errors format
+        responseData.message.forEach((msg: string) => {
+          const field = msg.split(' ')[0];
+          const stepIndex = stepFieldMap[field];
+          if (stepIndex !== undefined) {
+            newFieldErrors[field] = msg;
+            if (firstErrorStep === -1 || stepIndex < firstErrorStep) {
+              firstErrorStep = stepIndex;
+            }
+          }
+        });
+      } else if (responseData?.message) {
+        // Generic business error - try to map by content
+        const msg = (responseData.message || '').toLowerCase();
+        if (msg.includes('student')) {
+          newFieldErrors.studentProfileId = responseData.message;
+          firstErrorStep = 0;
+        } else if (msg.includes('course')) {
+          newFieldErrors.courseId = responseData.message;
+          firstErrorStep = 2;
+        } else if (msg.includes('year')) {
+          newFieldErrors.academicYearId = responseData.message;
+          firstErrorStep = 1;
+        } else if (msg.includes('branch')) {
+          newFieldErrors.branchId = responseData.message;
+          firstErrorStep = 3;
+        }
+      }
+
+      if (Object.keys(newFieldErrors).length > 0) {
+        setFieldErrorMap(newFieldErrors);
+        if (firstErrorStep !== -1) {
+          setCurrentStep(firstErrorStep);
+        }
+      }
+
       toast({
-        title: 'Admission Created',
-        description: `Admission ${result.admissionNumber} has been created successfully.`,
-      });
-      router.push(`/dashboard/admissions/${result.id}`);
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Failed to create admission.',
+        title: 'Validation Failed',
+        description:
+          Object.values(newFieldErrors).join('. ') ||
+          'Please check the input fields and try again.',
         variant: 'destructive',
       });
     }
-  }, [createAdmission, formData, router]);
+  }, [createAdmission, formData, router, stepFieldMap]);
 
   const renderStep = useCallback(() => {
+    const allErrors = { ...fieldErrorMap, ...errors };
     switch (currentStep) {
       case 0:
         return (
@@ -119,7 +218,7 @@ function AddAdmissionContent() {
             students={students}
             selectedStudentId={formData.studentProfileId}
             onSelect={(id) => updateFormField('studentProfileId', id)}
-            error={errors.studentProfileId}
+            error={allErrors.studentProfileId}
           />
         );
       case 1:
@@ -128,7 +227,7 @@ function AddAdmissionContent() {
             years={years}
             selectedYearId={formData.academicYearId}
             onSelect={(id) => updateFormField('academicYearId', id)}
-            error={errors.academicYearId}
+            error={allErrors.academicYearId}
           />
         );
       case 2:
@@ -136,24 +235,37 @@ function AddAdmissionContent() {
           <SelectCourseStep
             courses={courses}
             selectedCourseId={formData.courseId}
-            onSelect={(id) => updateFormField('courseId', id)}
-            error={errors.courseId}
+            onSelect={(id) => {
+              updateFormField('courseId', id);
+              updateFormField('batchId', ''); // Reset batch when course changes
+            }}
+            error={allErrors.courseId}
           />
         );
       case 3:
+        return (
+          <SelectBatchStep
+            batches={batches}
+            selectedBatchId={formData.batchId}
+            onSelect={(id) => updateFormField('batchId', id)}
+            error={allErrors.batchId}
+          />
+        );
+      case 4:
         return (
           <SelectBranchStep
             branches={branches}
             selectedBranchId={formData.branchId}
             onSelect={(id) => updateFormField('branchId', id)}
-            error={errors.branchId}
+            error={allErrors.branchId}
           />
         );
-      case 4:
+      case 5:
         return (
           <ReviewConfirmStep
             student={students.find((s) => s.id === formData.studentProfileId)}
             course={courses.find((c) => c.id === formData.courseId)}
+            batch={batches.find((b) => b.id === formData.batchId)}
             branch={branches.find((b) => b.id === formData.branchId)}
             academicYearName={years.find((y) => y.id === formData.academicYearId)?.name}
             admissionDate={formData.admissionDate}
@@ -163,7 +275,18 @@ function AddAdmissionContent() {
       default:
         return null;
     }
-  }, [currentStep, formData, students, courses, branches, years, errors, updateFormField]);
+  }, [
+    currentStep,
+    formData,
+    students,
+    courses,
+    batches,
+    branches,
+    years,
+    errors,
+    fieldErrorMap,
+    updateFormField,
+  ]);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">

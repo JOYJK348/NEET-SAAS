@@ -1,7 +1,15 @@
 import type { PaginationParams, PaginationMeta, PaginatedResponse } from '@/types/api';
 
 export type StudentStatus =
-  'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED_OUT';
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'PENDING'
+  | 'SUSPENDED'
+  | 'GRADUATED'
+  | 'DROPPED_OUT'
+  | 'WITHDRAWN'
+  | 'ALUMNI'
+  | 'ENQUIRY';
 
 export type StudentGender = 'MALE' | 'FEMALE' | 'OTHER';
 
@@ -19,9 +27,13 @@ export interface Student {
   batchName: string;
   courseId: string;
   courseName: string;
-  parentName: string;
-  parentPhone: string;
-  parentEmail: string;
+  branchId?: string;
+  branchName?: string;
+  academicYearId?: string;
+  academicYearName?: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
   address: string;
   city: string;
   state: string;
@@ -77,9 +89,9 @@ export interface CreateStudentInput {
   gender: StudentGender;
   batchId: string;
   courseId: string;
-  parentName: string;
-  parentPhone: string;
-  parentEmail: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
   address: string;
   city: string;
   state: string;
@@ -107,6 +119,9 @@ export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   SUSPENDED: 'Suspended',
   GRADUATED: 'Graduated',
   DROPPED_OUT: 'Dropped Out',
+  WITHDRAWN: 'Withdrawn',
+  ALUMNI: 'Alumni',
+  ENQUIRY: 'Enquiry',
 };
 
 export const STUDENT_STATUS_COLORS: Record<StudentStatus, string> = {
@@ -116,6 +131,9 @@ export const STUDENT_STATUS_COLORS: Record<StudentStatus, string> = {
   SUSPENDED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   GRADUATED: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   DROPPED_OUT: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  WITHDRAWN: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  ALUMNI: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  ENQUIRY: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 };
 
 export const STUDENT_GENDER_LABELS: Record<StudentGender, string> = {

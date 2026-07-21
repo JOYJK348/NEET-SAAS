@@ -139,7 +139,7 @@ describe('BatchEnrollmentsService', () => {
     it('throws BadRequestException when admission is not ACTIVE', async () => {
       prismaService.studentAdmissions.findFirst.mockResolvedValue({
         ...mockAdmission,
-        admissionStatus: AdmissionStatusEnum.PENDING,
+        admissionStatus: AdmissionStatusEnum.ACTIVE,
       });
 
       await expect(

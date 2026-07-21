@@ -14,19 +14,31 @@ import {
   Users,
   Heart,
   Fingerprint,
+  ToggleRight,
+  ToggleLeft,
 } from 'lucide-react';
 
 interface ReviewStepProps {
   values: StudentFormData;
+  branches: { id: string; name: string }[];
+  academicYears: { id: string; name: string }[];
   batches: { id: string; name: string }[];
   courses: { id: string; name: string }[];
+  status?: 'ACTIVE' | 'SUSPENDED';
 }
 
 function findLabel(items: { id: string; name: string }[], id: string): string {
   return items.find((item) => item.id === id)?.name || id;
 }
 
-export function ReviewStep({ values, batches, courses }: ReviewStepProps) {
+export function ReviewStep({
+  values,
+  branches,
+  academicYears,
+  batches,
+  courses,
+  status,
+}: ReviewStepProps) {
   const personalItems = [
     { label: 'First Name', value: values.firstName, icon: <User className="h-3.5 w-3.5" /> },
     { label: 'Last Name', value: values.lastName, icon: <User className="h-3.5 w-3.5" /> },
@@ -53,6 +65,16 @@ export function ReviewStep({ values, batches, courses }: ReviewStepProps) {
   ];
 
   const academicItems = [
+    {
+      label: 'Branch',
+      value: findLabel(branches, values.branchId),
+      icon: <MapPin className="h-3.5 w-3.5" />,
+    },
+    {
+      label: 'Academic Year',
+      value: findLabel(academicYears, values.academicYearId),
+      icon: <CalendarDays className="h-3.5 w-3.5" />,
+    },
     {
       label: 'Course',
       value: findLabel(courses, values.courseId),
@@ -94,6 +116,8 @@ export function ReviewStep({ values, batches, courses }: ReviewStepProps) {
     },
   ];
 
+  const isActive = (status ?? 'ACTIVE') === 'ACTIVE';
+
   return (
     <div className="space-y-6">
       <div>
@@ -101,6 +125,23 @@ export function ReviewStep({ values, batches, courses }: ReviewStepProps) {
           title="Review Information"
           description="Please review all the information before submitting"
         />
+      </div>
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-[#E5E7EB] bg-white">
+        {isActive ? (
+          <ToggleRight className="h-5 w-5 text-green-600" />
+        ) : (
+          <ToggleLeft className="h-5 w-5 text-gray-400" />
+        )}
+        <div>
+          <p className="text-sm font-medium text-[#111827]">
+            Status: {isActive ? 'Active' : 'Inactive'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isActive
+              ? 'Student has access to courses and batches'
+              : 'Student is hidden from course/batch listings'}
+          </p>
+        </div>
       </div>
       <StudentInfoCard title="Personal Information" items={personalItems} columns={2} />
       <StudentInfoCard title="Address" items={addressItems} columns={2} />

@@ -52,4 +52,11 @@ export class CreateBranchDto {
   @IsOptional()
   @IsString()
   timezone?: string = 'Asia/Kolkata';
+
+  @ApiPropertyOptional({
+    description: 'Academic Year ID this branch is associated with',
+  })
+  @IsOptional()
+  @IsString()
+  academicYearId?: string;
 }

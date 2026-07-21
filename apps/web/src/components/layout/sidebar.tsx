@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   LayoutDashboard,
   Users,
   BookOpen,
@@ -24,6 +25,15 @@ import {
   BookMarked,
   Contact,
   Calendar,
+  Clock,
+  Video,
+  FileText,
+  Shield,
+  Sliders,
+  BarChart,
+  Bell,
+  Volume2,
+  FolderTree,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -43,40 +53,230 @@ interface SidebarProps {
   setIsMobileOpen: (open: boolean) => void;
 }
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  children?: NavItem[];
+}
+
 export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+    Organization: true,
+    Academics: true,
+    Schedule: true,
+    Operations: true,
+    Finance: true,
+    Communication: true,
+    Analytics: true,
+    Settings: true,
+  });
+  const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
+    People: true,
+    Courses: true,
+    'Course Details': true,
+    Curriculum: true,
+    Learning: true,
+  });
+
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const navigation =
-    user?.roleCode === 'PLATFORM_ADMIN'
-      ? [
-          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-          { name: 'Institutes', href: '/dashboard/institutes', icon: Building2 },
-          { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users },
-          { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign },
-          { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-        ]
-      : [
-          { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-          { name: 'Students', href: '/dashboard/students', icon: Users },
-          { name: 'Admissions', href: '/dashboard/admissions', icon: Target },
-          { name: 'Batches', href: '/dashboard/batches', icon: Layers },
-          { name: 'Parents', href: '/dashboard/parents', icon: Contact },
-          { name: 'Tutors', href: '/dashboard/tutors', icon: GraduationCap },
-          { name: 'Academics', href: '/dashboard/academics', icon: BookOpen },
-          { name: 'Mock Tests', href: '/dashboard/mock-tests', icon: Target },
-          { name: 'Study Materials', href: '/dashboard/study-materials', icon: BookMarked },
-          { name: 'Announcements', href: '/dashboard/announcements', icon: Megaphone },
-          { name: 'Billing', href: '/dashboard/billing', icon: DollarSign },
-          { name: 'Reports & Analytics', href: '/dashboard/reports', icon: TrendingUp },
-          { name: 'Branches', href: '/tenant-admin/branches', icon: Building2 },
-          { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar },
-          { name: 'Courses', href: '/tenant-admin/courses', icon: BookOpen },
-          { name: 'Subjects', href: '/tenant-admin/subjects', icon: BookMarked },
-          { name: 'Delivery Types', href: '/tenant-admin/batch-delivery-types', icon: Layers },
-          { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-        ];
+  const toggleCategory = (category: string) => {
+    setOpenCategories((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  const toggleSubMenu = (name: string) => {
+    setOpenSubMenus((prev) => ({
+      ...prev,
+      [name]: !prev[name],
+    }));
+  };
+
+  const platformNavigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Institutes', href: '/dashboard/institutes', icon: Building2 },
+    { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users },
+    { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  ];
+
+  const tenantNavigation: { category: string; items: NavItem[] }[] = [
+    {
+      category: '',
+      items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+    },
+    {
+      category: 'Organization',
+      items: [
+        { name: 'Branches', href: '/tenant-admin/branches', icon: Building2 },
+        { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar },
+        {
+          name: 'People',
+          href: '#',
+          icon: Users,
+          children: [
+            { name: 'Students', href: '/dashboard/students', icon: GraduationCap },
+            { name: 'Parents', href: '#', icon: Contact },
+            { name: 'Staff / Tutors', href: '#', icon: BookMarked },
+          ],
+        },
+      ],
+    },
+    {
+      category: 'Academics',
+      items: [
+        { name: 'Curriculum', href: '/tenant-admin/curriculum', icon: FolderTree },
+        { name: 'Batches', href: '/dashboard/batches', icon: Layers },
+        { name: 'Examinations', href: '#', icon: Target },
+        {
+          name: 'Learning',
+          href: '#',
+          icon: BookMarked,
+          children: [
+            { name: 'Study Materials', href: '#', icon: FileText },
+            { name: 'Assignments', href: '#', icon: FileText },
+            { name: 'Learning Progress', href: '#', icon: TrendingUp },
+          ],
+        },
+      ],
+    },
+    {
+      category: 'Schedule',
+      items: [
+        { name: 'Timetable', href: '#', icon: Clock },
+        { name: 'Calendar', href: '#', icon: Calendar },
+        { name: 'Events', href: '#', icon: Target },
+        { name: 'Google Calendar', href: '#', icon: Calendar },
+      ],
+    },
+    {
+      category: 'Operations',
+      items: [
+        { name: 'Attendance', href: '#', icon: Calendar },
+        { name: 'Live Classes', href: '#', icon: Video },
+        { name: 'Recordings', href: '#', icon: FileText },
+      ],
+    },
+    {
+      category: 'Finance',
+      items: [{ name: 'Fees & Billing', href: '#', icon: DollarSign }],
+    },
+    {
+      category: 'Communication',
+      items: [
+        { name: 'Announcements', href: '#', icon: Volume2 },
+        { name: 'Notifications', href: '#', icon: Bell },
+      ],
+    },
+    {
+      category: 'Analytics',
+      items: [{ name: 'Analytics', href: '#', icon: BarChart }],
+    },
+    {
+      category: 'Settings',
+      items: [
+        { name: 'Roles & Permissions', href: '#', icon: Shield },
+        { name: 'Institute Settings', href: '#', icon: Building2 },
+        { name: 'System Configuration', href: '#', icon: Sliders },
+      ],
+    },
+  ];
+
+  // Helper component to render nested submenus recursively
+  const renderNavItems = (items: NavItem[], depth = 0) => {
+    return items.map((item) => {
+      const Icon = item.icon;
+      const hasChildren = item.children && item.children.length > 0;
+      const isSubOpen = openSubMenus[item.name] ?? false;
+      const isActive =
+        item.href === '/dashboard'
+          ? pathname === '/dashboard'
+          : item.href !== '#' && (pathname === item.href || pathname.startsWith(item.href + '/'));
+
+      if (hasChildren) {
+        return (
+          <div key={item.name} className="space-y-1">
+            <div className="flex items-center">
+              <Link
+                href={item.href}
+                className={cn(
+                  'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                  isCollapsed && 'justify-center',
+                )}
+                title={isCollapsed ? item.name : undefined}
+              >
+                <Icon
+                  className={cn(depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 'flex-shrink-0')}
+                  aria-hidden="true"
+                />
+                {!isCollapsed && <span>{item.name}</span>}
+              </Link>
+
+              {!isCollapsed && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSubMenu(item.name);
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                >
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 transition-transform duration-200',
+                      isSubOpen && 'rotate-180',
+                    )}
+                  />
+                </button>
+              )}
+            </div>
+
+            {isSubOpen && !isCollapsed && (
+              <div
+                className={cn(
+                  'space-y-1 border-l border-gray-100 dark:border-gray-800',
+                  depth === 0 ? 'pl-4 ml-4' : 'pl-3 ml-3',
+                )}
+              >
+                {renderNavItems(item.children!, depth + 1)}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <Link
+          key={item.name}
+          href={item.href}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+            isActive
+              ? 'bg-primary text-primary-foreground'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+            isCollapsed && 'justify-center',
+          )}
+          aria-current={isActive ? 'page' : undefined}
+          title={isCollapsed ? item.name : undefined}
+        >
+          <Icon
+            className={cn(depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 'flex-shrink-0')}
+            aria-hidden="true"
+          />
+          {!isCollapsed && <span>{item.name}</span>}
+        </Link>
+      );
+    });
+  };
 
   return (
     <>
@@ -126,32 +326,64 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto" aria-label="Main navigation">
-          {navigation.map((item) => {
-            const isActive =
-              item.href === '/dashboard'
-                ? pathname === '/dashboard'
-                : pathname === item.href || pathname.startsWith(item.href + '/');
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
-                  isCollapsed && 'justify-center',
-                )}
-                aria-current={isActive ? 'page' : undefined}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                {!isCollapsed && <span>{item.name}</span>}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 p-4 space-y-6 overflow-y-auto" aria-label="Main navigation">
+          {user?.roleCode === 'PLATFORM_ADMIN' ? (
+            <div className="space-y-1">
+              {platformNavigation.map((item) => {
+                const isActive =
+                  item.href === '/dashboard'
+                    ? pathname === '/dashboard'
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                      isCollapsed && 'justify-center',
+                    )}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {tenantNavigation.map((group, groupIdx) => {
+                const isGroupOpen = group.category
+                  ? (openCategories[group.category] ?? true)
+                  : true;
+                return (
+                  <div key={groupIdx} className="space-y-1">
+                    {group.category && !isCollapsed ? (
+                      <button
+                        onClick={() => toggleCategory(group.category)}
+                        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                        <span>{group.category}</span>
+                        <ChevronDown
+                          className={cn(
+                            'h-3.5 w-3.5 transition-transform duration-200',
+                            !isGroupOpen && '-rotate-90',
+                          )}
+                        />
+                      </button>
+                    ) : null}
+
+                    {isGroupOpen && <div className="space-y-1">{renderNavItems(group.items)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         {/* User section */}

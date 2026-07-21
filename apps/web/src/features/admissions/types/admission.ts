@@ -1,6 +1,6 @@
 import type { PaginationParams, PaginatedResponse } from '@/types/api';
 
-export type AdmissionStatus = 'PENDING' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+export type AdmissionStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface Admission {
   id: string;
@@ -26,8 +26,11 @@ export interface AdmissionListItem {
   admissionNumber: string;
   studentName: string;
   studentPhoto?: string;
+  courseId: string;
   courseName: string;
+  branchId: string;
   branchName: string;
+  batchId?: string | null;
   batchName?: string;
   admissionStatus: AdmissionStatus;
   admissionDate: string;
@@ -64,6 +67,9 @@ export interface AdmissionBatch {
   id: string;
   name: string;
   courseName?: string;
+  academicYearId?: string;
+  branchId?: string;
+  courseId?: string;
 }
 
 export interface AdmissionParent {
@@ -81,6 +87,7 @@ export interface AdmissionFilters extends PaginationParams {
   branchId?: string;
   dateFrom?: string;
   dateTo?: string;
+  studentProfileId?: string;
 }
 
 export type AdmissionListResponse = PaginatedResponse<AdmissionListItem>;
@@ -88,11 +95,8 @@ export type AdmissionStatsResponse = AdmissionStats;
 
 export interface AdmissionStats {
   total: number;
-  pending: number;
-  confirmed: number;
   active: number;
-  completed: number;
-  cancelled: number;
+  inactive: number;
   changeFromLastMonth: number;
 }
 
@@ -134,34 +138,17 @@ export interface TimelineEvent {
 }
 
 export const ADMISSION_STATUS_LABELS: Record<AdmissionStatus, string> = {
-  PENDING: 'Pending',
-  CONFIRMED: 'Confirmed',
   ACTIVE: 'Active',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  INACTIVE: 'Inactive',
 };
 
 export const ADMISSION_STATUS_COLORS: Record<AdmissionStatus, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  CONFIRMED: 'bg-blue-100 text-blue-800 border-blue-200',
   ACTIVE: 'bg-green-100 text-green-800 border-green-200',
-  COMPLETED: 'bg-gray-100 text-gray-800 border-gray-200',
-  CANCELLED: 'bg-red-100 text-red-800 border-red-200',
+  INACTIVE: 'bg-red-100 text-red-800 border-red-200',
 };
 
 export const ADMISSION_STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
   { value: 'ACTIVE', label: 'Active' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'INACTIVE', label: 'Inactive' },
 ] as const;
-
-export const VALID_TRANSITIONS: Record<AdmissionStatus, AdmissionStatus[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['ACTIVE', 'CANCELLED'],
-  ACTIVE: ['COMPLETED'],
-  COMPLETED: [],
-  CANCELLED: [],
-};

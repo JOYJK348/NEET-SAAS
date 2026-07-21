@@ -26,6 +26,7 @@ export interface CreateBranchInput {
   branchType: BranchType;
   status?: string;
   timezone?: string;
+  academicYearId?: string;
 }
 
 export interface UpdateBranchInput extends Partial<CreateBranchInput> {
@@ -70,6 +71,8 @@ export interface Course {
   description?: string;
   courseType: string;
   durationMonths: number;
+  startDate?: string;
+  endDate?: string;
   displayOrder: number;
   isActive: boolean;
   tenantId: string;
@@ -84,8 +87,11 @@ export interface CreateCourseInput {
   description?: string;
   courseType?: string;
   durationMonths?: number;
+  startDate?: string;
+  endDate?: string;
   displayOrder?: number;
   isActive?: boolean;
+  branchIds?: string[];
 }
 
 export interface UpdateCourseInput extends Partial<CreateCourseInput> {

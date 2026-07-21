@@ -23,9 +23,10 @@ interface AdmissionTableProps {
   className?: string;
 }
 
-const columns: { key: SortField; label: string; sortable: boolean; hideOnMobile?: boolean }[] = [
+const columns: { key: string; label: string; sortable: boolean; hideOnMobile?: boolean }[] = [
   { key: 'studentName', label: 'Student', sortable: true },
   { key: 'courseName', label: 'Course', sortable: true, hideOnMobile: true },
+  { key: 'batchName', label: 'Batch', sortable: false, hideOnMobile: true },
   { key: 'branchName', label: 'Branch', sortable: true, hideOnMobile: true },
   { key: 'admissionStatus', label: 'Status', sortable: true },
   { key: 'admissionDate', label: 'Date', sortable: true, hideOnMobile: true },
@@ -91,12 +92,12 @@ export function AdmissionTable({
                   col.sortable && 'cursor-pointer select-none hover:text-gray-700',
                   col.hideOnMobile && 'hidden lg:table-cell',
                 )}
-                onClick={() => col.sortable && onSort?.(col.key)}
+                onClick={() => col.sortable && onSort?.(col.key as SortField)}
               >
                 <div className="flex items-center gap-1">
                   {col.label}
                   {col.sortable && (
-                    <SortIcon column={col.key} sortBy={sortBy} sortOrder={sortOrder} />
+                    <SortIcon column={col.key as SortField} sortBy={sortBy} sortOrder={sortOrder} />
                   )}
                 </div>
               </th>
@@ -127,6 +128,9 @@ export function AdmissionTable({
                 </td>
                 <td className="px-4 py-3 text-gray-700 hidden lg:table-cell">
                   {admission.courseName}
+                </td>
+                <td className="px-4 py-3 text-gray-700 hidden lg:table-cell">
+                  {admission.batchName || 'Not assigned'}
                 </td>
                 <td className="px-4 py-3 text-gray-700 hidden lg:table-cell">
                   {admission.branchName}

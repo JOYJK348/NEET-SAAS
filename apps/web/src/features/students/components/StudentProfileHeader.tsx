@@ -82,17 +82,6 @@ export function StudentProfileHeader({
                   Edit
                 </Button>
               )}
-              {onArchive && student.status !== 'DROPPED_OUT' && student.status !== 'GRADUATED' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onArchive}
-                  className="gap-1.5 text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/5"
-                >
-                  <Archive className="h-4 w-4" />
-                  Archive
-                </Button>
-              )}
             </div>
           </div>
         </div>

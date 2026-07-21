@@ -147,7 +147,7 @@ function BatchDetailContent() {
               Edit
             </Button>
           )}
-          {!isTerminal && (
+          {!isTerminal && (batch.status === 'COMPLETED' || batch.status === 'CANCELLED') && (
             <Button
               variant="outline"
               className="w-full sm:w-auto rounded-xl h-11 px-5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"

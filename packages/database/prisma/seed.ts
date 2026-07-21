@@ -22,10 +22,13 @@ async function getPermissionIdMap(): Promise<Map<string, string>> {
   return map;
 }
 
+import { seedDeliveryTypes } from './seed/delivery-types';
+
 async function main(): Promise<void> {
   await seedTenant();
   await seedBranch();
   await seedRoles();
+  await seedDeliveryTypes();
 
   const groupIdMap = await seedPermissionGroups();
   await seedPermissions(groupIdMap);

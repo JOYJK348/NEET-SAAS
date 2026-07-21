@@ -168,9 +168,14 @@ class ApiClient {
     const status = error.response?.status;
     const message = (error.response?.data as { message?: string })?.message || error.message;
 
-    // Don't show toast for 401 (handled by refresh) or 422 (validation errors handled by forms)
+    // Don't show toast for 401 (handled by refresh), 422 (validation errors handled by forms),
+    // or 400 VALIDATION_ERROR (handled by forms inline)
     if (status === 401 || status === 422) {
       return;
+    }
+    if (status === 400) {
+      const responseData = error.response?.data as Record<string, unknown> | undefined;
+      if (responseData?.code === 'VALIDATION_ERROR') return;
     }
 
     // Show user-friendly error messages

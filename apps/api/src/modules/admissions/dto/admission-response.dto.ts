@@ -13,7 +13,7 @@ export class AdmissionResponseDto {
 
   @ApiProperty({
     enum: AdmissionStatusEnum,
-    example: AdmissionStatusEnum.PENDING,
+    example: AdmissionStatusEnum.ACTIVE,
   })
   admissionStatus: AdmissionStatusEnum;
 

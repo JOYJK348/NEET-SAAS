@@ -184,12 +184,8 @@ export function useCreateBatch(): UseCreateBatchReturn {
 
   const createBatch = useCallback(
     async (input: CreateBatchInput): Promise<Batch | null> => {
-      try {
-        setError(null);
-        return await mutateAsync(input);
-      } catch {
-        return null;
-      }
+      setError(null);
+      return await mutateAsync(input);
     },
     [mutateAsync],
   );

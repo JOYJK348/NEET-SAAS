@@ -12,12 +12,12 @@ export const subjectKeys = {
   detail: (id: string) => [...subjectKeys.details(), id] as const,
 };
 
-export function useSubjects(params?: FilterParams) {
+export function useSubjects(params?: FilterParams, options?: { enabled?: boolean }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return useQuery({
     queryKey: subjectKeys.list(params),
     queryFn: () => subjectsApi.getSubjects(params),
-    enabled: isAuthenticated,
+    enabled: options?.enabled !== undefined ? options.enabled && isAuthenticated : isAuthenticated,
   });
 }
 

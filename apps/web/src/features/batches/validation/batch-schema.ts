@@ -28,6 +28,8 @@ const baseBatchFormSchema = z.object({
     .max(500, 'Capacity must be at most 500'),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().min(1, 'End date is required'),
+  startTime: z.string().optional().or(z.literal('')),
+  endTime: z.string().optional().or(z.literal('')),
   allowNewAdmissions: z.boolean(),
 });
 
@@ -54,5 +56,7 @@ export const defaultFormValues: BatchFormData = {
   maxStudents: 40,
   startDate: '',
   endDate: '',
+  startTime: '',
+  endTime: '',
   allowNewAdmissions: true,
 };

@@ -35,6 +35,16 @@ export class QueryParamsDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by academic status' })
+  @IsOptional()
+  @IsString()
+  academicStatus?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by status' })
+  @IsOptional()
+  @IsString()
+  status?: string;
 }
 
 export class PaginatedResult<T> {

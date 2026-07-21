@@ -43,6 +43,7 @@ describe('StudentsService', () => {
 
   let prismaService: any;
   let tenantScoped: any;
+  let admissionNumberGenerator: any;
   let service: StudentsService;
 
   const defaultDto = {
@@ -83,7 +84,15 @@ describe('StudentsService', () => {
         })),
     };
 
-    service = new StudentsService(prismaService, tenantScoped);
+    admissionNumberGenerator = {
+      generate: jest.fn().mockResolvedValue('ADM-2026-0001'),
+    };
+
+    service = new StudentsService(
+      prismaService,
+      tenantScoped,
+      admissionNumberGenerator,
+    );
   });
 
   describe('create', () => {

@@ -34,6 +34,24 @@ import {
   Award,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import {
+  useAdmissions,
+  useUpdateAdmissionStatus,
+  useUpdateAdmissionBatch,
+  useBatchesForAdmission,
+  useCreateAdmission,
+  useCoursesForAdmission,
+  useBranchesForAdmission,
+  useAcademicYearsForAdmission,
+} from '@/features/admissions/hooks/use-admissions';
+import { BatchUpdateDialog } from '@/features/admissions/components/BatchUpdateDialog';
+import { StatusUpdateDialog } from '@/features/admissions/components/StatusUpdateDialog';
+import { EnrollCourseModal } from '@/features/students/components/EnrollCourseModal';
+import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
+import { AdmissionStatusBadge } from '@/features/admissions/components/AdmissionStatusBadge';
+import { formatDate as formatAdmissionDate } from '@/features/admissions/utils/admission-utils';
+import type { AdmissionStatus, AdmissionListItem } from '@/features/admissions/types/admission';
+import { Hash, ArrowRightLeft } from 'lucide-react';
 
 function StudentDetailContent() {
   const params = useParams();
@@ -44,8 +62,42 @@ function StudentDetailContent() {
   const { events: timelineEvents, isLoading: timelineLoading } = useStudentTimeline(id);
   const { archiveStudent, isArchiving } = useArchiveStudent();
 
+  // Admissions hooks
+  const { admissions: studentAllEnrollments, refetch: refetchEnrollments } = useAdmissions({
+    initialFilters: { studentProfileId: id || undefined, perPage: 100 },
+    autoFetch: !!id,
+  });
+  const { updateStatus, isUpdating: isUpdatingStatus } = useUpdateAdmissionStatus();
+  const { updateBatch, isUpdating: isUpdatingBatch } = useUpdateAdmissionBatch();
+  const { createAdmission, isCreating: isCreatingEnrollment } = useCreateAdmission();
+
+  // Master Data hooks
+  const { courses } = useCoursesForAdmission();
+  const { branches } = useBranchesForAdmission();
+  const { years } = useAcademicYearsForAdmission();
+  const { data: branchCourses = [] } = useBranchCourses();
+
   const [activeTab, setActiveTab] = useState<'academics' | 'medical' | 'timeline'>('academics');
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+
+  const [selectedEnrollment, setSelectedEnrollment] = useState<AdmissionListItem | null>(null);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+
+  // Resolves batches for selected enrollment's course track
+  const { batches: selectedTrackBatches } = useBatchesForAdmission(
+    selectedEnrollment?.courseId || undefined,
+    selectedEnrollment?.branchId || undefined,
+  );
+
+  // Dynamic batch resolution inside Enroll modal
+  const [modalCourseId, setModalCourseId] = useState('');
+  const [modalBranchId, setModalBranchId] = useState('');
+  const { batches: modalCourseBatches } = useBatchesForAdmission(
+    modalCourseId || undefined,
+    modalBranchId || undefined,
+  );
 
   const handleEdit = useCallback(() => {
     if (id) router.push(`/dashboard/students/${id}/edit`);
@@ -61,6 +113,85 @@ function StudentDetailContent() {
       toast({ title: 'Failed to archive student', variant: 'destructive' });
     }
   }, [id, archiveStudent]);
+
+  const handleStatusConfirm = useCallback(
+    async (newStatus: AdmissionStatus, notes?: string) => {
+      if (!selectedEnrollment) return;
+      const result = await updateStatus({ id: selectedEnrollment.id, status: newStatus, notes });
+      if (result) {
+        toast({
+          title: 'Status Updated',
+          description: `Enrollment status changed to ${newStatus}.`,
+        });
+        refetchEnrollments();
+        setShowStatusDialog(false);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update enrollment status.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [selectedEnrollment, updateStatus, refetchEnrollments],
+  );
+
+  const handleBatchConfirm = useCallback(
+    async (newBatchId: string) => {
+      if (!selectedEnrollment) return;
+      const result = await updateBatch({ id: selectedEnrollment.id, batchId: newBatchId });
+      if (result) {
+        toast({
+          title: 'Batch Updated',
+          description: 'Student batch has been updated successfully.',
+        });
+        refetchEnrollments();
+        setShowBatchDialog(false);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to update student batch.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [selectedEnrollment, updateBatch, refetchEnrollments],
+  );
+
+  const handleEnrollConfirm = useCallback(
+    async (data: {
+      courseId: string;
+      batchId: string;
+      branchId: string;
+      academicYearId: string;
+      admissionDate: string;
+      notes?: string;
+    }) => {
+      if (!id) return;
+      try {
+        const result = await createAdmission({
+          studentProfileId: id,
+          ...data,
+        });
+        if (result) {
+          toast({
+            title: 'Enrolled Successfully',
+            description: `Student enrolled into course track.`,
+          });
+          refetchEnrollments();
+          setShowEnrollModal(false);
+        }
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Failed to enroll student';
+        toast({
+          title: 'Enrollment Failed',
+          description: Array.isArray(msg) ? msg.join('. ') : msg,
+          variant: 'destructive',
+        });
+      }
+    },
+    [id, createAdmission, refetchEnrollments],
+  );
 
   if (isLoading) {
     return (
@@ -137,12 +268,25 @@ function StudentDetailContent() {
     },
   ];
 
+  // Dynamically resolve course and batch from the latest active enrollment
+  const latestEnrollment =
+    studentAllEnrollments.find((e) => e.admissionStatus === 'ACTIVE') || studentAllEnrollments[0];
+  const activeCourseName = latestEnrollment ? latestEnrollment.courseName : student.courseName;
+  const activeBatchName = latestEnrollment ? latestEnrollment.batchName : student.batchName;
+  const activeAdmissionDate = latestEnrollment
+    ? latestEnrollment.admissionDate
+    : student.admissionDate;
+
   const academicDetails = [
-    { label: 'Course', value: student.courseName, icon: <BookOpen className="h-3.5 w-3.5" /> },
-    { label: 'Batch', value: student.batchName, icon: <Users className="h-3.5 w-3.5" /> },
+    {
+      label: 'Primary Course',
+      value: activeCourseName,
+      icon: <BookOpen className="h-3.5 w-3.5" />,
+    },
+    { label: 'Primary Batch', value: activeBatchName, icon: <Users className="h-3.5 w-3.5" /> },
     {
       label: 'Admission Date',
-      value: formatDate(student.admissionDate),
+      value: formatDate(activeAdmissionDate),
       icon: <CalendarDays className="h-3.5 w-3.5" />,
     },
     {
@@ -156,11 +300,7 @@ function StudentDetailContent() {
     <DashboardLayout>
       <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
         {/* Profile Header */}
-        <StudentProfileHeader
-          student={student}
-          onEdit={handleEdit}
-          onArchive={() => setShowArchiveDialog(true)}
-        />
+        <StudentProfileHeader student={student} onEdit={handleEdit} />
 
         {/* Main responsive grid: Top stack on mobile, 3-column layout on desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -256,6 +396,78 @@ function StudentDetailContent() {
                   columns={2}
                 />
 
+                {/* Courses and batches track section card */}
+                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111827]">
+                        Enrolled Courses & Batches
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Manage active programs, batches, and delivery modes
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="h-9 px-3 rounded-lg text-xs bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => setShowEnrollModal(true)}
+                    >
+                      Enroll New Course
+                    </Button>
+                  </div>
+
+                  <div className="divide-y divide-gray-100 border rounded-xl overflow-hidden bg-gray-50/50">
+                    {studentAllEnrollments.length > 0 ? (
+                      studentAllEnrollments.map((enrollment) => (
+                        <div
+                          key={enrollment.id}
+                          className="flex items-center justify-between p-3.5 bg-white hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="space-y-1">
+                            <span className="font-semibold text-sm text-gray-900 block">
+                              {enrollment.courseName}
+                            </span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                              <span>
+                                Batch:{' '}
+                                <span className="font-medium text-gray-700">
+                                  {enrollment.batchName || '—'}
+                                </span>
+                              </span>
+                              <span>
+                                Branch: <span>{enrollment.branchName}</span>
+                              </span>
+                              <span>
+                                Date: <span>{formatAdmissionDate(enrollment.admissionDate)}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <AdmissionStatusBadge status={enrollment.admissionStatus} />
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 rounded-lg text-xs"
+                              onClick={() => {
+                                setSelectedEnrollment(enrollment);
+                                setShowBatchDialog(true);
+                              }}
+                            >
+                              Change Batch
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-5 text-center text-xs text-gray-500 bg-white">
+                        No active enrollments found for this student.
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
                 {/* Academic Highlights placeholder visual */}
                 <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-3 border-b border-[#E5E7EB] pb-3 mb-4">
@@ -308,6 +520,51 @@ function StudentDetailContent() {
         studentName={`${student.firstName} ${student.lastName}`}
         onConfirm={handleArchive}
         isArchiving={isArchiving}
+      />
+
+      {/* Batch Change Dialog */}
+      {selectedEnrollment && (
+        <BatchUpdateDialog
+          open={showBatchDialog}
+          onOpenChange={setShowBatchDialog}
+          currentBatchId={selectedEnrollment.batchId || undefined}
+          batches={selectedTrackBatches}
+          onConfirm={handleBatchConfirm}
+          isUpdating={isUpdatingBatch}
+        />
+      )}
+
+      {/* Status Toggle Dialog */}
+      {selectedEnrollment && (
+        <StatusUpdateDialog
+          open={showStatusDialog}
+          onOpenChange={setShowStatusDialog}
+          currentStatus={selectedEnrollment.admissionStatus}
+          admissionNumber={selectedEnrollment.admissionNumber}
+          onConfirm={handleStatusConfirm}
+          isUpdating={isUpdatingStatus}
+        />
+      )}
+
+      {/* Enroll Course Modal */}
+      <EnrollCourseModal
+        open={showEnrollModal}
+        onOpenChange={(open) => {
+          setShowEnrollModal(open);
+          if (!open) {
+            setModalCourseId('');
+            setModalBranchId('');
+          }
+        }}
+        courses={courses}
+        branches={branches}
+        batches={modalCourseBatches}
+        years={years}
+        branchCourses={branchCourses}
+        onConfirm={handleEnrollConfirm}
+        isSubmitting={isCreatingEnrollment}
+        onCourseChange={setModalCourseId}
+        onBranchChange={setModalBranchId}
       />
     </DashboardLayout>
   );

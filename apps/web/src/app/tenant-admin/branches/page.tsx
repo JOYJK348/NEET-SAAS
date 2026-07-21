@@ -14,6 +14,7 @@ import {
 import { BranchTable } from '@/features/master-data/components/branches/BranchTable';
 import { BranchDialog } from '@/features/master-data/components/branches/BranchDialog';
 import { BranchSkeleton } from '@/features/master-data/components/branches/BranchSkeleton';
+import { BranchDetailsModal } from '@/features/master-data/components/branches/BranchDetailsModal';
 import { toast } from 'sonner';
 import type { Branch, CreateBranchInput } from '@/features/master-data/types';
 
@@ -25,6 +26,9 @@ export default function BranchesPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [viewBranch, setViewBranch] = useState<Branch | null>(null);
 
   const { data, isLoading, error } = useBranches({
     page,
@@ -41,6 +45,11 @@ export default function BranchesPage() {
   const handleCreate = () => {
     setSelectedBranch(null);
     setDialogOpen(true);
+  };
+
+  const handleView = (branch: Branch) => {
+    setViewBranch(branch);
+    setDetailModalOpen(true);
   };
 
   const handleEdit = (branch: Branch) => {
@@ -139,6 +148,7 @@ export default function BranchesPage() {
               sortBy={sortBy}
               sortOrder={sortOrder}
               onSort={handleSort}
+              onView={handleView}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
@@ -177,6 +187,13 @@ export default function BranchesPage() {
           branch={selectedBranch}
           onSubmit={handleFormSubmit}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
+        />
+
+        {/* Detail Modal View */}
+        <BranchDetailsModal
+          open={detailModalOpen}
+          onOpenChange={setDetailModalOpen}
+          branch={viewBranch}
         />
       </div>
     </DashboardLayout>

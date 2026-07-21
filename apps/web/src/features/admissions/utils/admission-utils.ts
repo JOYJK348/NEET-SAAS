@@ -3,18 +3,7 @@ import type { AdmissionStatus } from '@/features/admissions/types/admission';
 export function getStatusBadgeVariant(
   status: AdmissionStatus,
 ): 'success' | 'warning' | 'info' | 'destructive' | 'default' {
-  switch (status) {
-    case 'ACTIVE':
-      return 'success';
-    case 'PENDING':
-      return 'warning';
-    case 'CONFIRMED':
-      return 'info';
-    case 'COMPLETED':
-      return 'default';
-    case 'CANCELLED':
-      return 'destructive';
-  }
+  return status === 'ACTIVE' ? 'success' : 'default';
 }
 
 import { formatDateOnly, formatDateTime as centralFormatDateTime } from '@/lib/date-utils';

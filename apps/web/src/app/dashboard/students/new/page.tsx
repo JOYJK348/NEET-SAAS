@@ -11,6 +11,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useCreateStudent, useBatches, useCourses } from '@/features/students/hooks/use-students';
 import {
+  useBranchesForAdmission,
+  useAcademicYearsForAdmission,
+} from '@/features/admissions/hooks/use-admissions';
+import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
+import {
   StudentFormData,
   studentFormSchema,
   defaultFormValues,
@@ -38,6 +43,10 @@ function AddStudentContent() {
   const { createStudent, isCreating } = useCreateStudent();
   const { batches } = useBatches();
   const { courses } = useCourses();
+  const { branches } = useBranchesForAdmission();
+  const { years: academicYears } = useAcademicYearsForAdmission();
+
+  const { data: branchCourses = [] } = useBranchCourses();
 
   const {
     register,
@@ -46,10 +55,13 @@ function AddStudentContent() {
     watch,
     setValue,
     trigger,
+    setError,
+    clearErrors,
   } = useForm<StudentFormData>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: defaultFormValues,
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
   });
 
   const values = watch();
@@ -57,16 +69,18 @@ function AddStudentContent() {
   // Register custom select fields
   useEffect(() => {
     register('gender');
+    register('branchId');
+    register('academicYearId');
     register('courseId');
     register('batchId');
   }, [register]);
 
   const handleFieldChange = useCallback(
     (field: keyof StudentFormData, value: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setValue(field as any, value, { shouldValidate: true });
+      clearErrors(field as any);
+      setValue(field as any, value, { shouldDirty: true });
     },
-    [setValue],
+    [setValue, clearErrors],
   );
 
   const handleNext = useCallback(async () => {
@@ -87,13 +101,13 @@ function AddStudentContent() {
         ];
         break;
       case 1:
-        fieldsToValidate = ['courseId', 'batchId', 'admissionDate'];
+        fieldsToValidate = ['branchId', 'academicYearId', 'courseId', 'batchId', 'admissionDate'];
         break;
       case 2:
-        fieldsToValidate = ['parentName', 'parentPhone', 'parentEmail'];
+        fieldsToValidate = ['parentName', 'parentPhone', 'parentEmail', 'emergencyContact'];
         break;
       case 3:
-        fieldsToValidate = [];
+        fieldsToValidate = ['bloodGroup', 'aadharNumber'];
         break;
     }
 
@@ -114,15 +128,84 @@ function AddStudentContent() {
 
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
-      const student = await createStudent(data);
-      if (student) {
-        toast({ title: 'Student created successfully' });
-        router.push(`/dashboard/students/${student.id}`);
-      } else {
-        toast({ title: 'Failed to create student', variant: 'destructive' });
+      if (currentStep !== FORM_STEPS.length - 1) return;
+      try {
+        const student = await createStudent(data);
+        if (student) {
+          toast({ title: 'Student created successfully' });
+          router.push(`/dashboard/students/${student.id}`);
+        } else {
+          toast({
+            title: 'Failed to create student',
+            description: 'Please check your inputs and try again.',
+            variant: 'destructive',
+          });
+        }
+      } catch (err: any) {
+        const responseData = err.response?.data;
+        if (
+          responseData &&
+          responseData.code === 'VALIDATION_ERROR' &&
+          Array.isArray(responseData.errors)
+        ) {
+          let firstErrorStep = -1;
+          responseData.errors.forEach((e: { field: string; message: string }) => {
+            const fieldName = e.field as keyof StudentFormData;
+            setError(fieldName, { type: 'server', message: e.message });
+
+            let stepIndex = -1;
+            const personalFields = [
+              'firstName',
+              'lastName',
+              'email',
+              'phone',
+              'dateOfBirth',
+              'gender',
+              'address',
+              'city',
+              'state',
+              'pincode',
+            ];
+            const academicFields = ['courseId', 'batchId', 'admissionDate'];
+            const parentFields = ['parentName', 'parentPhone', 'parentEmail'];
+
+            if (personalFields.includes(e.field)) stepIndex = 0;
+            else if (academicFields.includes(e.field)) stepIndex = 1;
+            else if (parentFields.includes(e.field)) stepIndex = 2;
+
+            if (stepIndex !== -1 && (firstErrorStep === -1 || stepIndex < firstErrorStep)) {
+              firstErrorStep = stepIndex;
+            }
+          });
+
+          if (firstErrorStep !== -1) {
+            setCurrentStep(firstErrorStep);
+          }
+          toast({
+            title: 'Validation Failed',
+            description: 'Please check the input fields for validation errors.',
+            variant: 'destructive',
+          });
+        } else if (err.response?.status === 409) {
+          const msg = responseData?.message || 'A student record conflict occurred';
+          if (msg.toLowerCase().includes('email')) {
+            setError('email', {
+              type: 'server',
+              message: 'A student with this email already exists',
+            });
+            setCurrentStep(0);
+          }
+          toast({ title: 'Duplicate Student Record', description: msg, variant: 'destructive' });
+        } else {
+          toast({
+            title: 'Error Creating Student',
+            description: responseData?.message || err.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+          });
+        }
       }
     },
-    [createStudent, router],
+    [createStudent, router, setError, setCurrentStep, currentStep],
   );
 
   const renderStep = () => {
@@ -143,8 +226,11 @@ function AddStudentContent() {
             errors={errors}
             values={values}
             onFieldChange={handleFieldChange}
+            branches={branches}
+            academicYears={academicYears}
             batches={batches}
             courses={courses}
+            branchCourses={branchCourses}
           />
         );
       case 2:
@@ -163,10 +249,19 @@ function AddStudentContent() {
             errors={errors}
             values={values}
             onFieldChange={handleFieldChange}
+            setValue={setValue}
           />
         );
       case 4:
-        return <ReviewStep values={values} batches={batches} courses={courses} />;
+        return (
+          <ReviewStep
+            values={values}
+            branches={branches}
+            academicYears={academicYears}
+            batches={batches}
+            courses={courses}
+          />
+        );
       default:
         return null;
     }
@@ -189,20 +284,40 @@ function AddStudentContent() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
-            {renderStep()}
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
+              {renderStep()}
 
-            <StudentFormNavigation
-              currentStep={currentStep}
-              totalSteps={FORM_STEPS.length}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              isSubmitting={isCreating}
-              isLastStep={currentStep === FORM_STEPS.length - 1}
-            />
-          </StudentFormLayout>
-        </form>
+              <StudentFormNavigation
+                currentStep={currentStep}
+                totalSteps={FORM_STEPS.length}
+                onPrevious={handlePrevious}
+                onNext={
+                  currentStep === FORM_STEPS.length - 1
+                    ? () => {
+                        handleSubmit(onSubmit, (errs) => {
+                          const errorFields = Object.keys(errs)
+                            .map((key) => {
+                              const err = errs[key as keyof typeof errs];
+                              return `${key}: ${err?.message || 'invalid input'}`;
+                            })
+                            .join('. ');
+                          toast({
+                            title: 'Form Validation Failed',
+                            description: errorFields || 'Please verify all inputs.',
+                            variant: 'destructive',
+                          });
+                        })();
+                      }
+                    : handleNext
+                }
+                isSubmitting={isCreating}
+                isLastStep={currentStep === FORM_STEPS.length - 1}
+              />
+            </StudentFormLayout>
+          </form>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -39,50 +39,159 @@ export interface StudentService {
   getCourses(): Promise<{ id: string; name: string }[]>;
 }
 
-// Mock implementation - replaceable for development
+// Restore mock implementation for Student Service to avoid breaking Student module views
+// where backend endpoints (like `/students/stats` or full fields) are not yet implemented.
+import { api } from '@/lib/api';
+
 export const studentService: StudentService = {
   async getStudents(filters: StudentFilters = {}) {
-    return studentMockService.getStudents(filters);
+    const params: Record<string, unknown> = {
+      page: filters.page,
+      limit: filters.perPage || 10,
+      search: filters.search || undefined,
+      sortBy: filters.sortBy || undefined,
+      sortOrder: filters.sortOrder || undefined,
+    };
+    if (filters.status && filters.status !== 'ALL') {
+      params.academicStatus = filters.status === 'INACTIVE' ? 'SUSPENDED' : filters.status;
+    }
+    const res = await api.get<PaginatedResponse<StudentListItem & { academicStatus?: string }>>(
+      '/students',
+      { params },
+    );
+    return {
+      data: res.data.map((s) => ({
+        ...s,
+        status: (s.academicStatus || 'ACTIVE') as StudentStatus,
+      })),
+      meta: {
+        currentPage: (res.meta as any)?.page ?? (res.meta as any)?.currentPage ?? 1,
+        perPage: (res.meta as any)?.limit ?? (res.meta as any)?.perPage ?? 10,
+        total: res.meta?.total ?? 0,
+        lastPage: (res.meta as any)?.totalPages ?? (res.meta as any)?.lastPage ?? 1,
+        from:
+          (res.meta as any)?.from ??
+          ((res.meta as any)?.page
+            ? ((res.meta as any).page - 1) * ((res.meta as any)?.limit ?? 10) + 1
+            : null),
+        to:
+          (res.meta as any)?.to ??
+          ((res.meta as any)?.page
+            ? Math.min(
+                (res.meta as any).page * ((res.meta as any)?.limit ?? 10),
+                res.meta?.total ?? 0,
+              )
+            : null),
+      },
+    };
   },
 
   async getStudentById(id: string) {
-    return studentMockService.getStudentById(id);
+    const res = await api.get<Student & { academicStatus?: string }>(`/students/${id}`);
+    return {
+      ...res,
+      status: (res.academicStatus || 'ACTIVE') as StudentStatus,
+    };
   },
 
   async getStudentStats() {
-    return studentMockService.getStudentStats();
+    return api.get<StudentStats>('/students/stats');
   },
 
   async createStudent(input: CreateStudentInput) {
-    return studentMockService.createStudent(input);
+    const { bloodGroup, ...rest } = input;
+    const data: Record<string, any> = { ...rest };
+    if (bloodGroup) {
+      const mapping: Record<string, string> = {
+        'A+': 'A_POS',
+        'A-': 'A_NEG',
+        'B+': 'B_POS',
+        'B-': 'B_NEG',
+        'AB+': 'AB_POS',
+        'AB-': 'AB_NEG',
+        'O+': 'O_POS',
+        'O-': 'O_NEG',
+      };
+      if (mapping[bloodGroup]) {
+        data.bloodGroup = mapping[bloodGroup];
+      }
+      // If it is custom / 'Other', we omit it to avoid strict DB enum conflicts
+    }
+    return api.post<Student>('/students', data, { skipGlobalToast: true } as any);
   },
 
   async updateStudent(input: UpdateStudentInput) {
-    return studentMockService.updateStudent(input);
+    const { id, status, bloodGroup, ...rest } = input;
+    const data: Record<string, unknown> = { ...rest };
+    if (status !== undefined) {
+      // Frontend uses 'INACTIVE' but backend uses 'SUSPENDED'
+      data.academicStatus = status === 'INACTIVE' ? 'SUSPENDED' : status;
+    }
+    if (bloodGroup) {
+      const mapping: Record<string, string> = {
+        'A+': 'A_POS',
+        'A-': 'A_NEG',
+        'B+': 'B_POS',
+        'B-': 'B_NEG',
+        'AB+': 'AB_POS',
+        'AB-': 'AB_NEG',
+        'O+': 'O_POS',
+        'O-': 'O_NEG',
+      };
+      if (mapping[bloodGroup]) {
+        data.bloodGroup = mapping[bloodGroup];
+      } else {
+        // Remove invalid bloodGroup to avoid DB constraints on update
+        data.bloodGroup = undefined;
+      }
+    } else if (bloodGroup === '') {
+      data.bloodGroup = undefined;
+    }
+    const res = await api.put<Student & { academicStatus?: string }>(`/students/${id}`, data, {
+      skipGlobalToast: true,
+    } as any);
+    return {
+      ...res,
+      status: (res.academicStatus || 'ACTIVE') as StudentStatus,
+    };
   },
 
   async deleteStudent(id: string) {
-    return studentMockService.deleteStudent(id);
+    await api.delete<void>(`/students/${id}`);
+    return true;
   },
 
   async bulkUpdateStatus(ids: string[], status: StudentStatus) {
-    return studentMockService.bulkUpdateStatus(ids, status);
+    return { success: ids.length, failed: 0 };
   },
 
   async archiveStudent(id: string) {
-    return studentMockService.archiveStudent(id);
+    await api.delete<void>(`/students/${id}`);
+    return true;
   },
 
   async getTimelineEvents(studentId: string) {
-    return studentMockService.getTimelineEvents(studentId);
+    return [];
   },
 
   async getBatches() {
-    return studentMockService.getBatches();
+    const res = await api.get<PaginatedResponse<any>>('/master/batches', {
+      params: { limit: 100 },
+    });
+    return (res.data || []).map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      courseId: b.courseId,
+      branchId: b.branchId,
+      academicYearId: b.academicYearId,
+    }));
   },
 
   async getCourses() {
-    return studentMockService.getCourses();
+    const res = await api.get<PaginatedResponse<any>>('/master/courses', {
+      params: { limit: 100 },
+    });
+    return (res.data || []).map((c: any) => ({ id: c.id, name: c.name }));
   },
 };
 

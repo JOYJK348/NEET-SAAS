@@ -225,24 +225,12 @@ function AdmissionsContent() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <AdmissionStatCard
           label="Total"
           value={stats?.total ?? 0}
           icon={Users}
           bgColor="bg-purple-50"
-        />
-        <AdmissionStatCard
-          label="Pending"
-          value={stats?.pending ?? 0}
-          icon={Clock}
-          bgColor="bg-yellow-50"
-        />
-        <AdmissionStatCard
-          label="Confirmed"
-          value={stats?.confirmed ?? 0}
-          icon={CheckCircle2}
-          bgColor="bg-blue-50"
         />
         <AdmissionStatCard
           label="Active"
@@ -251,16 +239,10 @@ function AdmissionsContent() {
           bgColor="bg-green-50"
         />
         <AdmissionStatCard
-          label="Completed"
-          value={stats?.completed ?? 0}
-          icon={CheckCircle2}
-          bgColor="bg-gray-50"
-        />
-        <AdmissionStatCard
-          label="Cancelled"
-          value={stats?.cancelled ?? 0}
+          label="Inactive"
+          value={stats?.inactive ?? 0}
           icon={XCircle}
-          bgColor="bg-red-50"
+          bgColor="bg-gray-50"
         />
       </div>
 

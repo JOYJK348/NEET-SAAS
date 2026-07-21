@@ -40,6 +40,7 @@ const GC = {
 
 export interface UseAdmissionsOptions {
   autoFetch?: boolean;
+  initialFilters?: Partial<AdmissionFilters>;
 }
 
 export interface UseAdmissionsReturn {
@@ -59,12 +60,13 @@ export interface UseAdmissionsReturn {
 }
 
 export function useAdmissions(options: UseAdmissionsOptions = {}): UseAdmissionsReturn {
-  const { autoFetch = true } = options;
+  const { autoFetch = true, initialFilters } = options;
   const [filters, setFilters] = useState<AdmissionFilters>({
     page: 1,
     perPage: 10,
     search: '',
     status: 'ALL',
+    ...initialFilters,
   });
 
   const { data, isPending, error, refetch } = useQuery({
@@ -164,7 +166,7 @@ export function useAdmission(id: string): UseAdmissionReturn {
 }
 
 export interface UseCreateAdmissionReturn {
-  createAdmission: (input: CreateAdmissionInput) => Promise<Admission | null>;
+  createAdmission: (input: CreateAdmissionInput) => Promise<Admission>;
   isCreating: boolean;
   error: string | null;
 }
@@ -185,13 +187,9 @@ export function useCreateAdmission(): UseCreateAdmissionReturn {
   });
 
   const createAdmission = useCallback(
-    async (input: CreateAdmissionInput): Promise<Admission | null> => {
-      try {
-        setError(null);
-        return await mutateAsync(input);
-      } catch {
-        return null;
-      }
+    async (input: CreateAdmissionInput): Promise<Admission> => {
+      setError(null);
+      return await mutateAsync(input);
     },
     [mutateAsync],
   );
@@ -236,6 +234,44 @@ export function useUpdateAdmissionStatus(): UseUpdateAdmissionStatusReturn {
   );
 
   return { updateStatus, isUpdating: isPending, error };
+}
+
+export interface UseUpdateAdmissionBatchReturn {
+  updateBatch: (input: { id: string; batchId: string }) => Promise<Admission | null>;
+  isUpdating: boolean;
+  error: string | null;
+}
+
+export function useUpdateAdmissionBatch(): UseUpdateAdmissionBatchReturn {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: (input: { id: string; batchId: string }) =>
+      admissionService.updateAdmissionBatch(input),
+    onSuccess: (_data, input) => {
+      queryClient.invalidateQueries({ queryKey: admissionServiceKeys.detail(input.id) });
+      queryClient.invalidateQueries({ queryKey: admissionServiceKeys.timeline(input.id) });
+      queryClient.invalidateQueries({ queryKey: admissionServiceKeys.lists() });
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : 'Failed to update admission batch');
+    },
+  });
+
+  const updateBatch = useCallback(
+    async (input: { id: string; batchId: string }): Promise<Admission | null> => {
+      try {
+        setError(null);
+        return await mutateAsync(input);
+      } catch {
+        return null;
+      }
+    },
+    [mutateAsync],
+  );
+
+  return { updateBatch, isUpdating: isPending, error };
 }
 
 export interface UseTimelineReturn {
@@ -331,10 +367,13 @@ export interface UseBatchesForAdmissionReturn {
   error: string | null;
 }
 
-export function useBatchesForAdmission(courseId?: string): UseBatchesForAdmissionReturn {
+export function useBatchesForAdmission(
+  courseId?: string,
+  branchId?: string,
+): UseBatchesForAdmissionReturn {
   const { data, isPending, error } = useQuery({
-    queryKey: admissionServiceKeys.batches(courseId),
-    queryFn: () => admissionService.getBatches(courseId),
+    queryKey: [...admissionServiceKeys.batches(courseId), branchId || 'all'],
+    queryFn: () => admissionService.getBatches(courseId, branchId),
     staleTime: STALE.reference,
     gcTime: GC.reference,
   });

@@ -66,6 +66,11 @@ export class StudentsController {
     enum: ['asc', 'desc'],
     example: 'desc',
   })
+  @ApiQuery({
+    name: 'academicStatus',
+    required: false,
+    description: 'Filter by academic status',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated student list',
@@ -74,9 +79,17 @@ export class StudentsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   findAll(
     @Query() query: QueryParamsDto,
-    @CurrentUser() user: AuthenticatedRequestUser,
+    @Query('academicStatus') academicStatus?: string,
+    @CurrentUser() user?: AuthenticatedRequestUser,
   ) {
-    return this.studentsService.findAll(user.tenantId!, query);
+    return this.studentsService.findAll(user!.tenantId!, query, academicStatus);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get student statistics counts' })
+  @ApiResponse({ status: 200, description: 'Student stats response' })
+  getStats(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.studentsService.getStats(user.tenantId!);
   }
 
   @Get(':id')

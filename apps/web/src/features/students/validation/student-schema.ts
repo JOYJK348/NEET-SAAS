@@ -14,7 +14,21 @@ export const personalInfoSchema = z.object({
     .string()
     .min(10, 'Phone number must be at least 10 digits')
     .max(15, 'Phone number must be at most 15 digits'),
-  dateOfBirth: z.string().min(1, 'Date of birth is required'),
+  dateOfBirth: z
+    .string()
+    .min(1, 'Date of birth is required')
+    .refine((val) => {
+      if (!val) return true;
+      const dob = new Date(val);
+      if (isNaN(dob.getTime())) return false;
+      const now = new Date();
+      let age = now.getFullYear() - dob.getFullYear();
+      const monthDiff = now.getMonth() - dob.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+        age--;
+      }
+      return age >= 15 && age <= 25;
+    }, 'Student age must be between 15 and 25 years'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER'], {
     required_error: 'Please select a gender',
   }),
@@ -38,6 +52,8 @@ export const personalInfoSchema = z.object({
 });
 
 export const academicInfoSchema = z.object({
+  branchId: z.string().min(1, 'Please select a branch'),
+  academicYearId: z.string().min(1, 'Please select an academic year'),
   courseId: z.string().min(1, 'Please select a course'),
   batchId: z.string().min(1, 'Please select a batch'),
   admissionDate: z.string().min(1, 'Admission date is required'),
@@ -47,12 +63,16 @@ export const parentInfoSchema = z.object({
   parentName: z
     .string()
     .min(2, 'Parent name must be at least 2 characters')
-    .max(50, 'Parent name must be at most 50 characters'),
+    .max(50, 'Parent name must be at most 50 characters')
+    .optional()
+    .or(z.literal('')),
   parentPhone: z
     .string()
     .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must be at most 15 digits'),
-  parentEmail: z.string().email('Invalid email address'),
+    .max(15, 'Phone number must be at most 15 digits')
+    .optional()
+    .or(z.literal('')),
+  parentEmail: z.string().email('Invalid email address').optional().or(z.literal('')),
   emergencyContact: z
     .string()
     .min(10, 'Emergency contact must be at least 10 digits')
@@ -91,6 +111,8 @@ export const defaultFormValues: StudentFormData = {
   state: '',
   pincode: '',
   profileImage: undefined,
+  branchId: '',
+  academicYearId: '',
   courseId: '',
   batchId: '',
   admissionDate: '',

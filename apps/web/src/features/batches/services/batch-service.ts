@@ -1,3 +1,4 @@
+import { api } from '@/lib/api';
 import type {
   Batch,
   BatchListItem,
@@ -11,7 +12,10 @@ import type {
   UpdateBatchInput,
 } from '@/features/batches/types/batch';
 import type { PaginatedResponse } from '@/types/api';
-import { batchMockService } from '@/features/batches/mock/batches.mock';
+import { coursesApi } from '@/features/master-data/api/courses.api';
+import { branchesApi } from '@/features/master-data/api/branches.api';
+import { academicYearsApi } from '@/features/master-data/api/academic-years.api';
+import { batchDeliveryTypesApi } from '@/features/master-data/api/batch-delivery-types.api';
 
 export interface BatchService {
   getBatches(filters?: BatchFilters): Promise<PaginatedResponse<BatchListItem>>;
@@ -30,19 +34,66 @@ export interface BatchService {
 }
 
 export const batchService: BatchService = {
-  getBatches: (filters) => batchMockService.getBatches(filters),
-  getBatchById: (id) => batchMockService.getBatchById(id),
-  getBatchStats: () => batchMockService.getBatchStats(),
-  createBatch: (input) => batchMockService.createBatch(input),
-  updateBatch: (input) => batchMockService.updateBatch(input),
-  archiveBatch: (id) => batchMockService.archiveBatch(id),
-  getTimelineEvents: (batchId) => batchMockService.getTimelineEvents(batchId),
-  getBatchStudents: (batchId) => batchMockService.getBatchStudents(batchId),
-  getBatchStaffAssignments: (batchId) => batchMockService.getBatchStaffAssignments(batchId),
-  getDeliveryTypes: () => batchMockService.getDeliveryTypes(),
-  getCourses: () => batchMockService.getCourses(),
-  getBranches: () => batchMockService.getBranches(),
-  getAcademicYears: () => batchMockService.getAcademicYears(),
+  async getBatches(filters) {
+    return api.get<PaginatedResponse<BatchListItem>>('/master/batches', { params: filters });
+  },
+
+  async getBatchById(id) {
+    return api.get<Batch>(`/master/batches/${id}`);
+  },
+
+  async getBatchStats() {
+    return api.get<BatchStats>('/master/batches/stats');
+  },
+
+  async createBatch(input) {
+    return api.post<Batch>('/master/batches', input);
+  },
+
+  async updateBatch(input) {
+    const { id, ...updatePayload } = input;
+    return api.patch<Batch>(`/master/batches/${id}`, updatePayload);
+  },
+
+  async archiveBatch(id) {
+    await api.patch(`/master/batches/${id}`, { status: 'ARCHIVED' });
+    return true;
+  },
+
+  async getTimelineEvents(batchId) {
+    return api.get<BatchTimelineEvent[]>(`/master/batches/${batchId}/timeline`);
+  },
+
+  async getBatchStudents(batchId) {
+    return api.get<BatchStudentEnrollment[]>(`/master/batches/${batchId}/students`);
+  },
+
+  async getBatchStaffAssignments(batchId) {
+    return api.get<BatchStaffAssignment[]>(`/master/batches/${batchId}/staff`);
+  },
+
+  async getDeliveryTypes() {
+    const res = await batchDeliveryTypesApi.getDeliveryTypes({ limit: 10 });
+    return res.data.map((dt) => ({
+      ...dt,
+      description: dt.description || '',
+    })) as BatchDeliveryType[];
+  },
+
+  async getCourses() {
+    const res = await coursesApi.getCourses({ limit: 100 });
+    return res.data.map((c) => ({ id: c.id, name: c.name }));
+  },
+
+  async getBranches() {
+    const res = await branchesApi.getBranches({ limit: 100, status: 'ACTIVE' } as any);
+    return res.data.map((b) => ({ id: b.id, name: b.name }));
+  },
+
+  async getAcademicYears() {
+    const res = await academicYearsApi.getAcademicYears({ limit: 100, status: 'ACTIVE' } as any);
+    return res.data.map((y) => ({ id: y.id, name: y.name }));
+  },
 };
 
 export const batchServiceKeys = {

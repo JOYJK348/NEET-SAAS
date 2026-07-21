@@ -179,7 +179,7 @@ const academicYears = [
 ];
 
 function generateAdmissions(): Admission[] {
-  const statuses: AdmissionStatus[] = ['PENDING', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+  const statuses: AdmissionStatus[] = ['ACTIVE', 'ACTIVE', 'INACTIVE', 'ACTIVE', 'INACTIVE'];
 
   return Array.from({ length: 25 }, (_, i) => {
     const studentIdx = i % mockStudents.length;
@@ -203,75 +203,19 @@ function generateAdmissions(): Admission[] {
       branch: mockBranches[branchIdx],
       batch: mockBatches[batchIdx],
       parent: mockParents[studentIdx],
-      timeline: generateTimeline(status),
+      timeline: [
+        {
+          id: 't-create',
+          type: 'CREATED',
+          title: 'Admission Created',
+          createdBy: 'Admin User',
+          createdAt: new Date().toISOString(),
+        },
+      ],
       createdAt: new Date(2026, 0, 10 + i).toISOString(),
       updatedAt: new Date(2026, 0, 20 + i).toISOString(),
     };
   });
-}
-
-function generateTimeline(finalStatus: AdmissionStatus): TimelineEvent[] {
-  const now = new Date();
-  const events: TimelineEvent[] = [
-    {
-      id: 't-create',
-      type: 'CREATED',
-      title: 'Admission Created',
-      createdBy: 'Admin User',
-      createdAt: new Date(now.getTime() - 86400000 * 7).toISOString(),
-    },
-  ];
-
-  if (finalStatus === 'CONFIRMED' || finalStatus === 'ACTIVE' || finalStatus === 'COMPLETED') {
-    events.push({
-      id: 't-confirm',
-      type: 'STATUS_CHANGE',
-      title: 'Admission Confirmed',
-      fromStatus: 'PENDING',
-      toStatus: 'CONFIRMED',
-      createdBy: 'Admin User',
-      createdAt: new Date(now.getTime() - 86400000 * 5).toISOString(),
-    });
-  }
-
-  if (finalStatus === 'ACTIVE' || finalStatus === 'COMPLETED') {
-    events.push({
-      id: 't-activate',
-      type: 'STATUS_CHANGE',
-      title: 'Admission Activated',
-      fromStatus: 'CONFIRMED',
-      toStatus: 'ACTIVE',
-      createdBy: 'Admin User',
-      createdAt: new Date(now.getTime() - 86400000 * 3).toISOString(),
-    });
-  }
-
-  if (finalStatus === 'COMPLETED') {
-    events.push({
-      id: 't-complete',
-      type: 'STATUS_CHANGE',
-      title: 'Admission Completed',
-      fromStatus: 'ACTIVE',
-      toStatus: 'COMPLETED',
-      createdBy: 'Admin User',
-      createdAt: new Date(now.getTime() - 86400000 * 1).toISOString(),
-    });
-  }
-
-  if (finalStatus === 'CANCELLED') {
-    events.push({
-      id: 't-cancel',
-      type: 'STATUS_CHANGE',
-      title: 'Admission Cancelled',
-      fromStatus: 'PENDING',
-      toStatus: 'CANCELLED',
-      description: 'Student opted for different course',
-      createdBy: 'Admin User',
-      createdAt: new Date(now.getTime() - 86400000 * 4).toISOString(),
-    });
-  }
-
-  return events;
 }
 
 const mockAdmissions = generateAdmissions();
@@ -308,6 +252,10 @@ function applyFilters(items: Admission[], filters?: AdmissionFilters): Admission
     filtered = filtered.filter((a) => a.academicYearId === filters.academicYearId);
   }
 
+  if (filters.studentProfileId) {
+    filtered = filtered.filter((a) => a.studentProfileId === filters.studentProfileId);
+  }
+
   return filtered;
 }
 
@@ -339,8 +287,11 @@ function toListItem(admission: Admission): AdmissionListItem {
     admissionNumber: admission.admissionNumber,
     studentName: `${admission.student.firstName} ${admission.student.lastName}`,
     studentPhoto: admission.student.photo,
+    courseId: admission.courseId,
     courseName: admission.course.name,
+    branchId: admission.branchId,
     branchName: admission.branch.name,
+    batchId: admission.batch?.id || null,
     batchName: admission.batch?.name,
     admissionStatus: admission.admissionStatus,
     admissionDate: admission.admissionDate,
@@ -375,21 +326,10 @@ export const admissionMockService = {
   async getAdmissionStats(): Promise<AdmissionStats> {
     await delay(200);
     const total = mockAdmissions.length;
-    const pending = mockAdmissions.filter((a) => a.admissionStatus === 'PENDING').length;
-    const confirmed = mockAdmissions.filter((a) => a.admissionStatus === 'CONFIRMED').length;
     const active = mockAdmissions.filter((a) => a.admissionStatus === 'ACTIVE').length;
-    const completed = mockAdmissions.filter((a) => a.admissionStatus === 'COMPLETED').length;
-    const cancelled = mockAdmissions.filter((a) => a.admissionStatus === 'CANCELLED').length;
+    const inactive = mockAdmissions.filter((a) => a.admissionStatus === 'INACTIVE').length;
 
-    return {
-      total,
-      pending,
-      confirmed,
-      active,
-      completed,
-      cancelled,
-      changeFromLastMonth: 12,
-    };
+    return { total, active, inactive, changeFromLastMonth: 12 };
   },
 
   async createAdmission(input: CreateAdmissionInput): Promise<Admission> {
@@ -407,7 +347,7 @@ export const admissionMockService = {
       academicYearId: input.academicYearId,
       courseId: input.courseId,
       branchId: input.branchId,
-      admissionStatus: 'PENDING',
+      admissionStatus: 'ACTIVE',
       admissionDate: input.admissionDate,
       student,
       course,
@@ -447,6 +387,28 @@ export const admissionMockService = {
       fromStatus: admission.admissionStatus,
       toStatus: input.status,
       description: input.notes,
+      createdBy: 'Current User',
+      createdAt: new Date().toISOString(),
+    });
+
+    return admission;
+  },
+
+  async updateAdmissionBatch(input: { id: string; batchId: string }): Promise<Admission | null> {
+    await delay(300);
+    const admission = mockAdmissions.find((a) => a.id === input.id);
+    if (!admission) return null;
+
+    const batch = mockBatches.find((b) => b.id === input.batchId);
+    if (batch) {
+      admission.batch = batch;
+    }
+    admission.updatedAt = new Date().toISOString();
+
+    admission.timeline?.push({
+      id: `t-${Date.now()}`,
+      type: 'BATCH_CHANGE' as any,
+      title: `Batch changed to ${batch?.name || input.batchId}`,
       createdBy: 'Current User',
       createdAt: new Date().toISOString(),
     });

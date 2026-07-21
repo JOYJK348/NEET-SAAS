@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
@@ -28,15 +29,46 @@ export class CourseService {
   ) {}
 
   async create(dto: CreateCourseDto, tenantId: string, userId: string) {
+    const normalizedCode = dto.code.trim().toUpperCase();
+    const durationMonths = dto.durationMonths ?? 12;
+
+    if (durationMonths < 1 || durationMonths > 60) {
+      throw new BadRequestException('Duration must be between 1 and 60 months');
+    }
+
+    const existing = await this.prisma.courses.findFirst({
+      where: {
+        tenantId,
+        code: normalizedCode,
+        deletedAt: null,
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Course with code "${dto.code}" already exists`,
+      );
+    }
+
+    const start = dto.startDate ? new Date(dto.startDate) : null;
+    const end = dto.endDate ? new Date(dto.endDate) : null;
+
+    if (start && end && start >= end) {
+      throw new BadRequestException(
+        'Course start date must be before end date',
+      );
+    }
+
     return this.prisma.courses.create({
       data: {
         tenantId,
-        code: dto.code,
-        name: dto.name,
-        displayName: dto.displayName,
+        code: normalizedCode,
+        name: dto.name.trim(),
+        displayName: dto.displayName.trim(),
         description: dto.description || '',
         courseType: dto.courseType || 'REGULAR',
-        durationMonths: dto.durationMonths || 12,
+        durationMonths,
+        startDate: start,
+        endDate: end,
         displayOrder: dto.displayOrder || 1,
         isActive: dto.isActive ?? true,
         createdBy: userId,
@@ -75,10 +107,61 @@ export class CourseService {
     tenantId: string,
     userId: string,
   ) {
-    await this.findOne(id, tenantId);
+    const course = await this.findOne(id, tenantId);
+
+    if (
+      dto.durationMonths !== undefined &&
+      (dto.durationMonths < 1 || dto.durationMonths > 60)
+    ) {
+      throw new BadRequestException('Duration must be between 1 and 60 months');
+    }
+
+    const start =
+      dto.startDate !== undefined
+        ? dto.startDate
+          ? new Date(dto.startDate)
+          : null
+        : undefined;
+    const end =
+      dto.endDate !== undefined
+        ? dto.endDate
+          ? new Date(dto.endDate)
+          : null
+        : undefined;
+
+    if (start !== undefined || end !== undefined) {
+      const activeStart =
+        start !== undefined
+          ? start
+          : course.startDate
+            ? new Date(course.startDate)
+            : null;
+      const activeEnd =
+        end !== undefined
+          ? end
+          : course.endDate
+            ? new Date(course.endDate)
+            : null;
+
+      if (activeStart && activeEnd && activeStart >= activeEnd) {
+        throw new BadRequestException(
+          'Course start date must be before end date',
+        );
+      }
+    }
+
+    const updatePayload: Record<string, any> = {
+      ...dto,
+      updatedBy: userId,
+    };
+    if (dto.name) updatePayload.name = dto.name.trim();
+    if (dto.displayName) updatePayload.displayName = dto.displayName.trim();
+    if (start !== undefined) updatePayload.startDate = start;
+    if (end !== undefined) updatePayload.endDate = end;
+
     return this.prisma.courses.update({
       where: { tenantId_id: { tenantId, id } },
-      data: { ...dto, updatedBy: userId },
+      data: updatePayload,
     });
   }
 

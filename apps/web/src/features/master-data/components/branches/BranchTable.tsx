@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Edit2, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Edit2, Trash2, Eye } from 'lucide-react';
 import type { Branch } from '../../types';
 
 interface Column<T> {
@@ -17,6 +17,7 @@ interface BranchTableProps {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (key: string) => void;
+  onView: (branch: Branch) => void;
   onEdit: (branch: Branch) => void;
   onDelete: (id: string) => void;
 }
@@ -26,6 +27,7 @@ export function BranchTable({
   sortBy,
   sortOrder,
   onSort,
+  onView,
   onEdit,
   onDelete,
 }: BranchTableProps) {
@@ -92,6 +94,13 @@ export function BranchTable({
       render: (_, branch) => (
         <div className="flex items-center gap-2">
           <button
+            onClick={() => onView(branch)}
+            className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/30 rounded-lg transition-colors"
+            aria-label={`View ${branch.name} details`}
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => onEdit(branch)}
             className="p-1.5 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
             aria-label={`Edit ${branch.name}`}
@@ -107,7 +116,7 @@ export function BranchTable({
           </button>
         </div>
       ),
-      className: 'w-24',
+      className: 'w-32',
     },
   ];
 

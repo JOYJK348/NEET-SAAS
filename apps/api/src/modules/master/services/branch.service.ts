@@ -28,18 +28,50 @@ export class BranchService {
   ) {}
 
   async create(dto: CreateBranchDto, tenantId: string, userId: string) {
+    const normalizedCode = dto.code.trim().toUpperCase();
+    const normalizedSlug = dto.slug.trim().toLowerCase();
+    const normalizedEmail = dto.email.trim().toLowerCase();
+
+    // Active duplicate checks
+    const existing = await this.prisma.branches.findFirst({
+      where: {
+        tenantId,
+        deletedAt: null,
+        OR: [
+          { code: normalizedCode },
+          { slug: normalizedSlug },
+          { email: normalizedEmail },
+        ],
+      },
+    });
+    if (existing) {
+      if (existing.code === normalizedCode)
+        throw new ConflictException(
+          `Branch with code "${dto.code}" already exists`,
+        );
+      if (existing.slug === normalizedSlug)
+        throw new ConflictException(
+          `Branch with slug "${dto.slug}" already exists`,
+        );
+      if (existing.email === normalizedEmail)
+        throw new ConflictException(
+          `Branch with email "${dto.email}" already exists`,
+        );
+    }
+
     return this.prisma.branches.create({
       data: {
         tenantId,
-        code: dto.code,
-        slug: dto.slug,
-        name: dto.name,
-        displayName: dto.displayName,
-        email: dto.email,
-        phone: dto.phone,
+        code: normalizedCode,
+        slug: normalizedSlug,
+        name: dto.name.trim(),
+        displayName: dto.displayName.trim(),
+        email: normalizedEmail,
+        phone: dto.phone.trim(),
         branchType: dto.branchType as any,
         status: dto.status || 'ACTIVE',
         timezone: dto.timezone || 'Asia/Kolkata',
+        academicYearId: dto.academicYearId || null,
         createdBy: userId,
         updatedBy: userId,
       },
@@ -53,6 +85,9 @@ export class BranchService {
     const where: any = this.tenantScoped.buildWhere(tenantId);
     if (query.search)
       where.OR = buildPrismaSearch(query.search, SEARCH_FIELDS)?.OR;
+    if (query.status) {
+      where.status = query.status;
+    }
     return paginate({
       model: this.prisma.branches,
       where,
@@ -78,11 +113,48 @@ export class BranchService {
   ) {
     await this.findOne(id, tenantId);
 
+    const normalizedSlug = dto.slug ? dto.slug.trim().toLowerCase() : undefined;
+    const normalizedEmail = dto.email
+      ? dto.email.trim().toLowerCase()
+      : undefined;
+
+    // Check duplicate among active branches excluding the current record
+    const duplicateChecks: any[] = [];
+    if (normalizedSlug) duplicateChecks.push({ slug: normalizedSlug });
+    if (normalizedEmail) duplicateChecks.push({ email: normalizedEmail });
+
+    if (duplicateChecks.length > 0) {
+      const existing = await this.prisma.branches.findFirst({
+        where: {
+          tenantId,
+          deletedAt: null,
+          id: { not: id },
+          OR: duplicateChecks,
+        },
+      });
+      if (existing) {
+        if (normalizedSlug && existing.slug === normalizedSlug)
+          throw new ConflictException(
+            `Branch with slug "${dto.slug}" already exists`,
+          );
+        if (normalizedEmail && existing.email === normalizedEmail)
+          throw new ConflictException(
+            `Branch with email "${dto.email}" already exists`,
+          );
+      }
+    }
+
     const { branchType, ...updateData } = dto;
     const updatePayload: Record<string, any> = {
       ...updateData,
       updatedBy: userId,
     };
+
+    if (normalizedSlug) updatePayload.slug = normalizedSlug;
+    if (normalizedEmail) updatePayload.email = normalizedEmail;
+    if (dto.name) updatePayload.name = dto.name.trim();
+    if (dto.displayName) updatePayload.displayName = dto.displayName.trim();
+    if (dto.phone) updatePayload.phone = dto.phone.trim();
 
     if (branchType) {
       updatePayload.branchType = branchType as any;

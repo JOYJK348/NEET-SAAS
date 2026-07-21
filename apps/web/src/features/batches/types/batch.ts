@@ -22,6 +22,8 @@ export interface Batch {
   enrolledCount: number;
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   allowNewAdmissions: boolean;
   createdAt: string;
   updatedAt: string;
@@ -32,8 +34,11 @@ export interface BatchListItem {
   code: string;
   name: string;
   status: BatchStatus;
+  branchId: string;
   branchName: string;
+  courseId: string;
   courseName: string;
+  academicYearId: string;
   academicYearName: string;
   deliveryTypeName: string;
   attendanceMode: AttendanceMode;
@@ -41,6 +46,8 @@ export interface BatchListItem {
   enrolledCount: number;
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   allowNewAdmissions: boolean;
 }
 
@@ -89,6 +96,8 @@ export interface CreateBatchInput {
   maxStudents: number;
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   allowNewAdmissions: boolean;
 }
 

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -13,6 +21,7 @@ import { AdmissionsService } from './admissions.service';
 import { AdmissionResponseDto } from './dto/admission-response.dto';
 import { UpdateAdmissionStatusDto } from './dto/update-admission-status.dto';
 import { AdmissionHistoryResponseDto } from './dto/admission-history-response.dto';
+import { AdminAdmissionQueryDto } from './dto/admin-admission-query.dto';
 
 @ApiTags('Admissions')
 @ApiBearerAuth('JWT-auth')
@@ -21,8 +30,25 @@ import { AdmissionHistoryResponseDto } from './dto/admission-history-response.dt
 export class AdmissionItemController {
   constructor(private readonly admissionsService: AdmissionsService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'List all admissions (admin view)' })
+  @ApiResponse({ status: 200, description: 'Paginated admission list' })
+  findAllAdmin(
+    @Query() query: AdminAdmissionQueryDto,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.admissionsService.findAllAdmin(user.tenantId!, query);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get admission statistics' })
+  @ApiResponse({ status: 200, description: 'Admission stats' })
+  getStats(@CurrentUser() user: AuthenticatedRequestUser) {
+    return this.admissionsService.getStats(user.tenantId!);
+  }
+
   @Get(':admissionId')
-  @ApiOperation({ summary: 'Get full admission details' })
+  @ApiOperation({ summary: 'Get full admission details (enriched)' })
   @ApiResponse({
     status: 200,
     description: 'Admission found',
@@ -33,8 +59,8 @@ export class AdmissionItemController {
   findOne(
     @Param('admissionId') admissionId: string,
     @CurrentUser() user: AuthenticatedRequestUser,
-  ): Promise<AdmissionResponseDto> {
-    return this.admissionsService.findOne(admissionId, user.tenantId!);
+  ) {
+    return this.admissionsService.findOneEnriched(admissionId, user.tenantId!);
   }
 
   @Patch(':admissionId/status')
@@ -58,6 +84,28 @@ export class AdmissionItemController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ): Promise<AdmissionResponseDto> {
     return this.admissionsService.updateStatus(
+      admissionId,
+      dto,
+      user.tenantId!,
+      user.sub,
+    );
+  }
+
+  @Patch(':admissionId/batch')
+  @ApiOperation({ summary: 'Update admission batch enrollment' })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch updated',
+    type: AdmissionResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Admission or Batch not found' })
+  updateBatch(
+    @Param('admissionId') admissionId: string,
+    @Body() dto: { batchId: string },
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ): Promise<AdmissionResponseDto> {
+    return this.admissionsService.updateBatch(
       admissionId,
       dto,
       user.tenantId!,

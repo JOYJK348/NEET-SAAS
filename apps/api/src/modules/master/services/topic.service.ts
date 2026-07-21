@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
 import {
@@ -24,13 +29,45 @@ export class TopicService {
   ) {}
 
   async create(dto: CreateTopicDto, tenantId: string, userId: string) {
+    const normalizedCode = dto.code.trim().toUpperCase();
+
+    if (dto.plannedHours !== undefined && dto.plannedHours < 0) {
+      throw new BadRequestException('Planned hours cannot be negative');
+    }
+    if (dto.plannedSessions !== undefined && dto.plannedSessions < 0) {
+      throw new BadRequestException('Planned sessions cannot be negative');
+    }
+
+    // Verify parent Chapter exists and belongs to the tenant
+    const chapter = await this.prisma.chapters.findFirst({
+      where: { id: dto.chapterId, tenantId, deletedAt: null },
+    });
+    if (!chapter) {
+      throw new NotFoundException('Chapter not found');
+    }
+
+    // Check code uniqueness within parent chapter scope
+    const existing = await this.prisma.topics.findFirst({
+      where: {
+        tenantId,
+        chapterId: dto.chapterId,
+        code: normalizedCode,
+        deletedAt: null,
+      },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Topic with code "${dto.code}" already exists for this chapter`,
+      );
+    }
+
     return this.prisma.topics.create({
       data: {
         tenantId,
         chapterId: dto.chapterId,
-        code: dto.code,
-        name: dto.name,
-        shortName: dto.shortName || dto.name,
+        code: normalizedCode,
+        name: dto.name.trim(),
+        shortName: dto.shortName?.trim() || dto.name.trim(),
         description: dto.description || '',
         learningObjectives: dto.learningObjectives || '',
         difficultyLevel: dto.difficultyLevel || 'MEDIUM',
@@ -76,10 +113,45 @@ export class TopicService {
     tenantId: string,
     userId: string,
   ) {
-    await this.findOne(id, tenantId);
+    const existingTopic = await this.findOne(id, tenantId);
+
+    if (dto.plannedHours !== undefined && dto.plannedHours < 0) {
+      throw new BadRequestException('Planned hours cannot be negative');
+    }
+    if (dto.plannedSessions !== undefined && dto.plannedSessions < 0) {
+      throw new BadRequestException('Planned sessions cannot be negative');
+    }
+
+    const normalizedCode = dto.code ? dto.code.trim().toUpperCase() : undefined;
+
+    if (normalizedCode) {
+      const existing = await this.prisma.topics.findFirst({
+        where: {
+          tenantId,
+          chapterId: existingTopic.chapterId,
+          code: normalizedCode,
+          deletedAt: null,
+          id: { not: id },
+        },
+      });
+      if (existing) {
+        throw new ConflictException(
+          `Topic with code "${dto.code}" already exists for this chapter`,
+        );
+      }
+    }
+
+    const updatePayload: Record<string, any> = {
+      ...dto,
+      updatedBy: userId,
+    };
+    if (normalizedCode) updatePayload.code = normalizedCode;
+    if (dto.name) updatePayload.name = dto.name.trim();
+    if (dto.shortName) updatePayload.shortName = dto.shortName.trim();
+
     return this.prisma.topics.update({
       where: { tenantId_id: { tenantId, id } },
-      data: { ...dto, updatedBy: userId },
+      data: updatePayload,
     });
   }
 

@@ -46,9 +46,9 @@ export function StudentFormNavigation({
       </Button>
 
       <Button
-        type={isLastStep ? 'submit' : 'button'}
+        type="button"
         disabled={isSubmitting}
-        onClick={isLastStep ? undefined : handleClick}
+        onClick={isLastStep ? onNext : handleClick}
         className="gap-1.5"
       >
         {isSubmitting ? (

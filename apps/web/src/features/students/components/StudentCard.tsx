@@ -8,9 +8,19 @@ import {
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Mail, Phone, Calendar, GraduationCap, User } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Mail,
+  Phone,
+  Calendar,
+  GraduationCap,
+  User,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +50,7 @@ export function StudentCard({
   selected,
   onSelect,
 }: StudentCardProps) {
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const statusLabel = STUDENT_STATUS_LABELS[student.status as StudentStatus];
   const statusColor = STUDENT_STATUS_COLORS[student.status as StudentStatus];
   const fullName =
@@ -100,9 +111,52 @@ export function StudentCard({
                   {student.studentId}
                 </p>
               </div>
-              <Badge variant="outline" className={`${statusColor} whitespace-nowrap shrink-0`}>
-                {statusLabel}
-              </Badge>
+              <button
+                type="button"
+                disabled={updatingStatus}
+                onClick={() => {
+                  setUpdatingStatus(true);
+                  const newStatus = student.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+                  onStatusChange?.(student, newStatus);
+                  setTimeout(() => setUpdatingStatus(false), 500);
+                }}
+                className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+                title={student.status === 'ACTIVE' ? 'Deactivate student' : 'Activate student'}
+              >
+                <span
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
+                    student.status === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                >
+                  {updatingStatus ? (
+                    <svg
+                      className="h-3 w-3 animate-spin text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
+                      />
+                    </svg>
+                  ) : student.status === 'ACTIVE' ? (
+                    <ToggleRight className="h-3 w-3 text-green-600" />
+                  ) : (
+                    <ToggleLeft className="h-3 w-3 text-gray-400" />
+                  )}
+                </span>
+              </button>
             </div>
 
             {/* Contact info */}
@@ -179,8 +233,8 @@ export function StudentCard({
                 Mark Active
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => onStatusChange?.(student, 'INACTIVE')}
-                className={student.status === 'INACTIVE' ? 'text-gray-600' : ''}
+                onClick={() => onStatusChange?.(student, 'SUSPENDED')}
+                className={student.status === 'SUSPENDED' ? 'text-gray-600' : ''}
               >
                 Mark Inactive
               </DropdownMenuItem>

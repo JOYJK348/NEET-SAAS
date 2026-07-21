@@ -207,25 +207,27 @@ export function useCreateStudent(): UseCreateStudentReturn {
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: (input: CreateStudentInput) => studentService.createStudent(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
-    },
-    onError: (err) => {
-      setError(err instanceof Error ? err : new Error('Failed to create student'));
-    },
   });
 
   const createStudent = useCallback(
     async (input: CreateStudentInput): Promise<Student | null> => {
       try {
         setError(null);
-        return await mutateAsync(input);
-      } catch {
-        return null;
+        const result = await mutateAsync(input, {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+            queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+          },
+          onError: (err) => {
+            setError(err instanceof Error ? err : new Error('Failed to create student'));
+          },
+        });
+        return result;
+      } catch (err) {
+        throw err;
       }
     },
-    [mutateAsync],
+    [mutateAsync, queryClient],
   );
 
   return { createStudent, isCreating: isPending, error };
@@ -255,12 +257,8 @@ export function useUpdateStudent(): UseUpdateStudentReturn {
 
   const updateStudent = useCallback(
     async (input: UpdateStudentInput): Promise<Student | null> => {
-      try {
-        setError(null);
-        return await mutateAsync(input);
-      } catch {
-        return null;
-      }
+      setError(null);
+      return await mutateAsync(input);
     },
     [mutateAsync],
   );
@@ -407,7 +405,13 @@ export function useBulkUpdateStatus(): UseBulkUpdateStatusReturn {
 }
 
 export interface UseBatchesReturn {
-  batches: { id: string; name: string }[];
+  batches: {
+    id: string;
+    name: string;
+    courseId?: string;
+    branchId?: string;
+    academicYearId?: string;
+  }[];
   isLoading: boolean;
   error: Error | null;
 }
@@ -421,7 +425,7 @@ export function useBatches(): UseBatchesReturn {
   });
 
   return {
-    batches: data ?? [],
+    batches: (data || []) as any,
     isLoading: isPending,
     error: error ?? null,
   };

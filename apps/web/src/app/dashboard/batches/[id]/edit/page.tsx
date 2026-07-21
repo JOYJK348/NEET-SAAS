@@ -26,6 +26,7 @@ import {
   useAcademicYearsForBatch,
   useDeliveryTypes,
 } from '@/features/batches/hooks/use-batches';
+import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
 import { BatchFormLayout } from '@/features/batches/components/forms/BatchFormLayout';
 import { BatchSkeleton } from '@/features/batches/components/BatchSkeleton';
 import { BatchEmptyState } from '@/features/batches/components/BatchEmptyState';
@@ -66,13 +67,19 @@ function EditBatchContent() {
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<z.infer<typeof editBatchFormSchema>>({
     resolver: zodResolver(editBatchFormSchema),
   });
 
+  const { data: branchCourses = [] } = useBranchCourses();
+
   useEffect(() => {
     if (batch) {
+      const startVal = batch.startDate ? new Date(batch.startDate).toISOString().split('T')[0] : '';
+      const endVal = batch.endDate ? new Date(batch.endDate).toISOString().split('T')[0] : '';
       reset({
         code: batch.code,
         name: batch.name,
@@ -82,8 +89,10 @@ function EditBatchContent() {
         academicYearId: batch.academicYearId,
         deliveryTypeId: batch.deliveryTypeId,
         maxStudents: batch.maxStudents,
-        startDate: batch.startDate,
-        endDate: batch.endDate,
+        startDate: startVal,
+        endDate: endVal,
+        startTime: batch.startTime || '',
+        endTime: batch.endTime || '',
         allowNewAdmissions: batch.allowNewAdmissions,
         status: batch.status,
       });
@@ -231,67 +240,7 @@ function EditBatchContent() {
               )}
             </div>
 
-            {/* Course & Branch */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="courseId">Course *</Label>
-                <Controller
-                  name="courseId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="courseId"
-                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
-                      >
-                        <SelectValue placeholder="Select a course" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Select a course</SelectItem>
-                        {courses.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.courseId && (
-                  <p className="text-sm text-red-500">{errors.courseId.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="branchId">Branch *</Label>
-                <Controller
-                  name="branchId"
-                  control={control}
-                  render={({ field }) => (
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="branchId"
-                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
-                      >
-                        <SelectValue placeholder="Select a branch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Select a branch</SelectItem>
-                        {branches.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.branchId && (
-                  <p className="text-sm text-red-500">{errors.branchId.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Academic Year & Delivery Type */}
+            {/* Academic Year & Branch Selection */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="academicYearId">Academic Year *</Label>
@@ -299,7 +248,14 @@ function EditBatchContent() {
                   name="academicYearId"
                   control={control}
                   render={({ field }) => (
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        setValue('branchId', '');
+                        setValue('courseId', '');
+                      }}
+                    >
                       <SelectTrigger
                         id="academicYearId"
                         className="w-full h-11 rounded-xl border-gray-200 bg-white"
@@ -321,29 +277,143 @@ function EditBatchContent() {
                   <p className="text-sm text-red-500">{errors.academicYearId.message}</p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="branchId">Branch *</Label>
+                <Controller
+                  name="branchId"
+                  control={control}
+                  render={({ field }) => {
+                    const selectedYear = watch('academicYearId');
+                    const filteredBranches = branches.filter((b) => {
+                      if (!selectedYear) return false;
+                      return branchCourses.some(
+                        (m) => m.academicYearId === selectedYear && m.branchId === b.id,
+                      );
+                    });
+
+                    return (
+                      <Select
+                        value={field.value || ''}
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          setValue('courseId', '');
+                        }}
+                        disabled={!selectedYear}
+                      >
+                        <SelectTrigger
+                          id="branchId"
+                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                        >
+                          <SelectValue
+                            placeholder={
+                              selectedYear ? 'Select a branch' : 'Select academic year first'
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Select a branch</SelectItem>
+                          {filteredBranches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>
+                              {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
+                />
+                {errors.branchId && (
+                  <p className="text-sm text-red-500">{errors.branchId.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Course & Delivery Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="courseId">Course *</Label>
+                <Controller
+                  name="courseId"
+                  control={control}
+                  render={({ field }) => {
+                    const selectedYear = watch('academicYearId');
+                    const selectedBranch = watch('branchId');
+                    const filteredCourses = courses.filter((c) => {
+                      if (!selectedBranch) return false;
+                      return branchCourses.some(
+                        (m) =>
+                          m.branchId === selectedBranch &&
+                          m.courseId === c.id &&
+                          m.academicYearId === selectedYear,
+                      );
+                    });
+
+                    return (
+                      <Select
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        disabled={!selectedBranch}
+                      >
+                        <SelectTrigger
+                          id="courseId"
+                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                        >
+                          <SelectValue
+                            placeholder={selectedBranch ? 'Select a course' : 'Select branch first'}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Select a course</SelectItem>
+                          {filteredCourses.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
+                />
+                {errors.courseId && (
+                  <p className="text-sm text-red-500">{errors.courseId.message}</p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="deliveryTypeId">Delivery Type *</Label>
                 <Controller
                   name="deliveryTypeId"
                   control={control}
-                  render={({ field }) => (
-                    <Select value={field.value || ''} onValueChange={field.onChange}>
-                      <SelectTrigger
-                        id="deliveryTypeId"
-                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                  render={({ field }) => {
+                    const selectedCourse = watch('courseId');
+                    return (
+                      <Select
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        disabled={!selectedCourse}
                       >
-                        <SelectValue placeholder="Select delivery type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Select delivery type</SelectItem>
-                        {deliveryTypes.map((dt) => (
-                          <SelectItem key={dt.id} value={dt.id}>
-                            {dt.name} ({dt.attendanceMode})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                        <SelectTrigger
+                          id="deliveryTypeId"
+                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                        >
+                          <SelectValue
+                            placeholder={
+                              selectedCourse ? 'Select delivery type' : 'Select course first'
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Select delivery type</SelectItem>
+                          {deliveryTypes.map((dt) => (
+                            <SelectItem key={dt.id} value={dt.id}>
+                              {dt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    );
+                  }}
                 />
                 {errors.deliveryTypeId && (
                   <p className="text-sm text-red-500">{errors.deliveryTypeId.message}</p>
@@ -379,6 +449,22 @@ function EditBatchContent() {
                 <Label htmlFor="endDate">End Date *</Label>
                 <Input id="endDate" type="date" {...register('endDate')} />
                 {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
+              </div>
+            </div>
+
+            {/* Daily Start & End Timings */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Daily Start Time (e.g. 09:00 AM)</Label>
+                <Input id="startTime" type="time" {...register('startTime')} />
+                {errors.startTime && (
+                  <p className="text-sm text-red-500">{errors.startTime.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Daily End Time (e.g. 05:00 PM)</Label>
+                <Input id="endTime" type="time" {...register('endTime')} />
+                {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
               </div>
             </div>
 

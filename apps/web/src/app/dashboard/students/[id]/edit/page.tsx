@@ -8,13 +8,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   useStudent,
   useUpdateStudent,
   useBatches,
   useCourses,
 } from '@/features/students/hooks/use-students';
+import {
+  useBranchesForAdmission,
+  useAcademicYearsForAdmission,
+} from '@/features/admissions/hooks/use-admissions';
+import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
 import {
   StudentFormData,
   studentFormSchema,
@@ -48,9 +54,13 @@ function EditStudentContent() {
   const { updateStudent, isUpdating } = useUpdateStudent();
   const { batches } = useBatches();
   const { courses } = useCourses();
+  const { branches } = useBranchesForAdmission();
+  const { years: academicYears } = useAcademicYearsForAdmission();
+  const { data: branchCourses = [] } = useBranchCourses();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [initialized, setInitialized] = useState(false);
+  const [studentStatus, setStudentStatus] = useState<'ACTIVE' | 'SUSPENDED'>('ACTIVE');
 
   const {
     register,
@@ -60,6 +70,8 @@ function EditStudentContent() {
     setValue,
     trigger,
     reset,
+    setError,
+    clearErrors,
   } = useForm<StudentFormData>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: defaultFormValues,
@@ -71,6 +83,8 @@ function EditStudentContent() {
   // Register custom select fields
   useEffect(() => {
     register('gender');
+    register('branchId');
+    register('academicYearId');
     register('courseId');
     register('batchId');
   }, [register]);
@@ -78,6 +92,9 @@ function EditStudentContent() {
   // Initialize form with student data
   useEffect(() => {
     if (student && !initialized) {
+      const backendStatus =
+        student.status === 'INACTIVE' || student.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE';
+      setStudentStatus(backendStatus);
       reset({
         firstName: student.firstName,
         lastName: student.lastName,
@@ -92,6 +109,8 @@ function EditStudentContent() {
         profileImage: student.profileImage,
         courseId: student.courseId,
         batchId: student.batchId,
+        branchId: student.branchId || '',
+        academicYearId: student.academicYearId || '',
         admissionDate: student.admissionDate,
         parentName: student.parentName,
         parentPhone: student.parentPhone,
@@ -133,10 +152,10 @@ function EditStudentContent() {
         fieldsToValidate = ['courseId', 'batchId', 'admissionDate'];
         break;
       case 2:
-        fieldsToValidate = ['parentName', 'parentPhone', 'parentEmail'];
+        fieldsToValidate = ['parentName', 'parentPhone', 'parentEmail', 'emergencyContact'];
         break;
       case 3:
-        fieldsToValidate = [];
+        fieldsToValidate = ['bloodGroup', 'aadharNumber'];
         break;
     }
 
@@ -157,16 +176,43 @@ function EditStudentContent() {
 
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
-      if (!id) return;
-      const result = await updateStudent({ id, ...data });
-      if (result) {
-        toast({ title: 'Student updated successfully' });
-        router.push(`/dashboard/students/${id}`);
-      } else {
-        toast({ title: 'Failed to update student', variant: 'destructive' });
+      if (!id || currentStep !== FORM_STEPS.length - 1) return;
+      try {
+        const result = await updateStudent({ id, ...data, status: studentStatus });
+        if (result) {
+          toast({ title: 'Student updated successfully' });
+          router.push(`/dashboard/students/${id}`);
+        }
+      } catch (err: any) {
+        const responseData = err.response?.data;
+        if (responseData?.code === 'VALIDATION_ERROR' && Array.isArray(responseData.errors)) {
+          responseData.errors.forEach((e: { field: string; message: string }) => {
+            setError(e.field as keyof StudentFormData, { type: 'server', message: e.message });
+          });
+          toast({
+            title: 'Validation Failed',
+            description: 'Please check the input fields for errors.',
+            variant: 'destructive',
+          });
+        } else if (err.response?.status === 409) {
+          const msg = responseData?.message || '';
+          if (msg.toLowerCase().includes('email')) {
+            setError('email', {
+              type: 'server',
+              message: 'A student with this email already exists',
+            });
+          }
+          toast({ title: 'Conflict', description: msg, variant: 'destructive' });
+        } else {
+          toast({
+            title: 'Error Updating Student',
+            description: responseData?.message || err.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+          });
+        }
       }
     },
-    [id, updateStudent, router],
+    [id, updateStudent, router, studentStatus, setError, currentStep],
   );
 
   if (studentLoading) {
@@ -214,8 +260,11 @@ function EditStudentContent() {
             errors={errors}
             values={values}
             onFieldChange={handleFieldChange}
+            branches={branches}
+            academicYears={academicYears}
             batches={batches}
             courses={courses}
+            branchCourses={branchCourses}
           />
         );
       case 2:
@@ -234,10 +283,20 @@ function EditStudentContent() {
             errors={errors}
             values={values}
             onFieldChange={handleFieldChange}
+            setValue={setValue}
           />
         );
       case 4:
-        return <ReviewStep values={values} batches={batches} courses={courses} />;
+        return (
+          <ReviewStep
+            values={values}
+            branches={branches}
+            academicYears={academicYears}
+            batches={batches}
+            courses={courses}
+            status={studentStatus}
+          />
+        );
       default:
         return null;
     }
@@ -260,6 +319,54 @@ function EditStudentContent() {
           </div>
         </div>
 
+        {/* Status Toggle Card */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-sm">
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[#111827]">Student Status</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {studentStatus === 'ACTIVE'
+                    ? 'Active students can access courses and batches'
+                    : 'Inactive students are hidden from course/batch listings'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setStudentStatus(studentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')
+                }
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  studentStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
+                    studentStatus === 'ACTIVE' ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                >
+                  {studentStatus === 'ACTIVE' ? (
+                    <ToggleRight className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <ToggleLeft className="h-4 w-4 text-gray-400" />
+                  )}
+                </span>
+              </button>
+            </div>
+            <div className="mt-2">
+              <span
+                className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  studentStatus === 'ACTIVE'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         <form onSubmit={handleSubmit(onSubmit)}>
           <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
             {renderStep()}
@@ -268,7 +375,25 @@ function EditStudentContent() {
               currentStep={currentStep}
               totalSteps={FORM_STEPS.length}
               onPrevious={handlePrevious}
-              onNext={handleNext}
+              onNext={
+                currentStep === FORM_STEPS.length - 1
+                  ? () => {
+                      handleSubmit(onSubmit, (errs) => {
+                        const errorFields = Object.keys(errs)
+                          .map((key) => {
+                            const err = errs[key as keyof typeof errs];
+                            return `${key}: ${err?.message || 'invalid input'}`;
+                          })
+                          .join('. ');
+                        toast({
+                          title: 'Form Validation Failed',
+                          description: errorFields || 'Please verify all inputs.',
+                          variant: 'destructive',
+                        });
+                      })();
+                    }
+                  : handleNext
+              }
               isSubmitting={isUpdating}
               isLastStep={currentStep === FORM_STEPS.length - 1}
             />

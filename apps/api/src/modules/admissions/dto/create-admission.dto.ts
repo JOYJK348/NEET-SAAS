@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsNotEmpty } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateAdmissionDto {
   @ApiProperty({
@@ -25,4 +25,18 @@ export class CreateAdmissionDto {
   @IsUUID()
   @IsNotEmpty()
   branchId: string;
+
+  @IsOptional()
+  @IsUUID()
+  studentProfileId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  batchId?: string;
+
+  @IsOptional()
+  admissionDate?: string;
+
+  @IsOptional()
+  notes?: string;
 }

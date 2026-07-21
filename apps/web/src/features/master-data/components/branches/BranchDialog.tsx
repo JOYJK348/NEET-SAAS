@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { branchSchema } from '../../validation/schemas';
 import type { Branch, CreateBranchInput, BranchType } from '../../types';
+import { useAcademicYears } from '../../hooks/use-academic-years';
 
 interface BranchDialogProps {
   open: boolean;
@@ -58,11 +59,16 @@ export function BranchDialog({
       branchType: 'CAMPUS',
       status: 'ACTIVE',
       timezone: 'Asia/Kolkata',
+      academicYearId: undefined,
     },
   });
 
+  const { data: academicYearsData } = useAcademicYears({ limit: 100 });
+  const academicYears = academicYearsData?.data ?? [];
+
   const branchType = watch('branchType');
   const status = watch('status');
+  const academicYearId = watch('academicYearId');
 
   useEffect(() => {
     if (branch) {
@@ -76,6 +82,7 @@ export function BranchDialog({
         branchType: branch.branchType,
         status: branch.status,
         timezone: branch.timezone,
+        academicYearId: (branch as any).academicYearId ?? undefined,
       });
     } else {
       reset({
@@ -88,6 +95,7 @@ export function BranchDialog({
         branchType: 'CAMPUS',
         status: 'ACTIVE',
         timezone: 'Asia/Kolkata',
+        academicYearId: undefined,
       });
     }
   }, [branch, reset, open]);
@@ -110,6 +118,29 @@ export function BranchDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4 py-2">
+          {/* Academic Year */}
+          <div className="space-y-2">
+            <Label>Academic Year</Label>
+            <Select
+              value={academicYearId ?? ''}
+              onValueChange={(val: string) =>
+                setValue('academicYearId', val === '__none__' ? undefined : val)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select academic year (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">-- None --</SelectItem>
+                {academicYears.map((yr: any) => (
+                  <SelectItem key={yr.id} value={yr.id}>
+                    {yr.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="code">Branch Code</Label>

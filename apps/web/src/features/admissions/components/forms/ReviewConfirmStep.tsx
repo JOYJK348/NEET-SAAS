@@ -9,12 +9,14 @@ import type {
   AdmissionStudent,
   AdmissionCourse,
   AdmissionBranch,
+  AdmissionBatch,
 } from '@/features/admissions/types/admission';
 
 interface ReviewConfirmStepProps {
   student?: AdmissionStudent;
   course?: AdmissionCourse;
   branch?: AdmissionBranch;
+  batch?: AdmissionBatch;
   academicYearName?: string;
   admissionDate: string;
   notes?: string;
@@ -24,6 +26,7 @@ export function ReviewConfirmStep({
   student,
   course,
   branch,
+  batch,
   academicYearName,
   admissionDate,
   notes,
@@ -39,6 +42,7 @@ export function ReviewConfirmStep({
 
   const academicItems = [
     ...(course ? [{ label: 'Course', value: course.name, icon: BookOpen }] : []),
+    ...(batch ? [{ label: 'Batch', value: batch.name, icon: User }] : []),
     ...(branch ? [{ label: 'Branch', value: branch.name, icon: MapPin }] : []),
     ...(academicYearName
       ? [{ label: 'Academic Year', value: academicYearName, icon: CalendarDays }]

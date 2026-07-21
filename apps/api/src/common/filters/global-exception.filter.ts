@@ -50,9 +50,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else if (Array.isArray(exceptionResponse.message)) {
           code = 'VALIDATION_ERROR';
           message = 'Validation failed';
-          errors = exceptionResponse.message.map((msg: string) => {
-            const field = msg.split(' ')[0] || 'field';
-            return { field, message: msg };
+          errors = exceptionResponse.message.map((msg: unknown) => {
+            const err = msg as Record<string, unknown> | null;
+            if (err && typeof err === 'object') {
+              return {
+                field: typeof err.field === 'string' ? err.field : 'field',
+                message:
+                  typeof err.message === 'string'
+                    ? err.message
+                    : JSON.stringify(err),
+              };
+            }
+
+            const msgStr = typeof msg === 'string' ? msg : String(msg);
+            const field = msgStr.split(' ')[0] || 'field';
+            return { field, message: msgStr };
           });
         }
       } else {

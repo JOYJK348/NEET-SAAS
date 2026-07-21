@@ -36,7 +36,7 @@ describe('AdmissionsService', () => {
     academicYearId,
     courseId,
     branchId,
-    admissionStatus: AdmissionStatusEnum.PENDING,
+    admissionStatus: AdmissionStatusEnum.ACTIVE,
     admissionDate: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -54,7 +54,7 @@ describe('AdmissionsService', () => {
     admissionId,
     tenantId,
     fromStatus: null,
-    toStatus: AdmissionStatusEnum.PENDING,
+    toStatus: AdmissionStatusEnum.ACTIVE,
     reason: null,
     changedAt: new Date(),
     changedBy: userId,
@@ -84,7 +84,7 @@ describe('AdmissionsService', () => {
         create: jest.fn().mockResolvedValue(mockAdmission),
         update: jest.fn().mockResolvedValue({
           ...mockAdmission,
-          admissionStatus: AdmissionStatusEnum.CONFIRMED,
+          admissionStatus: AdmissionStatusEnum.ACTIVE,
         }),
       },
       admissionStatusHistory: {
@@ -129,12 +129,12 @@ describe('AdmissionsService', () => {
       expect(prismaService.studentAdmissions.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           studentProfileId: studentId,
-          admissionStatus: AdmissionStatusEnum.PENDING,
+          admissionStatus: AdmissionStatusEnum.ACTIVE,
         }),
       });
       expect(prismaService.admissionStatusHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          toStatus: AdmissionStatusEnum.PENDING,
+          toStatus: AdmissionStatusEnum.ACTIVE,
         }),
       });
       expect(result.id).toBe(admissionId);
@@ -234,7 +234,7 @@ describe('AdmissionsService', () => {
 
   describe('updateStatus', () => {
     const updateDto = {
-      status: AdmissionStatusEnum.CONFIRMED,
+      status: AdmissionStatusEnum.ACTIVE,
       reason: 'Verified',
       remarks: 'All good',
     };
@@ -248,7 +248,7 @@ describe('AdmissionsService', () => {
     it('updates status and creates history record', async () => {
       prismaService.studentAdmissions.update.mockResolvedValue({
         ...mockAdmission,
-        admissionStatus: AdmissionStatusEnum.CONFIRMED,
+        admissionStatus: AdmissionStatusEnum.ACTIVE,
       });
 
       const result = await service.updateStatus(
@@ -261,16 +261,16 @@ describe('AdmissionsService', () => {
       expect(prismaService.studentAdmissions.update).toHaveBeenCalledWith({
         where: { id: admissionId },
         data: expect.objectContaining({
-          admissionStatus: AdmissionStatusEnum.CONFIRMED,
+          admissionStatus: AdmissionStatusEnum.ACTIVE,
         }),
       });
       expect(prismaService.admissionStatusHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          fromStatus: AdmissionStatusEnum.PENDING,
-          toStatus: AdmissionStatusEnum.CONFIRMED,
+          fromStatus: AdmissionStatusEnum.ACTIVE,
+          toStatus: AdmissionStatusEnum.ACTIVE,
         }),
       });
-      expect(result.admissionStatus).toBe(AdmissionStatusEnum.CONFIRMED);
+      expect(result.admissionStatus).toBe(AdmissionStatusEnum.ACTIVE);
     });
 
     it('throws BadRequestException for invalid transition', async () => {
@@ -287,7 +287,7 @@ describe('AdmissionsService', () => {
 
     it('throws BadRequestException for duplicate status', async () => {
       const dto = {
-        status: AdmissionStatusEnum.PENDING,
+        status: AdmissionStatusEnum.ACTIVE,
         reason: '',
         remarks: '',
       };
@@ -319,14 +319,14 @@ describe('AdmissionsService', () => {
 
   describe('updateStatus — terminal state', () => {
     const updateDto = {
-      status: AdmissionStatusEnum.CANCELLED,
+      status: AdmissionStatusEnum.INACTIVE,
       reason: 'No effect',
     };
 
     it('rejects status update when admission is COMPLETED', async () => {
       prismaService.studentAdmissions.findFirst.mockResolvedValue({
         ...mockAdmission,
-        admissionStatus: AdmissionStatusEnum.COMPLETED,
+        admissionStatus: AdmissionStatusEnum.INACTIVE,
       });
 
       await expect(
@@ -337,7 +337,7 @@ describe('AdmissionsService', () => {
     it('rejects status update when admission is CANCELLED', async () => {
       prismaService.studentAdmissions.findFirst.mockResolvedValue({
         ...mockAdmission,
-        admissionStatus: AdmissionStatusEnum.CANCELLED,
+        admissionStatus: AdmissionStatusEnum.INACTIVE,
       });
 
       await expect(
@@ -356,7 +356,7 @@ describe('AdmissionsService', () => {
       prismaService.studentAdmissions.findFirst
         .mockResolvedValueOnce({
           ...mockAdmission,
-          admissionStatus: AdmissionStatusEnum.CONFIRMED,
+          admissionStatus: AdmissionStatusEnum.ACTIVE,
         })
         .mockResolvedValueOnce({
           ...mockAdmission,
@@ -378,7 +378,7 @@ describe('AdmissionsService', () => {
       prismaService.studentAdmissions.findFirst
         .mockResolvedValueOnce({
           ...mockAdmission,
-          admissionStatus: AdmissionStatusEnum.CONFIRMED,
+          admissionStatus: AdmissionStatusEnum.ACTIVE,
         })
         .mockResolvedValueOnce(null);
 
@@ -406,32 +406,32 @@ describe('AdmissionsService', () => {
 
     it('throws for PENDING status', () => {
       expect(() =>
-        validateBatchEligibility(AdmissionStatusEnum.PENDING),
+        validateBatchEligibility(AdmissionStatusEnum.ACTIVE),
       ).toThrow(BadRequestException);
     });
 
     it('throws for CONFIRMED status', () => {
       expect(() =>
-        validateBatchEligibility(AdmissionStatusEnum.CONFIRMED),
+        validateBatchEligibility(AdmissionStatusEnum.ACTIVE),
       ).toThrow(BadRequestException);
     });
 
     it('throws for COMPLETED status', () => {
       expect(() =>
-        validateBatchEligibility(AdmissionStatusEnum.COMPLETED),
+        validateBatchEligibility(AdmissionStatusEnum.INACTIVE),
       ).toThrow(BadRequestException);
     });
 
     it('throws for CANCELLED status', () => {
       expect(() =>
-        validateBatchEligibility(AdmissionStatusEnum.CANCELLED),
+        validateBatchEligibility(AdmissionStatusEnum.INACTIVE),
       ).toThrow(BadRequestException);
     });
   });
 
   describe('full lifecycle', () => {
     it('transitions PENDING → CONFIRMED → ACTIVE → COMPLETED', async () => {
-      let currentStatus: AdmissionStatusEnum = AdmissionStatusEnum.PENDING;
+      let currentStatus: AdmissionStatusEnum = AdmissionStatusEnum.ACTIVE;
       const admissionBase = { ...mockAdmission };
 
       prismaService.studentAdmissions.findFirst.mockImplementation(
@@ -461,11 +461,11 @@ describe('AdmissionsService', () => {
       // PENDING → CONFIRMED
       let result = await service.updateStatus(
         admissionId,
-        { status: AdmissionStatusEnum.CONFIRMED, reason: 'Verify' },
+        { status: AdmissionStatusEnum.ACTIVE, reason: 'Verify' },
         tenantId,
         userId,
       );
-      expect(result.admissionStatus).toBe(AdmissionStatusEnum.CONFIRMED);
+      expect(result.admissionStatus).toBe(AdmissionStatusEnum.ACTIVE);
 
       // CONFIRMED → ACTIVE
       result = await service.updateStatus(
@@ -479,11 +479,11 @@ describe('AdmissionsService', () => {
       // ACTIVE → COMPLETED
       result = await service.updateStatus(
         admissionId,
-        { status: AdmissionStatusEnum.COMPLETED, reason: 'Complete' },
+        { status: AdmissionStatusEnum.INACTIVE, reason: 'Complete' },
         tenantId,
         userId,
       );
-      expect(result.admissionStatus).toBe(AdmissionStatusEnum.COMPLETED);
+      expect(result.admissionStatus).toBe(AdmissionStatusEnum.INACTIVE);
     });
   });
 
@@ -497,7 +497,7 @@ describe('AdmissionsService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].admissionId).toBe(admissionId);
-      expect(result[0].toStatus).toBe(AdmissionStatusEnum.PENDING);
+      expect(result[0].toStatus).toBe(AdmissionStatusEnum.ACTIVE);
     });
 
     it('throws NotFoundException when admission not found', async () => {

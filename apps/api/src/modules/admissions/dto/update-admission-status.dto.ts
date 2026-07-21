@@ -5,7 +5,7 @@ import { AdmissionStatusEnum } from '@prisma/client';
 export class UpdateAdmissionStatusDto {
   @ApiProperty({
     enum: AdmissionStatusEnum,
-    example: AdmissionStatusEnum.CONFIRMED,
+    example: AdmissionStatusEnum.ACTIVE,
   })
   @IsEnum(AdmissionStatusEnum)
   @IsNotEmpty()

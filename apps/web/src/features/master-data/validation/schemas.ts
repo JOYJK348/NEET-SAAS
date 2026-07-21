@@ -10,6 +10,7 @@ export const branchSchema = z.object({
   branchType: z.enum(['HEAD_OFFICE', 'CAMPUS', 'FRANCHISE', 'ONLINE']),
   status: z.string().default('ACTIVE'),
   timezone: z.string().default('Asia/Kolkata'),
+  academicYearId: z.string().optional(),
 });
 
 export const academicYearSchema = z.object({
@@ -30,8 +31,13 @@ export const courseSchema = z.object({
   description: z.string().optional(),
   courseType: z.string().default('REGULAR'),
   durationMonths: z.coerce.number().int().min(1, 'Duration must be at least 1 month').default(12),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   displayOrder: z.coerce.number().int().default(1),
   isActive: z.boolean().default(true),
+  branchIds: z.array(z.string()).optional(),
+  branchId: z.string().optional(),
+  academicYearId: z.string().optional(),
 });
 
 export const subjectSchema = z.object({

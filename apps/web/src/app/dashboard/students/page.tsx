@@ -16,6 +16,7 @@ import {
   useStudents,
   useStudentStats,
   useUpdateStudent,
+  useDeleteStudent,
   useBatches,
   useCourses,
   usePrefetchStudentDetail,
@@ -49,6 +50,7 @@ function StudentsContent() {
   } = useStudents();
   const { stats: studentStats, isLoading: statsLoading } = useStudentStats();
   const { updateStudent } = useUpdateStudent();
+  const { deleteStudent } = useDeleteStudent();
   const { batches: batchOptions } = useBatches();
   const { courses: courseOptions } = useCourses();
   const prefetchStudent = usePrefetchStudentDetail();
@@ -138,7 +140,24 @@ function StudentsContent() {
 
   const handleStatusUpdate = useCallback(
     async (student: any, status: StudentStatus) => {
-      await updateStudent({ id: student.id, status });
+      const name =
+        student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim();
+      try {
+        await updateStudent({ id: student.id, status });
+        const label =
+          status === 'ACTIVE'
+            ? 'activated'
+            : status === 'SUSPENDED'
+              ? 'suspended'
+              : status.toLowerCase();
+        toast({ title: `Student ${label}`, description: `${name} is now ${label}.` });
+      } catch {
+        toast({
+          title: 'Status update failed',
+          description: `Could not update ${name}'s status. Please try again.`,
+          variant: 'destructive',
+        });
+      }
     },
     [updateStudent],
   );
@@ -155,6 +174,24 @@ function StudentsContent() {
       router.push(`/dashboard/students/${student.id}/edit`);
     },
     [router],
+  );
+
+  const handleDelete = useCallback(
+    async (student: any) => {
+      const name =
+        student.fullName || `${student.firstName || ''} ${student.lastName || ''}`.trim();
+      try {
+        await deleteStudent(student.id);
+        toast({ title: 'Student deleted', description: `${name} has been removed.` });
+      } catch {
+        toast({
+          title: 'Delete failed',
+          description: `Could not delete ${name}. Please try again.`,
+          variant: 'destructive',
+        });
+      }
+    },
+    [deleteStudent],
   );
 
   const handleAddStudent = useCallback(() => {
@@ -383,6 +420,7 @@ function StudentsContent() {
                 onSort={handleSort}
                 onView={handleView}
                 onEdit={handleEdit}
+                onDelete={handleDelete}
                 onStatusChange={handleStatusUpdate}
                 onPrefetch={prefetchStudent}
                 isLoading={isLoading}
