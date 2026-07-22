@@ -26,6 +26,7 @@ export function useCreateTopicItem() {
       queryClient.invalidateQueries({
         queryKey: ['topic-items', data.topicId],
       });
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }
@@ -47,6 +48,7 @@ export function useDeleteTopicItem() {
     mutationFn: (id: string) => deleteTopicItem(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['topic-items'] });
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }

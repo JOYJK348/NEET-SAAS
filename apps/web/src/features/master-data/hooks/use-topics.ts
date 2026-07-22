@@ -50,12 +50,15 @@ export function useUpdateTopic(chapterId: string) {
   });
 }
 
-export function useDeleteTopic(chapterId: string) {
+export function useDeleteTopic(chapterId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => topicsApi.deleteTopic(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: topicKeys.list({ chapterId }) });
+      if (chapterId) {
+        queryClient.invalidateQueries({ queryKey: topicKeys.list({ chapterId }) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }

@@ -10,7 +10,10 @@ export function useReorderChapters() {
     mutationFn: ({ courseSubjectId, items }: { courseSubjectId: string; items: ReorderItem[] }) =>
       reorderChapters(courseSubjectId, items),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-subjects'] });
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }
@@ -21,7 +24,10 @@ export function useReorderTopics() {
     mutationFn: ({ chapterId, items }: { chapterId: string; items: ReorderItem[] }) =>
       reorderTopics(chapterId, items),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chapters'] });
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
+    },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }

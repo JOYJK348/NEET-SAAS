@@ -23,6 +23,7 @@ async function getPermissionIdMap(): Promise<Map<string, string>> {
 }
 
 import { seedDeliveryTypes } from './seed/delivery-types';
+import { seedCourses } from './seed/courses';
 
 async function main(): Promise<void> {
   await seedTenant();
@@ -37,6 +38,8 @@ async function main(): Promise<void> {
   const permissionIds = await getPermissionIdMap();
   await seedRolePermissions(roleIds, permissionIds);
   await seedUsers(roleIds);
+
+  await seedCourses();
 }
 
 main()

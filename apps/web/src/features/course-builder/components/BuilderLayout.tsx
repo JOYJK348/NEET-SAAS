@@ -1,14 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ArrowLeft, ChevronDown, Eye, Send, PanelRight, PanelRightOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUpdateCourse } from '@/features/master-data/hooks/use-courses';
+import { courseKeys } from '@/features/master-data/hooks/use-courses';
+import { PublishChecklist, type ChecklistItem } from './PublishChecklist';
+import { StudentPreview } from './StudentPreview';
 
 interface BuilderLayoutProps {
   courseId: string;
-  courseName: string;
-  courseStatus?: string;
+  course: any;
+  subjects?: any[];
+  selectedTopicId?: string | null;
+  selectedTopicName?: string | null;
+  selectedTopicDescription?: string | null;
   leftPanel: React.ReactNode;
   centerPanel: React.ReactNode;
   rightPanel: React.ReactNode;
@@ -22,18 +31,112 @@ const statusConfig: Record<string, { label: string; icon: string }> = {
 
 export function BuilderLayout({
   courseId,
-  courseName,
-  courseStatus = 'DRAFT',
+  course,
+  subjects,
+  selectedTopicId,
+  selectedTopicName,
+  selectedTopicDescription,
   leftPanel,
   centerPanel,
   rightPanel,
 }: BuilderLayoutProps) {
+  const queryClient = useQueryClient();
+  const updateCourse = useUpdateCourse();
+
+  const courseStatus = course?.isActive ? 'PUBLISHED' : 'DRAFT';
+  const courseName = course?.name ?? 'Untitled Course';
+
   const [statusOpen, setStatusOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'left' | 'right' | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const status = useMemo(
     () => statusConfig[courseStatus] ?? { label: courseStatus, icon: '🟡' },
     [courseStatus],
+  );
+
+  const treeData = subjects ?? [];
+
+  const checklistItems: ChecklistItem[] = useMemo(() => {
+    let subjectCount = 0;
+    let chapterCount = 0;
+    let topicsWithNoContent = 0;
+    let draftItems = 0;
+    let chaptersWithNoTopics = 0;
+
+    for (const s of treeData) {
+      if (s.subject) subjectCount++;
+      const chapters = s.chapters ?? [];
+      for (const ch of chapters) {
+        chapterCount++;
+        const topics = ch.topics ?? [];
+        if (topics.length === 0) chaptersWithNoTopics++;
+        for (const t of topics) {
+          const itemCount = t._count?.topicItems ?? 0;
+          if (itemCount === 0) topicsWithNoContent++;
+          if (t._count?.draftItems) draftItems += t._count.draftItems;
+        }
+      }
+    }
+
+    return [
+      { label: 'Course exists', passed: !!course, blocking: true },
+      { label: 'At least one subject mapped', passed: subjectCount > 0, blocking: true },
+      { label: `Course has ${chapterCount} chapter(s)`, passed: chapterCount > 0, blocking: false },
+      { label: `${subjectCount} subject(s) mapped`, passed: subjectCount > 0, blocking: false },
+      {
+        label:
+          chaptersWithNoTopics > 0
+            ? `${chaptersWithNoTopics} chapter(s) have no topics`
+            : 'All chapters have topics',
+        passed: chaptersWithNoTopics === 0,
+        blocking: false,
+      },
+      {
+        label:
+          topicsWithNoContent > 0
+            ? `${topicsWithNoContent} topic(s) have no learning content`
+            : 'All topics have learning content',
+        passed: topicsWithNoContent === 0,
+        blocking: false,
+      },
+    ];
+  }, [treeData, course]);
+
+  const handlePublish = useCallback(async () => {
+    try {
+      await updateCourse.mutateAsync({
+        id: courseId,
+        input: { isActive: true } as any,
+      });
+      queryClient.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
+      toast.success('Course published successfully');
+      setPublishOpen(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to publish course');
+    }
+  }, [courseId, updateCourse, queryClient]);
+
+  const handleStatusChange = useCallback(
+    async (newStatus: string) => {
+      setStatusOpen(false);
+      try {
+        if (newStatus === 'PUBLISHED') {
+          setPublishOpen(true);
+        } else if (newStatus === 'DRAFT') {
+          await updateCourse.mutateAsync({
+            id: courseId,
+            input: { isActive: false } as any,
+          });
+          queryClient.invalidateQueries({ queryKey: courseKeys.detail(courseId) });
+          toast.success('Course set to Draft');
+        }
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Failed to update status');
+      }
+    },
+    [courseId, updateCourse, queryClient],
   );
 
   const toggleMobilePanel = (panel: 'left' | 'right') => {
@@ -70,7 +173,7 @@ export function BuilderLayout({
                   {Object.entries(statusConfig).map(([key, s]) => (
                     <button
                       key={key}
-                      onClick={() => setStatusOpen(false)}
+                      onClick={() => handleStatusChange(key)}
                       className={cn(
                         'flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-left transition-colors',
                         key === courseStatus
@@ -88,21 +191,34 @@ export function BuilderLayout({
           </div>
 
           <button
-            disabled
-            className="flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/20 text-white/40 text-xs font-semibold cursor-not-allowed"
+            onClick={() => setPreviewOpen(!previewOpen)}
+            className={cn(
+              'flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/20 text-xs font-semibold transition-all',
+              previewOpen
+                ? 'bg-violet-600 text-white border-violet-600'
+                : 'text-white/60 hover:text-white hover:bg-white/10',
+            )}
           >
             <Eye className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Preview</span>
+            <span className="hidden sm:inline">{previewOpen ? 'Exit Preview' : 'Preview'}</span>
           </button>
 
-          <button className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20">
+          <button
+            onClick={() => setPublishOpen(true)}
+            className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20"
+          >
             <Send className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Publish</span>
           </button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div
+        className={cn(
+          'flex flex-1 overflow-hidden',
+          previewOpen && 'opacity-50 pointer-events-none',
+        )}
+      >
         <aside
           className={cn(
             'w-[280px] border-r border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
@@ -125,6 +241,17 @@ export function BuilderLayout({
           {rightPanel}
         </aside>
       </div>
+
+      {previewOpen && (
+        <StudentPreview
+          courseName={courseName}
+          selectedTopicId={selectedTopicId ?? null}
+          selectedTopicName={selectedTopicName ?? null}
+          selectedTopicDescription={selectedTopicDescription ?? null}
+          subjects={treeData}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
 
       <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#0f0a1e] rounded-2xl px-3 py-2 shadow-2xl border border-white/10">
         <button
@@ -152,6 +279,16 @@ export function BuilderLayout({
           Properties
         </button>
       </div>
+
+      {publishOpen && (
+        <PublishChecklist
+          courseName={courseName}
+          items={checklistItems}
+          onPublish={handlePublish}
+          onCancel={() => setPublishOpen(false)}
+          isPublishing={updateCourse.isPending}
+        />
+      )}
     </div>
   );
 }

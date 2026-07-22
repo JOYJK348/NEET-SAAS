@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   FileText,
   File,
@@ -13,9 +13,28 @@ import {
   MoreHorizontal,
   Check,
   X,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useTopicItems, useCreateTopicItem, useUpdateTopicItem } from '../hooks/use-topic-items';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  useTopicItems,
+  useCreateTopicItem,
+  useUpdateTopicItem,
+  useDeleteTopicItem,
+  useReorderTopicItems,
+} from '../hooks/use-topic-items';
 import { TextLessonEditor } from './TextLessonEditor';
 import { PdfDocumentForm } from './PdfDocumentForm';
 import { ExternalLinkForm } from './ExternalLinkForm';
@@ -109,10 +128,167 @@ function EditorWrapper({
   );
 }
 
+function SortableItemCard({
+  item,
+  isEditing,
+  editingItem,
+  onStartEdit,
+  onDelete,
+  onSaveEdit,
+  onCancelEdit,
+  isSaving,
+  renderEditor,
+  editContent,
+  editFileUrl,
+  editExternalUrl,
+  editMetadata,
+  setEditContent,
+  setEditFileUrl,
+  setEditExternalUrl,
+  setEditMetadata,
+}: {
+  item: TopicItem;
+  isEditing: boolean;
+  editingItem: TopicItem | null | undefined | false | '';
+  onStartEdit: (item: TopicItem) => void;
+  onDelete: (item: TopicItem) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
+  isSaving: boolean;
+  renderEditor: (item: TopicItem) => React.ReactNode;
+  editContent: Record<string, unknown> | null;
+  editFileUrl: string | undefined;
+  editExternalUrl: string | undefined;
+  editMetadata: Record<string, unknown> | undefined;
+  setEditContent: (c: Record<string, unknown> | null) => void;
+  setEditFileUrl: (u: string | undefined) => void;
+  setEditExternalUrl: (u: string | undefined) => void;
+  setEditMetadata: (m: Record<string, unknown> | undefined) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [menuOpen]);
+
+  const config = typeConfig[item.type] ?? {
+    icon: <FileText className="h-4 w-4 text-gray-400" />,
+    label: item.type,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging && 'opacity-50')}
+    >
+      {isEditing && editingItem ? (
+        <EditorWrapper onSave={onSaveEdit} onClose={onCancelEdit} isSaving={isSaving}>
+          {renderEditor(editingItem)}
+        </EditorWrapper>
+      ) : (
+        <div className="group flex items-center gap-3 w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200">
+          <div
+            {...attributes}
+            {...listeners}
+            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500"
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <button
+            onClick={() => onStartEdit(item)}
+            className="flex items-center gap-3 flex-1 min-w-0 text-left"
+          >
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 shrink-0">
+              {config.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900 truncate">{item.title}</span>
+                <span
+                  className={cn(
+                    'text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0',
+                    statusStyles[item.status] ?? statusStyles.DRAFT,
+                  )}
+                >
+                  {item.status}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-gray-400">{config.label}</span>
+                {item.durationMins != null && (
+                  <>
+                    <span className="text-gray-200">·</span>
+                    <span className="text-xs text-gray-400">{item.durationMins} min</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </button>
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="flex items-center justify-center w-8 h-8 rounded-xl text-gray-300 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-all"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onStartEdit(item);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete(item);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ContentWorkspace({ topicId, topicData }: ContentWorkspaceProps) {
   const { data: items, isLoading } = useTopicItems(topicId);
   const createMutation = useCreateTopicItem();
   const updateMutation = useUpdateTopicItem();
+  const deleteMutation = useDeleteTopicItem();
+  const reorderMutation = useReorderTopicItems();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -121,6 +297,8 @@ export function ContentWorkspace({ topicId, topicData }: ContentWorkspaceProps) 
   const [editFileUrl, setEditFileUrl] = useState<string | undefined>(undefined);
   const [editExternalUrl, setEditExternalUrl] = useState<string | undefined>(undefined);
   const [editMetadata, setEditMetadata] = useState<Record<string, unknown> | undefined>(undefined);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const resetEditState = useCallback(() => {
     setEditingId(null);
@@ -160,21 +338,44 @@ export function ContentWorkspace({ topicId, topicData }: ContentWorkspaceProps) 
   const handleAddContent = useCallback(
     (type: TopicItemType) => {
       if (!topicId) return;
-      setPickerOpen(false);
-      createMutation.mutate(
-        {
-          topicId,
-          type,
-          title: `New ${typeConfig[type]?.label ?? type}`,
-        },
-        {
-          onSuccess: (newItem) => {
-            startEditing(newItem);
-          },
-        },
-      );
+      createMutation.mutate({
+        topicId,
+        type,
+        title: `New ${typeConfig[type]?.label ?? type}`,
+      });
     },
-    [topicId, createMutation, startEditing],
+    [topicId, createMutation],
+  );
+
+  const handleDeleteItem = useCallback(
+    (item: TopicItem) => {
+      if (!window.confirm(`Delete "${item.title}"?`)) return;
+      deleteMutation.mutate(item.id, {
+        onSuccess: () => toast.success('Content item deleted'),
+        onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to delete item'),
+      });
+    },
+    [deleteMutation],
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !topicId || !items) return;
+
+      const sorted = [...items].sort((a, b) => a.displayOrder - b.displayOrder);
+      const oldIdx = sorted.findIndex((i) => i.id === active.id);
+      const newIdx = sorted.findIndex((i) => i.id === over.id);
+      if (oldIdx === -1 || newIdx === -1) return;
+
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(oldIdx, 1);
+      reordered.splice(newIdx, 0, moved);
+
+      const payload = { items: reordered.map((i, idx) => ({ id: i.id, displayOrder: idx + 1 })) };
+      reorderMutation.mutate({ topicId, payload });
+    },
+    [items, topicId, reorderMutation],
   );
 
   const renderEditor = useCallback(
@@ -283,68 +484,39 @@ export function ContentWorkspace({ topicId, topicData }: ContentWorkspaceProps) 
                 </p>
               </div>
             ) : (
-              items.map((item) => {
-                const isEditing = editingId === item.id;
-                const config = typeConfig[item.type] ?? {
-                  icon: <FileText className="h-4 w-4 text-gray-400" />,
-                  label: item.type,
-                };
-
-                return (
-                  <div key={item.id}>
-                    {isEditing && editingItem ? (
-                      <EditorWrapper
-                        onSave={handleSaveEdit}
-                        onClose={resetEditState}
-                        isSaving={updateMutation.isPending}
-                      >
-                        {renderEditor(editingItem)}
-                      </EditorWrapper>
-                    ) : (
-                      <button
-                        onClick={() => startEditing(item)}
-                        className="group flex items-center gap-3 w-full bg-white border border-gray-100 rounded-2xl px-4 py-3 shadow-sm hover:shadow-md transition-all duration-200 text-left"
-                      >
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab text-gray-300 hover:text-gray-500">
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 shrink-0">
-                          {config.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900 truncate">
-                              {item.title}
-                            </span>
-                            <span
-                              className={cn(
-                                'text-[9px] font-extrabold px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0',
-                                statusStyles[item.status] ?? statusStyles.DRAFT,
-                              )}
-                            >
-                              {item.status}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-gray-400">{config.label}</span>
-                            {item.durationMins != null && (
-                              <>
-                                <span className="text-gray-200">·</span>
-                                <span className="text-xs text-gray-400">
-                                  {item.durationMins} min
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-center w-8 h-8 rounded-xl text-gray-300 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-all">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </div>
-                      </button>
-                    )}
-                  </div>
-                );
-              })
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={items.map((i) => i.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {items.map((item) => (
+                    <SortableItemCard
+                      key={item.id}
+                      item={item}
+                      isEditing={editingId === item.id}
+                      editingItem={editingItem}
+                      onStartEdit={startEditing}
+                      onDelete={handleDeleteItem}
+                      onSaveEdit={handleSaveEdit}
+                      onCancelEdit={resetEditState}
+                      isSaving={updateMutation.isPending}
+                      renderEditor={renderEditor}
+                      editContent={editContent}
+                      editFileUrl={editFileUrl}
+                      editExternalUrl={editExternalUrl}
+                      editMetadata={editMetadata}
+                      setEditContent={setEditContent}
+                      setEditFileUrl={setEditFileUrl}
+                      setEditExternalUrl={setEditExternalUrl}
+                      setEditMetadata={setEditMetadata}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
           </div>
 

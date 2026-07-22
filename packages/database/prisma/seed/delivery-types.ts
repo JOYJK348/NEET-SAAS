@@ -34,33 +34,42 @@ export async function seedDeliveryTypes(): Promise<void> {
   endTime.setHours(17, 0, 0, 0);
 
   for (const dt of deliveryTypes) {
-    await prisma.batchDeliveryTypes.upsert({
-      where: { tenantId_code: { tenantId: DEMO_TENANT_ID, code: dt.code } },
-      update: {
-        name: dt.name,
-        description: dt.description,
-        attendanceMode: dt.attendanceMode,
-        colorCode: dt.colorCode,
-        iconName: dt.iconName,
-        defaultStartTime: startTime,
-        defaultEndTime: endTime,
-        updatedBy: SYSTEM_USER_ID,
-      },
-      create: {
-        tenantId: DEMO_TENANT_ID,
-        code: dt.code,
-        name: dt.name,
-        description: dt.description,
-        attendanceMode: dt.attendanceMode,
-        colorCode: dt.colorCode,
-        iconName: dt.iconName,
-        defaultStartTime: startTime,
-        defaultEndTime: endTime,
-        isDefault: true,
-        isActive: true,
-        createdBy: SYSTEM_USER_ID,
-        updatedBy: SYSTEM_USER_ID,
-      }
+    const existing = await prisma.batchDeliveryTypes.findFirst({
+      where: { tenantId: DEMO_TENANT_ID, code: dt.code },
     });
+
+    if (existing) {
+      await prisma.batchDeliveryTypes.update({
+        where: { id: existing.id },
+        data: {
+          name: dt.name,
+          description: dt.description,
+          attendanceMode: dt.attendanceMode,
+          colorCode: dt.colorCode,
+          iconName: dt.iconName,
+          defaultStartTime: startTime,
+          defaultEndTime: endTime,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    } else {
+      await prisma.batchDeliveryTypes.create({
+        data: {
+          tenantId: DEMO_TENANT_ID,
+          code: dt.code,
+          name: dt.name,
+          description: dt.description,
+          attendanceMode: dt.attendanceMode,
+          colorCode: dt.colorCode,
+          iconName: dt.iconName,
+          defaultStartTime: startTime,
+          defaultEndTime: endTime,
+          isDefault: true,
+          isActive: true,
+          createdBy: SYSTEM_USER_ID,
+          updatedBy: SYSTEM_USER_ID,
+        },
+      });
+    }
   }
 }

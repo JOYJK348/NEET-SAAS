@@ -51,12 +51,15 @@ export function useUpdateChapter(courseSubjectId: string) {
   });
 }
 
-export function useDeleteChapter(courseSubjectId: string) {
+export function useDeleteChapter(courseSubjectId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => chaptersApi.deleteChapter(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId }) });
+      if (courseSubjectId) {
+        queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId }) });
+      }
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
     },
   });
 }

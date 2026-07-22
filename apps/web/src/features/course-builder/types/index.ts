@@ -1,5 +1,3 @@
-import type { Subject, Chapter, Topic } from '@/features/master-data/types';
-
 export type TopicItemType = 'TEXT' | 'PDF' | 'LINK' | 'VIDEO' | 'ASSESSMENT';
 export type TopicItemStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type CompletionRule = 'NONE' | 'OPEN' | 'WATCH_80_PERCENT' | 'WATCHED_FULL';

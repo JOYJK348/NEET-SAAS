@@ -91,16 +91,62 @@ export class CourseSubjectService {
 
     if (courseSubjects.length === 0) return [];
 
-    // Manually join subjects
+    const courseSubjectIds = courseSubjects.map((cs) => cs.id);
+
     const subjectIds = [...new Set(courseSubjects.map((cs) => cs.subjectId))];
     const subjects = await this.prisma.subjects.findMany({
       where: { id: { in: subjectIds }, tenantId, deletedAt: null },
     });
     const subjectMap = Object.fromEntries(subjects.map((s) => [s.id, s]));
 
+    const chapters = await this.prisma.chapters.findMany({
+      where: {
+        tenantId,
+        courseSubjectId: { in: courseSubjectIds },
+        deletedAt: null,
+      },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    const chapterIds = chapters.map((ch) => ch.id);
+    const topics = await this.prisma.topics.findMany({
+      where: { tenantId, chapterId: { in: chapterIds }, deletedAt: null },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    const topicItemCounts = await this.prisma.topicItems.groupBy({
+      by: ['topicId'],
+      where: { tenantId, topicId: { in: topics.map((tp) => tp.id) } },
+      _count: { id: true },
+    });
+    const countMap: Record<string, number> = {};
+    for (const row of topicItemCounts) {
+      countMap[row.topicId] = row._count.id;
+    }
+
+    const topicMap: Record<string, any[]> = {};
+    for (const tp of topics) {
+      if (!topicMap[tp.chapterId]) topicMap[tp.chapterId] = [];
+      topicMap[tp.chapterId].push({
+        ...tp,
+        _count: { topicItems: countMap[tp.id] ?? 0 },
+      });
+    }
+
+    const chapterMap: Record<string, any[]> = {};
+    for (const ch of chapters) {
+      const chWithTopics = {
+        ...ch,
+        topics: topicMap[ch.id] || [],
+      };
+      if (!chapterMap[ch.courseSubjectId]) chapterMap[ch.courseSubjectId] = [];
+      chapterMap[ch.courseSubjectId].push(chWithTopics);
+    }
+
     return courseSubjects.map((cs) => ({
       ...cs,
       subject: subjectMap[cs.subjectId] ?? null,
+      chapters: chapterMap[cs.id] || [],
     }));
   }
 

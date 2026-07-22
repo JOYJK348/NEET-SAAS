@@ -158,6 +158,10 @@ export class TopicService {
 
   async remove(id: string, tenantId: string, userId: string) {
     await this.findOne(id, tenantId);
+    await this.prisma.topicItems.updateMany({
+      where: { tenantId, topicId: id, deletedAt: null },
+      data: { deletedAt: new Date(), deletedBy: userId, updatedBy: userId },
+    });
     await this.tenantScoped.softDelete(
       this.prisma.topics,
       id,

@@ -16,8 +16,13 @@ function BuilderPageInner() {
   const searchParams = useSearchParams();
 
   const { data: course, isLoading: courseLoading } = useCourse(courseId);
-  const { data: subjects, isLoading: subjectsLoading } = useCourseSubjects(courseId);
-  const { selectedTopicId, selection, selectTopic } = useBuilderState(courseId);
+  const {
+    data: subjects,
+    isLoading: subjectsLoading,
+    refetch: refetchSubjects,
+  } = useCourseSubjects(courseId);
+  const { selectedTopicId, selection, selectTopic, clearSelection, selectEntity } =
+    useBuilderState(courseId);
 
   const treeNodes = useMemo(() => {
     return (
@@ -32,11 +37,14 @@ function BuilderPageInner() {
             id: ch.id,
             name: ch.name,
             displayOrder: ch.displayOrder,
+            courseSubjectId: s.id,
             topics:
               ch.topics?.map((t: any) => ({
                 id: t.id,
                 name: t.name,
                 displayOrder: t.displayOrder,
+                chapterId: ch.id,
+                _count: t._count,
               })) ?? [],
           })) ?? [],
       })) ?? []
@@ -55,15 +63,36 @@ function BuilderPageInner() {
     return undefined;
   }, [selectedTopicId, subjects]);
 
-  const handleSave = useCallback((data: any) => {
-    console.log('Save:', data);
-  }, []);
+  const selectedTopicName = selectedTopicData?.name ?? null;
+  const selectedTopicDescription = selectedTopicData?.description ?? null;
+
+  const handleRefresh = useCallback(() => {
+    refetchSubjects();
+  }, [refetchSubjects]);
+
+  const selectedChapterId = selection.type === 'chapter' ? selection.id : null;
+  const selectedTopicItemId = selection.type === 'topic-item' ? selection.id : null;
+
+  const chapterData = useMemo(() => {
+    if (!selectedChapterId) return undefined;
+    for (const s of subjects ?? []) {
+      for (const _ch of (s as any).chapters ?? []) {
+        if (_ch.id === selectedChapterId) return _ch;
+      }
+    }
+    return undefined;
+  }, [selectedChapterId, subjects]);
+
+  const topicItemSelection = selectedTopicItemId
+    ? { type: 'topic-item' as const, id: selectedTopicItemId }
+    : null;
 
   if (courseLoading) {
     return (
       <BuilderLayout
         courseId={courseId}
-        courseName="Loading..."
+        course={null}
+        subjects={[]}
         leftPanel={
           <div className="p-4 space-y-3 animate-pulse">
             <div className="h-4 w-24 bg-gray-200 rounded" />
@@ -87,34 +116,21 @@ function BuilderPageInner() {
     );
   }
 
-  const selectedChapterId = selection.type === 'chapter' ? selection.id : null;
-  const selectedTopicItemId = selection.type === 'topic-item' ? selection.id : null;
-
-  const chapterData = useMemo(() => {
-    if (!selectedChapterId) return undefined;
-    for (const s of subjects ?? []) {
-      for (const ch of (s as any).chapters ?? []) {
-        if (ch.id === selectedChapterId) return ch;
-      }
-    }
-    return undefined;
-  }, [selectedChapterId, subjects]);
-
-  const topicItemSelection = selectedTopicItemId
-    ? { type: 'topic-item' as const, id: selectedTopicItemId }
-    : null;
-
   return (
     <BuilderLayout
       courseId={courseId}
-      courseName={course?.name ?? 'Untitled Course'}
-      courseStatus={(course as any)?.status ?? 'DRAFT'}
+      course={course}
+      subjects={subjects}
+      selectedTopicId={selectedTopicId}
+      selectedTopicName={selectedTopicName}
+      selectedTopicDescription={selectedTopicDescription}
       leftPanel={
         <CourseOutlinePanel
           courseId={courseId}
           subjects={treeNodes}
           selectedTopicId={selectedTopicId}
           onSelectTopic={selectTopic}
+          onRefresh={handleRefresh}
           loading={subjectsLoading}
         />
       }
@@ -129,7 +145,6 @@ function BuilderPageInner() {
           }
           topicData={selectedTopicData ?? chapterData}
           chapterData={chapterData}
-          onSave={handleSave}
         />
       }
     />

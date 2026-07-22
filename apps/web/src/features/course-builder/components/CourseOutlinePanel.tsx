@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Search,
   MoreVertical,
@@ -10,8 +10,39 @@ import {
   BookOpen,
   Folder,
   FileText,
+  GripVertical,
+  Edit3,
+  Trash2,
+  BookMarked,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useCreateChapter, useDeleteChapter } from '@/features/master-data/hooks/use-chapters';
+import { useCreateTopic, useDeleteTopic } from '@/features/master-data/hooks/use-topics';
+import { useReorderChapters, useReorderTopics } from '../hooks/use-reorder';
 
 interface SubjectNode {
   id: string;
@@ -20,10 +51,12 @@ interface SubjectNode {
     id: string;
     name: string;
     displayOrder: number;
+    courseSubjectId?: string;
     topics: Array<{
       id: string;
       name: string;
       displayOrder: number;
+      chapterId?: string;
       _count?: { topicItems?: number };
     }>;
   }>;
@@ -34,7 +67,289 @@ interface CourseOutlinePanelProps {
   subjects: SubjectNode[];
   selectedTopicId: string | null;
   onSelectTopic: (topicId: string) => void;
+  onRefresh?: () => void;
   loading?: boolean;
+}
+
+function ChapterSortable({
+  chapter,
+  isChapterOpen,
+  onToggleChapter,
+  onSelectTopic,
+  selectedTopicId,
+  onChapterEdit,
+  onChapterDelete,
+  onChapterAddTopic,
+}: {
+  chapter: SubjectNode['chapters'][number];
+  isChapterOpen: boolean;
+  onToggleChapter: (id: string) => void;
+  onSelectTopic: (topicId: string) => void;
+  selectedTopicId: string | null;
+  onChapterEdit: (ch: SubjectNode['chapters'][number]) => void;
+  onChapterDelete: (ch: SubjectNode['chapters'][number]) => void;
+  onChapterAddTopic: (chapterId: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: chapter.id,
+  });
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [menuOpen]);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging && 'opacity-50')}
+    >
+      <div className="group flex items-center gap-1 w-full">
+        <div
+          {...attributes}
+          {...listeners}
+          className="flex items-center justify-center w-4 h-6 shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-gray-500"
+        >
+          <GripVertical className="h-3 w-3" />
+        </div>
+        <button
+          onClick={() => onToggleChapter(chapter.id)}
+          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-xl text-left transition-all text-gray-600 hover:bg-violet-50/60 min-w-0"
+        >
+          <div className="flex items-center justify-center w-4 h-4 shrink-0">
+            {isChapterOpen ? (
+              <ChevronDown className="h-3 w-3 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-3 w-3 text-gray-400" />
+            )}
+          </div>
+          <Folder className="h-3 w-3 shrink-0 text-amber-500" />
+          <span className="text-[11px] font-semibold truncate flex-1">{chapter.name}</span>
+          <div className="relative shrink-0" ref={menuRef}>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMenuOpen(!menuOpen);
+                }
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-gray-200 cursor-pointer"
+            >
+              <MoreVertical className="h-3 w-3 text-gray-400" />
+            </div>
+            {menuOpen && (
+              <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onChapterEdit(chapter);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onChapterAddTopic(chapter.id);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
+                >
+                  <BookMarked className="h-3.5 w-3.5" />
+                  Add Topic
+                </button>
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onChapterDelete(chapter);
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </button>
+      </div>
+      {isChapterOpen && (
+        <div className="ml-7 space-y-0.5">
+          {chapter.topics.length === 0 && (
+            <p className="text-[10px] text-gray-400 italic py-1.5 pl-3">No topics</p>
+          )}
+          {chapter.topics.map((topic) => (
+            <TopicRow
+              key={topic.id}
+              topic={topic}
+              isSelected={selectedTopicId === topic.id}
+              onSelect={onSelectTopic}
+            />
+          ))}
+          <button
+            onClick={() => onChapterAddTopic(chapter.id)}
+            className="flex items-center gap-1 w-full px-3 py-1 text-[10px] font-semibold text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all opacity-0 hover:opacity-100"
+          >
+            <Plus className="h-3 w-3" />
+            Add Topic
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopicRow({
+  topic,
+  isSelected,
+  onSelect,
+}: {
+  topic: SubjectNode['chapters'][number]['topics'][number];
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const itemCount = topic._count?.topicItems ?? 0;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [menuOpen]);
+
+  return (
+    <div className="group flex items-center gap-1 w-full">
+      <button
+        onClick={() => onSelect(topic.id)}
+        className={cn(
+          'flex items-center gap-1.5 flex-1 w-full px-3 py-1.5 rounded-xl text-left transition-all min-w-0',
+          isSelected
+            ? 'bg-violet-600 text-white rounded-r-xl'
+            : 'text-gray-600 hover:bg-violet-50 rounded-r-xl',
+        )}
+      >
+        <FileText className="h-3 w-3 shrink-0" />
+        <span
+          className={cn('text-[11px] font-medium truncate flex-1', isSelected && 'font-semibold')}
+        >
+          {topic.name}
+        </span>
+        {itemCount > 0 && (
+          <span
+            className={cn(
+              'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md shrink-0',
+              isSelected
+                ? 'bg-white/20 text-white'
+                : 'bg-gray-100 text-gray-500 group-hover:bg-violet-100',
+            )}
+          >
+            {itemCount}
+          </span>
+        )}
+      </button>
+      <div className="relative shrink-0" ref={menuRef}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setMenuOpen(!menuOpen);
+          }}
+          className={cn(
+            'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md',
+            isSelected ? 'text-white/70 hover:bg-white/20' : 'hover:bg-gray-200',
+          )}
+        >
+          <MoreVertical className="h-3 w-3" />
+        </button>
+        {menuOpen && topic.chapterId && (
+          <TopicMenu topic={topic} onClose={() => setMenuOpen(false)} menuRef={menuRef} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopicMenu({
+  topic,
+  onClose,
+  menuRef: _menuRef,
+}: {
+  topic: SubjectNode['chapters'][number]['topics'][number];
+  onClose: () => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const deleteTopic = useDeleteTopic(topic.chapterId ?? '');
+
+  const handleDelete = () => {
+    if (
+      window.confirm(
+        `Delete "${topic.name}"?\n\nThis topic and its learning content will be permanently removed.`,
+      )
+    ) {
+      deleteTopic.mutate(topic.id, {
+        onSuccess: () => {
+          toast.success('Topic deleted');
+          onClose();
+        },
+        onError: (err: any) => {
+          toast.error(err?.response?.data?.message || 'Failed to delete topic');
+        },
+      });
+    }
+  };
+
+  return (
+    <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
+      <button
+        onClick={handleDelete}
+        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        Delete
+      </button>
+    </div>
+  );
 }
 
 export function CourseOutlinePanel({
@@ -42,6 +357,7 @@ export function CourseOutlinePanel({
   subjects,
   selectedTopicId,
   onSelectTopic,
+  onRefresh: _onRefresh,
   loading,
 }: CourseOutlinePanelProps) {
   const [search, setSearch] = useState('');
@@ -49,6 +365,26 @@ export function CourseOutlinePanel({
     return new Set(subjects.map((s) => s.id));
   });
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+
+  const [addChapterSubjectId, setAddChapterSubjectId] = useState<string | null>(null);
+  const [addTopicChapterId, setAddTopicChapterId] = useState<string | null>(null);
+  const [chapterFormOpen, setChapterFormOpen] = useState(false);
+  const [topicFormOpen, setTopicFormOpen] = useState(false);
+  const [chapterName, setChapterName] = useState('');
+  const [topicName, setTopicName] = useState('');
+  const [savingChapter, setSavingChapter] = useState(false);
+  const [savingTopic, setSavingTopic] = useState(false);
+
+  const createChapter = useCreateChapter(addChapterSubjectId ?? '');
+  const createTopic = useCreateTopic(addTopicChapterId ?? '');
+  const deleteChapterMutation = useDeleteChapter();
+  const reorderChaptersMutation = useReorderChapters();
+  const reorderTopicsMutation = useReorderTopics();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const filtered = useMemo(() => {
     if (!search.trim()) return subjects;
@@ -82,12 +418,175 @@ export function CourseOutlinePanel({
     });
   };
 
-  const toggleChapter = (id: string) => {
+  const toggleChapter = useCallback((id: string) => {
     setExpandedChapters((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
+    });
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const activeId = active.id as string;
+
+      const activeChapter = subjects.flatMap((s) => s.chapters).find((ch) => ch.id === activeId);
+      const overChapter = subjects.flatMap((s) => s.chapters).find((ch) => ch.id === over.id);
+
+      if (activeChapter && overChapter) {
+        const parentSubject = subjects.find((s) => s.chapters.some((ch) => ch.id === activeId));
+        if (!parentSubject) return;
+
+        const overInSameSubject = parentSubject.chapters.some((ch) => ch.id === over.id);
+        if (!overInSameSubject) return;
+
+        const sorted = [...parentSubject.chapters].sort((a, b) => a.displayOrder - b.displayOrder);
+        const oldIdx = sorted.findIndex((ch) => ch.id === activeId);
+        const newIdx = sorted.findIndex((ch) => ch.id === over.id);
+        if (oldIdx === -1 || newIdx === -1) return;
+
+        const reordered = [...sorted];
+        const [moved] = reordered.splice(oldIdx, 1);
+        reordered.splice(newIdx, 0, moved);
+
+        const items = reordered.map((ch, i) => ({ id: ch.id, displayOrder: i + 1 }));
+        reorderChaptersMutation.mutate({
+          courseSubjectId: parentSubject.id,
+          items,
+        });
+        return;
+      }
+
+      const activeTopic = subjects
+        .flatMap((s) => s.chapters)
+        .flatMap((ch) => ch.topics)
+        .find((t) => t.id === activeId);
+      const overTopic = subjects
+        .flatMap((s) => s.chapters)
+        .flatMap((ch) => ch.topics)
+        .find((t) => t.id === over.id);
+
+      if (activeTopic && overTopic) {
+        const parentChapter = subjects
+          .flatMap((s) => s.chapters)
+          .find((ch) => ch.topics.some((t) => t.id === activeId));
+        if (!parentChapter) return;
+
+        const overInSameChapter = parentChapter.topics.some((t) => t.id === over.id);
+        if (!overInSameChapter) return;
+
+        const sorted = [...parentChapter.topics].sort((a, b) => a.displayOrder - b.displayOrder);
+        const oldIdx = sorted.findIndex((t) => t.id === activeId);
+        const newIdx = sorted.findIndex((t) => t.id === over.id);
+        if (oldIdx === -1 || newIdx === -1) return;
+
+        const reordered = [...sorted];
+        const [moved] = reordered.splice(oldIdx, 1);
+        reordered.splice(newIdx, 0, moved);
+
+        const items = reordered.map((t, i) => ({ id: t.id, displayOrder: i + 1 }));
+        reorderTopicsMutation.mutate({
+          chapterId: parentChapter.id,
+          items,
+        });
+      }
+    },
+    [subjects, reorderChaptersMutation, reorderTopicsMutation],
+  );
+
+  const handleAddChapter = (subjectId: string) => {
+    setAddChapterSubjectId(subjectId);
+    setChapterName('');
+    setChapterFormOpen(true);
+  };
+
+  const handleAddTopic = (chapterId: string) => {
+    setAddTopicChapterId(chapterId);
+    setTopicName('');
+    setTopicFormOpen(true);
+  };
+
+  const submitChapter = async () => {
+    const name = chapterName.trim();
+    if (!name) return;
+    if (!addChapterSubjectId) return;
+    setSavingChapter(true);
+    try {
+      const chapters = subjects.find((s) => s.id === addChapterSubjectId)?.chapters ?? [];
+      const nextOrder =
+        chapters.length > 0 ? Math.max(...chapters.map((ch) => ch.displayOrder)) + 1 : 1;
+      await createChapter.mutateAsync({
+        courseSubjectId: addChapterSubjectId,
+        name,
+        code: name.toUpperCase().replace(/\s+/g, '_').slice(0, 10),
+        displayOrder: nextOrder,
+      });
+      toast.success('Chapter created');
+      setChapterFormOpen(false);
+      setChapterName('');
+      if (!expandedSubjects.has(addChapterSubjectId)) {
+        setExpandedSubjects((prev) => new Set(prev).add(addChapterSubjectId!));
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to create chapter');
+    } finally {
+      setSavingChapter(false);
+    }
+  };
+
+  const submitTopic = async () => {
+    const name = topicName.trim();
+    if (!name) return;
+    if (!addTopicChapterId) return;
+    setSavingTopic(true);
+    try {
+      const parentChapter = subjects
+        .flatMap((s) => s.chapters)
+        .find((ch) => ch.id === addTopicChapterId);
+      const topics = parentChapter?.topics ?? [];
+      const nextOrder = topics.length > 0 ? Math.max(...topics.map((t) => t.displayOrder)) + 1 : 1;
+      const newTopic = await createTopic.mutateAsync({
+        chapterId: addTopicChapterId,
+        name,
+        code: name.toUpperCase().replace(/\s+/g, '_').slice(0, 10),
+        displayOrder: nextOrder,
+      });
+      toast.success('Topic created');
+      setTopicFormOpen(false);
+      setTopicName('');
+      onSelectTopic(newTopic.id);
+      if (!expandedChapters.has(addTopicChapterId)) {
+        setExpandedChapters((prev) => new Set(prev).add(addTopicChapterId!));
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to create topic');
+    } finally {
+      setSavingTopic(false);
+    }
+  };
+
+  const handleDeleteChapterAction = (chapter: SubjectNode['chapters'][number]) => {
+    const hasTopics = chapter.topics.length > 0;
+    const msg = hasTopics
+      ? `Delete "${chapter.name}"?\n\nThis chapter contains ${chapter.topics.length} topic(s). They must be removed first.`
+      : `Delete "${chapter.name}"?`;
+    if (!window.confirm(msg)) return;
+
+    const parentSubject = subjects.find((s) => s.chapters.some((ch) => ch.id === chapter.id));
+    const csId = parentSubject?.id;
+    if (!csId) return;
+
+    deleteChapterMutation.mutate(chapter.id, {
+      onSuccess: () => {
+        toast.success('Chapter deleted');
+      },
+      onError: (err: any) => {
+        toast.error(err?.response?.data?.message || 'Failed to delete chapter');
+      },
     });
   };
 
@@ -145,6 +644,7 @@ export function CourseOutlinePanel({
         ) : (
           filtered.map((subject) => {
             const isSubjectOpen = expandedSubjects.has(subject.id);
+            const chapterIds = subject.chapters.map((ch) => ch.id);
             return (
               <div key={subject.id}>
                 <button
@@ -168,98 +668,43 @@ export function CourseOutlinePanel({
                   <span className="text-[9px] font-mono font-semibold text-gray-400 uppercase shrink-0">
                     {subject.subject.code}
                   </span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreVertical className="h-3.5 w-3.5 text-gray-400" />
-                  </span>
                 </button>
 
                 {isSubjectOpen && (
                   <div className="ml-2 pl-3 border-l-2 border-violet-100 space-y-0.5">
-                    {subject.chapters.length === 0 && (
-                      <p className="text-[10px] text-gray-400 italic py-2 pl-3">No chapters</p>
-                    )}
-                    {subject.chapters.map((chapter) => {
-                      const isChapterOpen = expandedChapters.has(chapter.id);
-                      return (
-                        <div key={chapter.id}>
-                          <button
-                            onClick={() => toggleChapter(chapter.id)}
-                            className="group flex items-center gap-2 w-full px-3 py-1.5 rounded-xl text-left transition-all text-gray-600 hover:bg-violet-50/60"
-                          >
-                            <div className="flex items-center justify-center w-4 h-4 shrink-0">
-                              {isChapterOpen ? (
-                                <ChevronDown className="h-3 w-3 text-gray-400" />
-                              ) : (
-                                <ChevronRight className="h-3 w-3 text-gray-400" />
-                              )}
-                            </div>
-                            <Folder className="h-3 w-3 shrink-0 text-amber-500" />
-                            <span className="text-[11px] font-semibold truncate flex-1">
-                              {chapter.name}
-                            </span>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="h-3 w-3 text-gray-400" />
-                            </span>
-                          </button>
-
-                          {isChapterOpen && (
-                            <div className="ml-4 space-y-0.5">
-                              {chapter.topics.length === 0 && (
-                                <p className="text-[10px] text-gray-400 italic py-1.5 pl-3">
-                                  No topics
-                                </p>
-                              )}
-                              {chapter.topics.map((topic) => {
-                                const isSelected = selectedTopicId === topic.id;
-                                const itemCount = topic._count?.topicItems ?? 0;
-                                return (
-                                  <button
-                                    key={topic.id}
-                                    onClick={() => onSelectTopic(topic.id)}
-                                    className={cn(
-                                      'group flex items-center gap-2 w-full px-3 py-1.5 rounded-xl text-left transition-all',
-                                      isSelected
-                                        ? 'bg-violet-600 text-white rounded-r-xl'
-                                        : 'text-gray-600 hover:bg-violet-50 rounded-r-xl',
-                                    )}
-                                  >
-                                    <FileText className="h-3 w-3 shrink-0" />
-                                    <span
-                                      className={cn(
-                                        'text-[11px] font-medium truncate flex-1',
-                                        isSelected && 'font-semibold',
-                                      )}
-                                    >
-                                      {topic.name}
-                                    </span>
-                                    {itemCount > 0 && (
-                                      <span
-                                        className={cn(
-                                          'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md shrink-0',
-                                          isSelected
-                                            ? 'bg-white/20 text-white'
-                                            : 'bg-gray-100 text-gray-500 group-hover:bg-violet-100',
-                                        )}
-                                      >
-                                        {itemCount}
-                                      </span>
-                                    )}
-                                    <span
-                                      className={cn(
-                                        'opacity-0 group-hover:opacity-100 transition-opacity',
-                                        isSelected && 'text-white/70',
-                                      )}
-                                    >
-                                      <MoreVertical className="h-3 w-3" />
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext items={chapterIds} strategy={verticalListSortingStrategy}>
+                        {subject.chapters.length === 0 && (
+                          <p className="text-[10px] text-gray-400 italic py-2 pl-3">No chapters</p>
+                        )}
+                        {subject.chapters.map((chapter) => (
+                          <ChapterSortable
+                            key={chapter.id}
+                            chapter={chapter}
+                            isChapterOpen={expandedChapters.has(chapter.id)}
+                            onToggleChapter={toggleChapter}
+                            onSelectTopic={onSelectTopic}
+                            selectedTopicId={selectedTopicId}
+                            onChapterEdit={(ch) => {
+                              handleAddChapter(subject.id);
+                            }}
+                            onChapterDelete={handleDeleteChapterAction}
+                            onChapterAddTopic={handleAddTopic}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                    <button
+                      onClick={() => handleAddChapter(subject.id)}
+                      className="flex items-center gap-1 w-full px-3 py-1.5 text-[10px] font-semibold text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Add Chapter
+                    </button>
                   </div>
                 )}
               </div>
@@ -277,6 +722,90 @@ export function CourseOutlinePanel({
           Add Subject
         </button>
       </div>
+
+      <Dialog open={chapterFormOpen} onOpenChange={setChapterFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Chapter</DialogTitle>
+            <DialogDescription>Enter a name for the new chapter</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                Chapter Name *
+              </label>
+              <input
+                value={chapterName}
+                onChange={(e) => setChapterName(e.target.value)}
+                placeholder="e.g. Mechanics"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitChapter();
+                  if (e.key === 'Escape') setChapterFormOpen(false);
+                }}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setChapterFormOpen(false)}
+                className="h-9 px-4 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitChapter}
+                disabled={!chapterName.trim() || savingChapter}
+                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+              >
+                {savingChapter ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={topicFormOpen} onOpenChange={setTopicFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Topic</DialogTitle>
+            <DialogDescription>Enter a name for the new topic</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                Topic Name *
+              </label>
+              <input
+                value={topicName}
+                onChange={(e) => setTopicName(e.target.value)}
+                placeholder="e.g. Kinematics"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitTopic();
+                  if (e.key === 'Escape') setTopicFormOpen(false);
+                }}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setTopicFormOpen(false)}
+                className="h-9 px-4 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitTopic}
+                disabled={!topicName.trim() || savingTopic}
+                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+              >
+                {savingTopic ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
