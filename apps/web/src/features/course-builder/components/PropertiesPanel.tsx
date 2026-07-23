@@ -1,7 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Layers, FileText, ClipboardList, Info, Calendar, User } from 'lucide-react';
+import {
+  Save,
+  Layers,
+  FileText,
+  ClipboardList,
+  Info,
+  Calendar,
+  User,
+  Plus,
+  Lightbulb,
+  Star,
+  Sigma,
+  GraduationCap,
+  HelpCircle,
+  Minus,
+  Settings,
+  Link,
+  Video,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PropertiesPanelProps {
@@ -344,21 +363,241 @@ function TopicItemForm({ data, onSave }: { data?: any; onSave?: (d: any) => void
   );
 }
 
+interface BlockTypeOption {
+  blockType: string;
+  label: string;
+  icon: React.ReactNode;
+  description: string;
+}
+
+const blockTypeOptions: BlockTypeOption[] = [
+  {
+    blockType: 'TEXT',
+    label: 'Text',
+    icon: <FileText className="h-3.5 w-3.5" />,
+    description: 'Rich text content',
+  },
+  {
+    blockType: 'KEY_CONCEPT',
+    label: 'Key Concept',
+    icon: <Lightbulb className="h-3.5 w-3.5" />,
+    description: 'Highlight a key concept',
+  },
+  {
+    blockType: 'IMPORTANT_NOTE',
+    label: 'Important Note',
+    icon: <Star className="h-3.5 w-3.5" />,
+    description: 'Important information',
+  },
+  {
+    blockType: 'FORMULA',
+    label: 'Formula',
+    icon: <Sigma className="h-3.5 w-3.5" />,
+    description: 'Mathematical equation',
+  },
+  {
+    blockType: 'WORKED_EXAMPLE',
+    label: 'Worked Example',
+    icon: <GraduationCap className="h-3.5 w-3.5" />,
+    description: 'Example with solution',
+  },
+  {
+    blockType: 'PRACTICE_QUESTION',
+    label: 'Practice Q',
+    icon: <HelpCircle className="h-3.5 w-3.5" />,
+    description: 'Question for practice',
+  },
+  {
+    blockType: 'DIVIDER',
+    label: 'Divider',
+    icon: <Minus className="h-3.5 w-3.5" />,
+    description: 'Horizontal separator',
+  },
+  {
+    blockType: 'IMAGE',
+    label: 'Image',
+    icon: <ImageIcon className="h-3.5 w-3.5" />,
+    description: 'Visual content',
+  },
+];
+
+const mediaBlockOptions: BlockTypeOption[] = [
+  {
+    blockType: 'PDF',
+    label: 'Upload Document',
+    icon: <FileText className="h-3.5 w-3.5" />,
+    description: 'PDF / document file',
+  },
+  {
+    blockType: 'VIDEO',
+    label: 'Video',
+    icon: <Video className="h-3.5 w-3.5" />,
+    description: 'Embed or upload video',
+  },
+  {
+    blockType: 'LINK',
+    label: 'External Link',
+    icon: <Link className="h-3.5 w-3.5" />,
+    description: 'Link to external resource',
+  },
+];
+
+function AddBlocksTab({ onSelectBlock }: { onSelectBlock?: (blockType: string) => void }) {
+  return (
+    <div className="p-4 space-y-4">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Plus className="h-3.5 w-3.5 text-violet-500" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+            Content Blocks
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-1.5">
+          {blockTypeOptions.map((opt) => (
+            <button
+              key={opt.blockType}
+              onClick={() => onSelectBlock?.(opt.blockType)}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/50 transition-all text-left shadow-sm"
+            >
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-50 text-gray-500 shrink-0">
+                {opt.icon}
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-gray-700 block">{opt.label}</span>
+                <span className="text-[9px] text-gray-400">{opt.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Plus className="h-3.5 w-3.5 text-amber-500" />
+          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+            Media & Resources
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-1.5">
+          {mediaBlockOptions.map((opt) => (
+            <button
+              key={opt.blockType}
+              onClick={() => onSelectBlock?.(opt.blockType)}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 transition-all text-left shadow-sm"
+            >
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-50 text-gray-500 shrink-0">
+                {opt.icon}
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-gray-700 block">{opt.label}</span>
+                <span className="text-[9px] text-gray-400">{opt.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BlockSettingsTab({ topicData }: { topicData?: any }) {
+  if (!topicData) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-xs text-gray-400">Select a block to edit its settings</p>
+      </div>
+    );
+  }
+  return (
+    <div className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Settings className="h-3.5 w-3.5 text-gray-500" />
+        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+          Block Settings
+        </span>
+      </div>
+      <TopicItemForm data={topicData} />
+    </div>
+  );
+}
+
+function TopicSettingsTab({ topicData, onSave }: { topicData?: any; onSave?: (d: any) => void }) {
+  if (!topicData) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-xs text-gray-400">No topic selected</p>
+      </div>
+    );
+  }
+  return <TopicForm data={topicData} onSave={onSave} />;
+}
+
+type TabId = 'add-blocks' | 'block-settings' | 'topic-settings';
+
 export function PropertiesPanel({
   selection,
   topicData,
   chapterData,
   onSave,
 }: PropertiesPanelProps) {
+  const [activeTab, setActiveTab] = useState<TabId>('add-blocks');
+
+  // If chapter selected, show chapter form directly (no tabs)
+  if (selection.type === 'chapter') {
+    return (
+      <div className="divide-y divide-gray-100">
+        <ChapterForm data={chapterData} onSave={onSave} />
+      </div>
+    );
+  }
+
+  // If topic-item selected, show item form directly (no tabs for now)
+  if (selection.type === 'topic-item') {
+    return (
+      <div className="divide-y divide-gray-100">
+        <TopicItemForm data={topicData} onSave={onSave} />
+      </div>
+    );
+  }
+
+  // If no selection
   if (!selection.type || !selection.id) {
     return <EmptyState />;
   }
 
+  // Topic selected - show tabbed interface
+  // Only show topic-settings if we have topicData
+  const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
+    { id: 'add-blocks', label: 'Blocks', icon: <Plus className="h-3 w-3" /> },
+    { id: 'block-settings', label: 'Block', icon: <Settings className="h-3 w-3" /> },
+    { id: 'topic-settings', label: 'Topic', icon: <FileText className="h-3 w-3" /> },
+  ];
+
   return (
-    <div className="divide-y divide-gray-100">
-      {selection.type === 'chapter' && <ChapterForm data={chapterData} onSave={onSave} />}
-      {selection.type === 'topic' && <TopicForm data={topicData} onSave={onSave} />}
-      {selection.type === 'topic-item' && <TopicItemForm data={topicData} onSave={onSave} />}
+    <div className="flex flex-col h-full">
+      <div className="flex border-b border-gray-100 shrink-0">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex items-center gap-1.5 flex-1 px-3 py-2.5 text-[10px] font-bold transition-all',
+              activeTab === tab.id
+                ? 'text-violet-600 border-b-2 border-violet-600 bg-violet-50/30'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+            )}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'add-blocks' && <AddBlocksTab />}
+        {activeTab === 'block-settings' && <BlockSettingsTab topicData={topicData} />}
+        {activeTab === 'topic-settings' && (
+          <TopicSettingsTab topicData={topicData} onSave={onSave} />
+        )}
+      </div>
     </div>
   );
 }

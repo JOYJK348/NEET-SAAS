@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, ChevronDown, Eye, Send, PanelRight, PanelRightOpen } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Eye, Send, PanelRight, PanelRightOpen, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUpdateCourse } from '@/features/master-data/hooks/use-courses';
 import { courseKeys } from '@/features/master-data/hooks/use-courses';
@@ -145,7 +145,7 @@ export function BuilderLayout({
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 h-[52px] shrink-0 bg-[#0f0a1e] flex items-center justify-between px-4 border-b border-white/5">
+      <header className="sticky top-0 z-50 h-[52px] shrink-0 bg-violet-700 flex items-center justify-between px-4 border-b border-white/10">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={`/tenant-admin/courses/${courseId}`}
@@ -153,7 +153,14 @@ export function BuilderLayout({
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <h1 className="text-white font-bold text-sm truncate">{courseName}</h1>
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-sm truncate">{courseName}</h1>
+            {selectedTopicName && (
+              <p className="text-[10px] text-white/40 truncate">
+                Selected Topic: {selectedTopicName}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -163,7 +170,7 @@ export function BuilderLayout({
               className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-semibold transition-all border border-white/10"
             >
               <span className="text-xs leading-none">{status.icon}</span>
-              <span>{status.label}</span>
+              <span className="hidden sm:inline">{status.label}</span>
               <ChevronDown className="h-3.5 w-3.5 text-white/40" />
             </button>
             {statusOpen && (
@@ -192,15 +199,21 @@ export function BuilderLayout({
 
           <button
             onClick={() => setPreviewOpen(!previewOpen)}
+            disabled={!selectedTopicId}
             className={cn(
-              'flex items-center gap-1.5 h-8 px-3 rounded-xl border border-white/20 text-xs font-semibold transition-all',
+              'flex items-center gap-1.5 h-8 px-3 rounded-xl border text-xs font-semibold transition-all',
               previewOpen
                 ? 'bg-violet-600 text-white border-violet-600'
-                : 'text-white/60 hover:text-white hover:bg-white/10',
+                : selectedTopicId
+                  ? 'text-white/60 hover:text-white hover:bg-white/10 border-white/20'
+                  : 'text-white/20 border-white/5 cursor-not-allowed',
             )}
+            title={!selectedTopicId ? 'Select a topic to preview' : 'Preview current topic'}
           >
             <Eye className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{previewOpen ? 'Exit Preview' : 'Preview'}</span>
+            <span className="hidden sm:inline">
+              {previewOpen ? 'Exit Preview' : selectedTopicId ? 'Preview Topic' : 'Preview'}
+            </span>
           </button>
 
           <button
@@ -215,31 +228,98 @@ export function BuilderLayout({
 
       <div
         className={cn(
-          'flex flex-1 overflow-hidden',
+          'flex flex-1 overflow-hidden relative',
           previewOpen && 'opacity-50 pointer-events-none',
         )}
       >
+        {/* Desktop left sidebar */}
         <aside
           className={cn(
             'w-[280px] border-r border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
-            'hidden md:block',
-            mobilePanel === 'left' && '!block fixed inset-0 z-30 pt-[52px] w-full',
+            'hidden lg:block',
           )}
         >
           {leftPanel}
         </aside>
 
+        {/* Tablet left sidebar — visible on md but not overlapping */}
+        <aside
+          className={cn(
+            'hidden md:block lg:hidden w-[240px] border-r border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+          )}
+        >
+          {leftPanel}
+        </aside>
+
+        {/* Mobile left drawer */}
+        {mobilePanel === 'left' && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMobilePanel(null)}
+            />
+            <div className="fixed left-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-r border-gray-200 shadow-2xl overflow-y-auto animate-slide-in-left">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Outline
+                </span>
+                <button
+                  onClick={() => setMobilePanel(null)}
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {leftPanel}
+            </div>
+          </div>
+        )}
+
         <main className="flex-1 overflow-y-auto min-w-0 bg-white">{centerPanel}</main>
 
+        {/* Desktop right sidebar */}
         <aside
           className={cn(
             'w-[280px] border-l border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
-            'hidden md:block',
-            mobilePanel === 'right' && '!block fixed inset-0 z-30 pt-[52px] w-full',
+            'hidden lg:block',
           )}
         >
           {rightPanel}
         </aside>
+
+        {/* Tablet right sidebar — hidden by default, toggleable */}
+        <aside
+          className={cn(
+            'hidden md:block lg:hidden w-[240px] border-l border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+            mobilePanel === 'right' && '!block',
+          )}
+        >
+          {rightPanel}
+        </aside>
+
+        {/* Mobile right drawer */}
+        {mobilePanel === 'right' && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMobilePanel(null)}
+            />
+            <div className="fixed right-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-l border-gray-200 shadow-2xl overflow-y-auto animate-slide-in-right">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Properties
+                </span>
+                <button
+                  onClick={() => setMobilePanel(null)}
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              {rightPanel}
+            </div>
+          </div>
+        )}
       </div>
 
       {previewOpen && (
@@ -253,7 +333,7 @@ export function BuilderLayout({
         />
       )}
 
-      <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#0f0a1e] rounded-2xl px-3 py-2 shadow-2xl border border-white/10">
+      <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-violet-700 rounded-2xl px-3 py-2 shadow-2xl border border-white/10">
         <button
           onClick={() => toggleMobilePanel('left')}
           className={cn(

@@ -14,6 +14,15 @@ import {
   Edit3,
   Trash2,
   BookMarked,
+  List,
+  Lightbulb,
+  Star,
+  Sigma,
+  GraduationCap,
+  HelpCircle,
+  Minus,
+  ExternalLink,
+  Video as VideoIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -43,6 +52,9 @@ import {
 import { useCreateChapter, useDeleteChapter } from '@/features/master-data/hooks/use-chapters';
 import { useCreateTopic, useDeleteTopic } from '@/features/master-data/hooks/use-topics';
 import { useReorderChapters, useReorderTopics } from '../hooks/use-reorder';
+import { useTopicItems } from '../hooks/use-topic-items';
+import { getBlockType } from '../types';
+import type { BlockType } from '../types';
 
 interface SubjectNode {
   id: string;
@@ -80,6 +92,9 @@ function ChapterSortable({
   onChapterEdit,
   onChapterDelete,
   onChapterAddTopic,
+  topicToCOpen,
+  onToggleToC,
+  blockItemsMap,
 }: {
   chapter: SubjectNode['chapters'][number];
   isChapterOpen: boolean;
@@ -89,6 +104,12 @@ function ChapterSortable({
   onChapterEdit: (ch: SubjectNode['chapters'][number]) => void;
   onChapterDelete: (ch: SubjectNode['chapters'][number]) => void;
   onChapterAddTopic: (chapterId: string) => void;
+  topicToCOpen: Set<string>;
+  onToggleToC: (id: string) => void;
+  blockItemsMap: Record<
+    string,
+    Array<{ id: string; type: string; blockType: BlockType | null; title: string }>
+  >;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: chapter.id,
@@ -213,6 +234,9 @@ function ChapterSortable({
               topic={topic}
               isSelected={selectedTopicId === topic.id}
               onSelect={onSelectTopic}
+              isToCOpen={topicToCOpen.has(topic.id)}
+              onToggleToC={onToggleToC}
+              blockItems={blockItemsMap[topic.id]}
             />
           ))}
           <button
@@ -228,14 +252,69 @@ function ChapterSortable({
   );
 }
 
+function TopicBlockItem({
+  blockType,
+  label,
+  itemType,
+}: {
+  blockType: BlockType | null;
+  label: string;
+  itemType?: string;
+}) {
+  const getIcon = (bt: BlockType | null, type?: string) => {
+    if (bt) {
+      switch (bt) {
+        case 'KEY_CONCEPT':
+          return <Lightbulb className="h-2.5 w-2.5 text-sky-500" />;
+        case 'IMPORTANT_NOTE':
+          return <Star className="h-2.5 w-2.5 text-amber-500" />;
+        case 'FORMULA':
+          return <Sigma className="h-2.5 w-2.5 text-indigo-500" />;
+        case 'WORKED_EXAMPLE':
+          return <GraduationCap className="h-2.5 w-2.5 text-emerald-500" />;
+        case 'PRACTICE_QUESTION':
+          return <HelpCircle className="h-2.5 w-2.5 text-orange-500" />;
+        case 'DIVIDER':
+          return <Minus className="h-2.5 w-2.5 text-gray-300" />;
+        default:
+          return <List className="h-2.5 w-2.5 text-gray-400" />;
+      }
+    }
+    // Media types
+    switch (type) {
+      case 'PDF':
+        return <FileText className="h-2.5 w-2.5 text-red-500" />;
+      case 'LINK':
+        return <ExternalLink className="h-2.5 w-2.5 text-blue-500" />;
+      case 'VIDEO':
+        return <VideoIcon className="h-2.5 w-2.5 text-purple-500" />;
+      default:
+        return <List className="h-2.5 w-2.5 text-gray-400" />;
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-1 pl-8 group">
+      <span className="shrink-0">{getIcon(blockType, itemType)}</span>
+      <span className="text-[10px] text-gray-500 truncate">{label}</span>
+    </div>
+  );
+}
+
 function TopicRow({
   topic,
   isSelected,
   onSelect,
+  isToCOpen,
+  onToggleToC,
+  blockItems,
 }: {
   topic: SubjectNode['chapters'][number]['topics'][number];
   isSelected: boolean;
   onSelect: (id: string) => void;
+  isToCOpen?: boolean;
+  onToggleToC?: (id: string) => void;
+  blockItems?: Array<{ id: string; type: string; blockType: BlockType | null; title: string }>;
 }) {
   const itemCount = topic._count?.topicItems ?? 0;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -260,52 +339,81 @@ function TopicRow({
   }, [menuOpen]);
 
   return (
-    <div className="group flex items-center gap-1 w-full">
-      <button
-        onClick={() => onSelect(topic.id)}
-        className={cn(
-          'flex items-center gap-1.5 flex-1 w-full px-3 py-1.5 rounded-xl text-left transition-all min-w-0',
-          isSelected
-            ? 'bg-violet-600 text-white rounded-r-xl'
-            : 'text-gray-600 hover:bg-violet-50 rounded-r-xl',
-        )}
-      >
-        <FileText className="h-3 w-3 shrink-0" />
-        <span
-          className={cn('text-[11px] font-medium truncate flex-1', isSelected && 'font-semibold')}
-        >
-          {topic.name}
-        </span>
-        {itemCount > 0 && (
-          <span
-            className={cn(
-              'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md shrink-0',
-              isSelected
-                ? 'bg-white/20 text-white'
-                : 'bg-gray-100 text-gray-500 group-hover:bg-violet-100',
-            )}
-          >
-            {itemCount}
-          </span>
-        )}
-      </button>
-      <div className="relative shrink-0" ref={menuRef}>
+    <div>
+      <div className="group flex items-center gap-1 w-full">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen(!menuOpen);
-          }}
+          onClick={() => onSelect(topic.id)}
           className={cn(
-            'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md',
-            isSelected ? 'text-white/70 hover:bg-white/20' : 'hover:bg-gray-200',
+            'flex items-center gap-1.5 flex-1 w-full px-3 py-1.5 rounded-xl text-left transition-all min-w-0',
+            isSelected
+              ? 'bg-violet-600 text-white rounded-r-xl'
+              : 'text-gray-600 hover:bg-violet-50 rounded-r-xl',
           )}
         >
-          <MoreVertical className="h-3 w-3" />
+          <FileText className="h-3 w-3 shrink-0" />
+          <span
+            className={cn('text-[11px] font-medium truncate flex-1', isSelected && 'font-semibold')}
+          >
+            {topic.name}
+          </span>
+          {itemCount > 0 && (
+            <span
+              className={cn(
+                'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md shrink-0',
+                isSelected
+                  ? 'bg-white/20 text-white'
+                  : 'bg-gray-100 text-gray-500 group-hover:bg-violet-100',
+              )}
+            >
+              {itemCount}
+            </span>
+          )}
         </button>
-        {menuOpen && topic.chapterId && (
-          <TopicMenu topic={topic} onClose={() => setMenuOpen(false)} menuRef={menuRef} />
+        <div className="relative shrink-0" ref={menuRef}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(!menuOpen);
+            }}
+            className={cn(
+              'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md',
+              isSelected ? 'text-white/70 hover:bg-white/20' : 'hover:bg-gray-200',
+            )}
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
+          {menuOpen && topic.chapterId && (
+            <TopicMenu topic={topic} onClose={() => setMenuOpen(false)} menuRef={menuRef} />
+          )}
+        </div>
+        {isSelected && blockItems && blockItems.length > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleToC?.(topic.id);
+            }}
+            className={cn(
+              'shrink-0 p-0.5 rounded-md transition-all',
+              isSelected ? 'text-white/70 hover:bg-white/20' : 'text-gray-400 hover:bg-gray-200',
+            )}
+          >
+            {isToCOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          </button>
         )}
       </div>
+      {/* Topic ToC - internal block outline */}
+      {isSelected && isToCOpen && blockItems && blockItems.length > 0 && (
+        <div className="ml-2 pl-2 border-l-2 border-violet-200/50 mt-0.5 space-y-0.5">
+          {blockItems.map((block) => (
+            <TopicBlockItem
+              key={block.id}
+              blockType={block.blockType}
+              label={block.title}
+              itemType={block.type}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -365,6 +473,7 @@ export function CourseOutlinePanel({
     return new Set(subjects.map((s) => s.id));
   });
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
+  const [topicToCOpen, setTopicToCOpen] = useState<Set<string>>(new Set());
 
   const [addChapterSubjectId, setAddChapterSubjectId] = useState<string | null>(null);
   const [addTopicChapterId, setAddTopicChapterId] = useState<string | null>(null);
@@ -374,6 +483,21 @@ export function CourseOutlinePanel({
   const [topicName, setTopicName] = useState('');
   const [savingChapter, setSavingChapter] = useState(false);
   const [savingTopic, setSavingTopic] = useState(false);
+
+  // Fetch topic items for the selected topic to show ToC
+  const { data: selectedTopicItems } = useTopicItems(selectedTopicId);
+
+  const blockItemsMap = useMemo(() => {
+    if (!selectedTopicItems || !selectedTopicId) return {};
+    const items = [...selectedTopicItems].sort((a, b) => a.displayOrder - b.displayOrder);
+    const blocks = items.map((item) => ({
+      id: item.id,
+      type: item.type,
+      blockType: getBlockType(item),
+      title: item.title,
+    }));
+    return { [selectedTopicId]: blocks };
+  }, [selectedTopicItems, selectedTopicId]);
 
   const createChapter = useCreateChapter(addChapterSubjectId ?? '');
   const createTopic = useCreateTopic(addTopicChapterId ?? '');
@@ -385,6 +509,15 @@ export function CourseOutlinePanel({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+
+  const toggleTopicToC = useCallback((topicId: string) => {
+    setTopicToCOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(topicId)) next.delete(topicId);
+      else next.add(topicId);
+      return next;
+    });
+  }, []);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return subjects;
@@ -694,6 +827,9 @@ export function CourseOutlinePanel({
                             }}
                             onChapterDelete={handleDeleteChapterAction}
                             onChapterAddTopic={handleAddTopic}
+                            topicToCOpen={topicToCOpen}
+                            onToggleToC={toggleTopicToC}
+                            blockItemsMap={blockItemsMap}
                           />
                         ))}
                       </SortableContext>

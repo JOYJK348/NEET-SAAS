@@ -122,7 +122,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           children: [
             { name: 'Students', href: '/dashboard/students', icon: GraduationCap },
             { name: 'Parents', href: '#', icon: Contact },
-            { name: 'Staff / Tutors', href: '#', icon: BookMarked },
+            { name: 'Staff / Tutors', href: '/dashboard/tutors', icon: BookMarked },
           ],
         },
       ],

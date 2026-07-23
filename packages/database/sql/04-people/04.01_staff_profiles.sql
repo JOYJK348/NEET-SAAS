@@ -106,8 +106,8 @@ BEGIN
     END IF;
 
     -- Enforce users type categorization
-    IF parent_user_record.user_type <> 'STAFF'::user_type_enum THEN
-        RAISE EXCEPTION 'Security restriction: Selected user type must be STAFF';
+    IF parent_user_record.user_type NOT IN ('STAFF'::user_type_enum, 'TUTOR'::user_type_enum) THEN
+        RAISE EXCEPTION 'Security restriction: Selected user type must be STAFF or TUTOR';
     END IF;
     
     RETURN new;

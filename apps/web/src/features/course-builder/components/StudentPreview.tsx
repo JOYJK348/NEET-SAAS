@@ -6,16 +6,18 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Download,
   ExternalLink,
   Eye,
   FileText,
   Link,
-  Play,
   Video,
   X,
+  Lightbulb,
+  Star,
+  Sigma,
+  GraduationCap,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTopicItems } from '@/features/course-builder/hooks/use-topic-items';
@@ -43,9 +45,184 @@ const typeConfig: Record<string, { icon: any; label: string; color: string; bg: 
   },
 };
 
+function BlockPreviewRenderer({ item }: { item: TopicItem }) {
+  const content = item.content as any;
+
+  if (item.type !== 'TEXT' || !content?.blockType) {
+    // For non-TEXT items, use existing rendering
+    return <TopicContentView item={item} />;
+  }
+
+  switch (content.blockType) {
+    case 'TEXT': {
+      const html = content.html ?? '';
+      return html ? (
+        <div
+          className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-violet-600 prose-strong:text-gray-900 prose-code:text-violet-700 prose-pre:bg-gray-50 prose-pre:border prose-pre:border-gray-200 prose-img:rounded-xl"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      ) : null;
+    }
+    case 'KEY_CONCEPT': {
+      const html = content.html ?? '';
+      return (
+        <div className="border border-sky-200 rounded-xl p-4 bg-sky-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb className="h-4 w-4 text-sky-600" />
+            <span className="text-[10px] font-bold text-sky-700 uppercase tracking-wider">
+              Key Concept
+            </span>
+          </div>
+          {html ? (
+            <div
+              className="prose prose-sm max-w-none prose-p:text-sky-800"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : null}
+        </div>
+      );
+    }
+    case 'IMPORTANT_NOTE': {
+      const html = content.html ?? '';
+      return (
+        <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Star className="h-4 w-4 text-amber-600" />
+            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+              Important Note
+            </span>
+          </div>
+          {html ? (
+            <div
+              className="prose prose-sm max-w-none prose-p:text-amber-800"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          ) : null}
+        </div>
+      );
+    }
+    case 'FORMULA':
+      return (
+        <div className="border border-indigo-200 rounded-xl p-4 bg-indigo-50/50">
+          <div className="flex items-center gap-2 mb-2">
+            <Sigma className="h-4 w-4 text-indigo-600" />
+            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+              Formula
+            </span>
+          </div>
+          {content.formula && (
+            <p className="text-lg font-mono font-bold text-indigo-900 mb-1">{content.formula}</p>
+          )}
+          {content.description && <p className="text-sm text-indigo-600">{content.description}</p>}
+        </div>
+      );
+    case 'WORKED_EXAMPLE':
+      return (
+        <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50/50">
+          <div className="flex items-center gap-2 mb-3">
+            <GraduationCap className="h-4 w-4 text-emerald-600" />
+            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+              Worked Example
+            </span>
+          </div>
+          {content.question && (
+            <div className="mb-3">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">
+                Question
+              </span>
+              <p className="text-sm text-gray-800">{content.question}</p>
+            </div>
+          )}
+          {content.solution && (
+            <div className="mb-2">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">
+                Solution
+              </span>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{content.solution}</p>
+            </div>
+          )}
+          {content.answer && (
+            <div>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">
+                Answer
+              </span>
+              <p className="text-sm font-bold text-emerald-800">{content.answer}</p>
+            </div>
+          )}
+        </div>
+      );
+    case 'PRACTICE_QUESTION':
+      return (
+        <div className="border border-orange-200 rounded-xl p-4 bg-orange-50/50">
+          <div className="flex items-center gap-2 mb-3">
+            <HelpCircle className="h-4 w-4 text-orange-600" />
+            <span className="text-[10px] font-bold text-orange-700 uppercase tracking-wider">
+              Practice Question
+            </span>
+          </div>
+          {content.question && (
+            <p className="text-sm font-semibold text-gray-800 mb-3">{content.question}</p>
+          )}
+          {content.options &&
+            content.options.length > 0 &&
+            content.options.some((o: string) => o) && (
+              <div className="space-y-1 mb-3">
+                {content.options.map((opt: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-orange-100"
+                  >
+                    <span className="text-xs font-bold text-orange-600 w-5">
+                      {String.fromCharCode(65 + idx)}.
+                    </span>
+                    <span className="text-sm text-gray-700">{opt}</span>
+                    {content.correctAnswer === String.fromCharCode(65 + idx) && (
+                      <span className="ml-auto text-xs text-emerald-500 font-bold">✓</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          {content.explanation && (
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">
+                Explanation
+              </span>
+              <p className="text-sm text-emerald-800">{content.explanation}</p>
+            </div>
+          )}
+        </div>
+      );
+    case 'DIVIDER':
+      return <hr className="border-gray-200" />;
+    case 'IMAGE':
+      return content.url ? (
+        <div className="space-y-1">
+          <div className="rounded-xl overflow-hidden border border-gray-200">
+            <img
+              src={content.url}
+              alt={content.altText || ''}
+              className="w-full object-contain max-h-96 bg-gray-50"
+            />
+          </div>
+          {content.caption && (
+            <p className="text-xs text-gray-500 text-center italic">{content.caption}</p>
+          )}
+        </div>
+      ) : null;
+    default:
+      return null;
+  }
+}
+
 function TopicContentView({ item }: { item: TopicItem }) {
   const cfg = typeConfig[item.type] ?? typeConfig.TEXT;
   const Icon = cfg.icon;
+
+  // For TEXT items with blockType, use the new block preview
+  if (item.type === 'TEXT' && (item.content as any)?.blockType) {
+    return <BlockPreviewRenderer item={item} />;
+  }
 
   switch (item.type) {
     case 'TEXT': {
@@ -247,112 +424,6 @@ function TopicContentView({ item }: { item: TopicItem }) {
   }
 }
 
-function CourseTreeOverview({ subjects }: { subjects: any[] }) {
-  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(
-    new Set(subjects?.map((s: any) => s.id) ?? []),
-  );
-  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
-
-  const toggleSubject = (id: string) => {
-    setExpandedSubjects((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleChapter = (id: string) => {
-    setExpandedChapters((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  return (
-    <div className="space-y-3">
-      {!subjects || subjects.length === 0 ? (
-        <div className="text-center py-12">
-          <BookOpen className="h-10 w-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-xs text-gray-400">No subjects available yet</p>
-        </div>
-      ) : (
-        subjects.map((s: any) => (
-          <div key={s.id} className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <button
-              onClick={() => toggleSubject(s.id)}
-              className="flex items-center gap-2 w-full px-4 py-3 bg-violet-50/50 hover:bg-violet-50 transition-colors text-left"
-            >
-              {expandedSubjects.has(s.id) ? (
-                <ChevronDown className="h-3.5 w-3.5 text-violet-400 shrink-0" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-violet-400 shrink-0" />
-              )}
-              <span className="text-sm font-bold text-gray-900">
-                {s.subject?.name ?? 'Subject'}
-              </span>
-              <span className="ml-auto text-[10px] font-semibold text-gray-400">
-                {(s.chapters ?? []).length} chapters
-              </span>
-            </button>
-            {expandedSubjects.has(s.id) && (
-              <div className="divide-y divide-gray-50">
-                {(s.chapters ?? []).length === 0 ? (
-                  <div className="px-4 py-3 text-xs text-gray-400 italic">No chapters yet</div>
-                ) : (
-                  (s.chapters ?? []).map((ch: any) => (
-                    <div key={ch.id}>
-                      <button
-                        onClick={() => toggleChapter(ch.id)}
-                        className="flex items-center gap-2 w-full px-4 py-2.5 pl-8 hover:bg-gray-50 transition-colors text-left"
-                      >
-                        {expandedChapters.has(ch.id) ? (
-                          <ChevronDown className="h-3 w-3 text-gray-300 shrink-0" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 text-gray-300 shrink-0" />
-                        )}
-                        <span className="text-xs font-bold text-gray-700">{ch.name}</span>
-                        <span className="ml-auto text-[9px] text-gray-400">
-                          {(ch.topics ?? []).length} topics
-                        </span>
-                      </button>
-                      {expandedChapters.has(ch.id) && (
-                        <div className="pb-2">
-                          {(ch.topics ?? []).length === 0 ? (
-                            <div className="px-4 py-1.5 pl-12 text-[10px] text-gray-400 italic">
-                              No topics yet
-                            </div>
-                          ) : (
-                            (ch.topics ?? []).map((t: any) => (
-                              <div key={t.id} className="flex items-center gap-2 px-4 py-1.5 pl-12">
-                                <div className="w-1.5 h-1.5 rounded-full bg-violet-300 shrink-0" />
-                                <span className="text-[11px] font-medium text-gray-600">
-                                  {t.name}
-                                </span>
-                                {(t._count?.topicItems ?? 0) > 0 && (
-                                  <span className="text-[9px] text-gray-400">
-                                    ({t._count.topicItems})
-                                  </span>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
 export function StudentPreview({
   courseName,
   selectedTopicId,
@@ -364,8 +435,7 @@ export function StudentPreview({
   const { data: topicItems, isLoading: itemsLoading } = useTopicItems(selectedTopicId);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const activeItems =
-    topicItems?.filter((item) => item.isActive && item.status === 'PUBLISHED') ?? [];
+  const activeItems = topicItems?.filter((item) => item.isActive) ?? [];
 
   const prevItem = () => setCurrentIndex((i) => Math.max(0, i - 1));
   const nextItem = () => setCurrentIndex((i) => Math.min(activeItems.length - 1, i + 1));
@@ -401,7 +471,16 @@ export function StudentPreview({
         </div>
 
         {!selectedTopicId ? (
-          <CourseTreeOverview subjects={subjects} />
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+              <Eye className="h-6 w-6 text-gray-300" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-800 mb-1">Select a Topic to Preview</h3>
+            <p className="text-xs text-gray-400 text-center max-w-sm">
+              Choose a topic from the course outline in the builder, then click Preview Topic to see
+              its student view.
+            </p>
+          </div>
         ) : itemsLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
@@ -433,13 +512,13 @@ export function StudentPreview({
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-8">
               {activeItems.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className="border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow bg-white"
-                >
+                <div key={item.id} className="bg-white">
                   <TopicContentView item={item} />
+                  {idx < activeItems.length - 1 && (
+                    <div className="mt-8 border-t border-gray-100" />
+                  )}
                 </div>
               ))}
             </div>

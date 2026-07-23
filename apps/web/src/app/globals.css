@@ -34,6 +34,26 @@
   --color-sidebar-border: #e5e7eb;
   --color-sidebar-ring: #7c3aed;
   --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --animate-slide-in-left: slide-in-left 0.25s ease-out;
+  --animate-slide-in-right: slide-in-right 0.25s ease-out;
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
