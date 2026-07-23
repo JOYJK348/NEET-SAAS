@@ -15,6 +15,10 @@ export const tutorSchema = z.object({
   createLogin: z.boolean().optional(),
   subjectIds: z.array(z.string()).optional(),
   branchIds: z.array(z.string()).optional(),
+  academicYearId: z.string().optional(),
+  branchId: z.string().optional(),
+  courseId: z.string().optional(),
+  batchId: z.string().optional(),
 });
 
 export type TutorFormData = z.infer<typeof tutorSchema>;

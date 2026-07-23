@@ -12,8 +12,31 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { tutorSchema } from '../validation/tutor-schema';
 import type { Tutor, CreateTutorInput } from '../types/tutor';
 import { useSubjects, useBranches } from '../hooks/use-tutors';
-import { ArrowLeft, User, Briefcase, BookOpen, Building2, Check, Save } from 'lucide-react';
+import {
+  useBranchesForAdmission,
+  useAcademicYearsForAdmission,
+} from '@/features/admissions/hooks/use-admissions';
+import { useBatches, useCourses } from '@/features/students/hooks/use-students';
+import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
+import { useCourseSubjects } from '@/features/master-data/hooks/use-course-subjects';
+import {
+  ArrowLeft,
+  User,
+  Briefcase,
+  BookOpen,
+  Building2,
+  Check,
+  Save,
+  GraduationCap,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface TutorDialogProps {
   open: boolean;
@@ -32,6 +55,11 @@ export function TutorDialog({
 }: TutorDialogProps) {
   const { data: subjects } = useSubjects();
   const { data: branches } = useBranches();
+  const { branches: admissionBranches } = useBranchesForAdmission();
+  const { years: academicYears } = useAcademicYearsForAdmission();
+  const { batches } = useBatches();
+  const { courses } = useCourses();
+  const { data: branchCourses = [] } = useBranchCourses();
 
   const {
     register,
@@ -57,16 +85,31 @@ export function TutorDialog({
       createLogin: undefined,
       subjectIds: undefined,
       branchIds: undefined,
+      academicYearId: '',
+      branchId: '',
+      courseId: '',
+      batchId: '',
     },
   });
 
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
   const createLogin = watch('createLogin');
+  const academicYearId = watch('academicYearId');
+  const selectedCourseId = watch('courseId');
+  const selectedBatchId = watch('batchId');
+
+  const { data: courseSubjects = [] } = useCourseSubjects(selectedCourseId || '', {
+    enabled: !!selectedCourseId,
+  });
 
   useEffect(() => {
     register('subjectIds');
     register('branchIds');
+    register('academicYearId');
+    register('branchId');
+    register('courseId');
+    register('batchId');
   }, [register]);
 
   useEffect(() => {
@@ -90,6 +133,10 @@ export function TutorDialog({
         createLogin: tutor.createdLogin || undefined,
         subjectIds,
         branchIds,
+        academicYearId: '',
+        branchId: '',
+        courseId: '',
+        batchId: '',
       });
     } else {
       setSelectedSubjectIds([]);
@@ -109,6 +156,10 @@ export function TutorDialog({
         createLogin: undefined,
         subjectIds: undefined,
         branchIds: undefined,
+        academicYearId: '',
+        branchId: '',
+        courseId: '',
+        batchId: '',
       });
     }
   }, [tutor, reset, open]);
@@ -128,6 +179,37 @@ export function TutorDialog({
     setSelectedBranchIds(next);
     setValue('branchIds', next);
   };
+
+  const selectedBranchId = watch('branchId');
+
+  const filteredBranches = academicYearId
+    ? (admissionBranches ?? []).filter((b: any) =>
+        branchCourses.some(
+          (bc: any) => bc.branchId === b.id && bc.academicYearId === academicYearId,
+        ),
+      )
+    : [];
+
+  const filteredCourses =
+    academicYearId && selectedBranchId
+      ? (courses ?? []).filter((c: any) =>
+          branchCourses.some(
+            (bc: any) =>
+              bc.courseId === c.id &&
+              bc.branchId === selectedBranchId &&
+              bc.academicYearId === academicYearId,
+          ),
+        )
+      : [];
+
+  const courseSubjectIds = courseSubjects.map((cs: any) => cs.subjectId);
+  const filteredSubjects = selectedCourseId
+    ? (subjects ?? []).filter((s: any) => courseSubjectIds.includes(s.id))
+    : (subjects ?? []);
+
+  const filteredBatches = selectedCourseId
+    ? (batches ?? []).filter((b: any) => b.courseId === selectedCourseId)
+    : [];
 
   const onFormSubmit = async (data: CreateTutorInput) => {
     await onSubmit({
@@ -375,7 +457,120 @@ export function TutorDialog({
           </CardContent>
         </Card>
 
-        {/* SECTION 3: Teaching Assignments */}
+        {/* SECTION 3: Batch Assignment */}
+        <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
+          <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm sm:text-base font-semibold">Batch Assignment</CardTitle>
+            </div>
+            <CardDescription className="text-xs text-muted-foreground">
+              Assign the tutor to a specific academic year, branch, course, and batch
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              {/* Academic Year */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Academic Year</Label>
+                <Select
+                  value={academicYearId || ''}
+                  onValueChange={(val) => {
+                    setValue('academicYearId', val);
+                    setValue('branchId', '');
+                    setValue('courseId', '');
+                    setValue('batchId', '');
+                  }}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
+                    <SelectValue placeholder="Select academic year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(academicYears ?? []).map((year: any) => (
+                      <SelectItem key={year.id} value={year.id}>
+                        {year.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Branch */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Branch</Label>
+                <Select
+                  value={selectedBranchId || ''}
+                  onValueChange={(val) => {
+                    setValue('branchId', val);
+                    setValue('courseId', '');
+                    setValue('batchId', '');
+                  }}
+                  disabled={!academicYearId}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
+                    <SelectValue placeholder="Select branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredBranches.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+              {/* Course */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Course</Label>
+                <Select
+                  value={selectedCourseId || ''}
+                  onValueChange={(val) => {
+                    setValue('courseId', val);
+                    setValue('batchId', '');
+                  }}
+                  disabled={!selectedBranchId}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
+                    <SelectValue placeholder="Select course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredCourses.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Batch</Label>
+                <Select
+                  value={selectedBatchId || ''}
+                  onValueChange={(val) => setValue('batchId', val)}
+                  disabled={!selectedCourseId}
+                >
+                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
+                    <SelectValue placeholder="Select batch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredBatches.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SECTION 4: Teaching Assignments */}
         <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
           <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
             <div className="flex items-center gap-2">
@@ -389,75 +584,47 @@ export function TutorDialog({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-6">
-            <div className="space-y-3">
-              <Label className="text-xs font-semibold">Subjects this tutor can teach</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(subjects ?? []).map((s: any) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggleSubject(s.id)}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
-                      selectedSubjectIds.includes(s.id)
-                        ? 'border-primary/50 bg-primary/5 text-primary'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
-                    )}
-                  >
-                    <div
+            {selectedCourseId ? (
+              <div className="space-y-3">
+                <Label className="text-xs font-semibold">Subjects this tutor can teach</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {filteredSubjects.map((s: any) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => toggleSubject(s.id)}
                       className={cn(
-                        'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                        'flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
                         selectedSubjectIds.includes(s.id)
-                          ? 'border-primary bg-primary'
-                          : 'border-gray-300',
+                          ? 'border-primary/50 bg-primary/5 text-primary'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
                       )}
                     >
-                      {selectedSubjectIds.includes(s.id) && (
-                        <Check className="h-3 w-3 text-white" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{s.name}</p>
-                      <p className="text-[10px] text-gray-400">{s.code}</p>
-                    </div>
-                  </button>
-                ))}
+                      <div
+                        className={cn(
+                          'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                          selectedSubjectIds.includes(s.id)
+                            ? 'border-primary bg-primary'
+                            : 'border-gray-300',
+                        )}
+                      >
+                        {selectedSubjectIds.includes(s.id) && (
+                          <Check className="h-3 w-3 text-white" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{s.name}</p>
+                        <p className="text-[10px] text-gray-400">{s.code}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-xs font-semibold">Assigned Branches</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(branches ?? []).map((b: any) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => toggleBranch(b.id)}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
-                      selectedBranchIds.includes(b.id)
-                        ? 'border-primary/50 bg-primary/5 text-primary'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
-                        selectedBranchIds.includes(b.id)
-                          ? 'border-primary bg-primary'
-                          : 'border-gray-300',
-                      )}
-                    >
-                      {selectedBranchIds.includes(b.id) && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{b.name}</p>
-                      <p className="text-[10px] text-gray-400">{b.code}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Select a course in Batch Assignment above to see subjects
+              </p>
+            )}
           </CardContent>
         </Card>
 

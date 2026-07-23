@@ -42,6 +42,10 @@ export interface CreateTutorInput {
   createLogin?: boolean;
   subjectIds?: string[];
   branchIds?: string[];
+  academicYearId?: string;
+  branchId?: string;
+  courseId?: string;
+  batchId?: string;
 }
 
 export interface UpdateTutorInput extends Partial<CreateTutorInput> {}
