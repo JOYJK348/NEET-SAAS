@@ -48,7 +48,27 @@ export default function TutorsPage() {
   const toggleMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       tutorService.update(id, { status }),
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      const key = tutorService.keys.all;
+      await queryClient.cancelQueries({ queryKey: key });
+      const queries = queryClient.getQueriesData({ queryKey: key });
+      queryClient.setQueriesData({ queryKey: key }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((t: any) => (t.id === id ? { ...t, status } : t)),
+        };
+      });
+      return { previous: queries };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        for (const [qKey, qData] of context.previous) {
+          queryClient.setQueryData(qKey, qData);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: tutorService.keys.all });
     },
   });
@@ -251,15 +271,17 @@ export default function TutorsPage() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <Switch
-                              checked={tutor.status === 'ACTIVE'}
-                              onCheckedChange={() =>
-                                toggleMutation.mutate({
-                                  id: tutor.id,
-                                  status: tutor.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-                                })
-                              }
-                            />
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Switch
+                                checked={tutor.status === 'ACTIVE'}
+                                onCheckedChange={() =>
+                                  toggleMutation.mutate({
+                                    id: tutor.id,
+                                    status: tutor.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+                                  })
+                                }
+                              />
+                            </div>
                             <span
                               className={cn(
                                 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold',
