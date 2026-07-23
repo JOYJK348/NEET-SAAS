@@ -115,7 +115,15 @@ function CreateBatchContent() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast({
+            title: 'Validation Error',
+            description: 'Please fix the highlighted fields before submitting.',
+            variant: 'destructive',
+          });
+        })}
+      >
         <BatchFormLayout title="Batch Details" description="Fill in the batch information below">
           <div className="space-y-6">
             {/* Code & Name */}
