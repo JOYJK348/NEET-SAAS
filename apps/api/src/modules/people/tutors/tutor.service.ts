@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { hashSync } from 'bcrypt';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
-import { paginate } from '../../../common/utils/prisma-paginator';
+import { paginateAndMap } from '../../../common/utils/prisma-paginator';
 import type { PaginatedResult } from '../../../common/dto/query-params.dto';
 import { CreateTutorDto } from './dto/create-tutor.dto';
 import { UpdateTutorDto } from './dto/update-tutor.dto';
@@ -187,25 +187,28 @@ export class TutorService {
       }
     }
 
-    return paginate({
-      model: this.prisma.users,
-      where,
-      orderBy: { createdAt: 'desc' },
-      query: { page: query.page, limit: query.limit },
-      tenantId,
-      include: {
-        staff_profiless: {
-          include: {
-            staff_subjectss: { where: { deletedAt: null } },
-            staff_departmentss: { where: { deletedAt: null } },
-            staff_qualificationss: { where: { deletedAt: null }, take: 1 },
-            staff_batch_assignmentss: {
-              where: { deletedAt: null, isActive: true },
+    return paginateAndMap(
+      this.prisma.users,
+      {
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          staff_profiless: {
+            include: {
+              staff_subjectss: { where: { deletedAt: null } },
+              staff_departmentss: { where: { deletedAt: null } },
+              staff_qualificationss: { where: { deletedAt: null }, take: 1 },
+              staff_batch_assignmentss: {
+                where: { deletedAt: null, isActive: true },
+              },
             },
           },
         },
       },
-    });
+      query,
+      tenantId,
+      (user) => this.formatTutor(user),
+    );
   }
 
   async findOne(id: string, tenantId: string) {
