@@ -89,4 +89,9 @@ export class UpdateTutorDto {
   @IsArray()
   @IsUUID('loose', { each: true })
   branchIds?: string[];
+
+  @ApiPropertyOptional({ example: 'ACTIVE' })
+  @IsOptional()
+  @IsString()
+  status?: string;
 }

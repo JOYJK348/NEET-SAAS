@@ -48,7 +48,9 @@ export interface CreateTutorInput {
   batchId?: string;
 }
 
-export interface UpdateTutorInput extends Partial<CreateTutorInput> {}
+export interface UpdateTutorInput extends Partial<CreateTutorInput> {
+  status?: string;
+}
 
 export interface TutorFilters {
   search?: string;

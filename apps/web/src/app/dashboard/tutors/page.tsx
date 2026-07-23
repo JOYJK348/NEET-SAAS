@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Users, BookOpen, MapPin, RefreshCw } from 'lucide-react';
 import { useTutors, useSubjects, useBranches } from '@/features/tutors/hooks/use-tutors';
+import { tutorService } from '@/features/tutors/services/tutor-service';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -34,6 +37,21 @@ export default function TutorsPage() {
   });
   const { data: subjects } = useSubjects();
   const { data: branches } = useBranches();
+  const queryClient = useQueryClient();
+
+  const subjectMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (subjects ?? []).forEach((s: any) => map.set(s.id, s.name));
+    return map;
+  }, [subjects]);
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      tutorService.update(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tutorService.keys.all });
+    },
+  });
 
   const tutors = data?.data ?? [];
   const meta = data?.meta;
@@ -213,7 +231,7 @@ export default function TutorsPage() {
                                   variant="secondary"
                                   className="text-[9px] px-1.5 py-0"
                                 >
-                                  {s.id?.substring(0, 8) || 'Subject'}
+                                  {subjectMap.get(s.subjectId) || 'Subject'}
                                 </Badge>
                               ))
                             ) : (
@@ -232,14 +250,25 @@ export default function TutorsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span
-                            className={cn(
-                              'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold',
-                              cfg.color,
-                            )}
-                          >
-                            {cfg.label}
-                          </span>
+                          <div className="flex items-center justify-center gap-2">
+                            <Switch
+                              checked={tutor.status === 'ACTIVE'}
+                              onCheckedChange={() =>
+                                toggleMutation.mutate({
+                                  id: tutor.id,
+                                  status: tutor.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+                                })
+                              }
+                            />
+                            <span
+                              className={cn(
+                                'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold',
+                                cfg.color,
+                              )}
+                            >
+                              {cfg.label}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button

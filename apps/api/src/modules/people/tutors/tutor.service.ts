@@ -265,6 +265,7 @@ export class TutorService {
       if (dto.firstName) userUpdate.firstName = dto.firstName;
       if (dto.lastName) userUpdate.lastName = dto.lastName;
       if (dto.email) userUpdate.email = dto.email;
+      if (dto.status) userUpdate.status = dto.status;
       if (Object.keys(userUpdate).length > 1) {
         await tx.users.update({
           where: { tenantId_id: { tenantId, id } },
