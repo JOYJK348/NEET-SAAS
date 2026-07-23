@@ -8,6 +8,7 @@ interface BatchListProps {
   onView: (id: string) => void;
   onEdit?: (batch: BatchListItem) => void;
   onStatusChange?: (batch: BatchListItem, status: BatchStatus) => void;
+  onToggleStatus?: (id: string, isActive: boolean) => void;
   onPrefetch?: (id: string) => void;
   isLoading?: boolean;
 }
@@ -17,6 +18,7 @@ export function BatchList({
   onView,
   onEdit,
   onStatusChange,
+  onToggleStatus,
   onPrefetch,
   isLoading = false,
 }: BatchListProps) {
@@ -63,6 +65,7 @@ export function BatchList({
           onView={onView}
           onEdit={onEdit}
           onStatusChange={onStatusChange}
+          onToggleStatus={onToggleStatus}
           onPrefetch={onPrefetch}
         />
       ))}

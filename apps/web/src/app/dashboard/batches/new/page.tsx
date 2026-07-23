@@ -49,6 +49,7 @@ function CreateBatchContent() {
     handleSubmit,
     control,
     setValue,
+    setError,
     watch,
     formState: { errors },
   } = useForm<BatchFormData>({
@@ -59,6 +60,19 @@ function CreateBatchContent() {
   const onSubmit = useCallback(
     async (data: BatchFormData) => {
       try {
+        let formattedStartDate = data.startDate;
+        let formattedEndDate = data.endDate;
+
+        // If the date is in DD-MM-YYYY format, convert to YYYY-MM-DD
+        if (formattedStartDate.includes('-') && formattedStartDate.split('-')[0].length === 2) {
+          const parts = formattedStartDate.split('-');
+          formattedStartDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        if (formattedEndDate.includes('-') && formattedEndDate.split('-')[0].length === 2) {
+          const parts = formattedEndDate.split('-');
+          formattedEndDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
         const result = await createBatch({
           code: data.code,
           name: data.name,
@@ -68,9 +82,11 @@ function CreateBatchContent() {
           academicYearId: data.academicYearId,
           deliveryTypeId: data.deliveryTypeId,
           maxStudents: data.maxStudents,
-          startDate: data.startDate,
-          endDate: data.endDate,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
           allowNewAdmissions: data.allowNewAdmissions,
+          startTime: data.startTime || undefined,
+          endTime: data.endTime || undefined,
         });
 
         if (result) {
@@ -87,15 +103,35 @@ function CreateBatchContent() {
           });
         }
       } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Failed to create batch';
-        toast({
-          title: 'Batch Creation Failed',
-          description: Array.isArray(msg) ? msg.join('. ') : msg,
-          variant: 'destructive',
-        });
+        const responseData = err.response?.data;
+        const msg = responseData?.message || err.message || 'Failed to create batch';
+        const apiErrors = responseData?.errors;
+
+        if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+          apiErrors.forEach((apiErr: { field?: string; message: string }) => {
+            if (apiErr.field) {
+              setError(apiErr.field as any, {
+                type: 'server',
+                message: apiErr.message,
+              });
+            }
+          });
+
+          toast({
+            title: 'Batch Creation Failed',
+            description: apiErrors.map((e) => e.message).join('. '),
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Batch Creation Failed',
+            description: Array.isArray(msg) ? msg.join('. ') : msg,
+            variant: 'destructive',
+          });
+        }
       }
     },
-    [createBatch, router],
+    [createBatch, setError, router],
   );
 
   return (

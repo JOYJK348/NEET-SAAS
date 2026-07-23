@@ -90,6 +90,12 @@ export class UpdateTutorDto {
   @IsUUID('loose', { each: true })
   branchIds?: string[];
 
+  @ApiPropertyOptional({ example: ['batch-uuid-1'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  batchIds?: string[];
+
   @ApiPropertyOptional({ example: 'ACTIVE' })
   @IsOptional()
   @IsString()

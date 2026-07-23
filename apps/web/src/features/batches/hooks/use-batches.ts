@@ -205,14 +205,46 @@ export function useUpdateBatch(): UseUpdateBatchReturn {
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: (input: UpdateBatchInput) => batchService.updateBatch(input),
+    onMutate: async (newBatch) => {
+      await queryClient.cancelQueries({ queryKey: batchServiceKeys.lists() });
+
+      const previousBatchesQueries = queryClient.getQueriesData<any>({
+        queryKey: batchServiceKeys.lists(),
+      });
+
+      queryClient.setQueriesData<any>({ queryKey: batchServiceKeys.lists() }, (old: any) => {
+        if (!old || !old.data) return old;
+        return {
+          ...old,
+          data: old.data.map((b: any) =>
+            b.id === newBatch.id
+              ? {
+                  ...b,
+                  ...(newBatch.isActive !== undefined ? { isActive: newBatch.isActive } : {}),
+                  ...(newBatch.status !== undefined ? { status: newBatch.status } : {}),
+                }
+              : b,
+          ),
+        };
+      });
+
+      return { previousBatchesQueries };
+    },
+    onError: (err, _newBatch, context: any) => {
+      setError(err instanceof Error ? err.message : 'Failed to update batch');
+      if (context?.previousBatchesQueries) {
+        context.previousBatchesQueries.forEach(([queryKey, value]: any) => {
+          queryClient.setQueryData(queryKey, value);
+        });
+      }
+    },
     onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: batchServiceKeys.detail(input.id) });
       queryClient.invalidateQueries({ queryKey: batchServiceKeys.timeline(input.id) });
-      queryClient.invalidateQueries({ queryKey: batchServiceKeys.lists() });
       queryClient.invalidateQueries({ queryKey: batchServiceKeys.stats() });
     },
-    onError: (err) => {
-      setError(err instanceof Error ? err.message : 'Failed to update batch');
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.lists() });
     },
   });
 
@@ -439,4 +471,47 @@ export function usePrefetchBatchDetail() {
     },
     [queryClient],
   );
+}
+
+export function useEnrollStudent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ admissionId, batchId }: { admissionId: string; batchId: string }) =>
+      batchService.enrollStudent(admissionId, batchId),
+    onSuccess: (_, { batchId }) => {
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.students(batchId) });
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.detail(batchId) });
+    },
+  });
+}
+
+export function useAssignStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      batchId,
+      staffProfileId,
+      subjectId,
+    }: {
+      batchId: string;
+      staffProfileId: string;
+      subjectId: string;
+    }) => batchService.assignStaff(batchId, staffProfileId, subjectId),
+    onSuccess: (_, { batchId }) => {
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.staff(batchId) });
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.detail(batchId) });
+    },
+  });
+}
+
+export function useUnassignStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ batchId, assignmentId }: { batchId: string; assignmentId: string }) =>
+      batchService.unassignStaff(batchId, assignmentId),
+    onSuccess: (_, { batchId }) => {
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.staff(batchId) });
+      queryClient.invalidateQueries({ queryKey: batchServiceKeys.detail(batchId) });
+    },
+  });
 }

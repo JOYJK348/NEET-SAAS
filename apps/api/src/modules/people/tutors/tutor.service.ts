@@ -117,20 +117,73 @@ export class TutorService {
 
       if (dto.branchIds && dto.branchIds.length > 0) {
         for (const branchId of dto.branchIds) {
-          await tx.staffDepartments
-            .create({
-              data: {
-                staffProfileId: user.id,
-                branchId,
-                departmentId: '',
+          const deptId = randomUUID();
+          await tx.$executeRaw`
+            INSERT INTO public."StaffDepartments" ("staffProfileId", "branchId", "departmentId", "tenantId", "createdBy", "updatedBy")
+            VALUES (${user.id}::uuid, ${branchId}::uuid, ${deptId}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
+            ON CONFLICT ("staffProfileId", "branchId", "departmentId") DO UPDATE SET "deletedAt" = NULL, "updatedAt" = now(), "updatedBy" = ${userId}::uuid
+          `;
+        }
+      }
+
+      if (dto.batchIds && dto.batchIds.length > 0) {
+        for (const batchId of dto.batchIds) {
+          const batch = await tx.batches.findFirst({
+            where: { id: batchId, tenantId },
+            select: { courseId: true },
+          });
+
+          let assignedSubjectId: string | null = null;
+
+          if (batch?.courseId) {
+            const tutorCourseSubject = await tx.courseSubjects.findFirst({
+              where: {
                 tenantId,
-                createdBy: userId,
-                updatedBy: userId,
+                courseId: batch.courseId,
+                subjectId: { in: dto.subjectIds || [] },
               },
-            })
-            .catch(() => {
-              // ON CONFLICT DO NOTHING equivalent
+              select: { subjectId: true },
             });
+            if (tutorCourseSubject) {
+              assignedSubjectId = tutorCourseSubject.subjectId;
+            } else {
+              const fallbackCourseSubject = await tx.courseSubjects.findFirst({
+                where: { tenantId, courseId: batch.courseId },
+                select: { subjectId: true },
+              });
+              if (fallbackCourseSubject) {
+                assignedSubjectId = fallbackCourseSubject.subjectId;
+              }
+            }
+          }
+
+          if (
+            !assignedSubjectId &&
+            dto.subjectIds &&
+            dto.subjectIds.length > 0
+          ) {
+            assignedSubjectId = dto.subjectIds[0];
+          }
+
+          if (assignedSubjectId) {
+            await tx.staffBatchAssignments
+              .create({
+                data: {
+                  staffProfileId: user.id,
+                  batchId,
+                  subjectId: assignedSubjectId,
+                  tenantId,
+                  effectiveFrom: new Date(),
+                  effectiveTo: new Date('2099-12-31'),
+                  isActive: true,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              })
+              .catch(() => {
+                // Ignore conflict
+              });
+          }
         }
       }
 
@@ -323,9 +376,9 @@ export class TutorService {
         });
         for (const subjectId of dto.subjectIds) {
           await tx.$executeRaw`
-            INSERT INTO public.staff_subjects (staff_profile_id, subject_id, tenant_id, created_by, updated_by)
+            INSERT INTO public."StaffSubjects" ("staffProfileId", "subjectId", "tenantId", "createdBy", "updatedBy")
             VALUES (${id}::uuid, ${subjectId}::uuid, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
-            ON CONFLICT (staff_profile_id, subject_id) DO UPDATE SET deleted_at = NULL, updated_at = now(), updated_by = ${userId}::uuid
+            ON CONFLICT ("staffProfileId", "subjectId") DO UPDATE SET "deletedAt" = NULL, "updatedAt" = now(), "updatedBy" = ${userId}::uuid
           `;
         }
       }
@@ -337,11 +390,90 @@ export class TutorService {
           data: { deletedAt: now, deletedBy: userId },
         });
         for (const branchId of dto.branchIds) {
+          const deptId = randomUUID();
           await tx.$executeRaw`
-            INSERT INTO public.staff_departments (staff_profile_id, branch_id, department_id, tenant_id, created_by, updated_by)
-            VALUES (${id}::uuid, ${branchId}::uuid, ${null}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
-            ON CONFLICT (staff_profile_id, branch_id, department_id) DO UPDATE SET deleted_at = NULL, updated_at = now(), updated_by = ${userId}::uuid
+            INSERT INTO public."StaffDepartments" ("staffProfileId", "branchId", "departmentId", "tenantId", "createdBy", "updatedBy")
+            VALUES (${id}::uuid, ${branchId}::uuid, ${deptId}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
+            ON CONFLICT ("staffProfileId", "branchId", "departmentId") DO UPDATE SET "deletedAt" = NULL, "updatedAt" = now(), "updatedBy" = ${userId}::uuid
           `;
+        }
+      }
+
+      // Update StaffBatchAssignments
+      if (dto.batchIds) {
+        await tx.staffBatchAssignments.updateMany({
+          where: { staffProfileId: id, tenantId },
+          data: { deletedAt: now, deletedBy: userId, isActive: false },
+        });
+
+        for (const batchId of dto.batchIds) {
+          const batch = await tx.batches.findFirst({
+            where: { id: batchId, tenantId },
+            select: { courseId: true },
+          });
+
+          let assignedSubjectId: string | null = null;
+
+          if (batch?.courseId) {
+            const tutorCourseSubject = await tx.courseSubjects.findFirst({
+              where: {
+                tenantId,
+                courseId: batch.courseId,
+                subjectId: {
+                  in:
+                    dto.subjectIds ||
+                    existing.subjects?.map((s: any) => s.subjectId) ||
+                    [],
+                },
+              },
+              select: { subjectId: true },
+            });
+            if (tutorCourseSubject) {
+              assignedSubjectId = tutorCourseSubject.subjectId;
+            } else {
+              const fallbackCourseSubject = await tx.courseSubjects.findFirst({
+                where: { tenantId, courseId: batch.courseId },
+                select: { subjectId: true },
+              });
+              if (fallbackCourseSubject) {
+                assignedSubjectId = fallbackCourseSubject.subjectId;
+              }
+            }
+          }
+
+          if (
+            !assignedSubjectId &&
+            dto.subjectIds &&
+            dto.subjectIds.length > 0
+          ) {
+            assignedSubjectId = dto.subjectIds[0];
+          } else if (
+            !assignedSubjectId &&
+            existing.subjects &&
+            existing.subjects.length > 0
+          ) {
+            assignedSubjectId = existing.subjects[0].subjectId;
+          }
+
+          if (assignedSubjectId) {
+            await tx.staffBatchAssignments
+              .create({
+                data: {
+                  staffProfileId: id,
+                  batchId,
+                  subjectId: assignedSubjectId,
+                  tenantId,
+                  effectiveFrom: new Date(),
+                  effectiveTo: new Date('2099-12-31'),
+                  isActive: true,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              })
+              .catch(() => {
+                // Ignore conflict
+              });
+          }
         }
       }
     });

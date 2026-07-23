@@ -23,6 +23,7 @@ import {
   useBranchesForBatch,
   useDeliveryTypes,
   usePrefetchBatchDetail,
+  useUpdateBatch,
 } from '@/features/batches/hooks/use-batches';
 import { BatchTable } from '@/features/batches/components/BatchTable';
 import { BatchList } from '@/features/batches/components/BatchList';
@@ -59,6 +60,7 @@ function BatchesContent() {
   const { branches } = useBranchesForBatch();
   const { deliveryTypes } = useDeliveryTypes();
   const prefetchBatch = usePrefetchBatchDetail();
+  const { updateBatch } = useUpdateBatch();
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -68,6 +70,30 @@ function BatchesContent() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleToggleStatus = useCallback(
+    async (id: string, currentActive: boolean) => {
+      try {
+        const result = await updateBatch({
+          id,
+          isActive: !currentActive,
+        });
+        if (result) {
+          toast({
+            title: 'Success',
+            description: `Batch status updated to ${!currentActive ? 'Active' : 'Inactive'}.`,
+          });
+        }
+      } catch (err: any) {
+        toast({
+          title: 'Error',
+          description: err.message || 'Failed to update status',
+          variant: 'destructive',
+        });
+      }
+    },
+    [updateBatch],
+  );
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -254,9 +280,19 @@ function BatchesContent() {
           />
         </Card>
       ) : isMobile ? (
-        <BatchList batches={batches} onView={handleView} onPrefetch={prefetchBatch} />
+        <BatchList
+          batches={batches}
+          onView={handleView}
+          onToggleStatus={handleToggleStatus}
+          onPrefetch={prefetchBatch}
+        />
       ) : (
-        <BatchTable batches={batches} onView={handleView} onPrefetch={prefetchBatch} />
+        <BatchTable
+          batches={batches}
+          onView={handleView}
+          onToggleStatus={handleToggleStatus}
+          onPrefetch={prefetchBatch}
+        />
       )}
 
       {/* Pagination */}

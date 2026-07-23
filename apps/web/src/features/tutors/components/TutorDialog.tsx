@@ -94,10 +94,10 @@ export function TutorDialog({
 
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([]);
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const createLogin = watch('createLogin');
   const academicYearId = watch('academicYearId');
   const selectedCourseId = watch('courseId');
-  const selectedBatchId = watch('batchId');
 
   const { data: courseSubjects = [] } = useCourseSubjects(selectedCourseId || '', {
     enabled: !!selectedCourseId,
@@ -109,15 +109,17 @@ export function TutorDialog({
     register('academicYearId');
     register('branchId');
     register('courseId');
-    register('batchId');
+    register('batchIds' as any);
   }, [register]);
 
   useEffect(() => {
     if (tutor) {
       const subjectIds = tutor.subjects?.map((s) => s.subjectId) || [];
       const branchIds = tutor.branches?.map((b) => b.branchId) || [];
+      const batchIds = tutor.batchAssignments?.map((b) => b.batchId) || [];
       setSelectedSubjectIds(subjectIds);
       setSelectedBranchIds(branchIds);
+      setSelectedBatchIds(batchIds);
       reset({
         firstName: tutor.firstName,
         lastName: tutor.lastName,
@@ -137,10 +139,12 @@ export function TutorDialog({
         branchId: '',
         courseId: '',
         batchId: '',
-      });
+        batchIds,
+      } as any);
     } else {
       setSelectedSubjectIds([]);
       setSelectedBranchIds([]);
+      setSelectedBatchIds([]);
       reset({
         firstName: '',
         lastName: '',
@@ -160,7 +164,8 @@ export function TutorDialog({
         branchId: '',
         courseId: '',
         batchId: '',
-      });
+        batchIds: [],
+      } as any);
     }
   }, [tutor, reset, open]);
 
@@ -170,6 +175,14 @@ export function TutorDialog({
       : [...selectedSubjectIds, id];
     setSelectedSubjectIds(next);
     setValue('subjectIds', next);
+  };
+
+  const toggleBatch = (id: string) => {
+    const next = selectedBatchIds.includes(id)
+      ? selectedBatchIds.filter((b) => b !== id)
+      : [...selectedBatchIds, id];
+    setSelectedBatchIds(next);
+    setValue('batchIds' as any, next);
   };
 
   const toggleBranch = (id: string) => {
@@ -212,10 +225,14 @@ export function TutorDialog({
     : [];
 
   const onFormSubmit = async (data: CreateTutorInput) => {
+    // Destructure and omit UI-only variables that are not expected by the backend DTO
+    const { academicYearId, branchId, courseId, batchId, ...submitData } = data as any;
+
     await onSubmit({
-      ...data,
+      ...submitData,
       subjectIds: selectedSubjectIds.length > 0 ? selectedSubjectIds : undefined,
       branchIds: selectedBranchIds.length > 0 ? selectedBranchIds : undefined,
+      batchIds: selectedBatchIds.length > 0 ? selectedBatchIds : undefined,
     });
     onOpenChange(false);
   };
@@ -504,6 +521,8 @@ export function TutorDialog({
                     setValue('branchId', val);
                     setValue('courseId', '');
                     setValue('batchId', '');
+                    setSelectedBranchIds([val]);
+                    setValue('branchIds', [val]);
                   }}
                   disabled={!academicYearId}
                 >
@@ -521,7 +540,7 @@ export function TutorDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="space-y-4 pt-2">
               {/* Course */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Course</Label>
@@ -529,7 +548,8 @@ export function TutorDialog({
                   value={selectedCourseId || ''}
                   onValueChange={(val) => {
                     setValue('courseId', val);
-                    setValue('batchId', '');
+                    setValue('batchIds' as any, []);
+                    setSelectedBatchIds([]);
                   }}
                   disabled={!selectedBranchId}
                 >
@@ -546,25 +566,55 @@ export function TutorDialog({
                 </Select>
               </div>
 
-              {/* Batch */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Batch</Label>
-                <Select
-                  value={selectedBatchId || ''}
-                  onValueChange={(val) => setValue('batchId', val)}
-                  disabled={!selectedCourseId}
-                >
-                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
-                    <SelectValue placeholder="Select batch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredBatches.map((b: any) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Batches Selection (Multi-Select Grid) */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold">Assigned Batches (Select Multiple)</Label>
+                {selectedCourseId ? (
+                  filteredBatches.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-1">
+                      {filteredBatches.map((b: any) => (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => toggleBatch(b.id)}
+                          className={cn(
+                            'flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all',
+                            selectedBatchIds.includes(b.id)
+                              ? 'border-primary/50 bg-primary/5 text-primary shadow-2xs'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                              selectedBatchIds.includes(b.id)
+                                ? 'border-primary bg-primary'
+                                : 'border-gray-300',
+                            )}
+                          >
+                            {selectedBatchIds.includes(b.id) && (
+                              <Check className="h-3 w-3 text-white stroke-[3]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold truncate text-gray-900 dark:text-white">
+                              {b.name}
+                            </p>
+                            <p className="text-[10px] text-gray-400 font-mono mt-0.5">{b.code}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4 bg-muted/10 border border-dashed rounded-xl">
+                      No active batches found for this course.
+                    </p>
+                  )
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-4 bg-muted/20 border border-dashed rounded-xl">
+                    Select a course first to view and assign batches.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>

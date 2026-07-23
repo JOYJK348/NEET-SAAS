@@ -431,7 +431,7 @@ export class BatchService {
 
     const total = batches.length;
     const planned = batches.filter((b) => b.status === 'PLANNED').length;
-    const active = batches.filter((b) => b.status === 'ACTIVE').length;
+    const active = batches.filter((b) => b.isActive).length;
     const completed = batches.filter((b) => b.status === 'COMPLETED').length;
     const cancelled = batches.filter((b) => b.status === 'CANCELLED').length;
     const archived = batches.filter((b) => b.status === 'ARCHIVED').length;
@@ -563,6 +563,52 @@ export class BatchService {
           isActive: ass.isActive,
         };
       }),
+    );
+  }
+
+  async assignStaff(
+    batchId: string,
+    dto: { staffProfileId: string; subjectId: string },
+    tenantId: string,
+    userId: string,
+  ) {
+    const batch = await this.prisma.batches.findFirst({
+      where: { id: batchId, tenantId, deletedAt: null },
+    });
+    if (!batch) throw new NotFoundException('Batch not found');
+
+    const created = await this.prisma.staffBatchAssignments.create({
+      data: {
+        staffProfileId: dto.staffProfileId,
+        batchId,
+        subjectId: dto.subjectId,
+        tenantId,
+        effectiveFrom: new Date(),
+        effectiveTo: new Date('2099-12-31'),
+        isActive: true,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+    });
+    return created;
+  }
+
+  async unassignStaff(
+    batchId: string,
+    assignmentId: string,
+    tenantId: string,
+    userId: string,
+  ) {
+    const assignment = await this.prisma.staffBatchAssignments.findFirst({
+      where: { id: assignmentId, batchId, tenantId, deletedAt: null },
+    });
+    if (!assignment) throw new NotFoundException('Staff assignment not found');
+
+    await this.tenantScoped.softDelete(
+      this.prisma.staffBatchAssignments,
+      assignmentId,
+      tenantId,
+      userId,
     );
   }
 

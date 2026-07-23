@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import type { BatchListItem } from '@/features/batches/types/batch';
 import { VALID_TRANSITIONS, BATCH_STATUS_LABELS } from '@/features/batches/types/batch';
 
@@ -21,10 +22,18 @@ interface BatchCardProps {
   onView?: (id: string) => void;
   onEdit?: (batch: BatchListItem) => void;
   onStatusChange?: (batch: BatchListItem, status: BatchStatus) => void;
+  onToggleStatus?: (id: string, isActive: boolean) => void;
   onPrefetch?: (id: string) => void;
 }
 
-export function BatchCard({ batch, onView, onEdit, onStatusChange, onPrefetch }: BatchCardProps) {
+export function BatchCard({
+  batch,
+  onView,
+  onEdit,
+  onStatusChange,
+  onToggleStatus,
+  onPrefetch,
+}: BatchCardProps) {
   const formatDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'MMM dd, yyyy');
@@ -46,7 +55,38 @@ export function BatchCard({ batch, onView, onEdit, onStatusChange, onPrefetch }:
             <h3 className="font-semibold text-gray-900 dark:text-white truncate">{batch.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{batch.code}</p>
           </div>
-          <BatchStatusBadge status={batch.status} />
+          <div className="flex flex-col items-end gap-1.5">
+            <BatchStatusBadge status={batch.status} />
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleStatus?.(batch.id, batch.isActive);
+                }}
+                className={cn(
+                  'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-none',
+                  batch.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+                )}
+                title="Toggle active status"
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                    batch.isActive ? 'translate-x-3' : 'translate-x-0',
+                  )}
+                />
+              </button>
+              <span
+                className={cn(
+                  'text-[9px] font-bold uppercase tracking-wider',
+                  batch.isActive ? 'text-emerald-600' : 'text-gray-500',
+                )}
+              >
+                {batch.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
         </div>
 
         <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">

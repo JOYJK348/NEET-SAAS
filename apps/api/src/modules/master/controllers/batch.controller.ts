@@ -111,6 +111,31 @@ export class BatchController {
     return this.batchService.update(id, dto, user.tenantId!, user.sub);
   }
 
+  @Post(':id/staff')
+  @ApiOperation({ summary: 'Assign staff to a batch' })
+  assignStaff(
+    @Param('id') id: string,
+    @Body() dto: { staffProfileId: string; subjectId: string },
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.batchService.assignStaff(id, dto, user.tenantId!, user.sub);
+  }
+
+  @Delete(':id/staff/:assignmentId')
+  @ApiOperation({ summary: 'Unassign staff from a batch' })
+  unassignStaff(
+    @Param('id') id: string,
+    @Param('assignmentId') assignmentId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.batchService.unassignStaff(
+      id,
+      assignmentId,
+      user.tenantId!,
+      user.sub,
+    );
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Soft-delete a batch' })
   @ApiResponse({ status: 204, description: 'Deleted' })

@@ -10,14 +10,17 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import type {
   AdmissionCourse,
   AdmissionBranch,
   AdmissionBatch,
+  AdmissionListItem,
 } from '@/features/admissions/types/admission';
+import { useCheckEnrollmentConflict } from '@/features/scheduling/hooks/use-schedules';
+import { ConflictResult } from '@/features/scheduling/types/schedule.types';
 
 interface EnrollCourseModalProps {
   open: boolean;
@@ -27,6 +30,7 @@ interface EnrollCourseModalProps {
   batches: AdmissionBatch[];
   years: { id: string; name: string }[];
   branchCourses?: { id: string; branchId: string; courseId: string; academicYearId: string }[];
+  activeEnrollments?: AdmissionListItem[];
   onConfirm: (data: {
     courseId: string;
     batchId: string;
@@ -38,6 +42,7 @@ interface EnrollCourseModalProps {
   isSubmitting?: boolean;
   onCourseChange: (courseId: string) => void;
   onBranchChange?: (branchId: string) => void;
+  studentProfileId?: string;
 }
 
 export function EnrollCourseModal({
@@ -48,10 +53,12 @@ export function EnrollCourseModal({
   batches,
   years,
   branchCourses = [],
+  activeEnrollments = [],
   onConfirm,
   isSubmitting = false,
   onCourseChange,
   onBranchChange,
+  studentProfileId,
 }: EnrollCourseModalProps) {
   const [courseId, setCourseId] = useState('');
   const [batchId, setBatchId] = useState('');
@@ -59,6 +66,23 @@ export function EnrollCourseModal({
   const [academicYearId, setAcademicYearId] = useState('');
   const [admissionDate, setAdmissionDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+  const [conflictResult, setConflictResult] = useState<ConflictResult | null>(null);
+
+  // Check if they are already mapped to this specific batch or course
+  const existingBatchMatch = activeEnrollments.find(
+    (e) => e.admissionStatus === 'ACTIVE' && e.batchId === batchId && batchId !== '',
+  );
+  const existingCourseMatch = activeEnrollments.find(
+    (e) => e.admissionStatus === 'ACTIVE' && e.courseId === courseId && courseId !== '',
+  );
+
+  const duplicateError = existingBatchMatch
+    ? `This student is already enrolled in batch: ${existingBatchMatch.batchName}`
+    : existingCourseMatch
+      ? `This student is already enrolled in course: ${existingCourseMatch.courseName}`
+      : null;
+
+  const { mutate: runCheck, isPending: checking } = useCheckEnrollmentConflict();
 
   // Reset form fields on dialog open/close
   const handleOpenChange = (isOpen: boolean) => {
@@ -68,6 +92,7 @@ export function EnrollCourseModal({
       setBranchId('');
       setAcademicYearId('');
       setNotes('');
+      setConflictResult(null);
     }
     onOpenChange(isOpen);
   };
@@ -92,6 +117,25 @@ export function EnrollCourseModal({
       onBranchChange(newBranchId);
     }
   };
+
+  // Run conflict check when batch selection is made
+  useEffect(() => {
+    if (open && batchId && studentProfileId) {
+      runCheck(
+        {
+          studentProfileId,
+          newBatchId: batchId,
+        },
+        {
+          onSuccess: (result) => {
+            setConflictResult(result);
+          },
+        },
+      );
+    } else {
+      setConflictResult(null);
+    }
+  }, [batchId, open, studentProfileId, runCheck]);
 
   // 1. Filter branches based on selected academic year mapping config in db
   const filteredBranches = branches.filter((branch) => {
@@ -131,6 +175,8 @@ export function EnrollCourseModal({
       notes,
     });
   };
+
+  const hasConflict = conflictResult?.hasConflict ?? false;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -236,26 +282,86 @@ export function EnrollCourseModal({
             />
           </div>
 
-          <DialogFooter className="gap-2 pt-2">
+          {/* Duplicate Course/Batch Warning */}
+          {duplicateError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                Already Mapped
+              </p>
+              <p className="text-[11px] font-semibold text-red-700/90 leading-relaxed">
+                {duplicateError}
+              </p>
+            </div>
+          )}
+
+          {/* Conflict status loader */}
+          {checking && (
+            <div className="flex items-center gap-2 py-1.5 text-xs text-slate-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Checking timetable compatibility...</span>
+            </div>
+          )}
+
+          {/* Conflict warnings */}
+          {!checking && !duplicateError && hasConflict && conflictResult && (
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                Timetable Conflict Warning
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-[11px] font-medium text-amber-700/90 pl-1">
+                {conflictResult.conflicts.map((c, i) => (
+                  <li key={i} className="leading-relaxed">
+                    {c.message}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-amber-600 font-semibold pt-1">
+                Enrolling the student into this batch will overlap with their existing timetable.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 pt-2 border-t border-slate-100 mt-2">
             <Button
               type="button"
               variant="outline"
               className="rounded-xl h-11"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || checking}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              className="rounded-xl h-11 text-white bg-purple-600 hover:bg-purple-700"
-              disabled={isSubmitting || !courseId || !batchId || !branchId || !academicYearId}
+              className={cn(
+                'rounded-xl h-11 text-white transition-all',
+                duplicateError
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : hasConflict
+                    ? 'bg-amber-600 hover:bg-amber-500'
+                    : 'bg-purple-600 hover:bg-purple-700',
+              )}
+              disabled={
+                isSubmitting ||
+                checking ||
+                !!duplicateError ||
+                !courseId ||
+                !batchId ||
+                !branchId ||
+                !academicYearId
+              }
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...
                 </>
+              ) : duplicateError ? (
+                'Already Enrolled'
+              ) : hasConflict ? (
+                'Enroll Anyway'
               ) : (
                 'Enroll Student'
               )}

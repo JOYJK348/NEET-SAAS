@@ -25,6 +25,7 @@ export interface Batch {
   startTime?: string;
   endTime?: string;
   allowNewAdmissions: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +50,7 @@ export interface BatchListItem {
   startTime?: string;
   endTime?: string;
   allowNewAdmissions: boolean;
+  isActive: boolean;
 }
 
 export interface BatchDeliveryType {
@@ -104,6 +106,7 @@ export interface CreateBatchInput {
 export interface UpdateBatchInput extends Partial<CreateBatchInput> {
   id: string;
   status?: BatchStatus;
+  isActive?: boolean;
 }
 
 export interface BatchStudentEnrollment {

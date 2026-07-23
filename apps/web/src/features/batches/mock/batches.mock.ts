@@ -272,6 +272,7 @@ function generateBatches(): Batch[] {
       startDate: b.startDate,
       endDate: b.endDate,
       allowNewAdmissions: b.status === 'ACTIVE' || b.status === 'PLANNED',
+      isActive: true,
       createdAt: new Date(now.getTime() - 86400000 * 365).toISOString(),
       updatedAt: new Date(now.getTime() - 86400000 * Math.floor(Math.random() * 30)).toISOString(),
     };
@@ -496,6 +497,7 @@ function toListItem(batch: Batch): BatchListItem {
     startDate: batch.startDate,
     endDate: batch.endDate,
     allowNewAdmissions: batch.allowNewAdmissions,
+    isActive: batch.isActive ?? true,
   };
 }
 
@@ -572,6 +574,7 @@ export const batchMockService = {
       startDate: input.startDate,
       endDate: input.endDate,
       allowNewAdmissions: input.allowNewAdmissions,
+      isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

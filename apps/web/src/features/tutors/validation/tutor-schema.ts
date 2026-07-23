@@ -19,6 +19,7 @@ export const tutorSchema = z.object({
   branchId: z.string().optional(),
   courseId: z.string().optional(),
   batchId: z.string().optional(),
+  batchIds: z.array(z.string()).optional(),
 });
 
 export type TutorFormData = z.infer<typeof tutorSchema>;

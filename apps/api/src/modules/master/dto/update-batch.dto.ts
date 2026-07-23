@@ -5,7 +5,6 @@ import {
   Min,
   Max,
   IsDateString,
-  IsUUID,
   IsOptional,
   IsEnum,
   MaxLength,
@@ -34,22 +33,22 @@ export class UpdateBatchDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   branchId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   courseId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   academicYearId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsString()
   deliveryTypeId?: string;
 
   @ApiPropertyOptional()
@@ -88,4 +87,9 @@ export class UpdateBatchDto {
   @IsOptional()
   @IsString()
   endTime?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

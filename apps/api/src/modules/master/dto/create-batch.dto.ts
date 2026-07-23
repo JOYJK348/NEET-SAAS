@@ -5,7 +5,6 @@ import {
   Min,
   Max,
   IsDateString,
-  IsUUID,
   IsOptional,
   MaxLength,
 } from 'class-validator';
@@ -28,19 +27,19 @@ export class CreateBatchDto {
   description?: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   branchId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   courseId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   academicYearId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsString()
   deliveryTypeId: string;
 
   @ApiProperty({ example: 40 })

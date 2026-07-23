@@ -31,11 +31,21 @@ export interface BatchService {
   getCourses(): Promise<{ id: string; name: string }[]>;
   getBranches(): Promise<{ id: string; name: string }[]>;
   getAcademicYears(): Promise<{ id: string; name: string }[]>;
+  enrollStudent(admissionId: string, batchId: string): Promise<any>;
+  assignStaff(batchId: string, staffProfileId: string, subjectId: string): Promise<any>;
+  unassignStaff(batchId: string, assignmentId: string): Promise<void>;
 }
 
 export const batchService: BatchService = {
   async getBatches(filters) {
-    return api.get<PaginatedResponse<BatchListItem>>('/master/batches', { params: filters });
+    const cleanedFilters = { ...filters };
+    Object.keys(cleanedFilters).forEach((key) => {
+      const val = cleanedFilters[key as keyof typeof cleanedFilters];
+      if (val === '' || val === null || val === undefined) {
+        delete cleanedFilters[key as keyof typeof cleanedFilters];
+      }
+    });
+    return api.get<PaginatedResponse<BatchListItem>>('/master/batches', { params: cleanedFilters });
   },
 
   async getBatchById(id) {
@@ -93,6 +103,18 @@ export const batchService: BatchService = {
   async getAcademicYears() {
     const res = await academicYearsApi.getAcademicYears({ limit: 100, status: 'ACTIVE' } as any);
     return res.data.map((y) => ({ id: y.id, name: y.name }));
+  },
+
+  async enrollStudent(admissionId, batchId) {
+    return api.post(`/admissions/${admissionId}/batches`, { batchId });
+  },
+
+  async assignStaff(batchId, staffProfileId, subjectId) {
+    return api.post(`/master/batches/${batchId}/staff`, { staffProfileId, subjectId });
+  },
+
+  async unassignStaff(batchId, assignmentId) {
+    return api.delete(`/master/batches/${batchId}/staff/${assignmentId}`);
   },
 };
 

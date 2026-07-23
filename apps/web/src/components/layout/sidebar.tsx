@@ -148,7 +148,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     {
       category: 'Schedule',
       items: [
-        { name: 'Timetable', href: '#', icon: Clock },
+        { name: 'Timetable', href: '/dashboard/timetable', icon: Clock },
         { name: 'Calendar', href: '#', icon: Calendar },
         { name: 'Events', href: '#', icon: Target },
         { name: 'Google Calendar', href: '#', icon: Calendar },

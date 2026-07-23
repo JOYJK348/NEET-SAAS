@@ -192,6 +192,8 @@ model Institutes {
   webhook_deliveriess              WebhookDeliveries[]            @relation("tenant_id_to_institutes")
   webhook_eventss                  WebhookEvents[]                @relation("tenant_id_to_institutes")
   whatsapp_providerss              WhatsappProviders[]            @relation("tenant_id_to_institutes")
+  roomss                           Rooms[]                        @relation("rooms_tenant_id_to_institutes")
+  scheduless                       Schedules[]                    @relation("schedules_tenant_id_to_institutes")
 }
 
 model Branches {
@@ -1490,6 +1492,14 @@ model AttendanceSessions {
   deletedAt                    DateTime?
   deletedBy                    String?
   version                      Int                         @default(1)
+  scheduleId                   String?                     // nullable: recurring class has scheduleId, ad-hoc class is null
+  // ─── Override / Source tracking ────────────────────────────────────────────
+  sessionSource      SessionSourceEnum   @default(SCHEDULE)  // How was this session created?
+  overrideType       OverrideTypeEnum    @default(NONE)      // What was changed after creation?
+  cancelledReason    String?                                  // e.g. "TUTOR_LEAVE", "HOLIDAY", "SUPERSEDED"
+  originalStartsAt   DateTime?                               // Preserved original time before reschedule
+  originalEndsAt     DateTime?                               // Preserved original time before reschedule
+
   attendance_recordss          AttendanceRecords[]         @relation("attendance_records_attendance_session_id_to_attendance_sessions")
   createdByusers               Users                       @relation("attendance_sessions_created_by_to_users", fields: [createdBy], references: [id], onDelete: SetNull)
   deletedByusers               Users?                      @relation("attendance_sessions_deleted_by_to_users", fields: [deletedBy], references: [id])
@@ -1498,8 +1508,13 @@ model AttendanceSessions {
   staffProfileIdstaff_profiles StaffProfiles               @relation("attendance_sessions_staff_profile_id_to_staff_profiles", fields: [staffProfileId], references: [userId], onDelete: SetNull)
   tenant                       Institutes                  @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
   updatedByusers               Users                       @relation("attendance_sessions_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  schedule                     Schedules?                  @relation("attendance_sessions_schedule_id_to_schedules", fields: [scheduleId], references: [id], onDelete: SetNull)
+  sessionAuditLogs             SessionAuditLogs[]          @relation("session_audit_logs_session_id")
 
   @@unique([tenantId, id])
+  @@index([tenantId, scheduleId])
+  @@index([tenantId, sessionSource])
+  @@index([tenantId, overrideType])
 }
 
 model AttendanceRecords {
@@ -5698,9 +5713,11 @@ enum AttendanceModeType {
 
 enum AttendanceSessionStatusEnum {
   DRAFT
+  SCHEDULED
   OPEN
   PUBLISHED
   LOCKED
+  CANCELLED
 }
 
 enum AttendanceStatusEnum {
@@ -6401,4 +6418,170 @@ enum CompletionRuleType {
   OPEN
   WATCH_80_PERCENT
   WATCHED_FULL
+}
+
+// ─── Scheduling / Timetable ──────────────────────────────────────────────────
+
+enum ScheduleStatusEnum {
+  ACTIVE
+  PAUSED
+  ENDED
+  CANCELLED
+  SUPERSEDED  // Template replaced by a newer series split
+}
+
+enum SessionSourceEnum {
+  SCHEDULE    // Auto-generated from recurring template
+  MANUAL      // Admin-created ad-hoc / extra class
+  IMPORT      // Bulk imported
+  RECOVERY    // Makeup / compensatory class
+}
+
+enum OverrideTypeEnum {
+  NONE
+  TIME_CHANGED
+  TUTOR_CHANGED
+  ROOM_CHANGED
+  CANCELLED
+  HOLIDAY
+}
+
+enum SessionAuditActionEnum {
+  CREATED
+  RESCHEDULED
+  TUTOR_CHANGED
+  ROOM_CHANGED
+  CANCELLED
+  STATUS_CHANGED
+  EXTRA_CLASS_CREATED
+}
+
+enum RoomTypeEnum {
+  CLASSROOM
+  LAB
+  AUDITORIUM
+  SEMINAR_HALL
+  ONLINE
+}
+
+model Rooms {
+  id        String       @id @default(uuid())
+  tenantId  String
+  branchId  String
+  name      String
+  code      String
+  capacity  Int          @default(40)
+  roomType  RoomTypeEnum
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  createdBy String
+  updatedAt DateTime     @default(now())
+  updatedBy String
+  deletedAt DateTime?
+  deletedBy String?
+  version   Int          @default(1)
+  tenant    Institutes   @relation("rooms_tenant_id_to_institutes", fields: [tenantId], references: [id])
+  schedules Schedules[]  @relation("schedules_room_id_to_rooms")
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, branchId, code])
+  @@index([tenantId, branchId])
+  @@index([tenantId, isActive])
+}
+
+model Schedules {
+  id               String              @id @default(uuid())
+  tenantId         String
+  branchId         String
+  academicYearId   String
+  batchId          String
+  subjectId        String
+  staffProfileId   String
+
+  // Recurrence — one row per weekday
+  dayOfWeek        WeekdayType
+  startTime        String              // "08:00" HH:mm
+  endTime          String              // "10:00" HH:mm
+  effectiveFrom    DateTime
+  effectiveUntil   DateTime
+
+  // Delivery
+  deliveryMode     AttendanceModeType  // CLASSROOM | ONLINE | HYBRID
+  roomId           String?             // OFFLINE → required, ONLINE → null, HYBRID → optional
+  meetingProvider  MeetingProviderEnum?
+  meetingLink      String?
+  meetingCode      String?
+  meetingPassword  String?
+
+  // Admin
+  status           ScheduleStatusEnum  @default(ACTIVE)
+  notes            String?
+  createdAt        DateTime            @default(now())
+  createdBy        String
+  updatedAt        DateTime            @default(now())
+  updatedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
+  version          Int                 @default(1)
+
+  tenant             Institutes          @relation("schedules_tenant_id_to_institutes", fields: [tenantId], references: [id])
+  room               Rooms?              @relation("schedules_room_id_to_rooms", fields: [roomId], references: [id])
+  attendanceSessions AttendanceSessions[] @relation("attendance_sessions_schedule_id_to_schedules")
+
+  @@unique([tenantId, id])
+  @@index([tenantId, batchId, dayOfWeek])
+  @@index([tenantId, staffProfileId, dayOfWeek])  // tutor conflict query
+  @@index([tenantId, roomId, dayOfWeek])           // room conflict query
+  @@index([tenantId, status, effectiveFrom, effectiveUntil])
+}
+
+// ─── Session Audit Trail ──────────────────────────────────────────────────────
+
+model SessionAuditLogs {
+  id                  String                  @id @default(uuid())
+  tenantId            String
+  attendanceSessionId String?
+  scheduleId          String?
+  entity              String                  // "SESSION" | "SCHEDULE"
+  action              SessionAuditActionEnum
+  originalData        Json?
+  newData             Json?
+  reason              String?
+  scope               String?                 // "ONLY_THIS" | "THIS_AND_FUTURE" | "ENTIRE_SERIES"
+  changedBy           String
+  changedAt           DateTime                @default(now())
+
+  attendanceSession   AttendanceSessions?     @relation("session_audit_logs_session_id", fields: [attendanceSessionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, attendanceSessionId])
+  @@index([tenantId, scheduleId])
+  @@index([tenantId, changedAt])
+}
+
+// ─── Notification Event Queue ─────────────────────────────────────────────────
+
+enum NotificationStatusEnum {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model NotificationEvents {
+  id          String                   @id @default(uuid())
+  tenantId    String
+  entityType  String                   // "SESSION" | "SCHEDULE" | "HOLIDAY"
+  entityId    String
+  eventType   String                   // "RESCHEDULED" | "CANCELLED" | "TUTOR_CHANGED" | "EXTRA_CLASS"
+  payload     Json                     // title, oldTime, newTime, newTutor, affectedStudentIds[]
+  channels    String[]                 // ["SMS", "WHATSAPP", "EMAIL", "PUSH"]
+  status      NotificationStatusEnum   @default(PENDING)
+  scheduledAt DateTime                 @default(now())
+  sentAt      DateTime?
+  errorReason String?
+  createdAt   DateTime                 @default(now())
+
+  @@index([tenantId, status])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, scheduledAt])
 }

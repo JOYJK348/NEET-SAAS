@@ -75,6 +75,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const err = exception as {
         code?: string;
         meta?: Record<string, unknown>;
+        message?: string;
       };
       if (
         err?.code &&
@@ -96,7 +97,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else {
           status = HttpStatus.BAD_REQUEST;
           code = 'DB_ERROR';
-          message = 'Database operation failed';
+          message = err.message
+            ? err.message.replace(/\n/g, ' ').trim()
+            : 'Database operation failed';
         }
       }
     }

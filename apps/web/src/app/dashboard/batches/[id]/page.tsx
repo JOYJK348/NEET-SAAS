@@ -17,6 +17,8 @@ import {
   Archive,
   Pencil,
   Monitor,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react';
 import {
   useBatch,
@@ -24,6 +26,7 @@ import {
   useBatchStudents,
   useBatchStaffAssignments,
   useArchiveBatch,
+  useUnassignStaff,
 } from '@/features/batches/hooks/use-batches';
 import { BatchSummaryCard } from '@/features/batches/components/BatchSummaryCard';
 import { BatchInfoCard } from '@/features/batches/components/BatchInfoCard';
@@ -35,6 +38,8 @@ import { BatchStatusBadge } from '@/features/batches/components/BatchStatusBadge
 import { BatchStudentEnrollmentTable } from '@/features/batches/components/BatchStudentEnrollmentTable';
 import { BatchStaffAssignmentTable } from '@/features/batches/components/BatchStaffAssignmentTable';
 import { BatchArchiveDialog } from '@/features/batches/components/BatchArchiveDialog';
+import { MapStudentsDialog } from '@/features/batches/components/MapStudentsDialog';
+import { MapTutorDialog } from '@/features/batches/components/MapTutorDialog';
 import { formatBatchDate } from '@/features/batches/utils/batch-utils';
 import { BATCH_ATTENDANCE_MODE_LABELS } from '@/features/batches/types/batch';
 import { toast } from '@/hooks/use-toast';
@@ -47,16 +52,22 @@ function BatchDetailContent() {
   const [activeTab, setActiveTab] = useState<'info' | 'students' | 'staff' | 'timeline'>('info');
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['info']));
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [showMapStudents, setShowMapStudents] = useState(false);
+  const [showMapTutor, setShowMapTutor] = useState(false);
 
   const { batch, isLoading, error } = useBatch(id);
   const { events: timelineEvents, isLoading: timelineLoading } = useBatchTimeline(id);
-  const { students: enrolledStudents, isLoading: studentsLoading } = useBatchStudents(id, {
+  const { students: enrolledStudents = [], isLoading: studentsLoading } = useBatchStudents(id, {
     enabled: visitedTabs.has('students'),
   });
-  const { assignments: staffAssignments, isLoading: staffLoading } = useBatchStaffAssignments(id, {
-    enabled: visitedTabs.has('staff'),
-  });
+  const { assignments: staffAssignments = [], isLoading: staffLoading } = useBatchStaffAssignments(
+    id,
+    {
+      enabled: visitedTabs.has('staff'),
+    },
+  );
   const { archiveBatch, isArchiving } = useArchiveBatch();
+  const unassignMutation = useUnassignStaff();
 
   const handleTabChange = useCallback((tab: 'info' | 'students' | 'staff' | 'timeline') => {
     setActiveTab(tab);
@@ -80,6 +91,26 @@ function BatchDetailContent() {
       });
     }
   }, [batch, archiveBatch]);
+
+  const handleUnassignStaff = useCallback(
+    async (assignmentId: string) => {
+      if (!confirm('Are you sure you want to remove this tutor assignment?')) return;
+      try {
+        await unassignMutation.mutateAsync({ batchId: id, assignmentId });
+        toast({
+          title: 'Tutor Removed',
+          description: 'Tutor assignment has been successfully removed.',
+        });
+      } catch (err: any) {
+        toast({
+          title: 'Error',
+          description: err?.message || 'Failed to remove tutor assignment.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [id, unassignMutation],
+  );
 
   if (isLoading) {
     return (
@@ -260,7 +291,15 @@ function BatchDetailContent() {
               <BatchSectionHeader
                 title="Enrolled Students"
                 description={`${enrolledStudents.length} student(s) enrolled`}
-              />
+              >
+                <Button
+                  onClick={() => setShowMapStudents(true)}
+                  className="rounded-xl h-10 px-4 btn-primary gap-2 text-xs"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Map New Students
+                </Button>
+              </BatchSectionHeader>
               <BatchStudentEnrollmentTable
                 students={enrolledStudents}
                 isLoading={studentsLoading}
@@ -275,8 +314,20 @@ function BatchDetailContent() {
               <BatchSectionHeader
                 title="Staff Assignments"
                 description={`${staffAssignments.length} staff assigned`}
+              >
+                <Button
+                  onClick={() => setShowMapTutor(true)}
+                  className="rounded-xl h-10 px-4 btn-primary gap-2 text-xs"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Map New Tutor
+                </Button>
+              </BatchSectionHeader>
+              <BatchStaffAssignmentTable
+                assignments={staffAssignments}
+                isLoading={staffLoading}
+                onUnassign={handleUnassignStaff}
               />
-              <BatchStaffAssignmentTable assignments={staffAssignments} isLoading={staffLoading} />
             </CardContent>
           </Card>
         )}
@@ -299,6 +350,24 @@ function BatchDetailContent() {
         batchCode={batch.code}
         onConfirm={handleArchiveConfirm}
         isArchiving={isArchiving}
+      />
+
+      {/* Map Students Dialog */}
+      <MapStudentsDialog
+        open={showMapStudents}
+        onOpenChange={setShowMapStudents}
+        batchId={batch.id}
+        courseId={batch.courseId}
+        branchId={batch.branchId}
+        enrolledStudentIds={enrolledStudents.map((s: any) => s.id)}
+      />
+
+      {/* Map Tutor Dialog */}
+      <MapTutorDialog
+        open={showMapTutor}
+        onOpenChange={setShowMapTutor}
+        batchId={batch.id}
+        courseId={batch.courseId}
       />
     </div>
   );

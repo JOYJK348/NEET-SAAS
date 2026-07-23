@@ -21,6 +21,7 @@ interface BatchTableProps {
   onSort?: (key: string) => void;
   onView: (id: string) => void;
   onEdit?: (batch: BatchListItem) => void;
+  onToggleStatus?: (id: string, isActive: boolean) => void;
   onPrefetch?: (id: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function BatchTable({
   onSort,
   onView,
   onEdit,
+  onToggleStatus,
   onPrefetch,
 }: BatchTableProps) {
   const columns: Column<BatchListItem>[] = [
@@ -75,7 +77,40 @@ export function BatchTable({
       key: 'status',
       header: 'Status',
       sortable: true,
-      render: (_, batch) => <BatchStatusBadge status={batch.status} />,
+      render: (_, batch) => (
+        <div className="flex items-center gap-3">
+          <BatchStatusBadge status={batch.status} />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStatus?.(batch.id, batch.isActive);
+              }}
+              className={cn(
+                'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-none',
+                batch.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+              )}
+              title="Toggle active status"
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+                  batch.isActive ? 'translate-x-3' : 'translate-x-0',
+                )}
+              />
+            </button>
+            <span
+              className={cn(
+                'text-[10px] font-bold uppercase tracking-wider',
+                batch.isActive ? 'text-emerald-600' : 'text-gray-500',
+              )}
+            >
+              {batch.isActive ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+        </div>
+      ),
     },
     {
       key: 'capacity',

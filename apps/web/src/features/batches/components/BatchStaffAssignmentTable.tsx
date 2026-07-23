@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { BatchSectionHeader } from './BatchSectionHeader';
 import { TableSkeleton } from '@/components/ui/loading';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase } from 'lucide-react';
+import { Trash, Briefcase } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatBatchDate } from '@/features/batches/utils/batch-utils';
 import type { BatchStaffAssignment } from '@/features/batches/types/batch';
 
@@ -13,12 +14,14 @@ interface BatchStaffAssignmentTableProps {
   assignments: BatchStaffAssignment[];
   isLoading?: boolean;
   className?: string;
+  onUnassign?: (assignmentId: string) => void;
 }
 
 export function BatchStaffAssignmentTable({
   assignments,
   isLoading,
   className,
+  onUnassign,
 }: BatchStaffAssignmentTableProps) {
   if (isLoading) {
     return (
@@ -28,7 +31,7 @@ export function BatchStaffAssignmentTable({
             title="Staff Assignments"
             description="Staff assigned to this batch"
           />
-          <TableSkeleton rows={4} columns={5} />
+          <TableSkeleton rows={4} columns={6} />
         </CardContent>
       </Card>
     );
@@ -74,6 +77,11 @@ export function BatchStaffAssignmentTable({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
+                {onUnassign && (
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -102,6 +110,18 @@ export function BatchStaffAssignmentTable({
                       </Badge>
                     )}
                   </td>
+                  {onUnassign && (
+                    <td className="px-4 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onUnassign(assignment.id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 rounded-lg"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

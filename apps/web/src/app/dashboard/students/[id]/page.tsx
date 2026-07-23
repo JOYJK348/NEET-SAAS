@@ -531,6 +531,8 @@ function StudentDetailContent() {
           batches={selectedTrackBatches}
           onConfirm={handleBatchConfirm}
           isUpdating={isUpdatingBatch}
+          studentProfileId={id || undefined}
+          excludeAdmissionId={selectedEnrollment.id}
         />
       )}
 
@@ -561,10 +563,12 @@ function StudentDetailContent() {
         batches={modalCourseBatches}
         years={years}
         branchCourses={branchCourses}
+        activeEnrollments={studentAllEnrollments}
         onConfirm={handleEnrollConfirm}
         isSubmitting={isCreatingEnrollment}
         onCourseChange={setModalCourseId}
         onBranchChange={setModalBranchId}
+        studentProfileId={id || undefined}
       />
     </DashboardLayout>
   );

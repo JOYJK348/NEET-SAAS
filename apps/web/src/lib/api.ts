@@ -207,22 +207,23 @@ class ApiClient {
         break;
       case 500:
         toast.error('Server Error', {
-          description: 'An unexpected error occurred. Please try again later.',
+          description: message || 'An unexpected error occurred. Please try again later.',
         });
         break;
       case 503:
         toast.error('Service Unavailable', {
-          description: 'The service is temporarily unavailable. Please try again later.',
+          description: message || 'The service is temporarily unavailable. Please try again later.',
         });
         break;
       default:
         if (status && status >= 500) {
           toast.error('Server Error', {
-            description: 'An unexpected error occurred. Please try again later.',
+            description: message || 'An unexpected error occurred. Please try again later.',
           });
         } else if (!status) {
           toast.error('Network Error', {
-            description: 'Unable to connect to the server. Please check your connection.',
+            description:
+              message || 'Unable to connect to the server. Please check your connection.',
           });
         }
     }
