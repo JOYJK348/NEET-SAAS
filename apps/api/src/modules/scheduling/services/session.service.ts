@@ -122,6 +122,61 @@ export class SessionService {
     });
   }
 
+  // ─── RESOLVE SESSION OR SCHEDULE ──────────────────────────────────────────
+  // The weekly timetable view exposes schedule IDs (not session IDs).
+  // This helper resolves the correct session to work on — finding the nearest
+  // upcoming/current session for a schedule when a direct session lookup fails.
+
+  private async resolveSession(tenantId: string, idOrScheduleId: string) {
+    // 1. Try direct session lookup first
+    const directSession = await this.prisma.attendanceSessions.findFirst({
+      where: { tenantId, id: idOrScheduleId, deletedAt: null },
+      select: SESSION_SELECT,
+    });
+    if (directSession) return { session: directSession, resolvedFrom: 'session' as const };
+
+    // 2. Check if it's a schedule ID and find the nearest upcoming session
+    const schedule = await this.prisma.schedules.findFirst({
+      where: { tenantId, id: idOrScheduleId, deletedAt: null },
+    });
+    if (!schedule) {
+      throw new NotFoundException(`Session or Schedule ${idOrScheduleId} not found`);
+    }
+
+    // Find the next scheduled/draft session for this schedule from today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const nearestSession = await this.prisma.attendanceSessions.findFirst({
+      where: {
+        tenantId,
+        scheduleId: idOrScheduleId,
+        deletedAt: null,
+        sessionStatus: {
+          in: [
+            AttendanceSessionStatusEnum.SCHEDULED,
+            AttendanceSessionStatusEnum.DRAFT,
+          ],
+        },
+        attendanceDate: { gte: today },
+      },
+      select: SESSION_SELECT,
+      orderBy: { attendanceDate: 'asc' },
+    });
+
+    if (nearestSession) {
+      return { session: nearestSession, resolvedFrom: 'schedule' as const, schedule };
+    }
+
+    // 3. No sessions found — return a synthetic session-like object from the schedule
+    //    (used for ENTIRE_SERIES direct schedule updates)
+    return {
+      session: null,
+      resolvedFrom: 'schedule-only' as const,
+      schedule,
+    };
+  }
+
   // ─── OVERRIDE SESSION ─────────────────────────────────────────────────────
 
   async override(
@@ -130,7 +185,100 @@ export class SessionService {
     userId: string,
     dto: OverrideSessionDto,
   ) {
-    const session = await this.findOne(tenantId, sessionId);
+    const { session, schedule } = await this.resolveSession(tenantId, sessionId);
+
+    // ── No materialized sessions found — operate directly on the schedule template ──
+    // This happens when the weekly view passes a schedule ID and no attendanceSessions
+    // have been generated yet (or none are in SCHEDULED/DRAFT state).
+    if (!session) {
+      if (!schedule) {
+        throw new NotFoundException(`Session or Schedule ${sessionId} not found`);
+      }
+
+      // Build the schedule update payload from the dto
+      const scheduleUpdateData: any = { updatedBy: userId, updatedAt: new Date() };
+      let auditAction: SessionAuditActionEnum = SessionAuditActionEnum.TUTOR_CHANGED;
+
+      if (dto.staffProfileId) {
+        scheduleUpdateData.staffProfileId = dto.staffProfileId;
+        auditAction = SessionAuditActionEnum.TUTOR_CHANGED;
+      }
+      if (dto.newStartTime) {
+        scheduleUpdateData.startTime = dto.newStartTime;
+        auditAction = SessionAuditActionEnum.RESCHEDULED;
+      }
+      if (dto.newEndTime) {
+        scheduleUpdateData.endTime = dto.newEndTime;
+        auditAction = SessionAuditActionEnum.RESCHEDULED;
+      }
+      if (dto.cancel) {
+        scheduleUpdateData.status = ScheduleStatusEnum.CANCELLED;
+        auditAction = SessionAuditActionEnum.CANCELLED;
+      }
+
+      // Update the schedule template
+      await this.prisma.schedules.update({
+        where: { id: schedule.id },
+        data: scheduleUpdateData,
+      });
+
+      // Also update any future sessions that exist (best-effort)
+      if (!dto.cancel) {
+        const sessionFieldsToUpdate: any = { updatedBy: userId, updatedAt: new Date() };
+        if (dto.staffProfileId) {
+          sessionFieldsToUpdate.staffProfileId = dto.staffProfileId;
+          sessionFieldsToUpdate.overrideType = OverrideTypeEnum.TUTOR_CHANGED;
+        }
+        if (dto.newStartTime || dto.newEndTime) {
+          sessionFieldsToUpdate.overrideType = OverrideTypeEnum.TIME_CHANGED;
+        }
+        await this.prisma.attendanceSessions.updateMany({
+          where: {
+            tenantId,
+            scheduleId: schedule.id,
+            deletedAt: null,
+            sessionStatus: { in: [AttendanceSessionStatusEnum.SCHEDULED, AttendanceSessionStatusEnum.DRAFT] },
+            attendanceDate: { gte: new Date() },
+          },
+          data: sessionFieldsToUpdate,
+        });
+      } else {
+        await this.prisma.attendanceSessions.updateMany({
+          where: {
+            tenantId,
+            scheduleId: schedule.id,
+            deletedAt: null,
+            sessionStatus: { in: [AttendanceSessionStatusEnum.SCHEDULED, AttendanceSessionStatusEnum.DRAFT] },
+          },
+          data: {
+            sessionStatus: AttendanceSessionStatusEnum.CANCELLED,
+            cancelledReason: dto.reason ?? 'ADMIN_CANCELLED',
+            overrideType: OverrideTypeEnum.CANCELLED,
+            updatedBy: userId,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      await this.writeAudit({
+        tenantId,
+        scheduleId: schedule.id,
+        entity: 'SCHEDULE',
+        action: auditAction,
+        originalData: {
+          staffProfileId: schedule.staffProfileId,
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+          status: schedule.status,
+        },
+        newData: scheduleUpdateData,
+        reason: dto.reason,
+        scope: dto.scope,
+        changedBy: userId,
+      });
+
+      return { updated: 'schedule_template', scheduleId: schedule.id, scope: dto.scope };
+    }
 
     // Build the override type from what's being changed
     let overrideType: OverrideTypeEnum = OverrideTypeEnum.NONE;
@@ -171,7 +319,7 @@ export class SessionService {
             tenantId,
             staffProfileId: dto.staffProfileId,
             deletedAt: null,
-            id: { not: sessionId },
+            id: { not: session.id },
             attendanceDate: newDate,
             AND: [
               { startsAt: { lt: newEndsAt } },
@@ -194,7 +342,7 @@ export class SessionService {
             tenantId,
             batchId: session.batchId,
             deletedAt: null,
-            id: { not: sessionId },
+            id: { not: session.id },
             attendanceDate: newDate,
             AND: [
               { startsAt: { lt: newEndsAt } },
@@ -219,10 +367,14 @@ export class SessionService {
     };
 
     // ── 2. Apply by scope ─────────────────────────────────────────────────────
+    // Use the resolved session's actual ID (session.id), not the original parameter
+    // which may have been a schedule ID that got resolved.
+    const resolvedSessionId = session.id;
+
     if (dto.scope === 'ONLY_THIS') {
       return this.applyOnlyThis(
         tenantId,
-        sessionId,
+        resolvedSessionId,
         session,
         dto,
         userId,
@@ -234,7 +386,7 @@ export class SessionService {
     if (dto.scope === 'THIS_AND_FUTURE') {
       return this.applyThisAndFuture(
         tenantId,
-        sessionId,
+        resolvedSessionId,
         session,
         dto,
         userId,

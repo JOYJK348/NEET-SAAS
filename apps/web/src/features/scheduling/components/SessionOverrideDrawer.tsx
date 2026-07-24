@@ -16,7 +16,7 @@ interface SessionOverrideDrawerProps {
   open: boolean;
   action: SessionAction | null;
   schedule: ScheduleDetail | null;
-  tutors: { id: string; firstName: string; lastName: string; employeeCode: string }[];
+  tutors: { id: string; firstName: string; lastName: string; employeeCode: string; subjects?: { subjectId: string }[] }[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -73,8 +73,34 @@ export function SessionOverrideDrawer({
       onSuccess();
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Something went wrong.';
-      toast.error(msg);
+      // Map backend error messages to simple, friendly user messages
+      const raw: string =
+        err?.response?.data?.message ??
+        err?.message ??
+        '';
+
+      let friendlyMsg = 'Something went wrong. Please try again.';
+
+      if (raw.toLowerCase().includes('tutor already has a class')) {
+        friendlyMsg = 'This tutor already has another class at that time. Please pick a different tutor or time.';
+      } else if (raw.toLowerCase().includes('batch already has a class')) {
+        friendlyMsg = 'This batch already has a class at the new time. Please choose a different time slot.';
+      } else if (raw.toLowerCase().includes('conflict')) {
+        friendlyMsg = 'There is a scheduling conflict. Please check the tutor and batch availability.';
+      } else if (raw.toLowerCase().includes('not found')) {
+        friendlyMsg = 'Could not find this class session. Please refresh the timetable and try again.';
+      } else if (raw.toLowerCase().includes('invalid scope')) {
+        friendlyMsg = 'Invalid selection. Please choose a valid scope (This session / This & future / Entire series).';
+      } else if (raw.toLowerCase().includes('no active sessions')) {
+        friendlyMsg = 'No upcoming sessions found for this schedule. The timetable may not have sessions generated yet.';
+      } else if (raw.toLowerCase().includes('cancelled')) {
+        friendlyMsg = 'This session is already cancelled and cannot be modified.';
+      } else if (raw.length > 0 && raw.length < 120) {
+        // Short raw message that is probably readable — show it directly
+        friendlyMsg = raw;
+      }
+
+      toast.error(friendlyMsg);
       setScopeDialogOpen(false);
     },
   });
@@ -196,12 +222,19 @@ export function SessionOverrideDrawer({
                   className="w-full px-3 py-2.5 pr-8 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition appearance-none"
                 >
                   <option value="">Select tutor…</option>
-                  {tutors.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.firstName} {t.lastName}
-                      {t.employeeCode ? ` (${t.employeeCode})` : ''}
-                    </option>
-                  ))}
+                  {(() => {
+                    const filteredTutors = tutors.filter((t: any) =>
+                      t.subjects?.some((s: any) => s.subjectId === schedule?.subjectId || s.id === schedule?.subjectId)
+                    );
+                    const tutorsToShow = filteredTutors.length > 0 ? filteredTutors : tutors;
+                    
+                    return tutorsToShow.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.firstName} {t.lastName}
+                        {t.employeeCode ? ` (${t.employeeCode})` : ''}
+                      </option>
+                    ));
+                  })()}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>

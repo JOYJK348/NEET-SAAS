@@ -8,7 +8,11 @@ import {
   Post,
   Query,
   UseGuards,
+  Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -73,5 +77,46 @@ export class TutorController {
   ) {
     await this.tutorService.remove(id, user.tenantId!, user.sub);
     return { success: true };
+  }
+
+  @Get('import/template')
+  @ApiOperation({ summary: 'Download dynamic bulk tutor import template' })
+  async downloadTemplate(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Res() res: any,
+  ) {
+    const buffer = await this.tutorService.generateBulkImportTemplate(user.tenantId!);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="tutors_bulk_import_template.xlsx"',
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  @Post('import/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload filled spreadsheet template to bulk register tutors' })
+  async uploadTemplate(
+    @UploadedFile() file: any,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Query('academicYearId') academicYearId?: string,
+    @Query('branchId') branchId?: string,
+    @Query('courseId') courseId?: string,
+    @Query('batchIds') batchIdsRaw?: string,
+    @Query('createLogin') createLoginRaw?: string,
+  ) {
+    const batchIds = batchIdsRaw ? batchIdsRaw.split(',') : [];
+    const createLogin = createLoginRaw === 'true';
+    return this.tutorService.bulkImport(
+      file.buffer,
+      user.tenantId!,
+      user.sub,
+      academicYearId,
+      branchId,
+      courseId,
+      batchIds,
+      createLogin,
+    );
   }
 }

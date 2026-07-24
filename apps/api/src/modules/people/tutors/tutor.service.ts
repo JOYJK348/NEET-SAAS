@@ -611,4 +611,291 @@ export class TutorService {
       createdAt: user.createdAt,
     };
   }
+
+  async generateBulkImportTemplate(tenantId: string): Promise<Buffer> {
+    const XLSX = require('xlsx');
+
+    // 1. Fetch active courses and batches reference data if needed
+    const courses = await this.prisma.courses.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { code: true },
+    });
+
+    // 1. Fetch active subjects reference data
+    const subjects = await this.prisma.subjects.findMany({
+      where: { tenantId, deletedAt: null },
+      select: { code: true, name: true },
+    });
+
+    // 2. Prepare main instructions/input sheet headers for tutors
+    const headers = [
+      'First Name *',
+      'Last Name',
+      'Email *',
+      'Phone',
+      'Gender (MALE/FEMALE/OTHER)',
+      'Employee Code',
+      'Designation (e.g. Faculty)',
+      'Highest Qualification',
+      'Specialization',
+      'Years of Experience',
+      'Previous Institution',
+      'Bio',
+      'Subject Code (Copy from next sheet)',
+    ];
+
+    const sampleRow = [
+      'Ganesh',
+      'Arumugam',
+      'ganesh.faculty@example.com',
+      '+919876543209',
+      'MALE',
+      'TUT-001',
+      'Senior Physics Faculty',
+      'M.Sc Physics',
+      'Mechanics, Electrodynamics',
+      '8',
+      'Previous Institute',
+      'Experienced physics educator',
+      subjects[0]?.code || 'PHY-11',
+    ];
+
+    // 3. Create Workbook
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Main data input template
+    const wsInput = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+    XLSX.utils.book_append_sheet(wb, wsInput, 'Import Tutors');
+
+    // Sheet 2: Available Subjects helper sheet
+    const referenceData = [
+      ['Subject Code', 'Subject Name'],
+    ];
+    for (const sub of subjects) {
+      referenceData.push([sub.code, sub.name]);
+    }
+    const wsRef = XLSX.utils.aoa_to_sheet(referenceData);
+    XLSX.utils.book_append_sheet(wb, wsRef, 'Available Subjects');
+
+    // 4. Return as binary buffer
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    return buf;
+  }
+
+  async bulkImport(
+    fileBuffer: Buffer,
+    tenantId: string,
+    userId: string,
+    academicYearId?: string,
+    branchId?: string,
+    courseId?: string,
+    batchIds?: string[],
+    createLogin?: boolean,
+  ): Promise<{ importedCount: number; errors: string[] }> {
+    const XLSX = require('xlsx');
+    const wb = XLSX.read(fileBuffer, { type: 'buffer' });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws) as any[];
+
+    const errors: string[] = [];
+    let importedCount = 0;
+
+    const placeholderHash = hashSync(randomUUID(), 8);
+    const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
+
+    // Get TUTOR/FACULTY role
+    const tutorRole = await this.prisma.roles.findFirst({
+      where: { tenantId, code: 'FACULTY' },
+    });
+
+    // Run each import cleanly
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 2; // header is line 1
+
+      // Pick headers safely
+      const firstName = (row['First Name *'] || row['firstName'] || '').toString().trim();
+      const lastName = (row['Last Name'] || row['lastName'] || '').toString().trim();
+      const email = (row['Email *'] || row['email'] || '').toString().trim().toLowerCase();
+      const phone = (row['Phone'] || row['phone'] || '').toString().trim();
+      const genderRaw = (row['Gender (MALE/FEMALE/OTHER)'] || row['gender'] || 'MALE').toString().trim().toUpperCase();
+      
+      const designationName = (row['Designation (e.g. Faculty)'] || 'Faculty').toString().trim();
+      const empType = (row['Employment Type (FULL_TIME/PART_TIME)'] || 'FULL_TIME').toString().trim().toUpperCase();
+      const qualification = (row['Highest Qualification'] || row['Qualification (e.g. PhD)'] || row['qualification'] || '').toString().trim();
+      const yearsOfExpRaw = parseInt((row['Years of Experience'] || row['Years of Experience (Number)'] || row['yearsOfExperience'] || '0').toString().trim(), 10) || 0;
+      const parsedSubjectCode = (row['Subject Code (Copy from next sheet)'] || row['Subject Code'] || row['subjectCode'] || '').toString().trim().toUpperCase();
+
+      // Additional Professional details
+      const sheetEmpCode = (row['Employee Code'] || row['employeeCode'] || '').toString().trim();
+      const specialization = (row['Specialization'] || row['specialization'] || '').toString().trim();
+      const previousInstitution = (row['Previous Institution'] || row['previousInstitution'] || '').toString().trim();
+      const bio = (row['Bio'] || row['bio'] || '').toString().trim();
+
+      if (!firstName || !email) {
+        errors.push(`Row ${lineNum}: Missing required Name or Email.`);
+        continue;
+      }
+
+      const identifier = `${firstName} (${email})`;
+
+      // Check if email already exists
+      const emailExists = await this.prisma.users.findFirst({
+        where: { email, tenantId, deletedAt: null },
+      });
+      if (emailExists) {
+        errors.push(`Row ${lineNum} [Tutor: ${identifier}]: Email '${email}' already exists.`);
+        continue;
+      }
+
+      // Check if Subject Code is valid
+      let mappedSubject: any = null;
+      if (parsedSubjectCode) {
+        mappedSubject = await this.prisma.subjects.findFirst({
+          where: { tenantId, code: parsedSubjectCode, deletedAt: null },
+        });
+        if (!mappedSubject) {
+          errors.push(`Row ${lineNum} [Tutor: ${identifier}]: Subject Code '${parsedSubjectCode}' is invalid.`);
+          continue;
+        }
+      }
+
+      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw) ? genderRaw : 'MALE';
+      const employeeCode = `TUT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          // Resolve Designation
+          const designationId = await this.resolveDesignationInTx(tx, designationName, tenantId);
+
+          // 1. Create User
+          const user = await tx.users.create({
+            data: {
+              email,
+              firstName,
+              lastName,
+              userType: 'TUTOR',
+              status: 'ACTIVE',
+              tenantId,
+              branchId: branchId || '',
+              passwordHash: placeholderHash,
+              forcePasswordChange: !createLogin,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          // 2. Create Staff Profile
+          const profile = await tx.staffProfiles.create({
+            data: {
+              userId: user.id,
+              tenantId,
+              employeeCode: sheetEmpCode || employeeCode,
+              designationId,
+              employmentType: empType === 'PART_TIME' ? 'PART_TIME' : 'FULL_TIME',
+              employmentStatus: 'ACTIVE',
+              joinedAt: new Date(),
+              resignedAt: new Date('2099-12-31'),
+              officialEmail: email,
+              workPhone: phone,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          // 3. Assign FACULTY role
+          if (tutorRole) {
+            await tx.userRoles.create({
+              data: {
+                tenantId,
+                userId: user.id,
+                roleId: tutorRole.id,
+                effectiveTo: defaultDeletedAt,
+                revokedBy: '',
+                revokedReason: '',
+                assignedBy: userId,
+                assignmentReason: 'Bulk Import Auto Allocation',
+                metadata: {},
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          }
+
+          // 4. Save qualifications if any
+          if (qualification || specialization || previousInstitution || bio) {
+            await tx.staffQualifications.create({
+              data: {
+                staffProfileId: user.id,
+                tenantId,
+                degree: qualification || 'Imported',
+                institution: previousInstitution || 'Bulk Imported',
+                yearCompleted: new Date().getFullYear(),
+                experienceMonths: yearsOfExpRaw * 12,
+                certificatesMetadata: {
+                  specialization: specialization || null,
+                  previousInstitution: previousInstitution || null,
+                  bio: bio || null,
+                },
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          }
+
+          // 5. Map Branch to StaffDepartments
+          if (branchId) {
+            const deptId = randomUUID();
+            await tx.$executeRaw`
+              INSERT INTO public."StaffDepartments" ("staffProfileId", "branchId", "departmentId", "tenantId", "createdBy", "updatedBy")
+              VALUES (${user.id}::uuid, ${branchId}::uuid, ${deptId}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
+              ON CONFLICT ("staffProfileId", "branchId", "departmentId") DO NOTHING
+            `;
+          }
+
+          // 6. Map Selected Batches
+          if (batchIds && batchIds.length > 0) {
+            let subjectId = mappedSubject?.id || null;
+
+            if (!subjectId) {
+              const assignedSubject = await tx.courseSubjects.findFirst({
+                where: { tenantId, courseId: courseId },
+                select: { subjectId: true },
+              });
+              subjectId = assignedSubject?.subjectId || null;
+            }
+
+            if (subjectId) {
+              // Save StaffSubjects link
+              await tx.staffSubjects.create({
+                data: {
+                  staffProfileId: user.id,
+                  subjectId,
+                  tenantId,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              }).catch(() => {});
+
+              for (const batchId of batchIds) {
+                // Save StaffBatchAssignments link
+                await tx.$executeRaw`
+                  INSERT INTO public."StaffBatchAssignments" (id, "staffProfileId", "batchId", "subjectId", "tenantId", "isActive", "effectiveFrom", "effectiveTo", "createdBy", "updatedBy")
+                  VALUES (${randomUUID()}::uuid, ${user.id}::uuid, ${batchId}::uuid, ${subjectId}::uuid, ${tenantId}::uuid, true, now(), ${defaultDeletedAt}, ${userId}::uuid, ${userId}::uuid)
+                  ON CONFLICT DO NOTHING
+                `;
+              }
+            }
+          }
+        });
+
+        importedCount++;
+      } catch (err: any) {
+        errors.push(`Row ${lineNum} [Tutor: ${identifier}]: ${err?.message || err}`);
+      }
+    }
+
+    return { importedCount, errors };
+  }
 }

@@ -49,6 +49,34 @@ function getSubjectColor(subjectName?: string) {
   return key ? SUBJECT_COLORS[key] : DEFAULT_COLOR;
 }
 
+// ── Compute the upcoming calendar date for a dayOfWeek ──
+const DAY_INDEX: Record<string, number> = {
+  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
+  THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+};
+
+function getNextOccurrenceDate(dayOfWeek: string): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDay = DAY_INDEX[dayOfWeek] ?? today.getDay();
+  const todayDay = today.getDay();
+  const diff = (targetDay - todayDay + 7) % 7; // 0 = today, 1..6 = future days
+  const result = new Date(today);
+  result.setDate(today.getDate() + diff);
+  return result;
+}
+
+function formatOccurrenceDate(dayOfWeek: string): string {
+  const date = getNextOccurrenceDate(dayOfWeek);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isToday = date.getTime() === today.getTime();
+  const formatted = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
+  return isToday ? `Today, ${formatted}` : formatted;
+}
+
 interface ScheduleSlotCardProps {
   schedule: ScheduleDetail;
   subjectName?: string;
@@ -193,6 +221,13 @@ export function ScheduleSlotCard({
             {schedule.deliveryMode.toLowerCase()}
           </span>
         </div>
+      </div>
+
+      {/* Upcoming date for this schedule's day */}
+      <div className="flex items-center gap-1 mt-1.5">
+        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+          📅 {formatOccurrenceDate(schedule.dayOfWeek)}
+        </span>
       </div>
 
       {/* Hover highlight overlay */}

@@ -8,7 +8,12 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as express from 'express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -140,5 +145,42 @@ export class StudentsController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     await this.studentsService.remove(id, user.tenantId!, user.sub);
+  }
+
+  @Get('import/template')
+  @ApiOperation({ summary: 'Download dynamic bulk import template with live validation dropdown ranges' })
+  async downloadTemplate(
+    @Res() res: express.Response,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    const buffer = await this.studentsService.generateBulkImportTemplate(user.tenantId!);
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="students_bulk_import_template.xlsx"',
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  @Post('import/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload filled spreadsheet template to bulk register students' })
+  async uploadTemplate(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Query('courseId') courseId?: string,
+    @Query('batchId') batchId?: string,
+    @Query('academicYearId') academicYearId?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.studentsService.bulkImport(
+      file.buffer,
+      user.tenantId!,
+      user.sub,
+      courseId,
+      batchId,
+      academicYearId,
+      branchId,
+    );
   }
 }

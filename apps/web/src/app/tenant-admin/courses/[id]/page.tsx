@@ -1111,6 +1111,30 @@ export default function CourseDetailPage() {
                                   {tp.isActive ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
+
+                               {/* Action Buttons: View and Edit */}
+                               <div className="flex items-center gap-2">
+                                 <button
+                                   type="button"
+                                   onClick={() => {
+                                     setEditingTopic(tp);
+                                     setTopicOpen(true);
+                                   }}
+                                   className="text-xs font-bold text-violet-600 hover:text-violet-850 hover:underline"
+                                 >
+                                   Edit
+                                 </button>
+                                 <button
+                                   type="button"
+                                   onClick={() => {
+                                     // Redirect to course builder with specific topicId query param
+                                     router.push(`/tenant-admin/courses/${courseId}/builder?topicId=${tp.id}`);
+                                   }}
+                                   className="text-xs font-bold text-gray-500 hover:text-gray-700 hover:underline"
+                                 >
+                                   View
+                                 </button>
+                               </div>
                             </div>
                           </div>
                         </div>

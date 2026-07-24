@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Users, BookOpen, MapPin, RefreshCw } from 'lucide-react';
+import { Plus, Search, Users, BookOpen, MapPin, RefreshCw, Upload, Download, FileSpreadsheet, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { useTutors, useSubjects, useBranches } from '@/features/tutors/hooks/use-tutors';
+import {
+  useCoursesForAdmission,
+  useBranchesForAdmission,
+  useAcademicYearsForAdmission,
+  useBatchesForAdmission,
+} from '@/features/admissions/hooks/use-admissions';
+import { TutorBulkImportDialog } from '@/features/tutors/components/TutorBulkImportDialog';
 import { tutorService } from '@/features/tutors/services/tutor-service';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -29,7 +36,17 @@ export default function TutorsPage() {
   const [branchFilter, setBranchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  const { data, isLoading } = useTutors({
+  // Bulk Import state
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [lastImportLog, setLastImportLog] = useState<{ importedCount: number; errors: string[] } | null>(null);
+
+  // Load cascading dropdown targets
+  const { years: yearOptions } = useAcademicYearsForAdmission();
+  const { branches: branchOptions } = useBranchesForAdmission();
+  const { courses: courseOptions } = useCoursesForAdmission();
+  const { batches: batchOptions } = useBatchesForAdmission();
+
+  const { data, isLoading, refetch } = useTutors({
     search: search || undefined,
     subjectId: subjectFilter || undefined,
     branchId: branchFilter || undefined,
@@ -87,14 +104,74 @@ export default function TutorsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Tutors</h1>
             <p className="text-sm text-gray-500">Manage your teaching faculty and assignments</p>
           </div>
-          <Button
-            onClick={() => router.push('/dashboard/tutors/new')}
-            className="gap-2 rounded-xl h-11 px-5"
-          >
-            <Plus className="h-4 w-4" />
-            Add Tutor
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsImportOpen(true)}
+              className="w-full sm:w-auto gap-2 border-purple-200 text-purple-700 hover:bg-purple-50 rounded-xl h-11 px-4 font-semibold"
+            >
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              Bulk Import
+            </Button>
+            <Button
+              onClick={() => router.push('/dashboard/tutors/new')}
+              className="w-full sm:w-auto gap-2 rounded-xl h-11 px-5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Tutor
+            </Button>
+          </div>
         </div>
+
+        {/* Persistent Import Validation Log with Dismiss Action */}
+        {lastImportLog && (
+          <Card className="rounded-2xl border-purple-100 bg-purple-50/10 p-5 shadow-sm relative space-y-4">
+            <button
+              onClick={() => setLastImportLog(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Dismiss logs"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-purple-600" />
+              <h3 className="font-bold text-sm text-gray-800">Last Bulk Import Operation Logs</h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Status</span>
+                <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-1">
+                  <CheckCircle className="h-4 w-4" />
+                  Successfully Imported: {lastImportLog.importedCount} Tutor(s)
+                </p>
+              </div>
+              <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Validation Errors count</span>
+                <p className={`text-sm font-semibold mt-1 ${lastImportLog.errors.length > 0 ? 'text-red-700' : 'text-gray-600'}`}>
+                  {lastImportLog.errors.length} row(s) failed validation rules
+                </p>
+              </div>
+            </div>
+
+            {lastImportLog.errors.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-purple-100">
+                <div className="flex items-center gap-1.5 text-red-600 font-bold text-xs uppercase tracking-wider">
+                  <AlertTriangle className="h-4 w-4" />
+                  Detailed Error log messages
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1.5 bg-red-50/30 p-4 rounded-xl border border-red-100">
+                  {lastImportLog.errors.map((err, idx) => (
+                    <div key={idx} className="text-xs text-red-700 font-medium flex gap-2 items-start">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                      <span>{err}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="border border-gray-200">
@@ -324,6 +401,17 @@ export default function TutorsPage() {
           )}
         </Card>
       </div>
+
+      <TutorBulkImportDialog
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={refetch}
+        onImportComplete={(res) => setLastImportLog(res)}
+        academicYears={yearOptions}
+        branches={branchOptions}
+        courses={courseOptions}
+        batches={batchOptions}
+      />
     </DashboardLayout>
   );
 }

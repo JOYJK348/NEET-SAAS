@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, Plus, Filter, Clock, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calendar, Plus, Filter, Clock, Loader2, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useWeeklyView } from '@/features/scheduling/hooks/use-schedules';
 import { CreateScheduleDrawer } from '@/features/scheduling/components/CreateScheduleDrawer';
 import { ScheduleSlotCard } from '@/features/scheduling/components/ScheduleSlotCard';
@@ -48,6 +49,7 @@ interface FilterState {
 }
 
 export default function TimetablePage() {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedMobileDay, setSelectedMobileDay] = useState<WeekdayType>('MONDAY');
   const [filters, setFilters] = useState<FilterState>({
@@ -143,7 +145,16 @@ export default function TimetablePage() {
     <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
+        <div className="flex flex-col gap-2">
+          {/* Back Button */}
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors w-fit"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Dashboard
+          </button>
+          
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
               <Calendar className="w-5 h-5 text-white" />
