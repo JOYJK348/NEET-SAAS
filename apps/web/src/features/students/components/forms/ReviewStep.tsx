@@ -103,19 +103,6 @@ export function ReviewStep({
     },
   ];
 
-  const medicalItems = [
-    {
-      label: 'Blood Group',
-      value: values.bloodGroup || 'Not provided',
-      icon: <Heart className="h-3.5 w-3.5" />,
-    },
-    {
-      label: 'Aadhar Number',
-      value: values.aadharNumber || 'Not provided',
-      icon: <Fingerprint className="h-3.5 w-3.5" />,
-    },
-  ];
-
   const isActive = (status ?? 'ACTIVE') === 'ACTIVE';
 
   return (
@@ -147,7 +134,6 @@ export function ReviewStep({
       <StudentInfoCard title="Address" items={addressItems} columns={2} />
       <StudentInfoCard title="Academic Information" items={academicItems} columns={2} />
       <StudentInfoCard title="Parent Information" items={parentItems} columns={2} />
-      <StudentInfoCard title="Medical Information" items={medicalItems} columns={2} />
     </div>
   );
 }

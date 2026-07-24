@@ -31,7 +31,6 @@ import { StudentFormNavigation } from '@/features/students/components/forms/Stud
 import { PersonalInformationStep } from '@/features/students/components/forms/PersonalInformationStep';
 import { AcademicInformationStep } from '@/features/students/components/forms/AcademicInformationStep';
 import { ParentInformationStep } from '@/features/students/components/forms/ParentInformationStep';
-import { MedicalInformationStep } from '@/features/students/components/forms/MedicalInformationStep';
 import { ReviewStep } from '@/features/students/components/forms/ReviewStep';
 import { StudentEmptySection } from '@/features/students/components/StudentEmptySection';
 import { toast } from '@/hooks/use-toast';
@@ -41,7 +40,6 @@ const FORM_STEPS = [
   { id: 'personal', title: 'Personal Info', description: 'Basic details and address' },
   { id: 'academic', title: 'Academic', description: 'Course and batch selection' },
   { id: 'parent', title: 'Parent', description: 'Parent/guardian details' },
-  { id: 'medical', title: 'Medical', description: 'Health & identification' },
   { id: 'review', title: 'Review', description: 'Verify all information' },
 ];
 
@@ -153,9 +151,6 @@ function EditStudentContent() {
         break;
       case 2:
         fieldsToValidate = ['parentName', 'parentPhone', 'parentEmail', 'emergencyContact'];
-        break;
-      case 3:
-        fieldsToValidate = ['bloodGroup', 'aadharNumber'];
         break;
     }
 
@@ -277,16 +272,6 @@ function EditStudentContent() {
           />
         );
       case 3:
-        return (
-          <MedicalInformationStep
-            register={register}
-            errors={errors}
-            values={values}
-            onFieldChange={handleFieldChange}
-            setValue={setValue}
-          />
-        );
-      case 4:
         return (
           <ReviewStep
             values={values}

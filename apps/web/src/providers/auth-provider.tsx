@@ -65,10 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
     try {
       const data = await api.post<{ user: User; accessToken: string; refreshToken: string }>(
         '/auth/login',
         { email, password },
+        tenantId ? { headers: { 'x-tenant-id': tenantId } } : undefined,
       );
       const { user, accessToken, refreshToken } = data;
       setAuth(user, accessToken, refreshToken, rememberMe);
