@@ -148,15 +148,22 @@ export class StudentsController {
   }
 
   @Get('import/template')
-  @ApiOperation({ summary: 'Download dynamic bulk import template with live validation dropdown ranges' })
+  @ApiOperation({
+    summary:
+      'Download dynamic bulk import template with live validation dropdown ranges',
+  })
   async downloadTemplate(
     @Res() res: express.Response,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    const buffer = await this.studentsService.generateBulkImportTemplate(user.tenantId!);
+    const buffer = await this.studentsService.generateBulkImportTemplate(
+      user.tenantId!,
+    );
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': 'attachment; filename="students_bulk_import_template.xlsx"',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition':
+        'attachment; filename="students_bulk_import_template.xlsx"',
       'Content-Length': buffer.length,
     });
     res.end(buffer);
@@ -164,7 +171,9 @@ export class StudentsController {
 
   @Post('import/upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload filled spreadsheet template to bulk register students' })
+  @ApiOperation({
+    summary: 'Upload filled spreadsheet template to bulk register students',
+  })
   async uploadTemplate(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: AuthenticatedRequestUser,

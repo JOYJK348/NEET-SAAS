@@ -34,6 +34,7 @@ export interface LoginTenantSelectionResponse {
 
 export interface LoginSuccessResponse {
   accessToken: string;
+  refreshToken: string;
   tokenType: 'Bearer';
   expiresIn: number;
   user: {

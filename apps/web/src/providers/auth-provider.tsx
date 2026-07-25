@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTokens(newAccessToken, newRefreshToken);
     } catch {
       logoutStore();
-      router.push('/auth/login');
+      router.replace('/auth/login');
     }
   }, [refreshToken, logoutStore, setTokens, router]);
 
@@ -102,8 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       logoutStore();
-      router.push('/auth/login');
-      router.refresh();
+      router.replace('/auth/login');
     }
   };
 

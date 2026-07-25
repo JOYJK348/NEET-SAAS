@@ -43,6 +43,9 @@ export class LoginSuccessResponseDto {
   @ApiProperty({ example: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken: string;
 
+  @ApiProperty({ example: 'a1b2c3d4...base64url...' })
+  refreshToken: string;
+
   @ApiProperty({ example: 'Bearer' })
   tokenType: 'Bearer';
 

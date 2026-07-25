@@ -17,16 +17,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      router.refresh();
+      router.replace(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
     }
   }, [isAuthenticated, isLoading, router, pathname]);
 
   useEffect(() => {
     if (isAuthenticated && allowedRoles && allowedRoles.length > 0 && user) {
       if (!allowedRoles.includes(user.roleCode)) {
-        router.push('/dashboard');
-        router.refresh();
+        router.replace('/dashboard');
       }
     }
   }, [isAuthenticated, user, allowedRoles, router]);
@@ -56,8 +54,7 @@ export function PublicRoute({ children }: PublicRouteProps) {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
-      router.refresh();
+      router.replace('/dashboard');
     }
   }, [isAuthenticated, isLoading, router]);
 

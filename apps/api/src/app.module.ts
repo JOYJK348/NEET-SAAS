@@ -17,6 +17,7 @@ import { BatchEnrollmentsModule } from './modules/batch-enrollments/batch-enroll
 import { MasterModule } from './modules/master/master.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
+import { TutorDashboardModule } from './modules/tutor-dashboard/tutor-dashboard.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { SchedulingModule } from './modules/scheduling/scheduling.module';
     MasterModule,
     LearningModule,
     SchedulingModule,
+    TutorDashboardModule,
     HealthModule,
   ],
   controllers: [],

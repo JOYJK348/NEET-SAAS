@@ -85,10 +85,14 @@ export class TutorController {
     @CurrentUser() user: AuthenticatedRequestUser,
     @Res() res: any,
   ) {
-    const buffer = await this.tutorService.generateBulkImportTemplate(user.tenantId!);
+    const buffer = await this.tutorService.generateBulkImportTemplate(
+      user.tenantId!,
+    );
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': 'attachment; filename="tutors_bulk_import_template.xlsx"',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition':
+        'attachment; filename="tutors_bulk_import_template.xlsx"',
       'Content-Length': buffer.length,
     });
     res.end(buffer);
@@ -96,7 +100,9 @@ export class TutorController {
 
   @Post('import/upload')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload filled spreadsheet template to bulk register tutors' })
+  @ApiOperation({
+    summary: 'Upload filled spreadsheet template to bulk register tutors',
+  })
   async uploadTemplate(
     @UploadedFile() file: any,
     @CurrentUser() user: AuthenticatedRequestUser,

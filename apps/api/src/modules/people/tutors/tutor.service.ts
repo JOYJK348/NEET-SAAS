@@ -16,6 +16,18 @@ import { QueryTutorDto } from './dto/query-tutor.dto';
 
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
+const TUTOR_LOGIN_PASSWORD_PREFIX = 'Tut@';
+
+function generatePasswordFromPhone(phone?: string): string {
+  if (phone) {
+    const digits = phone.replace(/\D/g, '');
+    const last4 = digits.slice(-4);
+    if (last4.length === 4) return `${TUTOR_LOGIN_PASSWORD_PREFIX}${last4}`;
+  }
+  const fallback = String(1000 + Math.floor(Math.random() * 9000));
+  return `${TUTOR_LOGIN_PASSWORD_PREFIX}${fallback}`;
+}
+
 @Injectable()
 export class TutorService {
   constructor(
@@ -35,7 +47,16 @@ export class TutorService {
 
     const employeeCode =
       dto.employeeCode || `TUT-${Date.now().toString(36).toUpperCase()}`;
-    const placeholderHash = hashSync(randomUUID(), 8);
+
+    let rawPassword: string | null = null;
+
+    if (dto.createLogin) {
+      rawPassword = generatePasswordFromPhone(dto.phone);
+    }
+
+    const passwordHash = rawPassword
+      ? hashSync(rawPassword, 10)
+      : hashSync(randomUUID(), 8);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const designationId = await this.resolveDesignationInTx(
@@ -52,8 +73,8 @@ export class TutorService {
           status: 'ACTIVE',
           tenantId,
           branchId: '',
-          passwordHash: placeholderHash,
-          forcePasswordChange: !dto.createLogin,
+          passwordHash,
+          forcePasswordChange: false,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -187,8 +208,38 @@ export class TutorService {
         }
       }
 
+      // Assign TUTOR role for login access
+      const tutorRole = await tx.roles.findFirst({
+        where: { tenantId, code: 'TUTOR' },
+      });
+      if (tutorRole) {
+        await tx.userRoles.create({
+          data: {
+            tenantId,
+            userId: user.id,
+            roleId: tutorRole.id,
+            effectiveFrom: new Date(),
+            effectiveTo: new Date('2099-12-31'),
+            assignedBy: userId,
+            assignmentReason: 'Tutor account creation',
+            revokedBy: '',
+            revokedReason: '',
+            metadata: {},
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        }).catch(() => {});
+      }
+
       return this.findOneInTx(tx, user.id, tenantId);
     });
+
+    if (rawPassword) {
+      return {
+        ...(result as Record<string, unknown>),
+        generatedPassword: rawPassword,
+      };
+    }
 
     return result;
   }
@@ -668,9 +719,7 @@ export class TutorService {
     XLSX.utils.book_append_sheet(wb, wsInput, 'Import Tutors');
 
     // Sheet 2: Available Subjects helper sheet
-    const referenceData = [
-      ['Subject Code', 'Subject Name'],
-    ];
+    const referenceData = [['Subject Code', 'Subject Name']];
     for (const sub of subjects) {
       referenceData.push([sub.code, sub.name]);
     }
@@ -691,7 +740,11 @@ export class TutorService {
     courseId?: string,
     batchIds?: string[],
     createLogin?: boolean,
-  ): Promise<{ importedCount: number; errors: string[] }> {
+  ): Promise<{
+    importedCount: number;
+    errors: string[];
+    loginCredentials?: Array<{ email: string; password: string }>;
+  }> {
     const XLSX = require('xlsx');
     const wb = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
@@ -699,9 +752,9 @@ export class TutorService {
     const rows = XLSX.utils.sheet_to_json(ws) as any[];
 
     const errors: string[] = [];
+    const loginCredentials: Array<{ email: string; password: string }> = [];
     let importedCount = 0;
 
-    const placeholderHash = hashSync(randomUUID(), 8);
     const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
 
     // Get TUTOR/FACULTY role
@@ -715,22 +768,83 @@ export class TutorService {
       const lineNum = i + 2; // header is line 1
 
       // Pick headers safely
-      const firstName = (row['First Name *'] || row['firstName'] || '').toString().trim();
-      const lastName = (row['Last Name'] || row['lastName'] || '').toString().trim();
-      const email = (row['Email *'] || row['email'] || '').toString().trim().toLowerCase();
+      const firstName = (row['First Name *'] || row['firstName'] || '')
+        .toString()
+        .trim();
+      const lastName = (row['Last Name'] || row['lastName'] || '')
+        .toString()
+        .trim();
+      const email = (row['Email *'] || row['email'] || '')
+        .toString()
+        .trim()
+        .toLowerCase();
       const phone = (row['Phone'] || row['phone'] || '').toString().trim();
-      const genderRaw = (row['Gender (MALE/FEMALE/OTHER)'] || row['gender'] || 'MALE').toString().trim().toUpperCase();
-      
-      const designationName = (row['Designation (e.g. Faculty)'] || 'Faculty').toString().trim();
-      const empType = (row['Employment Type (FULL_TIME/PART_TIME)'] || 'FULL_TIME').toString().trim().toUpperCase();
-      const qualification = (row['Highest Qualification'] || row['Qualification (e.g. PhD)'] || row['qualification'] || '').toString().trim();
-      const yearsOfExpRaw = parseInt((row['Years of Experience'] || row['Years of Experience (Number)'] || row['yearsOfExperience'] || '0').toString().trim(), 10) || 0;
-      const parsedSubjectCode = (row['Subject Code (Copy from next sheet)'] || row['Subject Code'] || row['subjectCode'] || '').toString().trim().toUpperCase();
+      const genderRaw = (
+        row['Gender (MALE/FEMALE/OTHER)'] ||
+        row['gender'] ||
+        'MALE'
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
+
+      const designationName = (row['Designation (e.g. Faculty)'] || 'Faculty')
+        .toString()
+        .trim();
+      const empType = (
+        row['Employment Type (FULL_TIME/PART_TIME)'] || 'FULL_TIME'
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
+      const qualification = (
+        row['Highest Qualification'] ||
+        row['Qualification (e.g. PhD)'] ||
+        row['qualification'] ||
+        ''
+      )
+        .toString()
+        .trim();
+      const yearsOfExpRaw =
+        parseInt(
+          (
+            row['Years of Experience'] ||
+            row['Years of Experience (Number)'] ||
+            row['yearsOfExperience'] ||
+            '0'
+          )
+            .toString()
+            .trim(),
+          10,
+        ) || 0;
+      const parsedSubjectCode = (
+        row['Subject Code (Copy from next sheet)'] ||
+        row['Subject Code'] ||
+        row['subjectCode'] ||
+        ''
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
 
       // Additional Professional details
-      const sheetEmpCode = (row['Employee Code'] || row['employeeCode'] || '').toString().trim();
-      const specialization = (row['Specialization'] || row['specialization'] || '').toString().trim();
-      const previousInstitution = (row['Previous Institution'] || row['previousInstitution'] || '').toString().trim();
+      const sheetEmpCode = (row['Employee Code'] || row['employeeCode'] || '')
+        .toString()
+        .trim();
+      const specialization = (
+        row['Specialization'] ||
+        row['specialization'] ||
+        ''
+      )
+        .toString()
+        .trim();
+      const previousInstitution = (
+        row['Previous Institution'] ||
+        row['previousInstitution'] ||
+        ''
+      )
+        .toString()
+        .trim();
       const bio = (row['Bio'] || row['bio'] || '').toString().trim();
 
       if (!firstName || !email) {
@@ -745,7 +859,9 @@ export class TutorService {
         where: { email, tenantId, deletedAt: null },
       });
       if (emailExists) {
-        errors.push(`Row ${lineNum} [Tutor: ${identifier}]: Email '${email}' already exists.`);
+        errors.push(
+          `Row ${lineNum} [Tutor: ${identifier}]: Email '${email}' already exists.`,
+        );
         continue;
       }
 
@@ -756,18 +872,34 @@ export class TutorService {
           where: { tenantId, code: parsedSubjectCode, deletedAt: null },
         });
         if (!mappedSubject) {
-          errors.push(`Row ${lineNum} [Tutor: ${identifier}]: Subject Code '${parsedSubjectCode}' is invalid.`);
+          errors.push(
+            `Row ${lineNum} [Tutor: ${identifier}]: Subject Code '${parsedSubjectCode}' is invalid.`,
+          );
           continue;
         }
       }
 
-      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw) ? genderRaw : 'MALE';
+      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw)
+        ? genderRaw
+        : 'MALE';
       const employeeCode = `TUT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       try {
         await this.prisma.$transaction(async (tx) => {
           // Resolve Designation
-          const designationId = await this.resolveDesignationInTx(tx, designationName, tenantId);
+          const designationId = await this.resolveDesignationInTx(
+            tx,
+            designationName,
+            tenantId,
+          );
+
+          // Generate password if createLogin is enabled
+          const rowRawPassword = createLogin
+            ? generatePasswordFromPhone(phone)
+            : null;
+          const rowPasswordHash = rowRawPassword
+            ? hashSync(rowRawPassword, 10)
+            : hashSync(randomUUID(), 8);
 
           // 1. Create User
           const user = await tx.users.create({
@@ -779,12 +911,16 @@ export class TutorService {
               status: 'ACTIVE',
               tenantId,
               branchId: branchId || '',
-              passwordHash: placeholderHash,
-              forcePasswordChange: !createLogin,
+              passwordHash: rowPasswordHash,
+              forcePasswordChange: false,
               createdBy: userId,
               updatedBy: userId,
             },
           });
+
+          if (rowRawPassword) {
+            loginCredentials.push({ email, password: rowRawPassword });
+          }
 
           // 2. Create Staff Profile
           const profile = await tx.staffProfiles.create({
@@ -793,7 +929,8 @@ export class TutorService {
               tenantId,
               employeeCode: sheetEmpCode || employeeCode,
               designationId,
-              employmentType: empType === 'PART_TIME' ? 'PART_TIME' : 'FULL_TIME',
+              employmentType:
+                empType === 'PART_TIME' ? 'PART_TIME' : 'FULL_TIME',
               employmentStatus: 'ACTIVE',
               joinedAt: new Date(),
               resignedAt: new Date('2099-12-31'),
@@ -868,15 +1005,17 @@ export class TutorService {
 
             if (subjectId) {
               // Save StaffSubjects link
-              await tx.staffSubjects.create({
-                data: {
-                  staffProfileId: user.id,
-                  subjectId,
-                  tenantId,
-                  createdBy: userId,
-                  updatedBy: userId,
-                },
-              }).catch(() => {});
+              await tx.staffSubjects
+                .create({
+                  data: {
+                    staffProfileId: user.id,
+                    subjectId,
+                    tenantId,
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                })
+                .catch(() => {});
 
               for (const batchId of batchIds) {
                 // Save StaffBatchAssignments link
@@ -892,10 +1031,16 @@ export class TutorService {
 
         importedCount++;
       } catch (err: any) {
-        errors.push(`Row ${lineNum} [Tutor: ${identifier}]: ${err?.message || err}`);
+        errors.push(
+          `Row ${lineNum} [Tutor: ${identifier}]: ${err?.message || err}`,
+        );
       }
     }
 
-    return { importedCount, errors };
+    return {
+      importedCount,
+      errors,
+      ...(loginCredentials.length > 0 ? { loginCredentials } : {}),
+    };
   }
 }

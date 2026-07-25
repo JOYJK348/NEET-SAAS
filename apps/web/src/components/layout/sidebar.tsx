@@ -57,6 +57,7 @@ interface NavItem {
   name: string;
   href: string;
   icon: any;
+  iconColor?: string;
   children?: NavItem[];
 }
 
@@ -97,28 +98,36 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     }));
   };
 
+  const tutorNavigation = [
+    { name: 'Overview', href: '/dashboard/tutor', icon: LayoutDashboard, iconColor: 'text-blue-500' },
+    { name: 'My Timetable', href: '/dashboard/tutor/timetable', icon: Clock, iconColor: 'text-rose-500' },
+    { name: 'My Courses', href: '/dashboard/tutor/courses', icon: BookOpen, iconColor: 'text-amber-500' },
+    { name: 'My Batches', href: '/dashboard/tutor/batches', icon: Layers, iconColor: 'text-emerald-500' },
+  ];
+
   const platformNavigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Institutes', href: '/dashboard/institutes', icon: Building2 },
-    { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users },
-    { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' },
+    { name: 'Institutes', href: '/dashboard/institutes', icon: Building2, iconColor: 'text-violet-500' },
+    { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users, iconColor: 'text-teal-500' },
+    { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign, iconColor: 'text-amber-500' },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings, iconColor: 'text-slate-500' },
   ];
 
   const tenantNavigation: { category: string; items: NavItem[] }[] = [
     {
       category: '',
-      items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }],
+      items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' }],
     },
     {
       category: 'Organization',
       items: [
-        { name: 'Branches', href: '/tenant-admin/branches', icon: Building2 },
-        { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar },
+        { name: 'Branches', href: '/tenant-admin/branches', icon: Building2, iconColor: 'text-indigo-500' },
+        { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar, iconColor: 'text-pink-500' },
         {
           name: 'People',
           href: '#',
           icon: Users,
+          iconColor: 'text-violet-500',
           children: [
             { name: 'Students', href: '/dashboard/students', icon: GraduationCap },
             { name: 'Parents', href: '#', icon: Contact },
@@ -130,59 +139,48 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     {
       category: 'Academics',
       items: [
-        { name: 'Curriculum', href: '/tenant-admin/curriculum', icon: FolderTree },
-        { name: 'Batches', href: '/dashboard/batches', icon: Layers },
-        { name: 'Examinations', href: '#', icon: Target },
-        {
-          name: 'Learning',
-          href: '#',
-          icon: BookMarked,
-          children: [
-            { name: 'Study Materials', href: '#', icon: FileText },
-            { name: 'Assignments', href: '#', icon: FileText },
-            { name: 'Learning Progress', href: '#', icon: TrendingUp },
-          ],
-        },
+        { name: 'Curriculum', href: '/tenant-admin/curriculum', icon: FolderTree, iconColor: 'text-emerald-500' },
+        { name: 'Batches', href: '/dashboard/batches', icon: Layers, iconColor: 'text-cyan-500' },
+        { name: 'Examinations', href: '#', icon: Target, iconColor: 'text-red-500' },
       ],
     },
     {
       category: 'Schedule',
       items: [
-        { name: 'Timetable', href: '/dashboard/timetable', icon: Clock },
-        { name: 'Calendar', href: '#', icon: Calendar },
-        { name: 'Events', href: '#', icon: Target },
-        { name: 'Google Calendar', href: '#', icon: Calendar },
+        { name: 'Timetable', href: '/dashboard/timetable', icon: Clock, iconColor: 'text-rose-500' },
+        { name: 'Events', href: '#', icon: Target, iconColor: 'text-orange-500' },
+        { name: 'Google Calendar', href: '#', icon: Calendar, iconColor: 'text-sky-500' },
       ],
     },
     {
       category: 'Operations',
       items: [
-        { name: 'Attendance', href: '#', icon: Calendar },
-        { name: 'Live Classes', href: '#', icon: Video },
-        { name: 'Recordings', href: '#', icon: FileText },
+        { name: 'Attendance', href: '#', icon: Calendar, iconColor: 'text-teal-500' },
+        { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
+        { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
       ],
     },
     {
       category: 'Finance',
-      items: [{ name: 'Fees & Billing', href: '#', icon: DollarSign }],
+      items: [{ name: 'Fees & Billing', href: '#', icon: DollarSign, iconColor: 'text-emerald-500' }],
     },
     {
       category: 'Communication',
       items: [
-        { name: 'Announcements', href: '#', icon: Volume2 },
-        { name: 'Notifications', href: '#', icon: Bell },
+        { name: 'Announcements', href: '#', icon: Volume2, iconColor: 'text-amber-500' },
+        { name: 'Notifications', href: '#', icon: Bell, iconColor: 'text-yellow-500' },
       ],
     },
     {
       category: 'Analytics',
-      items: [{ name: 'Analytics', href: '#', icon: BarChart }],
+      items: [{ name: 'Analytics', href: '#', icon: BarChart, iconColor: 'text-fuchsia-500' }],
     },
     {
       category: 'Settings',
       items: [
-        { name: 'Roles & Permissions', href: '#', icon: Shield },
-        { name: 'Institute Settings', href: '#', icon: Building2 },
-        { name: 'System Configuration', href: '#', icon: Sliders },
+        { name: 'Roles & Permissions', href: '#', icon: Shield, iconColor: 'text-red-500' },
+        { name: 'Institute Settings', href: '#', icon: Building2, iconColor: 'text-blue-500' },
+        { name: 'System Configuration', href: '#', icon: Sliders, iconColor: 'text-slate-500' },
       ],
     },
   ];
@@ -207,17 +205,21 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 className={cn(
                   'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
                   isCollapsed && 'justify-center',
                 )}
                 title={isCollapsed ? item.name : undefined}
               >
                 <Icon
-                  className={cn(depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 'flex-shrink-0')}
+                  className={cn(
+                    depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 
+                    'flex-shrink-0 transition-colors',
+                    isActive ? 'text-primary-foreground' : (item.iconColor || 'text-slate-400')
+                  )}
                   aria-hidden="true"
                 />
-                {!isCollapsed && <span>{item.name}</span>}
+                {!isCollapsed && <span className="font-semibold">{item.name}</span>}
               </Link>
 
               {!isCollapsed && (
@@ -243,8 +245,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             {isSubOpen && !isCollapsed && (
               <div
                 className={cn(
-                  'space-y-1 border-l border-gray-100 dark:border-gray-800',
-                  depth === 0 ? 'pl-4 ml-4' : 'pl-3 ml-3',
+                  'space-y-1 border-l-2 border-violet-100 dark:border-gray-800/80 ml-5 pl-4 transition-all duration-200',
                 )}
               >
                 {renderNavItems(item.children!, depth + 1)}
@@ -259,20 +260,39 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           key={item.name}
           href={item.href}
           className={cn(
-            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-            isActive
-              ? 'bg-primary text-primary-foreground'
-              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+            'flex items-center transition-all duration-150',
+            depth > 0 
+              ? 'relative py-1.5 px-3.5 text-[13px] text-gray-500 hover:text-violet-600 dark:text-gray-400 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 rounded-md font-medium'
+              : 'gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+            isActive && (depth > 0 
+              ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-semibold' 
+              : 'bg-primary text-primary-foreground shadow-sm'
+            ),
             isCollapsed && 'justify-center',
           )}
           aria-current={isActive ? 'page' : undefined}
           title={isCollapsed ? item.name : undefined}
         >
-          <Icon
-            className={cn(depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 'flex-shrink-0')}
-            aria-hidden="true"
-          />
-          {!isCollapsed && <span>{item.name}</span>}
+          {depth > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                'w-1.5 h-1.5 rounded-full transition-all duration-200',
+                isActive ? 'bg-violet-500 scale-125' : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-violet-400'
+              )} />
+              {!isCollapsed && <span>{item.name}</span>}
+            </div>
+          ) : (
+            <>
+              <Icon
+                className={cn(
+                  'h-5 w-5 flex-shrink-0 transition-colors',
+                  isActive ? 'text-inherit' : (item.iconColor || 'text-slate-400')
+                )}
+                aria-hidden="true"
+              />
+              {!isCollapsed && <span>{item.name}</span>}
+            </>
+          )}
         </Link>
       );
     });
@@ -333,6 +353,34 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 const isActive =
                   item.href === '/dashboard'
                     ? pathname === '/dashboard'
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                      isCollapsed && 'justify-center',
+                    )}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : user?.roleCode === 'TUTOR' ? (
+            <div className="space-y-1">
+              {tutorNavigation.map((item) => {
+                const isActive =
+                  item.href === '/dashboard/tutor'
+                    ? pathname === '/dashboard/tutor'
                     : pathname === item.href || pathname.startsWith(item.href + '/');
                 const Icon = item.icon;
                 return (

@@ -13,6 +13,7 @@ export interface Tutor {
   previousInstitution: string | null;
   bio: string | null;
   createdLogin: boolean;
+  generatedPassword?: string;
   subjects: { id: string; subjectId: string }[];
   branches: { id: string; branchId: string; departmentId: string | null }[];
   batchCount: number;

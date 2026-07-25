@@ -574,10 +574,22 @@ export class StudentsService {
   async generateBulkImportTemplate(tenantId: string): Promise<Buffer> {
     // 1. Fetch live DB references for mapping helper sheet
     const [academicYears, branches, courses, batches] = await Promise.all([
-      this.prisma.academicYears.findMany({ where: { tenantId, deletedAt: null, isActive: true }, select: { code: true, name: true } }),
-      this.prisma.branches.findMany({ where: { tenantId, deletedAt: null, status: 'ACTIVE' }, select: { code: true, name: true } }),
-      this.prisma.courses.findMany({ where: { tenantId, deletedAt: null, isActive: true }, select: { code: true, name: true } }),
-      this.prisma.batches.findMany({ where: { tenantId, deletedAt: null, isActive: true, status: 'ACTIVE' }, select: { code: true, name: true } }),
+      this.prisma.academicYears.findMany({
+        where: { tenantId, deletedAt: null, isActive: true },
+        select: { code: true, name: true },
+      }),
+      this.prisma.branches.findMany({
+        where: { tenantId, deletedAt: null, status: 'ACTIVE' },
+        select: { code: true, name: true },
+      }),
+      this.prisma.courses.findMany({
+        where: { tenantId, deletedAt: null, isActive: true },
+        select: { code: true, name: true },
+      }),
+      this.prisma.batches.findMany({
+        where: { tenantId, deletedAt: null, isActive: true, status: 'ACTIVE' },
+        select: { code: true, name: true },
+      }),
     ]);
 
     // 2. Prepare main instructions/input sheet data
@@ -650,13 +662,21 @@ export class StudentsService {
       this.prisma.courses.findMany({ where: { tenantId, deletedAt: null } }),
       this.prisma.batches.findMany({ where: { tenantId, deletedAt: null } }),
       this.prisma.branches.findMany({ where: { tenantId, deletedAt: null } }),
-      this.prisma.academicYears.findMany({ where: { tenantId, deletedAt: null } }),
+      this.prisma.academicYears.findMany({
+        where: { tenantId, deletedAt: null },
+      }),
       this.prisma.roles.findFirst({ where: { tenantId, code: 'STUDENT' } }),
     ]);
 
-    const courseMap = new Map(courses.map((c) => [c.code.trim().toUpperCase(), c]));
-    const batchMap = new Map(batches.map((b) => [b.code.trim().toUpperCase(), b]));
-    const branchMap = new Map(branches.map((b) => [b.code.trim().toUpperCase(), b]));
+    const courseMap = new Map(
+      courses.map((c) => [c.code.trim().toUpperCase(), c]),
+    );
+    const batchMap = new Map(
+      batches.map((b) => [b.code.trim().toUpperCase(), b]),
+    );
+    const branchMap = new Map(
+      branches.map((b) => [b.code.trim().toUpperCase(), b]),
+    );
 
     const coursesById = new Map(courses.map((c) => [c.id, c]));
     const batchesById = new Map(batches.map((b) => [b.id, b]));
@@ -667,24 +687,70 @@ export class StudentsService {
       const lineNum = i + 2; // header is line 1
 
       // Pick headers safely
-      const firstName = (row['First Name *'] || row['firstName'] || '').toString().trim();
-      const lastName = (row['Last Name'] || row['lastName'] || '').toString().trim();
-      const email = (row['Email *'] || row['email'] || '').toString().trim().toLowerCase();
+      const firstName = (row['First Name *'] || row['firstName'] || '')
+        .toString()
+        .trim();
+      const lastName = (row['Last Name'] || row['lastName'] || '')
+        .toString()
+        .trim();
+      const email = (row['Email *'] || row['email'] || '')
+        .toString()
+        .trim()
+        .toLowerCase();
       const phone = (row['Phone'] || row['phone'] || '').toString().trim();
-      const genderRaw = (row['Gender (MALE/FEMALE/OTHER)'] || row['gender'] || 'MALE').toString().trim().toUpperCase();
-      const dobRaw = (row['Date of Birth (YYYY-MM-DD)'] || row['dateOfBirth'] || '').toString().trim();
-      
-      const address = (row['Address'] || row['address'] || '').toString().trim();
+      const genderRaw = (
+        row['Gender (MALE/FEMALE/OTHER)'] ||
+        row['gender'] ||
+        'MALE'
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
+      const dobRaw = (
+        row['Date of Birth (YYYY-MM-DD)'] ||
+        row['dateOfBirth'] ||
+        ''
+      )
+        .toString()
+        .trim();
+
+      const address = (row['Address'] || row['address'] || '')
+        .toString()
+        .trim();
       const city = (row['City'] || row['city'] || '').toString().trim();
       const state = (row['State'] || row['state'] || '').toString().trim();
-      const pincode = (row['Pincode'] || row['pincode'] || '').toString().trim();
-      
-      const parentName = (row['Parent Name'] || row['parentName'] || '').toString().trim();
-      const parentPhone = (row['Parent Phone'] || row['parentPhone'] || '').toString().trim();
-      const parentEmail = (row['Parent Email'] || row['parentEmail'] || '').toString().trim();
-      
-      const courseCode = (row['Course Code (Copy from next sheet)'] || row['Course Code'] || row['courseCode'] || '').toString().trim().toUpperCase();
-      const batchCode = (row['Batch Code (Copy from next sheet)'] || row['Batch Code'] || row['batchCode'] || '').toString().trim().toUpperCase();
+      const pincode = (row['Pincode'] || row['pincode'] || '')
+        .toString()
+        .trim();
+
+      const parentName = (row['Parent Name'] || row['parentName'] || '')
+        .toString()
+        .trim();
+      const parentPhone = (row['Parent Phone'] || row['parentPhone'] || '')
+        .toString()
+        .trim();
+      const parentEmail = (row['Parent Email'] || row['parentEmail'] || '')
+        .toString()
+        .trim();
+
+      const courseCode = (
+        row['Course Code (Copy from next sheet)'] ||
+        row['Course Code'] ||
+        row['courseCode'] ||
+        ''
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
+      const batchCode = (
+        row['Batch Code (Copy from next sheet)'] ||
+        row['Batch Code'] ||
+        row['batchCode'] ||
+        ''
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
 
       if (!firstName || !email) {
         errors.push(`Row ${lineNum}: Missing required Name or Email.`);
@@ -698,7 +764,9 @@ export class StudentsService {
         where: { email, tenantId, deletedAt: null },
       });
       if (emailExists) {
-        errors.push(`Row ${lineNum} [Student: ${identifier}]: Email '${email}' already exists.`);
+        errors.push(
+          `Row ${lineNum} [Student: ${identifier}]: Email '${email}' already exists.`,
+        );
         continue;
       }
 
@@ -709,7 +777,9 @@ export class StudentsService {
       if (courseCode) {
         mappedCourse = courseMap.get(courseCode);
         if (!mappedCourse) {
-          errors.push(`Row ${lineNum} [Student: ${identifier}]: Course code '${courseCode}' is invalid.`);
+          errors.push(
+            `Row ${lineNum} [Student: ${identifier}]: Course code '${courseCode}' is invalid.`,
+          );
           continue;
         }
       } else if (courseId) {
@@ -719,11 +789,15 @@ export class StudentsService {
       if (batchCode) {
         mappedBatch = batchMap.get(batchCode);
         if (!mappedBatch) {
-          errors.push(`Row ${lineNum} [Student: ${identifier}]: Batch code '${batchCode}' is invalid.`);
+          errors.push(
+            `Row ${lineNum} [Student: ${identifier}]: Batch code '${batchCode}' is invalid.`,
+          );
           continue;
         }
         if (mappedCourse && mappedBatch.courseId !== mappedCourse.id) {
-          errors.push(`Row ${lineNum} [Student: ${identifier}]: Batch '${batchCode}' does not belong to Course '${mappedCourse.code}'.`);
+          errors.push(
+            `Row ${lineNum} [Student: ${identifier}]: Batch '${batchCode}' does not belong to Course '${mappedCourse.code}'.`,
+          );
           continue;
         }
       } else if (batchId) {
@@ -733,23 +807,31 @@ export class StudentsService {
       // Validate DOB and check strict age limits (15 - 25 years)
       let dob: Date;
       if (!dobRaw) {
-        errors.push(`Row ${lineNum} [Student: ${identifier}]: Date of Birth (YYYY-MM-DD) is required.`);
+        errors.push(
+          `Row ${lineNum} [Student: ${identifier}]: Date of Birth (YYYY-MM-DD) is required.`,
+        );
         continue;
       } else {
         dob = new Date(dobRaw);
         if (isNaN(dob.getTime())) {
-          errors.push(`Row ${lineNum} [Student: ${identifier}]: Date of Birth '${dobRaw}' is in an invalid format. Must be YYYY-MM-DD.`);
+          errors.push(
+            `Row ${lineNum} [Student: ${identifier}]: Date of Birth '${dobRaw}' is in an invalid format. Must be YYYY-MM-DD.`,
+          );
           continue;
         }
         try {
           validateAge(dob);
         } catch (ageErr: any) {
-          errors.push(`Row ${lineNum} [Student: ${identifier}]: Date of Birth validation failed — ${ageErr?.message || ageErr}.`);
+          errors.push(
+            `Row ${lineNum} [Student: ${identifier}]: Date of Birth validation failed — ${ageErr?.message || ageErr}.`,
+          );
           continue;
         }
       }
 
-      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw) ? genderRaw : 'MALE';
+      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw)
+        ? genderRaw
+        : 'MALE';
       const studentCode = `STU-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       try {
@@ -763,7 +845,9 @@ export class StudentsService {
               userType: 'TUTOR', // Wait, type is STUDENT
               status: 'ACTIVE',
               tenantId,
-              branchId: mappedBatch ? mappedBatch.branchId : (branches[0]?.id || ''),
+              branchId: mappedBatch
+                ? mappedBatch.branchId
+                : branches[0]?.id || '',
               passwordHash: placeholderHash,
               forcePasswordChange: true,
               createdBy: userId,
@@ -784,7 +868,7 @@ export class StudentsService {
               tenantId,
               studentCode,
               dateOfBirth: dob,
-              gender: gender as any,
+              gender: gender,
               bloodGroup: 'O_POS',
               academicStatus: 'ACTIVE',
               createdBy: userId,
@@ -865,13 +949,18 @@ export class StudentsService {
           // 5. Enrollments mapping
           if (mappedCourse) {
             // Find branch matching selection or fallback
-            const targetBranchId = mappedBatch ? mappedBatch.branchId : (branchId || branches[0]?.id || '');
-            const targetAcademicYearId = mappedBatch ? mappedBatch.academicYearId : (academicYearId || years[0]?.id || '');
+            const targetBranchId = mappedBatch
+              ? mappedBatch.branchId
+              : branchId || branches[0]?.id || '';
+            const targetAcademicYearId = mappedBatch
+              ? mappedBatch.academicYearId
+              : academicYearId || years[0]?.id || '';
 
-            const admissionNumber = await this.admissionNumberGenerator.generate(
-              tenantId,
-              targetAcademicYearId,
-            );
+            const admissionNumber =
+              await this.admissionNumberGenerator.generate(
+                tenantId,
+                targetAcademicYearId,
+              );
 
             const admission = await tx.studentAdmissions.create({
               data: {
@@ -907,11 +996,12 @@ export class StudentsService {
 
         importedCount++;
       } catch (err: any) {
-        errors.push(`Row ${lineNum}: DB Import failed — ${err?.message || err}`);
+        errors.push(
+          `Row ${lineNum}: DB Import failed — ${err?.message || err}`,
+        );
       }
     }
 
     return { importedCount, errors };
   }
 }
-

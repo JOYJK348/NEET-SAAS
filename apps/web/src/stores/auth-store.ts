@@ -7,9 +7,19 @@ export interface User {
   firstName: string;
   lastName: string;
   roleCode: string;
+  userType?: string;
   tenantId?: string;
   forcePasswordChange?: boolean;
   avatar?: string;
+  staffProfile?: {
+    userId: string;
+    employeeCode: string | null;
+    employmentType: string | null;
+    employmentStatus: string | null;
+    subjects: string[];
+    branches: string[];
+    batchAssignments: Array<{ batchId: string; subjectId: string }>;
+  } | null;
 }
 
 export interface AuthState {
@@ -29,32 +39,19 @@ export interface AuthState {
   setHasHydrated: (hasHydrated: boolean) => void;
 }
 
-const customDynamicStorage = {
+const STORAGE_KEY = 'auth-storage';
+
+const tabStorage = {
   getItem: (name: string) => {
     if (typeof window === 'undefined') return null;
-    const local = localStorage.getItem(name);
-    if (local) return local;
     return sessionStorage.getItem(name);
   },
   setItem: (name: string, value: string) => {
     if (typeof window === 'undefined') return;
-    try {
-      const parsed = JSON.parse(value);
-      const rememberMe = parsed.state?.rememberMe;
-      if (rememberMe) {
-        localStorage.setItem(name, value);
-        sessionStorage.removeItem(name);
-      } else {
-        sessionStorage.setItem(name, value);
-        localStorage.removeItem(name);
-      }
-    } catch {
-      localStorage.setItem(name, value);
-    }
+    sessionStorage.setItem(name, value);
   },
   removeItem: (name: string) => {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(name);
     sessionStorage.removeItem(name);
   },
 };
@@ -94,8 +91,8 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
     }),
     {
-      name: 'auth-storage',
-      storage: createJSONStorage(() => customDynamicStorage),
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => tabStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
@@ -109,3 +106,5 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
+
+

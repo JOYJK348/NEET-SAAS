@@ -34,11 +34,17 @@ import { api } from '@/lib/api';
 import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface BulkImportResult {
+  importedCount: number;
+  errors: string[];
+  loginCredentials?: Array<{ email: string; password: string }>;
+}
+
 interface TutorBulkImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onImportComplete?: (result: { importedCount: number; errors: string[] }) => void;
+  onImportComplete?: (result: BulkImportResult) => void;
   academicYears: Array<{ id: string; name: string }>;
   branches: Array<{ id: string; name: string }>;
   courses: Array<{ id: string; name: string }>;
@@ -64,7 +70,7 @@ export function TutorBulkImportDialog({
 
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<{ importedCount: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<BulkImportResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'summary' | 'logs'>('summary');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -407,15 +413,34 @@ export function TutorBulkImportDialog({
               </div>
 
               {activeTab === 'summary' ? (
-                <div className="space-y-3 p-5 bg-green-50/20 rounded-2xl border border-green-100">
+                <div className="space-y-4 p-5 bg-green-50/20 rounded-2xl border border-green-100">
                   <div className="flex items-center gap-2.5 text-green-700 font-bold text-sm">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     Import Completed Successfully!
                   </div>
-                  <p className="text-xs text-gray-600 font-medium pl-7">
-                    Successfully loaded and registered **{result.importedCount}** new tutor profiles. 
+                  <p className="text-xs text-gray-600 font-medium">
+                    Successfully loaded and registered <strong>{result.importedCount}</strong> new tutor profiles. 
                     {result.errors.length > 0 && ` However, ${result.errors.length} rows failed validation rules. Check the "Error Logs" tab for details.`}
                   </p>
+
+                  {result.loginCredentials && result.loginCredentials.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Login Credentials</p>
+                      <div className="max-h-48 overflow-y-auto space-y-1.5">
+                        {result.loginCredentials.map((cred, idx) => (
+                          <div key={idx} className="flex items-center justify-between bg-white border border-green-200 rounded-xl px-4 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-gray-800 truncate">{cred.email}</p>
+                              <p className="text-xs font-mono text-green-700 font-bold mt-0.5">{cred.password}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
+                        ⚠ Copy these passwords now. They won&apos;t be shown again.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">

@@ -510,6 +510,23 @@ function DashboardContent() {
   return <TenantAdminDashboard />;
 }
 
+function TutorRedirectContent() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push('/dashboard/tutor');
+    router.refresh();
+  }, [router]);
+
+  return (
+    <DashboardLayout>
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
+        <LoadingSpinner size="lg" />
+      </div>
+    </DashboardLayout>
+  );
+}
+
 function DashboardPageContent() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -519,6 +536,12 @@ function DashboardPageContent() {
       router.push('/auth/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.roleCode === 'TUTOR') {
+      router.replace('/dashboard/tutor');
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -531,6 +554,17 @@ function DashboardPageContent() {
   }
 
   if (!user) return null;
+
+  // TUTOR users get redirected above; show loading while redirect is in progress
+  if (user?.roleCode === 'TUTOR') {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

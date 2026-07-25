@@ -133,14 +133,17 @@ export class SessionService {
       where: { tenantId, id: idOrScheduleId, deletedAt: null },
       select: SESSION_SELECT,
     });
-    if (directSession) return { session: directSession, resolvedFrom: 'session' as const };
+    if (directSession)
+      return { session: directSession, resolvedFrom: 'session' as const };
 
     // 2. Check if it's a schedule ID and find the nearest upcoming session
     const schedule = await this.prisma.schedules.findFirst({
       where: { tenantId, id: idOrScheduleId, deletedAt: null },
     });
     if (!schedule) {
-      throw new NotFoundException(`Session or Schedule ${idOrScheduleId} not found`);
+      throw new NotFoundException(
+        `Session or Schedule ${idOrScheduleId} not found`,
+      );
     }
 
     // Find the next scheduled/draft session for this schedule from today
@@ -165,7 +168,11 @@ export class SessionService {
     });
 
     if (nearestSession) {
-      return { session: nearestSession, resolvedFrom: 'schedule' as const, schedule };
+      return {
+        session: nearestSession,
+        resolvedFrom: 'schedule' as const,
+        schedule,
+      };
     }
 
     // 3. No sessions found — return a synthetic session-like object from the schedule
@@ -185,19 +192,28 @@ export class SessionService {
     userId: string,
     dto: OverrideSessionDto,
   ) {
-    const { session, schedule } = await this.resolveSession(tenantId, sessionId);
+    const { session, schedule } = await this.resolveSession(
+      tenantId,
+      sessionId,
+    );
 
     // ── No materialized sessions found — operate directly on the schedule template ──
     // This happens when the weekly view passes a schedule ID and no attendanceSessions
     // have been generated yet (or none are in SCHEDULED/DRAFT state).
     if (!session) {
       if (!schedule) {
-        throw new NotFoundException(`Session or Schedule ${sessionId} not found`);
+        throw new NotFoundException(
+          `Session or Schedule ${sessionId} not found`,
+        );
       }
 
       // Build the schedule update payload from the dto
-      const scheduleUpdateData: any = { updatedBy: userId, updatedAt: new Date() };
-      let auditAction: SessionAuditActionEnum = SessionAuditActionEnum.TUTOR_CHANGED;
+      const scheduleUpdateData: any = {
+        updatedBy: userId,
+        updatedAt: new Date(),
+      };
+      let auditAction: SessionAuditActionEnum =
+        SessionAuditActionEnum.TUTOR_CHANGED;
 
       if (dto.staffProfileId) {
         scheduleUpdateData.staffProfileId = dto.staffProfileId;
@@ -224,7 +240,10 @@ export class SessionService {
 
       // Also update any future sessions that exist (best-effort)
       if (!dto.cancel) {
-        const sessionFieldsToUpdate: any = { updatedBy: userId, updatedAt: new Date() };
+        const sessionFieldsToUpdate: any = {
+          updatedBy: userId,
+          updatedAt: new Date(),
+        };
         if (dto.staffProfileId) {
           sessionFieldsToUpdate.staffProfileId = dto.staffProfileId;
           sessionFieldsToUpdate.overrideType = OverrideTypeEnum.TUTOR_CHANGED;
@@ -237,7 +256,12 @@ export class SessionService {
             tenantId,
             scheduleId: schedule.id,
             deletedAt: null,
-            sessionStatus: { in: [AttendanceSessionStatusEnum.SCHEDULED, AttendanceSessionStatusEnum.DRAFT] },
+            sessionStatus: {
+              in: [
+                AttendanceSessionStatusEnum.SCHEDULED,
+                AttendanceSessionStatusEnum.DRAFT,
+              ],
+            },
             attendanceDate: { gte: new Date() },
           },
           data: sessionFieldsToUpdate,
@@ -248,7 +272,12 @@ export class SessionService {
             tenantId,
             scheduleId: schedule.id,
             deletedAt: null,
-            sessionStatus: { in: [AttendanceSessionStatusEnum.SCHEDULED, AttendanceSessionStatusEnum.DRAFT] },
+            sessionStatus: {
+              in: [
+                AttendanceSessionStatusEnum.SCHEDULED,
+                AttendanceSessionStatusEnum.DRAFT,
+              ],
+            },
           },
           data: {
             sessionStatus: AttendanceSessionStatusEnum.CANCELLED,
@@ -277,7 +306,11 @@ export class SessionService {
         changedBy: userId,
       });
 
-      return { updated: 'schedule_template', scheduleId: schedule.id, scope: dto.scope };
+      return {
+        updated: 'schedule_template',
+        scheduleId: schedule.id,
+        scope: dto.scope,
+      };
     }
 
     // Build the override type from what's being changed

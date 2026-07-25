@@ -254,6 +254,19 @@ export class AuthController {
     return this.authService.sessions(currentUser);
   }
 
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, TenantGuard)
+  @Get('me')
+  @ApiOperation({
+    summary: 'Get currently authenticated user profile',
+    description:
+      'Returns the authenticated user identity, user type, staff profile (if any), and role/permissions context. ' +
+      'Used by the frontend to hydrate auth state and determine role-based access.',
+  })
+  me(@CurrentUser() currentUser: AuthenticatedRequestUser) {
+    return this.authService.me(currentUser);
+  }
+
   private getIpAddress(request: Request): string {
     const forwardedFor = request.headers['x-forwarded-for'];
 

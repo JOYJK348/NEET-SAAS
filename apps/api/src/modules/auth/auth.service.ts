@@ -3,7 +3,6 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -111,6 +110,7 @@ export class AuthService {
 
     return {
       accessToken,
+      refreshToken,
       tokenType: 'Bearer',
       expiresIn: this.tokenService.getAccessTokenExpiresInSeconds(),
       user: {
@@ -246,8 +246,101 @@ export class AuthService {
     }));
   }
 
-  me(): never {
-    throw new NotImplementedException('Me endpoint will be implemented later');
+  async me(currentUser: AuthenticatedRequestUser): Promise<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    userType: string;
+    tenantId: string | null;
+    roleCode: string;
+    forcePasswordChange: boolean;
+    staffProfile: Record<string, unknown> | null;
+  }> {
+    const user = await this.prismaService.users.findFirst({
+      where: {
+        id: currentUser.sub,
+        tenantId: currentUser.tenantId ?? undefined,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        userType: true,
+        tenantId: true,
+        forcePasswordChange: true,
+        staff_profiless: {
+          where: { deletedAt: null },
+          select: {
+            userId: true,
+            employeeCode: true,
+            employmentType: true,
+            employmentStatus: true,
+            designationId: true,
+            staff_subjectss: {
+              where: { deletedAt: null },
+              select: { subjectId: true },
+            },
+            staff_departmentss: {
+              where: { deletedAt: null },
+              select: { branchId: true, departmentId: true },
+            },
+            staff_batch_assignmentss: {
+              where: { deletedAt: null, isActive: true },
+              select: { batchId: true, subjectId: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Fetch the user's active roles
+    const userRole = await this.prismaService.userRoles.findFirst({
+      where: {
+        userId: user.id,
+        ...(currentUser.tenantId ? { tenantId: currentUser.tenantId } : {}),
+        effectiveFrom: { lte: new Date() },
+        effectiveTo: { gte: new Date() },
+      },
+      include: {
+        roleIdroles: { select: { code: true } },
+      },
+      orderBy: { roleIdroles: { priority: 'desc' } },
+    });
+
+    const profile = user.staff_profiless?.[0] ?? null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      userType: user.userType,
+      tenantId: user.tenantId,
+      roleCode: userRole?.roleIdroles?.code ?? currentUser.roleCode,
+      forcePasswordChange: user.forcePasswordChange,
+      staffProfile: profile
+        ? {
+            userId: profile.userId,
+            employeeCode: profile.employeeCode,
+            employmentType: profile.employmentType,
+            employmentStatus: profile.employmentStatus,
+            subjects: profile.staff_subjectss.map(
+              (s: { subjectId: string }) => s.subjectId,
+            ),
+            branches: profile.staff_departmentss.map(
+              (d: { branchId: string }) => d.branchId,
+            ),
+            batchAssignments: profile.staff_batch_assignmentss,
+          }
+        : null,
+    };
   }
 
   private async findLoginUser(email: string, tenantId?: string) {

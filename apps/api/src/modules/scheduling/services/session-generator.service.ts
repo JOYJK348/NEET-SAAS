@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { ScheduleStatusEnum, WeekdayType } from '@prisma/client';
+import { ScheduleStatusEnum, WeekdayType, AttendanceSessionStatusEnum } from '@prisma/client';
 
 // Map WeekdayType enum → JS Date.getDay() (0=Sun, 1=Mon, ..., 6=Sat)
 const WEEKDAY_TO_JS_DAY: Record<WeekdayType, number> = {
@@ -136,7 +136,7 @@ export class SessionGeneratorService {
           attendanceDate: date,
           startsAt,
           endsAt,
-          sessionStatus: 'DRAFT',
+          sessionStatus: AttendanceSessionStatusEnum.SCHEDULED,
           // Required non-nullable fields — use valid creator user ID
           publishedBy: activeUserId,
           publishedAt: date,
