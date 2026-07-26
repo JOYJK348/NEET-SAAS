@@ -73,6 +73,7 @@ class ApiClient {
         const isAuthRequest =
           originalRequest.url?.includes('/auth/login') ||
           originalRequest.url?.includes('/auth/register') ||
+          originalRequest.url?.includes('/auth/refresh') ||
           originalRequest.url?.includes('/login') ||
           originalRequest.url?.includes('/register');
 

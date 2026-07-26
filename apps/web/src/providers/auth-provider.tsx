@@ -134,6 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser,
   ]);
 
+  // Proactive token refresh — keep access token fresh before it expires
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Default access token expiry is 900s (15 min); refresh every 10 min
+    const INTERVAL_MS = 10 * 60 * 1000;
+    const intervalId = setInterval(() => {
+      refreshAccessToken();
+    }, INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, refreshAccessToken]);
+
   return (
     <AuthContext.Provider
       value={{
