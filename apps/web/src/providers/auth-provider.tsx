@@ -5,6 +5,17 @@ import { useAuthStore, User } from '@/stores/auth-store';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 
+const PROACTIVE_INTERVAL_MS = 12 * 60 * 60 * 1000; // every 12 hours
+
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp ?? null;
+  } catch {
+    return null;
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -54,6 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.replace('/auth/login');
     }
   }, [logoutStore, setTokens, router]);
+
+  // Background refresh that never logs out — keeps token alive silently
+  const silentRefresh = useCallback(async () => {
+    try {
+      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
+      const { accessToken: newAccessToken } = data;
+      setTokens(newAccessToken);
+    } catch {
+      // Ignore — the next cycle or a user action will trigger a real refresh
+    }
+  }, [setTokens]);
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
@@ -134,18 +156,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser,
   ]);
 
-  // Proactive token refresh — keep access token fresh before it expires
+  // Proactive token refresh — silently keep access token fresh before it expires
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !accessToken) return;
 
-    // Default access token expiry is 900s (15 min); refresh every 10 min
-    const INTERVAL_MS = 10 * 60 * 1000;
-    const intervalId = setInterval(() => {
-      refreshAccessToken();
-    }, INTERVAL_MS);
+    const scheduleNext = () => {
+      const exp = decodeJwtExp(accessToken);
+      const delay = exp ? Math.max(60_000, (exp * 1000 - Date.now()) * 0.9) : PROACTIVE_INTERVAL_MS;
 
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated, refreshAccessToken]);
+      return setTimeout(
+        () => {
+          silentRefresh();
+        },
+        Math.min(delay, PROACTIVE_INTERVAL_MS),
+      );
+    };
+
+    let timerId = scheduleNext();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        silentRefresh();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [isAuthenticated, accessToken, silentRefresh]);
 
   return (
     <AuthContext.Provider
