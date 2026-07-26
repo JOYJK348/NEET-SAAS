@@ -45,23 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const refreshAccessToken = useCallback(async () => {
-    if (!refreshToken) {
-      logoutStore();
-      router.push('/auth/login');
-      return;
-    }
-
     try {
-      const data = await api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', {
-        refreshToken,
-      });
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = data;
-      setTokens(newAccessToken, newRefreshToken);
+      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
+      const { accessToken: newAccessToken } = data;
+      setTokens(newAccessToken);
     } catch {
       logoutStore();
       router.replace('/auth/login');
     }
-  }, [refreshToken, logoutStore, setTokens, router]);
+  }, [logoutStore, setTokens, router]);
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
@@ -123,12 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(user);
           setLoading(false);
         } catch {
-          if (refreshToken) {
-            await refreshAccessToken();
-          } else {
-            logoutStore();
-            setLoading(false);
-          }
+          await refreshAccessToken();
         }
       } else {
         setLoading(false);
@@ -141,7 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     pathname,
     accessToken,
     isAuthenticated,
-    refreshToken,
     refreshAccessToken,
     logoutStore,
     setLoading,

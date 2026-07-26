@@ -36,9 +36,9 @@ interface ScheduleDto {
 export interface SessionDetailDto {
   id: string;
   attendanceDate: string; // ISO date
-  startsAt: string;       // HH:mm
-  endsAt: string;         // HH:mm
-  sessionStatus: string;  // SCHEDULED, COMPLETED, CANCELLED, DRAFT
+  startsAt: string; // HH:mm
+  endsAt: string; // HH:mm
+  sessionStatus: string; // SCHEDULED, COMPLETED, CANCELLED, DRAFT
   sessionSource?: string | null;
   overrideType?: string | null;
   cancelledReason?: string | null;
@@ -72,6 +72,15 @@ export interface AttendanceRecordDto {
   admission?: AdmissionRefDto | null;
 }
 
+export interface EnrolledStudentDto {
+  admissionId: string;
+  admissionNumber: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface AttendanceStatsDto {
   totalStudents: number;
   markedCount: number;
@@ -80,10 +89,10 @@ export interface AttendanceStatsDto {
   lateCount: number;
   unmarkedCount: number;
   records: AttendanceRecordDto[];
+  enrolledStudents: EnrolledStudentDto[];
 }
 
 export interface SessionDetailsResponseDto {
   session: SessionDetailDto;
   attendance: AttendanceStatsDto;
 }
-

@@ -34,6 +34,7 @@ import {
   Bell,
   Volume2,
   FolderTree,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
@@ -99,30 +100,121 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
   };
 
   const tutorNavigation = [
-    { name: 'Overview', href: '/dashboard/tutor', icon: LayoutDashboard, iconColor: 'text-blue-500' },
-    { name: 'My Timetable', href: '/dashboard/tutor/timetable', icon: Clock, iconColor: 'text-rose-500' },
-    { name: 'My Courses', href: '/dashboard/tutor/courses', icon: BookOpen, iconColor: 'text-amber-500' },
-    { name: 'My Batches', href: '/dashboard/tutor/batches', icon: Layers, iconColor: 'text-emerald-500' },
+    {
+      name: 'Overview',
+      href: '/dashboard/tutor',
+      icon: LayoutDashboard,
+      iconColor: 'text-blue-500',
+    },
+    {
+      name: 'My Timetable',
+      href: '/dashboard/tutor/timetable',
+      icon: Clock,
+      iconColor: 'text-rose-500',
+    },
+    {
+      name: 'My Courses',
+      href: '/dashboard/tutor/courses',
+      icon: BookOpen,
+      iconColor: 'text-amber-500',
+    },
+    {
+      name: 'My Batches',
+      href: '/dashboard/tutor/batches',
+      icon: Layers,
+      iconColor: 'text-emerald-500',
+    },
+    {
+      name: 'Attendance',
+      href: '/dashboard/tutor/timetable',
+      icon: ClipboardCheck,
+      iconColor: 'text-teal-500',
+    },
+  ];
+
+  const studentNavigation = [
+    {
+      name: 'Overview',
+      href: '/dashboard/student',
+      icon: LayoutDashboard,
+      iconColor: 'text-blue-500',
+    },
+    {
+      name: 'My Timetable',
+      href: '/dashboard/student/timetable',
+      icon: Clock,
+      iconColor: 'text-rose-500',
+    },
+    {
+      name: 'My Courses',
+      href: '/dashboard/student/courses',
+      icon: BookOpen,
+      iconColor: 'text-violet-500',
+    },
+    {
+      name: 'My Batches',
+      href: '/dashboard/student/batches',
+      icon: Layers,
+      iconColor: 'text-emerald-500',
+    },
+    {
+      name: 'Attendance',
+      href: '/dashboard/student/attendance',
+      icon: Target,
+      iconColor: 'text-amber-500',
+    },
   ];
 
   const platformNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' },
-    { name: 'Institutes', href: '/dashboard/institutes', icon: Building2, iconColor: 'text-violet-500' },
-    { name: 'Tenant Admins', href: '/dashboard/tenant-admins', icon: Users, iconColor: 'text-teal-500' },
-    { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: DollarSign, iconColor: 'text-amber-500' },
+    {
+      name: 'Institutes',
+      href: '/dashboard/institutes',
+      icon: Building2,
+      iconColor: 'text-violet-500',
+    },
+    {
+      name: 'Tenant Admins',
+      href: '/dashboard/tenant-admins',
+      icon: Users,
+      iconColor: 'text-teal-500',
+    },
+    {
+      name: 'Subscriptions',
+      href: '/dashboard/subscriptions',
+      icon: DollarSign,
+      iconColor: 'text-amber-500',
+    },
     { name: 'Settings', href: '/dashboard/settings', icon: Settings, iconColor: 'text-slate-500' },
   ];
 
   const tenantNavigation: { category: string; items: NavItem[] }[] = [
     {
       category: '',
-      items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' }],
+      items: [
+        {
+          name: 'Dashboard',
+          href: '/dashboard',
+          icon: LayoutDashboard,
+          iconColor: 'text-blue-500',
+        },
+      ],
     },
     {
       category: 'Organization',
       items: [
-        { name: 'Branches', href: '/tenant-admin/branches', icon: Building2, iconColor: 'text-indigo-500' },
-        { name: 'Academic Years', href: '/tenant-admin/academic-years', icon: Calendar, iconColor: 'text-pink-500' },
+        {
+          name: 'Branches',
+          href: '/tenant-admin/branches',
+          icon: Building2,
+          iconColor: 'text-indigo-500',
+        },
+        {
+          name: 'Academic Years',
+          href: '/tenant-admin/academic-years',
+          icon: Calendar,
+          iconColor: 'text-pink-500',
+        },
         {
           name: 'People',
           href: '#',
@@ -139,30 +231,42 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     {
       category: 'Academics',
       items: [
-        { name: 'Curriculum', href: '/tenant-admin/curriculum', icon: FolderTree, iconColor: 'text-emerald-500' },
+        {
+          name: 'Curriculum',
+          href: '/tenant-admin/curriculum',
+          icon: FolderTree,
+          iconColor: 'text-emerald-500',
+        },
         { name: 'Batches', href: '/dashboard/batches', icon: Layers, iconColor: 'text-cyan-500' },
+        {
+          name: 'Attendance',
+          href: '/dashboard/attendance',
+          icon: ClipboardCheck,
+          iconColor: 'text-teal-500',
+        },
+        { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
+        { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
         { name: 'Examinations', href: '#', icon: Target, iconColor: 'text-red-500' },
       ],
     },
     {
       category: 'Schedule',
       items: [
-        { name: 'Timetable', href: '/dashboard/timetable', icon: Clock, iconColor: 'text-rose-500' },
+        {
+          name: 'Timetable',
+          href: '/dashboard/timetable',
+          icon: Clock,
+          iconColor: 'text-rose-500',
+        },
         { name: 'Events', href: '#', icon: Target, iconColor: 'text-orange-500' },
         { name: 'Google Calendar', href: '#', icon: Calendar, iconColor: 'text-sky-500' },
       ],
     },
     {
-      category: 'Operations',
-      items: [
-        { name: 'Attendance', href: '#', icon: Calendar, iconColor: 'text-teal-500' },
-        { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
-        { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
-      ],
-    },
-    {
       category: 'Finance',
-      items: [{ name: 'Fees & Billing', href: '#', icon: DollarSign, iconColor: 'text-emerald-500' }],
+      items: [
+        { name: 'Fees & Billing', href: '#', icon: DollarSign, iconColor: 'text-emerald-500' },
+      ],
     },
     {
       category: 'Communication',
@@ -213,9 +317,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               >
                 <Icon
                   className={cn(
-                    depth === 0 ? 'h-5 w-5' : 'h-4 w-4', 
+                    depth === 0 ? 'h-5 w-5' : 'h-4 w-4',
                     'flex-shrink-0 transition-colors',
-                    isActive ? 'text-primary-foreground' : (item.iconColor || 'text-slate-400')
+                    isActive ? 'text-primary-foreground' : item.iconColor || 'text-slate-400',
                   )}
                   aria-hidden="true"
                 />
@@ -261,13 +365,13 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           href={item.href}
           className={cn(
             'flex items-center transition-all duration-150',
-            depth > 0 
+            depth > 0
               ? 'relative py-1.5 px-3.5 text-[13px] text-gray-500 hover:text-violet-600 dark:text-gray-400 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 rounded-md font-medium'
               : 'gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
-            isActive && (depth > 0 
-              ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-semibold' 
-              : 'bg-primary text-primary-foreground shadow-sm'
-            ),
+            isActive &&
+              (depth > 0
+                ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-semibold'
+                : 'bg-primary text-primary-foreground shadow-sm'),
             isCollapsed && 'justify-center',
           )}
           aria-current={isActive ? 'page' : undefined}
@@ -275,10 +379,14 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         >
           {depth > 0 ? (
             <div className="flex items-center gap-2">
-              <span className={cn(
-                'w-1.5 h-1.5 rounded-full transition-all duration-200',
-                isActive ? 'bg-violet-500 scale-125' : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-violet-400'
-              )} />
+              <span
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full transition-all duration-200',
+                  isActive
+                    ? 'bg-violet-500 scale-125'
+                    : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-violet-400',
+                )}
+              />
               {!isCollapsed && <span>{item.name}</span>}
             </div>
           ) : (
@@ -286,7 +394,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               <Icon
                 className={cn(
                   'h-5 w-5 flex-shrink-0 transition-colors',
-                  isActive ? 'text-inherit' : (item.iconColor || 'text-slate-400')
+                  isActive ? 'text-inherit' : item.iconColor || 'text-slate-400',
                 )}
                 aria-hidden="true"
               />
@@ -398,6 +506,40 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                     title={isCollapsed ? item.name : undefined}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : user?.roleCode === 'STUDENT' ? (
+            <div className="space-y-1">
+              {studentNavigation.map((item) => {
+                const isActive =
+                  item.href === '/dashboard/student'
+                    ? pathname === '/dashboard/student'
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                      isActive
+                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
+                        : 'text-gray-600 hover:bg-violet-50 hover:text-violet-700',
+                      isCollapsed && 'justify-center',
+                    )}
+                    aria-current={isActive ? 'page' : undefined}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 flex-shrink-0 transition-colors',
+                        isActive ? 'text-white' : item.iconColor,
+                      )}
+                      aria-hidden="true"
+                    />
                     {!isCollapsed && <span>{item.name}</span>}
                   </Link>
                 );

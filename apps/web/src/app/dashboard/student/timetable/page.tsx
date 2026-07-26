@@ -1,23 +1,30 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { useAuth } from '@/providers/auth-provider';
+import { useMemo, useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { useTutorTimetable } from '@/features/tutor-dashboard/hooks/use-tutor-timetable';
-import type { TimetableSessionDto } from '@/features/tutor-dashboard/types/timetable';
-import { ErrorState } from '@/components/ui/error-state';
 import {
+  useStudentTimetable,
+  useJoinSession,
+} from '@/features/student-dashboard/hooks/use-student-timetable';
+import type { StudentSessionDto } from '@/features/student-dashboard/types/student-dashboard.types';
+import { ErrorState } from '@/components/ui/error-state';
+import { useAuth } from '@/providers/auth-provider';
+import {
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Clock,
-  MapPin,
   Layers,
-  Calendar,
+  Loader2,
+  MapPin,
+  Radio,
   RefreshCw,
+  Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { toast } from 'sonner';
 
 const WEEKDAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
 const DAY_SHORT: Record<string, string> = {
@@ -58,8 +65,6 @@ function getStatusColors(status: string): string {
       return 'border-l-green-500 bg-green-50/60 hover:bg-green-50';
     case 'CANCELLED':
       return 'border-l-red-500 bg-red-50/60 hover:bg-red-50';
-    case 'DRAFT':
-      return 'border-l-amber-500 bg-amber-50/60 hover:bg-amber-50';
     default:
       return 'border-l-slate-400 bg-slate-50/60 hover:bg-slate-50';
   }
@@ -73,22 +78,81 @@ function getBadgeColors(status: string): string {
       return 'text-green-700 bg-green-100';
     case 'CANCELLED':
       return 'text-red-700 bg-red-100';
-    case 'DRAFT':
-      return 'text-amber-700 bg-amber-100';
     default:
       return 'text-slate-600 bg-slate-100';
   }
 }
 
-// ─── Session Card ────────────────────────────────────────────────────────────
+function DeliveryModeBadge({ mode }: { mode: string | null }) {
+  if (!mode) return null;
+  const map: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+    ONLINE: {
+      label: 'Online',
+      cls: 'bg-sky-100 text-sky-700',
+      icon: <Video className="w-2.5 h-2.5" />,
+    },
+    CLASSROOM: {
+      label: 'Classroom',
+      cls: 'bg-amber-100 text-amber-700',
+      icon: <MapPin className="w-2.5 h-2.5" />,
+    },
+    HYBRID: {
+      label: 'Hybrid',
+      cls: 'bg-violet-100 text-violet-700',
+      icon: <Radio className="w-2.5 h-2.5" />,
+    },
+  };
+  const cfg = map[mode] ?? { label: mode, cls: 'bg-slate-100 text-slate-600', icon: null };
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded',
+        cfg.cls,
+      )}
+    >
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
+}
 
-function TimetableSessionCard({ session, date }: { session: TimetableSessionDto; date: string }) {
+function LiveStatusDot({ status }: { status: string }) {
+  if (status === 'LIVE_NOW') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        LIVE
+      </span>
+    );
+  }
+  if (status === 'COMPLETED') {
+    return (
+      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
+        Done
+      </span>
+    );
+  }
+  return (
+    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">
+      Upcoming
+    </span>
+  );
+}
+
+function TimetableSessionCard({ session, date }: { session: StudentSessionDto; date: string }) {
+  const { join, isJoining } = useJoinSession();
   const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isRescheduled =
-    session.overrideType === 'TIME_CHANGED' || session.overrideType === 'TUTOR_CHANGED';
   const formattedDate = date
     ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
     : '';
+
+  const handleJoin = async () => {
+    try {
+      await join(session.id);
+    } catch {
+      toast.error('Cannot join', { description: 'Meeting link not available.' });
+    }
+  };
 
   return (
     <div
@@ -124,16 +188,12 @@ function TimetableSessionCard({ session, date }: { session: TimetableSessionDto;
             {session.batch.name}
           </span>
         )}
-        {session.branch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
-            <MapPin className="w-2.5 h-2.5" />
-            {session.branch.name}
-          </span>
-        )}
+        {session.deliveryMode && <DeliveryModeBadge mode={session.deliveryMode} />}
       </div>
 
-      {/* Status badge */}
+      {/* Status badges */}
       <div className="mt-1.5 flex items-center gap-1 flex-wrap">
+        <LiveStatusDot status={session.liveStatus} />
         <span
           className={cn(
             'text-[9px] font-bold px-1.5 py-0.5 rounded',
@@ -142,43 +202,33 @@ function TimetableSessionCard({ session, date }: { session: TimetableSessionDto;
         >
           {session.sessionStatus}
         </span>
-        {isRescheduled && !isCancelled && (
-          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-            RESCHEDULED
-          </span>
-        )}
       </div>
 
-      {/* Mark Attendance link */}
-      {!isCancelled && (
-        <a
-          href={`/dashboard/tutor/sessions/${session.id}`}
-          className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-800 hover:underline"
+      {/* Join button */}
+      {session.canJoin && !isCancelled && (
+        <button
+          onClick={handleJoin}
+          disabled={isJoining}
+          className="mt-1.5 w-full flex items-center justify-center gap-1 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white text-[10px] font-bold transition-all disabled:opacity-60"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-          Mark Attendance →
-        </a>
+          {isJoining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Video className="w-3 h-3" />}
+          Join Live
+        </button>
       )}
 
       {/* Cancelled reason */}
-      {isCancelled && session.cancelledReason && (
-        <p className="text-[10px] text-red-500 italic mt-1 leading-tight">
-          {session.cancelledReason}
-        </p>
+      {isCancelled && (
+        <p className="text-[10px] text-red-500 italic mt-1 leading-tight">Cancelled</p>
       )}
     </div>
   );
 }
-
-// ─── Empty Cell ──────────────────────────────────────────────────────────────
 
 function EmptyCell() {
   return (
     <div className="h-full min-h-[80px] rounded-lg border border-dashed border-slate-200 bg-slate-50/20" />
   );
 }
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
 
 function TimetableContent() {
   const { user } = useAuth();
@@ -195,23 +245,23 @@ function TimetableContent() {
   const dateFrom = weekRange.start.toISOString().split('T')[0];
   const dateTo = weekRange.end.toISOString().split('T')[0];
 
-  const { timetable, isLoading, error, refetch } = useTutorTimetable(dateFrom, dateTo);
+  const { timetable, isLoading, error, refetch } = useStudentTimetable(dateFrom, dateTo);
 
-  const goBack = useCallback(() => {
+  const goBack = () => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() - 7);
     setWeekStart(d);
-  }, [weekStart]);
+  };
 
-  const goForward = useCallback(() => {
+  const goForward = () => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + 7);
     setWeekStart(d);
-  }, [weekStart]);
+  };
 
-  const goToday = useCallback(() => {
+  const goToday = () => {
     setWeekStart(getWeekRange(new Date()).start);
-  }, []);
+  };
 
   const isCurrentWeek = useMemo(() => {
     const today = getWeekRange(new Date()).start;
@@ -220,17 +270,13 @@ function TimetableContent() {
 
   // Build weekly view: group sessions by weekday
   const weeklyView = useMemo(() => {
-    const grouped: Record<string, TimetableSessionDto[]> = {};
-    for (const day of WEEKDAYS) {
-      grouped[day] = [];
-    }
+    const grouped: Record<string, StudentSessionDto[]> = {};
+    for (const day of WEEKDAYS) grouped[day] = [];
     if (timetable?.timetable) {
       for (const day of timetable.timetable) {
         const date = new Date(day.date + 'T00:00:00');
         const dayName = WEEKDAYS[date.getDay() === 0 ? 6 : date.getDay() - 1];
-        if (grouped[dayName]) {
-          grouped[dayName] = day.sessions;
-        }
+        if (grouped[dayName]) grouped[dayName] = day.sessions;
       }
     }
     return grouped;
@@ -431,11 +477,9 @@ function TimetableContent() {
   );
 }
 
-// ─── Page Export ─────────────────────────────────────────────────────────────
-
-export default function TutorTimetablePage() {
+export default function StudentTimetablePage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['STUDENT']}>
       <DashboardLayout>
         <TimetableContent />
       </DashboardLayout>

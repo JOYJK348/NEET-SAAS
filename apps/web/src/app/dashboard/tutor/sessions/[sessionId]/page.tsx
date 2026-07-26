@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { BulkAttendanceItem } from '@/features/tutor-dashboard/services/session-service';
 import {
   ArrowLeft,
@@ -57,7 +57,11 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function getStatusBadge(status: string): { label: string; className: string; icon: React.ElementType } {
+function getStatusBadge(status: string): {
+  label: string;
+  className: string;
+  icon: React.ElementType;
+} {
   switch (status) {
     case 'SCHEDULED':
       return { label: 'Scheduled', className: 'bg-blue-100 text-blue-700', icon: Clock };
@@ -74,18 +78,32 @@ function getStatusBadge(status: string): { label: string; className: string; ico
 
 function getOverrideLabel(type: string | null | undefined): string | null {
   switch (type) {
-    case 'TIME_CHANGED': return 'Time was rescheduled';
-    case 'TUTOR_CHANGED': return 'Tutor was changed';
-    case 'ROOM_CHANGED': return 'Room was changed';
-    case 'DATE_CHANGED': return 'Date was changed';
-    case 'CANCELLED': return 'Session was cancelled';
-    default: return null;
+    case 'TIME_CHANGED':
+      return 'Time was rescheduled';
+    case 'TUTOR_CHANGED':
+      return 'Tutor was changed';
+    case 'ROOM_CHANGED':
+      return 'Room was changed';
+    case 'DATE_CHANGED':
+      return 'Date was changed';
+    case 'CANCELLED':
+      return 'Session was cancelled';
+    default:
+      return null;
   }
 }
 
 // ─── Info Row ───────────────────────────────────────────────────────────────
 
-function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | null | undefined }) {
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | null | undefined;
+}) {
   if (!value) return null;
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -98,19 +116,9 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
   );
 }
 
-// ─── Attendance Status Selector ─────────────────────────────────────────────
-
-const STATUS_OPTIONS = [
-  { value: '', label: '—', icon: null, className: '' },
-  { value: 'PRESENT', label: 'Present', color: 'text-green-600 bg-green-50 border-green-200 hover:bg-green-100', icon: UserCheck },
-  { value: 'ABSENT', label: 'Absent', color: 'text-red-600 bg-red-50 border-red-200 hover:bg-red-100', icon: UserX },
-  { value: 'LATE', label: 'Late', color: 'text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100', icon: Hourglass },
-  { value: 'HALF_DAY', label: 'Half Day', color: 'text-purple-600 bg-purple-50 border-purple-200 hover:bg-purple-100', icon: CheckCircle2 },
-  { value: 'EXCUSED', label: 'Excused', color: 'text-sky-600 bg-sky-50 border-sky-200 hover:bg-sky-100', icon: CheckCircle2 },
-];
+// ─── ATTENDANCE MARK ROW ─────────────────────────────────────────────────────
 
 function AttendanceMarkRow({
-  enrollmentId,
   studentName,
   initials,
   admissionNumber,
@@ -119,7 +127,6 @@ function AttendanceMarkRow({
   onStatusChange,
   onLateMinutesChange,
 }: {
-  enrollmentId: string;
   studentName: string;
   initials: string;
   admissionNumber: string | undefined;
@@ -129,37 +136,68 @@ function AttendanceMarkRow({
   onLateMinutesChange: (minutes: number | undefined) => void;
 }) {
   const isLate = currentStatus === 'LATE';
+
   return (
-    <div className="flex items-center gap-3 p-2.5 rounded-xl border border-[#E5E7EB] hover:border-[#7C3AED]/20 transition-colors">
-      <Avatar className="h-7 w-7 flex-shrink-0 border border-[#E5E7EB]">
-        <AvatarFallback className="bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-bold">{initials}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[#111827] truncate">{studentName}</p>
-        {admissionNumber && <p className="text-[10px] text-muted-foreground font-mono">{admissionNumber}</p>}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-xl border border-slate-200 bg-white hover:shadow-sm transition-shadow">
+      {/* Avatar + Name */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Avatar className="h-9 w-9 border border-slate-200 flex-shrink-0">
+          <AvatarFallback className="bg-white text-slate-700 text-xs font-bold">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-800 truncate">{studentName}</p>
+          {admissionNumber && (
+            <p className="text-[10px] text-slate-400 font-mono truncate">{admissionNumber}</p>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {STATUS_OPTIONS.map((opt) => {
-          if (!opt.value) return null;
-          const isSelected = currentStatus === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onStatusChange(opt.value)}
-              className={cn(
-                'text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all',
-                isSelected
-                  ? opt.color + ' ring-1 ring-offset-0'
-                  : 'text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600',
-              )}
-              title={opt.label}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+
+      {/* 3 Status Buttons */}
+      <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
+        <button
+          type="button"
+          onClick={() => onStatusChange('PRESENT')}
+          className={cn(
+            'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all active:scale-95',
+            currentStatus === 'PRESENT'
+              ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm shadow-emerald-200'
+              : 'bg-white text-slate-500 border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200',
+          )}
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Present</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange('ABSENT')}
+          className={cn(
+            'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all active:scale-95',
+            currentStatus === 'ABSENT'
+              ? 'bg-red-500 text-white border-red-500 shadow-sm shadow-red-200'
+              : 'bg-white text-slate-500 border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200',
+          )}
+        >
+          <XCircle className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Absent</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange('LATE')}
+          className={cn(
+            'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all active:scale-95',
+            currentStatus === 'LATE'
+              ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200'
+              : 'bg-white text-slate-500 border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200',
+          )}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Late</span>
+        </button>
       </div>
+
+      {/* Late minutes input */}
       {isLate && (
         <div className="flex-shrink-0 w-16">
           <input
@@ -193,12 +231,17 @@ function SessionDetailContent() {
   const [attendanceMap, setAttendanceMap] = useState<Record<string, string>>({});
   const [lateMinutesMap, setLateMinutesMap] = useState<Record<string, number | undefined>>({});
 
-  // Reset local state when session data changes (e.g. after refetch)
-  const resetLocalState = useCallback(() => {
-    if (sessionDetails?.attendance?.records) {
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    const attendance = sessionDetails?.attendance;
+    if (!attendance) return;
+    if (attendance.records && attendance.records.length > 0) {
+      initializedRef.current = true;
       const map: Record<string, string> = {};
       const lateMap: Record<string, number | undefined> = {};
-      for (const r of sessionDetails.attendance.records) {
+      for (const r of attendance.records) {
         map[r.admission?.id ?? r.id] = r.attendanceStatus;
         if (r.lateMinutes !== null && r.lateMinutes !== undefined) {
           lateMap[r.admission?.id ?? r.id] = r.lateMinutes;
@@ -206,13 +249,16 @@ function SessionDetailContent() {
       }
       setAttendanceMap(map);
       setLateMinutesMap(lateMap);
+    } else if (attendance.enrolledStudents && attendance.enrolledStudents.length > 0) {
+      initializedRef.current = true;
+      const map: Record<string, string> = {};
+      for (const s of attendance.enrolledStudents) {
+        map[s.admissionId] = '';
+      }
+      setAttendanceMap(map);
+      setLateMinutesMap({});
     }
   }, [sessionDetails]);
-
-  // Initialize local state on first load or data change
-  if (sessionDetails && Object.keys(attendanceMap).length === 0) {
-    resetLocalState();
-  }
 
   // Handle status change
   const handleStatusChange = useCallback((admissionId: string, status: string) => {
@@ -222,9 +268,28 @@ function SessionDetailContent() {
     }
   }, []);
 
-  const handleLateMinutesChange = useCallback((admissionId: string, minutes: number | undefined) => {
-    setLateMinutesMap((prev) => ({ ...prev, [admissionId]: minutes }));
-  }, []);
+  const handleLateMinutesChange = useCallback(
+    (admissionId: string, minutes: number | undefined) => {
+      setLateMinutesMap((prev) => ({ ...prev, [admissionId]: minutes }));
+    },
+    [],
+  );
+
+  const handleMarkAllPresent = useCallback(() => {
+    const allPresent: Record<string, string> = {};
+    const att = sessionDetails?.attendance;
+    if (att?.records && att.records.length > 0) {
+      for (const r of att.records) {
+        allPresent[r.admission?.id ?? r.id] = 'PRESENT';
+      }
+    } else if (att?.enrolledStudents && att.enrolledStudents.length > 0) {
+      for (const s of att.enrolledStudents) {
+        allPresent[s.admissionId] = 'PRESENT';
+      }
+    }
+    setAttendanceMap(allPresent);
+    setLateMinutesMap({});
+  }, [sessionDetails]);
 
   // Submit attendance
   const handleSubmitAttendance = useCallback(async () => {
@@ -301,7 +366,10 @@ function SessionDetailContent() {
   if (!sessionDetails) {
     return (
       <div className="p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
-        <EmptyState title="Session not found" description="This session does not exist or has been removed." />
+        <EmptyState
+          title="Session not found"
+          description="This session does not exist or has been removed."
+        />
       </div>
     );
   }
@@ -315,7 +383,8 @@ function SessionDetailContent() {
   // Build enrolled students list from attendance records for marking
   // When no records exist, we still show the card but can't mark (no data on who to mark)
   // The backend controls which students can be marked via batch enrollment validation
-  const hasUnmarkedStudents = attendance.totalStudents > 0 && attendance.records.length < attendance.totalStudents;
+  const hasUnmarkedStudents =
+    attendance.totalStudents > 0 && attendance.records.length < attendance.totalStudents;
 
   return (
     <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
@@ -333,7 +402,12 @@ function SessionDetailContent() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
               {session.subject?.name || 'Session Details'}
             </h1>
-            <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full', statusBadge.className)}>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+                statusBadge.className,
+              )}
+            >
               <StatusIcon className="h-3 w-3" aria-hidden="true" />
               {statusBadge.label}
             </span>
@@ -356,7 +430,9 @@ function SessionDetailContent() {
         <Card className="lg:col-span-2 rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
           <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-0 pb-4">
             <BookOpen className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Session Information</CardTitle>
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              Session Information
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -365,19 +441,35 @@ function SessionDetailContent() {
               <InfoRow icon={MapPin} label="Branch" value={session.branch?.name} />
               <InfoRow icon={MapPin} label="Room" value={session.room?.name} />
               <InfoRow icon={Calendar} label="Date" value={formatDate(session.attendanceDate)} />
-              <InfoRow icon={Clock} label="Time" value={formatTime(session.startsAt, session.endsAt)} />
+              <InfoRow
+                icon={Clock}
+                label="Time"
+                value={formatTime(session.startsAt, session.endsAt)}
+              />
               {session.schedule && (
                 <>
-                  <InfoRow icon={Calendar} label="Recurring Day" value={session.schedule.dayOfWeek} />
-                  <InfoRow icon={Clock} label="Scheduled Time" value={
-                    session.schedule.startTime && session.schedule.endTime
-                      ? formatTime(session.schedule.startTime, session.schedule.endTime)
-                      : null
-                  } />
+                  <InfoRow
+                    icon={Calendar}
+                    label="Recurring Day"
+                    value={session.schedule.dayOfWeek}
+                  />
+                  <InfoRow
+                    icon={Clock}
+                    label="Scheduled Time"
+                    value={
+                      session.schedule.startTime && session.schedule.endTime
+                        ? formatTime(session.schedule.startTime, session.schedule.endTime)
+                        : null
+                    }
+                  />
                 </>
               )}
               {session.room?.capacity && (
-                <InfoRow icon={Users} label="Room Capacity" value={`${session.room.capacity} seats`} />
+                <InfoRow
+                  icon={Users}
+                  label="Room Capacity"
+                  value={`${session.room.capacity} seats`}
+                />
               )}
             </div>
             {overrideLabel && (
@@ -388,13 +480,17 @@ function SessionDetailContent() {
                 </div>
                 <p className="text-amber-600 mt-1 text-xs">
                   {overrideLabel}
-                  {session.cancelledReason && <span className="block mt-0.5 italic">Reason: {session.cancelledReason}</span>}
+                  {session.cancelledReason && (
+                    <span className="block mt-0.5 italic">Reason: {session.cancelledReason}</span>
+                  )}
                 </p>
               </div>
             )}
             {session.remarks && (
               <div className="mt-3 p-3 rounded-xl bg-gray-50 border border-[#E5E7EB] text-sm">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Remarks</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                  Remarks
+                </p>
                 <p className="text-[#111827]">{session.remarks}</p>
               </div>
             )}
@@ -405,14 +501,18 @@ function SessionDetailContent() {
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
           <CardHeader className="flex flex-row items-center gap-2 space-y-0 p-0 pb-4">
             <UserCheck className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Attendance</CardTitle>
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+              Attendance
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0 space-y-4">
             {isCancelled ? (
               <div className="text-center p-4 rounded-xl bg-red-50 border border-red-200">
                 <XCircle className="h-8 w-8 text-red-400 mx-auto mb-1" aria-hidden="true" />
                 <p className="text-sm font-bold text-red-700">Session Cancelled</p>
-                <p className="text-xs text-red-500 mt-1">No attendance was recorded for this session.</p>
+                <p className="text-xs text-red-500 mt-1">
+                  No attendance was recorded for this session.
+                </p>
               </div>
             ) : attendance.markedCount === 0 && attendance.totalStudents > 0 ? (
               <div className="text-center p-4 rounded-xl bg-amber-50 border border-amber-200">
@@ -432,14 +532,34 @@ function SessionDetailContent() {
               <>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { label: 'Present', count: attendance.presentCount, icon: UserCheck, color: 'text-green-500' },
-                    { label: 'Absent', count: attendance.absentCount, icon: UserX, color: 'text-red-500' },
-                    { label: 'Late', count: attendance.lateCount, icon: Hourglass, color: 'text-amber-500' },
+                    {
+                      label: 'Present',
+                      count: attendance.presentCount,
+                      icon: UserCheck,
+                      color: 'text-green-500',
+                    },
+                    {
+                      label: 'Absent',
+                      count: attendance.absentCount,
+                      icon: UserX,
+                      color: 'text-red-500',
+                    },
+                    {
+                      label: 'Late',
+                      count: attendance.lateCount,
+                      icon: Hourglass,
+                      color: 'text-amber-500',
+                    },
                   ].map((s) => (
-                    <div key={s.label} className="flex flex-col items-center p-3 rounded-xl border border-[#E5E7EB] bg-white">
+                    <div
+                      key={s.label}
+                      className="flex flex-col items-center p-3 rounded-xl border border-[#E5E7EB] bg-white"
+                    >
                       <s.icon className={cn('h-5 w-5 mb-1', s.color)} aria-hidden="true" />
                       <p className="text-lg font-bold text-[#111827]">{s.count}</p>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase">{s.label}</p>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase">
+                        {s.label}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -447,7 +567,10 @@ function SessionDetailContent() {
                   <span className="font-semibold">{attendance.markedCount}</span> of{' '}
                   <span className="font-semibold">{attendance.totalStudents}</span> students marked
                   {attendance.unmarkedCount > 0 && (
-                    <span className="text-amber-600 font-semibold"> · {attendance.unmarkedCount} unmarked</span>
+                    <span className="text-amber-600 font-semibold">
+                      {' '}
+                      · {attendance.unmarkedCount} unmarked
+                    </span>
                   )}
                 </div>
               </>
@@ -459,34 +582,46 @@ function SessionDetailContent() {
       {/* ── Attendance Marking Panel ── */}
       {!isCancelled && (
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-4">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 space-y-0 p-0 pb-4">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
                 Mark Attendance
               </CardTitle>
               <span className="text-xs text-muted-foreground">
-                ({Object.values(attendanceMap).filter(Boolean).length} marked of {attendance.totalStudents} total enrolled)
+                ({Object.values(attendanceMap).filter(Boolean).length} marked of{' '}
+                {attendance.totalStudents} total enrolled)
               </span>
             </div>
-            <Button
-              onClick={handleSubmitAttendance}
-              disabled={isMarking || Object.values(attendanceMap).filter(Boolean).length === 0}
-              size="sm"
-              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold gap-1.5 rounded-lg"
-            >
-              {isMarking ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-3.5 w-3.5" aria-hidden="true" />
-                  Save Attendance
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleMarkAllPresent}
+                size="sm"
+                variant="outline"
+                className="text-xs font-bold gap-1.5 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Mark All Present
+              </Button>
+              <Button
+                onClick={handleSubmitAttendance}
+                disabled={isMarking || Object.values(attendanceMap).filter(Boolean).length === 0}
+                size="sm"
+                className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold gap-1.5 rounded-lg"
+              >
+                {isMarking ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                    Save Attendance
+                  </>
+                )}
+              </Button>
+            </div>
           </CardHeader>
 
           <CardContent className="p-0 space-y-1.5">
@@ -496,18 +631,7 @@ function SessionDetailContent() {
                 title="No students enrolled"
                 description="This batch doesn't have any enrolled students to mark attendance for."
               />
-            ) : attendance.records.length === 0 && attendance.totalStudents > 0 ? (
-              // Records exist in backend but none marked — show a prompt
-              <div className="text-center p-6">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Attendance records will appear here after the first save.
-                </p>
-                <p className="text-xs text-gray-400">
-                  Currently {attendance.totalStudents} student(s) are enrolled. The marking panel below only works after
-                  initial records are created via the backend.
-                </p>
-              </div>
-            ) : (
+            ) : attendance.records.length > 0 ? (
               attendance.records.map((record) => {
                 const admissionId = record.admission?.id ?? record.id;
                 const fullName = record.student
@@ -520,7 +644,6 @@ function SessionDetailContent() {
                 return (
                   <AttendanceMarkRow
                     key={record.id}
-                    enrollmentId={record.id}
                     studentName={fullName}
                     initials={initials}
                     admissionNumber={record.admission?.admissionNumber}
@@ -531,7 +654,28 @@ function SessionDetailContent() {
                   />
                 );
               })
-            )}
+            ) : attendance.enrolledStudents?.length > 0 ? (
+              attendance.enrolledStudents.map((enrolled) => {
+                const fullName = `${enrolled.firstName} ${enrolled.lastName}`;
+                const initials = `${enrolled.firstName.charAt(0)}${enrolled.lastName.charAt(0)}`;
+                const currentStatus = attendanceMap[enrolled.admissionId] ?? '';
+
+                return (
+                  <AttendanceMarkRow
+                    key={enrolled.admissionId}
+                    studentName={fullName}
+                    initials={initials}
+                    admissionNumber={enrolled.admissionNumber}
+                    currentStatus={currentStatus}
+                    lateMinutes={lateMinutesMap[enrolled.admissionId] ?? undefined}
+                    onStatusChange={(status) => handleStatusChange(enrolled.admissionId, status)}
+                    onLateMinutesChange={(minutes) =>
+                      handleLateMinutesChange(enrolled.admissionId, minutes)
+                    }
+                  />
+                );
+              })
+            ) : null}
 
             {/* Success banner */}
             {markResult && markResult.successCount > 0 && (
@@ -569,38 +713,64 @@ function SessionDetailContent() {
               const initials = record.student
                 ? `${record.student.firstName.charAt(0)}${record.student.lastName.charAt(0)}`
                 : '??';
-              const StatusIcon = record.attendanceStatus === 'PRESENT' ? CheckCircle2
-                : record.attendanceStatus === 'ABSENT' ? XCircle
-                : Hourglass;
-              const iconColor = record.attendanceStatus === 'PRESENT' ? 'text-green-500'
-                : record.attendanceStatus === 'ABSENT' ? 'text-red-500'
-                : 'text-amber-500';
+              const StatusIcon =
+                record.attendanceStatus === 'PRESENT'
+                  ? CheckCircle2
+                  : record.attendanceStatus === 'ABSENT'
+                    ? XCircle
+                    : Hourglass;
+              const iconColor =
+                record.attendanceStatus === 'PRESENT'
+                  ? 'text-green-500'
+                  : record.attendanceStatus === 'ABSENT'
+                    ? 'text-red-500'
+                    : 'text-amber-500';
               return (
-                <div key={record.id} className="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+                <div
+                  key={record.id}
+                  className="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]"
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <Avatar className="h-7 w-7 flex-shrink-0 border border-[#E5E7EB]">
-                      <AvatarFallback className="bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-bold">{initials}</AvatarFallback>
+                      <AvatarFallback className="bg-[#7C3AED]/10 text-[#7C3AED] text-[10px] font-bold">
+                        {initials}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-[#111827] truncate">{fullName}</p>
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                        {record.admission && <span className="font-mono">{record.admission.admissionNumber}</span>}
+                        {record.admission && (
+                          <span className="font-mono">{record.admission.admissionNumber}</span>
+                        )}
                         <span>•</span>
-                        <span>{new Date(record.markedAt).toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>
+                          {new Date(record.markedAt).toLocaleString('en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     <StatusIcon className={cn('h-3.5 w-3.5', iconColor)} aria-hidden="true" />
-                    <span className={cn(
-                      'text-[10px] font-bold',
-                      record.attendanceStatus === 'PRESENT' && 'text-green-600',
-                      record.attendanceStatus === 'ABSENT' && 'text-red-600',
-                      record.attendanceStatus === 'LATE' && 'text-amber-600',
-                    )}>
+                    <span
+                      className={cn(
+                        'text-[10px] font-bold',
+                        record.attendanceStatus === 'PRESENT' && 'text-green-600',
+                        record.attendanceStatus === 'ABSENT' && 'text-red-600',
+                        record.attendanceStatus === 'LATE' && 'text-amber-600',
+                      )}
+                    >
                       {record.attendanceStatus}
                     </span>
-                    {record.lateMinutes && <span className="text-[9px] text-muted-foreground">({record.lateMinutes} min)</span>}
+                    {record.lateMinutes && (
+                      <span className="text-[9px] text-muted-foreground">
+                        ({record.lateMinutes} min)
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -623,4 +793,3 @@ export default function SessionDetailsPage() {
     </ProtectedRoute>
   );
 }
-

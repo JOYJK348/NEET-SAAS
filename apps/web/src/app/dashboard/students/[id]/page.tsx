@@ -486,12 +486,20 @@ function StudentDetailContent() {
                       </span>
                       <p className="text-xl font-extrabold text-[#7C3AED] mt-1">720/720 (Max)</p>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 border border-[#E5E7EB]">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <a
+                      href="/dashboard/attendance"
+                      className="block p-3 rounded-xl bg-slate-50 border border-[#E5E7EB] hover:border-teal-300 hover:bg-teal-50 transition-colors group"
+                    >
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                         Attendance Rate
+                        <span className="text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]">
+                          View →
+                        </span>
                       </span>
-                      <p className="text-xl font-extrabold text-green-600 mt-1">98.4%</p>
-                    </div>
+                      <p className="text-xl font-extrabold text-teal-600 mt-1 group-hover:text-teal-700">
+                        Click to view
+                      </p>
+                    </a>
                   </div>
                 </Card>
               </div>

@@ -314,7 +314,17 @@ export class AuthService {
       orderBy: { roleIdroles: { priority: 'desc' } },
     });
 
-    const profile = user.staff_profiless?.[0] ?? null;
+    const profile = user.staff_profiless?.[0]
+      ? (user.staff_profiless[0] as {
+          userId: string;
+          employeeCode: string | null;
+          employmentType: string | null;
+          employmentStatus: string | null;
+          staff_subjectss: { subjectId: string }[];
+          staff_departmentss: { branchId: string }[];
+          staff_batch_assignmentss: { batchId: string; subjectId: string }[];
+        })
+      : null;
 
     return {
       id: user.id,
@@ -331,12 +341,8 @@ export class AuthService {
             employeeCode: profile.employeeCode,
             employmentType: profile.employmentType,
             employmentStatus: profile.employmentStatus,
-            subjects: profile.staff_subjectss.map(
-              (s: { subjectId: string }) => s.subjectId,
-            ),
-            branches: profile.staff_departmentss.map(
-              (d: { branchId: string }) => d.branchId,
-            ),
+            subjects: profile.staff_subjectss.map((s) => s.subjectId),
+            branches: profile.staff_departmentss.map((d) => d.branchId),
             batchAssignments: profile.staff_batch_assignmentss,
           }
         : null,
@@ -349,6 +355,9 @@ export class AuthService {
         email,
         ...(tenantId ? { tenantId } : {}),
       },
+      include: {
+        student_profiless: true,
+      },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -358,6 +367,7 @@ export class AuthService {
   private assertUserCanLogin(user: {
     status: string;
     lockedUntil: Date | null;
+    student_profiless?: { academicStatus: string } | null;
   }): void {
     if (user.status !== 'ACTIVE') {
       throw new ForbiddenException('Account is not active');
@@ -365,6 +375,13 @@ export class AuthService {
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       throw new HttpException('Account is locked', HttpStatus.LOCKED);
+    }
+
+    if (
+      user.student_profiless &&
+      user.student_profiless.academicStatus !== 'ACTIVE'
+    ) {
+      throw new ForbiddenException('Account is not active');
     }
   }
 

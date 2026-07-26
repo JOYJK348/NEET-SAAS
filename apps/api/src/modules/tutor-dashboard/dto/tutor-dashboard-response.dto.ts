@@ -1,4 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 // ─── NESTED OBJECT DTOs ─────────────────────────────────────────────────────
 
@@ -267,6 +279,26 @@ class AttendanceRecordDto {
   admission?: AdmissionInfoDto | null;
 }
 
+class EnrolledStudentDto {
+  @ApiProperty({ example: 'admission-uuid' })
+  admissionId!: string;
+
+  @ApiProperty({ example: 'ADM-2026-0001' })
+  admissionNumber!: string;
+
+  @ApiProperty({ example: 'user-uuid' })
+  studentId!: string;
+
+  @ApiProperty({ example: 'Rajesh' })
+  firstName!: string;
+
+  @ApiProperty({ example: 'Kumar' })
+  lastName!: string;
+
+  @ApiProperty({ example: 'rajesh@example.com' })
+  email!: string;
+}
+
 class AttendanceStatsDto {
   @ApiProperty({ example: 45 })
   totalStudents!: number;
@@ -288,6 +320,9 @@ class AttendanceStatsDto {
 
   @ApiProperty({ type: [AttendanceRecordDto] })
   records!: AttendanceRecordDto[];
+
+  @ApiProperty({ type: [EnrolledStudentDto] })
+  enrolledStudents!: EnrolledStudentDto[];
 }
 
 class SessionDetailDto {
@@ -397,20 +432,32 @@ export class SessionDetailsResponseDto {
 
 export class BulkAttendanceItemDto {
   @ApiProperty({ example: 'admission-uuid' })
+  @IsString()
+  @IsNotEmpty()
   studentAdmissionId!: string;
 
   @ApiProperty({ enum: ['PRESENT', 'ABSENT', 'LATE'] })
+  @IsEnum(['PRESENT', 'ABSENT', 'LATE'] as const)
   attendanceStatus!: 'PRESENT' | 'ABSENT' | 'LATE';
 
   @ApiPropertyOptional({ example: 15 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   lateMinutes?: number;
 
   @ApiPropertyOptional({ example: 'Medical appointment' })
+  @IsOptional()
+  @IsString()
   remarks?: string;
 }
 
 export class BulkAttendanceRequestDto {
   @ApiProperty({ type: [BulkAttendanceItemDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => BulkAttendanceItemDto)
   records!: BulkAttendanceItemDto[];
 }
 

@@ -37,15 +37,54 @@ import { StudentPreview } from '@/features/course-builder/components/StudentPrev
 type DrillLevel = 'courses' | 'subjects' | 'chapters' | 'topics';
 
 // ─── Subject colour theming ──────────────────────────────────────────────────
-const SUBJECT_THEMES: Record<string, { from: string; to: string; icon: string; light: string; badge: string }> = {
-  physics:    { from: 'from-indigo-500',  to: 'to-blue-600',   icon: 'text-indigo-600',  light: 'bg-indigo-50',   badge: 'bg-indigo-100 text-indigo-700' },
-  chemistry:  { from: 'from-emerald-500', to: 'to-teal-600',   icon: 'text-emerald-600', light: 'bg-emerald-50',  badge: 'bg-emerald-100 text-emerald-700' },
-  biology:    { from: 'from-green-500',   to: 'to-lime-600',   icon: 'text-green-600',   light: 'bg-green-50',    badge: 'bg-green-100 text-green-700' },
-  maths:      { from: 'from-rose-500',    to: 'to-pink-600',   icon: 'text-rose-600',    light: 'bg-rose-50',     badge: 'bg-rose-100 text-rose-700' },
-  english:    { from: 'from-violet-500',  to: 'to-purple-600', icon: 'text-violet-600',  light: 'bg-violet-50',   badge: 'bg-violet-100 text-violet-700' },
+const SUBJECT_THEMES: Record<
+  string,
+  { from: string; to: string; icon: string; light: string; badge: string }
+> = {
+  physics: {
+    from: 'from-indigo-500',
+    to: 'to-blue-600',
+    icon: 'text-indigo-600',
+    light: 'bg-indigo-50',
+    badge: 'bg-indigo-100 text-indigo-700',
+  },
+  chemistry: {
+    from: 'from-emerald-500',
+    to: 'to-teal-600',
+    icon: 'text-emerald-600',
+    light: 'bg-emerald-50',
+    badge: 'bg-emerald-100 text-emerald-700',
+  },
+  biology: {
+    from: 'from-green-500',
+    to: 'to-lime-600',
+    icon: 'text-green-600',
+    light: 'bg-green-50',
+    badge: 'bg-green-100 text-green-700',
+  },
+  maths: {
+    from: 'from-rose-500',
+    to: 'to-pink-600',
+    icon: 'text-rose-600',
+    light: 'bg-rose-50',
+    badge: 'bg-rose-100 text-rose-700',
+  },
+  english: {
+    from: 'from-violet-500',
+    to: 'to-purple-600',
+    icon: 'text-violet-600',
+    light: 'bg-violet-50',
+    badge: 'bg-violet-100 text-violet-700',
+  },
 };
 
-const DEFAULT_THEME = { from: 'from-slate-500', to: 'to-slate-600', icon: 'text-slate-600', light: 'bg-slate-50', badge: 'bg-slate-100 text-slate-700' };
+const DEFAULT_THEME = {
+  from: 'from-slate-500',
+  to: 'to-slate-600',
+  icon: 'text-slate-600',
+  light: 'bg-slate-50',
+  badge: 'bg-slate-100 text-slate-700',
+};
 
 function getSubjectTheme(name: string) {
   const lower = name.toLowerCase();
@@ -58,13 +97,27 @@ function getSubjectTheme(name: string) {
 // ─── Difficulty badge ────────────────────────────────────────────────────────
 function DifficultyBadge({ level }: { level: string }) {
   const cfg: Record<string, { cls: string; icon: React.ReactNode }> = {
-    EASY:   { cls: 'bg-emerald-100 text-emerald-700 border border-emerald-200', icon: <CheckCircle2 className="w-3 h-3" /> },
-    MEDIUM: { cls: 'bg-amber-100 text-amber-700 border border-amber-200',       icon: <Flame className="w-3 h-3" /> },
-    HARD:   { cls: 'bg-red-100 text-red-700 border border-red-200',             icon: <AlertCircle className="w-3 h-3" /> },
+    EASY: {
+      cls: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+      icon: <CheckCircle2 className="w-3 h-3" />,
+    },
+    MEDIUM: {
+      cls: 'bg-amber-100 text-amber-700 border border-amber-200',
+      icon: <Flame className="w-3 h-3" />,
+    },
+    HARD: {
+      cls: 'bg-red-100 text-red-700 border border-red-200',
+      icon: <AlertCircle className="w-3 h-3" />,
+    },
   };
-  const c = cfg[level] ?? { cls: 'bg-slate-100 text-slate-600 border border-slate-200', icon: null };
+  const c = cfg[level] ?? {
+    cls: 'bg-slate-100 text-slate-600 border border-slate-200',
+    icon: null,
+  };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.cls}`}>
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${c.cls}`}
+    >
       {c.icon} {level}
     </span>
   );
@@ -105,10 +158,14 @@ function Breadcrumb({ crumbs }: { crumbs: { label: string; onClick?: () => void 
 // ─── Course Card ─────────────────────────────────────────────────────────────
 function CourseCard({ course, onSelect }: { course: TutorCourseDto; onSelect: () => void }) {
   const totalChapters = course.subjects.reduce((a, s) => a + s.chapters.length, 0);
-  const totalTopics   = course.subjects.reduce((acc, s) => acc + s.chapters.reduce((sum, ch) => sum + ch.topics.length, 0), 0);
+  const totalTopics = course.subjects.reduce(
+    (acc, s) => acc + s.chapters.reduce((sum, ch) => sum + ch.topics.length, 0),
+    0,
+  );
 
   const isCourseDeactivated = course.isActive === false;
-  const isAllBatchesInactive = course.batches.length > 0 && course.batches.every((b) => b.status === 'INACTIVE');
+  const isAllBatchesInactive =
+    course.batches.length > 0 && course.batches.every((b) => b.status === 'INACTIVE');
   const isDeactivated = isCourseDeactivated || isAllBatchesInactive;
   const deactivatedBatches = course.batches.filter((b) => b.status === 'INACTIVE').length;
 
@@ -121,21 +178,32 @@ function CourseCard({ course, onSelect }: { course: TutorCourseDto; onSelect: ()
         isDeactivated && 'cursor-not-allowed opacity-55 saturate-0 pointer-events-none',
       )}
     >
-      <div className={cn(
-        'bg-white rounded-2xl border border-slate-100 shadow-sm transition-all duration-200 overflow-hidden',
-        isDeactivated ? 'border-red-200' : 'hover:shadow-md hover:border-violet-200',
-      )}>
+      <div
+        className={cn(
+          'bg-white rounded-2xl border border-slate-100 shadow-sm transition-all duration-200 overflow-hidden',
+          isDeactivated ? 'border-red-200' : 'hover:shadow-md hover:border-violet-200',
+        )}
+      >
         {/* Top accent bar */}
-        <div className={cn('h-1 bg-gradient-to-r from-violet-500 to-indigo-500', isDeactivated && 'from-red-400 to-red-500')} />
+        <div
+          className={cn(
+            'h-1 bg-gradient-to-r from-violet-500 to-indigo-500',
+            isDeactivated && 'from-red-400 to-red-500',
+          )}
+        />
 
         <div className="p-4 sm:p-5">
           {/* Header row */}
           <div className="flex items-start gap-3">
-            <div className={cn(
-              'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
-              isDeactivated ? 'bg-red-100' : 'bg-gradient-to-br from-violet-100 to-indigo-100',
-            )}>
-              <BookOpen className={cn('w-5 h-5', isDeactivated ? 'text-red-400' : 'text-violet-600')} />
+            <div
+              className={cn(
+                'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
+                isDeactivated ? 'bg-red-100' : 'bg-gradient-to-br from-violet-100 to-indigo-100',
+              )}
+            >
+              <BookOpen
+                className={cn('w-5 h-5', isDeactivated ? 'text-red-400' : 'text-violet-600')}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -183,11 +251,26 @@ function CourseCard({ course, onSelect }: { course: TutorCourseDto; onSelect: ()
 
           {/* Stats */}
           <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-slate-50">
-            <Stat icon={<Layers className="w-3.5 h-3.5 text-violet-400" />}    label={`${course.subjects.length} subjects`} />
-            <Stat icon={<FolderOpen className="w-3.5 h-3.5 text-blue-400" />}  label={`${totalChapters} chapters`} />
-            <Stat icon={<FileText className="w-3.5 h-3.5 text-emerald-400" />} label={`${totalTopics} topics`} />
-            <Stat icon={<GraduationCap className="w-3.5 h-3.5 text-amber-400" />} label={`${course.batches.length} batches`} />
-            <Stat icon={<Clock className="w-3.5 h-3.5 text-rose-400" />}       label={`${course.durationMonths}m`} />
+            <Stat
+              icon={<Layers className="w-3.5 h-3.5 text-violet-400" />}
+              label={`${course.subjects.length} subjects`}
+            />
+            <Stat
+              icon={<FolderOpen className="w-3.5 h-3.5 text-blue-400" />}
+              label={`${totalChapters} chapters`}
+            />
+            <Stat
+              icon={<FileText className="w-3.5 h-3.5 text-emerald-400" />}
+              label={`${totalTopics} topics`}
+            />
+            <Stat
+              icon={<GraduationCap className="w-3.5 h-3.5 text-amber-400" />}
+              label={`${course.batches.length} batches`}
+            />
+            <Stat
+              icon={<Clock className="w-3.5 h-3.5 text-rose-400" />}
+              label={`${course.durationMonths}m`}
+            />
           </div>
 
           {/* Inactive course status warning */}
@@ -218,17 +301,26 @@ function SubjectCard({ cs, onSelect }: { cs: CourseSubjectDto; onSelect: () => v
         isDeactivated && 'cursor-not-allowed opacity-55 saturate-0 pointer-events-none',
       )}
     >
-      <div className={cn(
-        'bg-white rounded-2xl border shadow-sm transition-all duration-200 overflow-hidden',
-        isDeactivated ? 'border-red-200' : 'border-slate-100 hover:shadow-md',
-      )}>
-        <div className={cn(`h-1 bg-gradient-to-r`, isDeactivated ? 'from-red-400 to-red-500' : `${theme.from} ${theme.to}`)} />
+      <div
+        className={cn(
+          'bg-white rounded-2xl border shadow-sm transition-all duration-200 overflow-hidden',
+          isDeactivated ? 'border-red-200' : 'border-slate-100 hover:shadow-md',
+        )}
+      >
+        <div
+          className={cn(
+            `h-1 bg-gradient-to-r`,
+            isDeactivated ? 'from-red-400 to-red-500' : `${theme.from} ${theme.to}`,
+          )}
+        />
         <div className="p-4 sm:p-5">
           <div className="flex items-start gap-3">
-            <div className={cn(
-              'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-              isDeactivated ? 'bg-red-100' : theme.light,
-            )}>
+            <div
+              className={cn(
+                'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+                isDeactivated ? 'bg-red-100' : theme.light,
+              )}
+            >
               <BookMarked className={cn('w-5 h-5', isDeactivated ? 'text-red-400' : theme.icon)} />
             </div>
             <div className="flex-1 min-w-0">
@@ -263,8 +355,14 @@ function SubjectCard({ cs, onSelect }: { cs: CourseSubjectDto; onSelect: () => v
           )}
 
           <div className="flex gap-3 mt-3 pt-3 border-t border-slate-50">
-            <Stat icon={<FolderOpen className="w-3.5 h-3.5 text-blue-400" />}  label={`${cs.chapters.length} chapters`} />
-            <Stat icon={<FileText className="w-3.5 h-3.5 text-emerald-400" />} label={`${totalTopics} topics`} />
+            <Stat
+              icon={<FolderOpen className="w-3.5 h-3.5 text-blue-400" />}
+              label={`${cs.chapters.length} chapters`}
+            />
+            <Stat
+              icon={<FileText className="w-3.5 h-3.5 text-emerald-400" />}
+              label={`${totalTopics} topics`}
+            />
           </div>
         </div>
       </div>
@@ -273,7 +371,15 @@ function SubjectCard({ cs, onSelect }: { cs: CourseSubjectDto; onSelect: () => v
 }
 
 // ─── Chapter Row ─────────────────────────────────────────────────────────────
-function ChapterRow({ ch, index, onSelect }: { ch: ChapterDto; index: number; onSelect: () => void }) {
+function ChapterRow({
+  ch,
+  index,
+  onSelect,
+}: {
+  ch: ChapterDto;
+  index: number;
+  onSelect: () => void;
+}) {
   return (
     <button
       onClick={onSelect}
@@ -283,14 +389,22 @@ function ChapterRow({ ch, index, onSelect }: { ch: ChapterDto; index: number; on
         <div className="flex items-center gap-3">
           {/* Chapter number badge */}
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-black text-amber-700">{String(index + 1).padStart(2, '0')}</span>
+            <span className="text-xs font-black text-amber-700">
+              {String(index + 1).padStart(2, '0')}
+            </span>
           </div>
 
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-900 text-sm truncate">{ch.name}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <Stat icon={<FileText className="w-3 h-3 text-slate-400" />} label={`${ch.topics.length} topics`} />
-              <Stat icon={<Clock className="w-3 h-3 text-slate-400" />}    label={`${ch.plannedHours}h`} />
+              <Stat
+                icon={<FileText className="w-3 h-3 text-slate-400" />}
+                label={`${ch.topics.length} topics`}
+              />
+              <Stat
+                icon={<Clock className="w-3 h-3 text-slate-400" />}
+                label={`${ch.plannedHours}h`}
+              />
             </div>
           </div>
 
@@ -302,7 +416,15 @@ function ChapterRow({ ch, index, onSelect }: { ch: ChapterDto; index: number; on
 }
 
 // ─── Topic Card ──────────────────────────────────────────────────────────────
-function TopicCard({ topic, index, onSelect }: { topic: TopicDto; index: number; onSelect: () => void }) {
+function TopicCard({
+  topic,
+  index,
+  onSelect,
+}: {
+  topic: TopicDto;
+  index: number;
+  onSelect: () => void;
+}) {
   return (
     <button
       onClick={onSelect}
@@ -312,12 +434,16 @@ function TopicCard({ topic, index, onSelect }: { topic: TopicDto; index: number;
         <div className="flex items-start gap-3 p-4">
           {/* Number */}
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:from-violet-50 group-hover:to-violet-100 transition-colors">
-            <span className="text-[10px] font-black text-emerald-700 group-hover:text-violet-700 transition-colors">{String(index + 1).padStart(2, '0')}</span>
+            <span className="text-[10px] font-black text-emerald-700 group-hover:text-violet-700 transition-colors">
+              {String(index + 1).padStart(2, '0')}
+            </span>
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-slate-900 text-sm leading-tight group-hover:text-violet-700 transition-colors">{topic.name}</p>
+              <p className="font-semibold text-slate-900 text-sm leading-tight group-hover:text-violet-700 transition-colors">
+                {topic.name}
+              </p>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <DifficultyBadge level={topic.difficultyLevel} />
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-100 px-1.5 py-0.5 rounded-full flex items-center gap-1">
@@ -331,9 +457,18 @@ function TopicCard({ topic, index, onSelect }: { topic: TopicDto; index: number;
             )}
 
             <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-slate-50">
-              <Stat icon={<FileText className="w-3 h-3 text-green-400" />}  label={`${topic.topicItemCount} items`} />
-              <Stat icon={<Clock className="w-3 h-3 text-blue-400" />}      label={`${topic.plannedHours}h`} />
-              <Stat icon={<BarChart3 className="w-3 h-3 text-violet-400" />} label={`${topic.plannedSessions} sessions`} />
+              <Stat
+                icon={<FileText className="w-3 h-3 text-green-400" />}
+                label={`${topic.topicItemCount} items`}
+              />
+              <Stat
+                icon={<Clock className="w-3 h-3 text-blue-400" />}
+                label={`${topic.plannedHours}h`}
+              />
+              <Stat
+                icon={<BarChart3 className="w-3 h-3 text-violet-400" />}
+                label={`${topic.plannedSessions} sessions`}
+              />
             </div>
 
             {topic.description && (
@@ -348,7 +483,9 @@ function TopicCard({ topic, index, onSelect }: { topic: TopicDto; index: number;
         {topic.learningObjectives && (
           <div className="bg-violet-50 border-t border-violet-100 px-4 py-2 flex items-start gap-2 group-hover:bg-violet-100/50 transition-colors">
             <Zap className="w-3 h-3 text-violet-500 flex-shrink-0 mt-0.5" />
-            <p className="text-[10px] text-violet-700 font-medium line-clamp-2">{topic.learningObjectives}</p>
+            <p className="text-[10px] text-violet-700 font-medium line-clamp-2">
+              {topic.learningObjectives}
+            </p>
           </div>
         )}
       </div>
@@ -357,7 +494,15 @@ function TopicCard({ topic, index, onSelect }: { topic: TopicDto; index: number;
 }
 
 // ─── Back header ─────────────────────────────────────────────────────────────
-function BackHeader({ onBack, title, subtitle }: { onBack: () => void; title: string; subtitle?: string }) {
+function BackHeader({
+  onBack,
+  title,
+  subtitle,
+}: {
+  onBack: () => void;
+  title: string;
+  subtitle?: string;
+}) {
   return (
     <div className="flex items-center gap-3 mb-1">
       <button
@@ -389,10 +534,10 @@ function CountBadge({ count, label }: { count: number; label: string }) {
 function TutorCoursesContent() {
   const { courses: data, isLoading, error, refetch } = useTutorCourses();
 
-  const [selectedCourse,  setSelectedCourse]  = useState<TutorCourseDto | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<TutorCourseDto | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<CourseSubjectDto | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<ChapterDto | null>(null);
-  const [selectedTopic,   setSelectedTopic]   = useState<TopicDto | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<TopicDto | null>(null);
 
   const level: DrillLevel = !selectedCourse
     ? 'courses'
@@ -403,16 +548,46 @@ function TutorCoursesContent() {
         : 'topics';
 
   const handleBack = () => {
-    if (selectedTopic)        setSelectedTopic(null);
-    else if (level === 'topics')   setSelectedChapter(null);
+    if (selectedTopic) setSelectedTopic(null);
+    else if (level === 'topics') setSelectedChapter(null);
     else if (level === 'chapters') setSelectedSubject(null);
     else if (level === 'subjects') setSelectedCourse(null);
   };
 
   const breadcrumbs = [
-    { label: 'Courses', onClick: level !== 'courses' ? () => { setSelectedCourse(null); setSelectedSubject(null); setSelectedChapter(null); } : undefined },
-    ...(selectedCourse  ? [{ label: selectedCourse.displayName || selectedCourse.name, onClick: level !== 'subjects' ? () => { setSelectedSubject(null); setSelectedChapter(null); } : undefined }] : []),
-    ...(selectedSubject ? [{ label: selectedSubject.subject.name, onClick: level !== 'chapters' ? () => setSelectedChapter(null) : undefined }] : []),
+    {
+      label: 'Courses',
+      onClick:
+        level !== 'courses'
+          ? () => {
+              setSelectedCourse(null);
+              setSelectedSubject(null);
+              setSelectedChapter(null);
+            }
+          : undefined,
+    },
+    ...(selectedCourse
+      ? [
+          {
+            label: selectedCourse.displayName || selectedCourse.name,
+            onClick:
+              level !== 'subjects'
+                ? () => {
+                    setSelectedSubject(null);
+                    setSelectedChapter(null);
+                  }
+                : undefined,
+          },
+        ]
+      : []),
+    ...(selectedSubject
+      ? [
+          {
+            label: selectedSubject.subject.name,
+            onClick: level !== 'chapters' ? () => setSelectedChapter(null) : undefined,
+          },
+        ]
+      : []),
     ...(selectedChapter ? [{ label: selectedChapter.name }] : []),
   ];
 
@@ -472,7 +647,6 @@ function TutorCoursesContent() {
 
       {/* ── Content ── */}
       <div className="p-4 sm:p-6 space-y-4 pb-24">
-
         {/* ── Courses ── */}
         {level === 'courses' && (
           <>
@@ -481,7 +655,11 @@ function TutorCoursesContent() {
             </div>
             <div className="space-y-3">
               {data.courses.map((course) => (
-                <CourseCard key={course.id} course={course} onSelect={() => setSelectedCourse(course)} />
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onSelect={() => setSelectedCourse(course)}
+                />
               ))}
             </div>
           </>
@@ -531,7 +709,12 @@ function TutorCoursesContent() {
                 {selectedSubject.chapters
                   .sort((a, b) => a.displayOrder - b.displayOrder)
                   .map((ch, i) => (
-                    <ChapterRow key={ch.id} ch={ch} index={i} onSelect={() => setSelectedChapter(ch)} />
+                    <ChapterRow
+                      key={ch.id}
+                      ch={ch}
+                      index={i}
+                      onSelect={() => setSelectedChapter(ch)}
+                    />
                   ))}
               </div>
             )}
@@ -549,11 +732,13 @@ function TutorCoursesContent() {
             <div className="flex items-center gap-2 flex-wrap gap-y-2">
               <CountBadge count={selectedChapter.topics.length} label="topics" />
               {/* Difficulty distribution */}
-              {(['EASY','MEDIUM','HARD'] as const).map((d) => {
-                const n = selectedChapter.topics.filter(t => t.difficultyLevel === d).length;
-                if (n === 0) return null;
-                return <DifficultyBadge key={d} level={d} />;
-              }).map((el, i) => el && <span key={i}>{el}</span>)}
+              {(['EASY', 'MEDIUM', 'HARD'] as const)
+                .map((d) => {
+                  const n = selectedChapter.topics.filter((t) => t.difficultyLevel === d).length;
+                  if (n === 0) return null;
+                  return <DifficultyBadge key={d} level={d} />;
+                })
+                .map((el, i) => el && <span key={i}>{el}</span>)}
             </div>
 
             {selectedChapter.topics.length === 0 ? (
@@ -586,7 +771,7 @@ function TutorCoursesContent() {
           courseName={selectedCourse.displayName || selectedCourse.name}
           selectedTopicId={selectedTopic.id}
           selectedTopicName={selectedTopic.name}
-          selectedTopicDescription={selectedTopic.description}
+          selectedTopicDescription={selectedTopic.description || null}
           subjects={selectedCourse.subjects}
           onClose={() => setSelectedTopic(null)}
         />

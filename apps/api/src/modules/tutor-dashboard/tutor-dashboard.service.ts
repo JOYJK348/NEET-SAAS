@@ -473,7 +473,9 @@ export class TutorDashboardService {
     });
 
     const tutorAssignedSubjectIds = new Set(
-      staffSubjects.map((s) => s.subjectId).filter((id): id is string => id !== null),
+      staffSubjects
+        .map((s) => s.subjectId)
+        .filter((id): id is string => id !== null),
     );
 
     // Get unique courses from those batches
@@ -485,12 +487,17 @@ export class TutorDashboardService {
     const courseIds = [...new Set(batches.map((b) => b.courseId))];
 
     // Group batch names by course
-    const batchesByCourse = new Map<string, { id: string; name: string; status: string }[]>();
+    const batchesByCourse = new Map<
+      string,
+      { id: string; name: string; status: string }[]
+    >();
     for (const b of batches) {
       if (!batchesByCourse.has(b.courseId)) {
         batchesByCourse.set(b.courseId, []);
       }
-      batchesByCourse.get(b.courseId)!.push({ id: b.id, name: b.name, status: b.status });
+      batchesByCourse
+        .get(b.courseId)!
+        .push({ id: b.id, name: b.name, status: b.status });
     }
 
     // Fetch courses
@@ -541,7 +548,12 @@ export class TutorDashboardService {
 
     // Fetch chapters
     const chapters = await this.prisma.chapters.findMany({
-      where: { tenantId, courseSubjectId: { in: csIds }, isActive: true, deletedAt: null },
+      where: {
+        tenantId,
+        courseSubjectId: { in: csIds },
+        isActive: true,
+        deletedAt: null,
+      },
       orderBy: { displayOrder: 'asc' },
     });
 
@@ -549,17 +561,28 @@ export class TutorDashboardService {
 
     // Fetch topics
     const topics = await this.prisma.topics.findMany({
-      where: { tenantId, chapterId: { in: chapterIds }, isActive: true, deletedAt: null },
+      where: {
+        tenantId,
+        chapterId: { in: chapterIds },
+        isActive: true,
+        deletedAt: null,
+      },
       orderBy: { displayOrder: 'asc' },
     });
 
     // Topic item counts
     const topicItemCounts = await this.prisma.topicItems.groupBy({
       by: ['topicId'],
-      where: { tenantId, topicId: { in: topics.map((t) => t.id) }, deletedAt: null },
+      where: {
+        tenantId,
+        topicId: { in: topics.map((t) => t.id) },
+        deletedAt: null,
+      },
       _count: { id: true },
     });
-    const countMap = new Map(topicItemCounts.map((r) => [r.topicId, r._count.id]));
+    const countMap = new Map(
+      topicItemCounts.map((r) => [r.topicId, r._count.id]),
+    );
 
     // Build nested structure
     const topicsByChapter = new Map<string, typeof topics>();
@@ -602,51 +625,51 @@ export class TutorDashboardService {
           subjects: csList
             .filter((cs) => subjectMap.has(cs.subjectId))
             .map((cs) => {
-            // Only include chapters/topics for active course-subject links
-            const chList = cs.isActive ? (chaptersByCs.get(cs.id) ?? []) : [];
-            const sub = subjectMap.get(cs.subjectId)!;
-            return {
-              id: cs.id,
-              displayOrder: cs.displayOrder,
-              isMandatory: cs.isMandatory,
-              isActive: cs.isActive,   // courseSubjects.isActive drives disabled state
-              subject: {
-                id: sub.id,
-                code: sub.code,
-                name: sub.name,
-                shortName: sub.shortName,
-                displayName: sub.displayName,
-                subjectType: sub.subjectType,
-                displayOrder: sub.displayOrder,
-              },
-              chapters: chList.map((ch) => {
-                const topicList = topicsByChapter.get(ch.id) ?? [];
-                return {
-                  id: ch.id,
-                  code: ch.code,
-                  name: ch.name,
-                  shortName: ch.shortName,
-                  description: ch.description,
-                  plannedHours: ch.plannedHours,
-                  estimatedSessions: ch.estimatedSessions,
-                  displayOrder: ch.displayOrder,
-                  topics: topicList.map((t) => ({
-                    id: t.id,
-                    code: t.code,
-                    name: t.name,
-                    shortName: t.shortName,
-                    description: t.description,
-                    learningObjectives: t.learningObjectives,
-                    difficultyLevel: t.difficultyLevel,
-                    plannedHours: t.plannedHours,
-                    plannedSessions: t.plannedSessions,
-                    displayOrder: t.displayOrder,
-                    topicItemCount: countMap.get(t.id) ?? 0,
-                  })),
-                };
-              }),
-            };
-          }),
+              // Only include chapters/topics for active course-subject links
+              const chList = cs.isActive ? (chaptersByCs.get(cs.id) ?? []) : [];
+              const sub = subjectMap.get(cs.subjectId)!;
+              return {
+                id: cs.id,
+                displayOrder: cs.displayOrder,
+                isMandatory: cs.isMandatory,
+                isActive: cs.isActive, // courseSubjects.isActive drives disabled state
+                subject: {
+                  id: sub.id,
+                  code: sub.code,
+                  name: sub.name,
+                  shortName: sub.shortName,
+                  displayName: sub.displayName,
+                  subjectType: sub.subjectType,
+                  displayOrder: sub.displayOrder,
+                },
+                chapters: chList.map((ch) => {
+                  const topicList = topicsByChapter.get(ch.id) ?? [];
+                  return {
+                    id: ch.id,
+                    code: ch.code,
+                    name: ch.name,
+                    shortName: ch.shortName,
+                    description: ch.description,
+                    plannedHours: ch.plannedHours,
+                    estimatedSessions: ch.estimatedSessions,
+                    displayOrder: ch.displayOrder,
+                    topics: topicList.map((t) => ({
+                      id: t.id,
+                      code: t.code,
+                      name: t.name,
+                      shortName: t.shortName,
+                      description: t.description,
+                      learningObjectives: t.learningObjectives,
+                      difficultyLevel: t.difficultyLevel,
+                      plannedHours: t.plannedHours,
+                      plannedSessions: t.plannedSessions,
+                      displayOrder: t.displayOrder,
+                      topicItemCount: countMap.get(t.id) ?? 0,
+                    })),
+                  };
+                }),
+              };
+            }),
         };
       }),
     };
@@ -1014,6 +1037,44 @@ export class TutorDashboardService {
       },
     });
 
+    // Enrolled students list for the marking panel
+    const enrollments = await this.prisma.studentBatchEnrollments.findMany({
+      where: {
+        tenantId,
+        batchId: session.batchId,
+        status: 'ACTIVE',
+        deletedAt: null,
+      },
+      select: {
+        studentAdmissionId: true,
+      },
+    });
+    const enrolledAdmissionIds = enrollments.map((e) => e.studentAdmissionId);
+    const enrolledAdmissions = await this.prisma.studentAdmissions.findMany({
+      where: { tenantId, id: { in: enrolledAdmissionIds } },
+      select: {
+        id: true,
+        admissionNumber: true,
+        studentProfileId: true,
+      },
+    });
+    const enrolledProfileIds = enrolledAdmissions.map(
+      (a) => a.studentProfileId,
+    );
+    const enrolledProfiles = await this.prisma.studentProfiles.findMany({
+      where: { userId: { in: enrolledProfileIds } },
+      select: { userId: true },
+    });
+    const enrolledUserIds = enrolledProfiles.map((sp) => sp.userId);
+    const enrolledUsers = await this.prisma.users.findMany({
+      where: { tenantId, id: { in: enrolledUserIds } },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+    const enrolledUserMap = new Map(enrolledUsers.map((u) => [u.id, u]));
+    const enrolledProfileToUserMap = new Map(
+      enrolledProfiles.map((sp) => [sp.userId, sp.userId]),
+    );
+
     // Attendance stats
     const presentCount = attendanceRecords.filter(
       (r) => r.attendanceStatus === 'PRESENT',
@@ -1068,6 +1129,22 @@ export class TutorDashboardService {
             admission: admission
               ? { id: admission.id, admissionNumber: admission.admissionNumber }
               : null,
+          };
+        }),
+        enrolledStudents: enrolledAdmissions.map((a) => {
+          const studentUserId = enrolledProfileToUserMap.get(
+            a.studentProfileId,
+          );
+          const user = studentUserId
+            ? enrolledUserMap.get(studentUserId)
+            : null;
+          return {
+            admissionId: a.id,
+            admissionNumber: a.admissionNumber,
+            studentId: studentUserId ?? '',
+            firstName: user?.firstName ?? '',
+            lastName: user?.lastName ?? '',
+            email: user?.email ?? '',
           };
         }),
       },

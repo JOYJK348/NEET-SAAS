@@ -96,20 +96,15 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
-            const refreshToken = useAuthStore.getState().refreshToken;
-            if (!refreshToken) {
-              throw new Error('No refresh token available');
-            }
-
             const response = await axios.post(
               `${API_BASE_URL}/auth/refresh`,
-              { refreshToken },
+              {},
               { withCredentials: true },
             );
 
             const refreshData = response.data?.data ?? response.data;
-            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshData;
-            useAuthStore.getState().setTokens(newAccessToken, newRefreshToken);
+            const { accessToken: newAccessToken } = refreshData;
+            useAuthStore.getState().setTokens(newAccessToken);
 
             // Process queued requests
             this.failedQueue.forEach(({ resolve }) => resolve(newAccessToken));

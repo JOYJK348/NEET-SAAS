@@ -32,7 +32,7 @@ export interface AuthState {
   hasHydrated: boolean;
   setAuth: (user: User, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
   setUser: (user: User) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
+  setTokens: (accessToken: string, refreshToken?: string | null) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setRememberMe: (rememberMe: boolean) => void;
@@ -76,7 +76,8 @@ export const useAuthStore = create<AuthState>()(
           rememberMe,
         }),
       setUser: (user) => set({ user }),
-      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
+      setTokens: (accessToken, refreshToken) =>
+        set({ accessToken, refreshToken: refreshToken ?? null }),
       logout: () =>
         set({
           user: null,
@@ -106,5 +107,3 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 );
-
-

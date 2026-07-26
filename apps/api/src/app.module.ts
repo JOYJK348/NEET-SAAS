@@ -18,6 +18,8 @@ import { MasterModule } from './modules/master/master.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { TutorDashboardModule } from './modules/tutor-dashboard/tutor-dashboard.module';
+import { StudentDashboardModule } from './modules/student-dashboard/student-dashboard.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { TutorDashboardModule } from './modules/tutor-dashboard/tutor-dashboard.
     LearningModule,
     SchedulingModule,
     TutorDashboardModule,
+    StudentDashboardModule,
+    AttendanceModule,
     HealthModule,
   ],
   controllers: [],

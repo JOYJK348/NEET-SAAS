@@ -23,7 +23,9 @@ export class ForcePasswordChangeGuard implements CanActivate {
 
     if (
       request.method === 'POST' &&
-      request.path.endsWith('/auth/change-password')
+      (request.path.endsWith('/auth/change-password') ||
+        request.path.endsWith('/auth/logout') ||
+        request.path.endsWith('/auth/logout-all'))
     ) {
       return true;
     }

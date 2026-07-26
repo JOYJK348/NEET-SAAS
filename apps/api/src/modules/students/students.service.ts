@@ -406,7 +406,7 @@ export class StudentsService {
 
     if (
       dto.studentCode !== undefined &&
-      dto.studentCode !== (existing as any).studentCode
+      dto.studentCode !== existing.studentCode
     ) {
       await this.checkDuplicateStudentCode(dto.studentCode, tenantId, id);
     }
@@ -417,9 +417,25 @@ export class StudentsService {
 
     if (dto.academicStatus !== undefined) {
       validateAcademicStatusTransition(
-        (existing as any).academicStatus,
+        existing.academicStatus,
         dto.academicStatus,
       );
+
+      const userStatusMap: Record<string, 'ACTIVE' | 'INACTIVE' | 'PENDING'> = {
+        ACTIVE: 'ACTIVE',
+        SUSPENDED: 'INACTIVE',
+        WITHDRAWN: 'INACTIVE',
+        ALUMNI: 'INACTIVE',
+        ENQUIRY: 'PENDING',
+      };
+
+      const newUserStatus = userStatusMap[dto.academicStatus];
+      if (newUserStatus) {
+        await this.prisma.users.update({
+          where: { id },
+          data: { status: newUserStatus, updatedBy: userId },
+        });
+      }
     }
 
     const userData: Record<string, unknown> = {};
@@ -573,7 +589,7 @@ export class StudentsService {
 
   async generateBulkImportTemplate(tenantId: string): Promise<Buffer> {
     // 1. Fetch live DB references for mapping helper sheet
-    const [academicYears, branches, courses, batches] = await Promise.all([
+    await Promise.all([
       this.prisma.academicYears.findMany({
         where: { tenantId, deletedAt: null, isActive: true },
         select: { code: true, name: true },
@@ -649,6 +665,7 @@ export class StudentsService {
     const wb = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
     const rows = XLSX.utils.sheet_to_json<any>(ws);
 
     const errors: string[] = [];
@@ -674,10 +691,6 @@ export class StudentsService {
     const batchMap = new Map(
       batches.map((b) => [b.code.trim().toUpperCase(), b]),
     );
-    const branchMap = new Map(
-      branches.map((b) => [b.code.trim().toUpperCase(), b]),
-    );
-
     const coursesById = new Map(courses.map((c) => [c.id, c]));
     const batchesById = new Map(batches.map((b) => [b.id, b]));
 
@@ -1002,6 +1015,7 @@ export class StudentsService {
       }
     }
 
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
     return { importedCount, errors };
   }
 }
