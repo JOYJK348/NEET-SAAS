@@ -72,12 +72,14 @@ export class TokenService {
   }
 
   setRefreshCookie(response: Response, refreshToken: string): void {
+    const expires = this.getRefreshTokenExpiresAt();
     response.cookie(this.getRefreshCookieName(), refreshToken, {
       httpOnly: true,
       secure: this.isSecureCookie(),
       sameSite: this.isSecureCookie() ? 'none' : 'lax',
       path: '/api/v1/auth/refresh',
-      expires: this.getRefreshTokenExpiresAt(),
+      expires,
+      maxAge: expires.getTime() - Date.now(),
     });
   }
 
