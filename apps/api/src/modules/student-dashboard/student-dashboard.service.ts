@@ -11,6 +11,7 @@ export interface StudentContext {
   userId: string;
   tenantId: string;
   studentAdmissionId: string;
+  classType: 'CLASSROOM' | 'ONLINE' | 'HYBRID';
   activeEnrollments: Array<{
     id: string;
     batchId: string;
@@ -55,7 +56,7 @@ export class StudentDashboardService {
     // Step 1: Resolve StudentProfile (userId is the PK)
     const profile = await this.prisma.studentProfiles.findFirst({
       where: { userId, tenantId, deletedAt: null },
-      select: { userId: true },
+      select: { userId: true, classType: true },
     });
 
     if (!profile) {
@@ -99,6 +100,7 @@ export class StudentDashboardService {
       userId,
       tenantId,
       studentAdmissionId: admission.id,
+      classType: profile.classType,
       activeEnrollments,
     };
   }
@@ -180,7 +182,11 @@ export class StudentDashboardService {
         : null;
 
     // Enrich sessions
-    const enriched = await this.enrichStudentSessions(tenantId, todaysSessions);
+    const enriched = await this.enrichStudentSessions(
+      tenantId,
+      todaysSessions,
+      ctx.classType,
+    );
 
     // Live-now detection
     const now = new Date();
@@ -218,6 +224,7 @@ export class StudentDashboardService {
       sessionStatus: string;
       sessionSource: string | null;
     }>,
+    studentClassType: 'CLASSROOM' | 'ONLINE' | 'HYBRID',
   ) {
     if (sessions.length === 0) return [];
 
@@ -297,6 +304,7 @@ export class StudentDashboardService {
         // canJoin: NEVER return meetingLink here; only via /join endpoint
         canJoin:
           liveStatus === 'LIVE_NOW' &&
+          studentClassType !== 'CLASSROOM' &&
           (sched?.deliveryMode === 'ONLINE' ||
             sched?.deliveryMode === 'HYBRID'),
       };
@@ -361,7 +369,11 @@ export class StudentDashboardService {
     const uniqueSessions = Array.from(
       new Map(sessions.map((s) => [s.id, s])).values(),
     );
-    const enriched = await this.enrichStudentSessions(tenantId, uniqueSessions);
+    const enriched = await this.enrichStudentSessions(
+      tenantId,
+      uniqueSessions,
+      ctx.classType,
+    );
 
     // Group by date
     const timetableMap = new Map<string, typeof enriched>();
@@ -422,7 +434,14 @@ export class StudentDashboardService {
       throw new BadRequestException('This class has already ended');
     }
 
-    // Gate 6: Schedule has deliveryMode ONLINE or HYBRID and a meetingLink
+    // Gate 6: Student's classType must allow online joining
+    if (ctx.classType === 'CLASSROOM') {
+      throw new BadRequestException(
+        'Your profile is set to Classroom mode — you cannot join online sessions',
+      );
+    }
+
+    // Gate 7: Schedule has deliveryMode ONLINE or HYBRID and a meetingLink
     if (!session.scheduleId) {
       throw new BadRequestException('No schedule linked to this session');
     }
