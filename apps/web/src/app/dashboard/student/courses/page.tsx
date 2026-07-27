@@ -14,6 +14,7 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
+  Eye,
   FileText,
   Layers,
   Lock,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { StudentPreview } from '@/features/course-builder/components/StudentPreview';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function CoursesSkeleton() {
@@ -71,9 +73,11 @@ function getSubjectTheme(name: string) {
 function TopicRow({
   topic,
   subjectTheme,
+  onView,
 }: {
   topic: TopicItemCountDto;
   subjectTheme: ReturnType<typeof getSubjectTheme>;
+  onView?: () => void;
 }) {
   const hasContent = topic.publishedItemCount > 0;
   return (
@@ -105,7 +109,17 @@ function TopicRow({
           </span>
         )}
       </div>
-      {topic.publishedItemCount > 0 && (
+      {hasContent ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onView?.();
+          }}
+          className="flex items-center gap-1 text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-100 px-2 py-1 rounded-full hover:bg-violet-100 transition-colors flex-shrink-0"
+        >
+          <Eye className="w-3 h-3" /> View
+        </button>
+      ) : (
         <span
           className={cn(
             'text-[10px] font-bold px-2 py-0.5 rounded-full',
@@ -125,10 +139,12 @@ function ChapterRow({
   chapter,
   subjectTheme,
   defaultOpen = false,
+  onViewTopic,
 }: {
   chapter: ChapterDto;
   subjectTheme: ReturnType<typeof getSubjectTheme>;
   defaultOpen?: boolean;
+  onViewTopic?: (topic: TopicItemCountDto) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const totalItems = chapter.topics.reduce((sum, t) => sum + t.publishedItemCount, 0);
@@ -181,7 +197,12 @@ function ChapterRow({
             <p className="text-[11px] text-slate-300 italic px-5 py-3">No topics yet</p>
           ) : (
             chapter.topics.map((topic) => (
-              <TopicRow key={topic.id} topic={topic} subjectTheme={subjectTheme} />
+              <TopicRow
+                key={topic.id}
+                topic={topic}
+                subjectTheme={subjectTheme}
+                onView={() => onViewTopic?.(topic)}
+              />
             ))
           )}
         </div>
@@ -191,7 +212,13 @@ function ChapterRow({
 }
 
 // ─── Subject Section ──────────────────────────────────────────────────────────
-function SubjectSection({ cs }: { cs: CourseSubjectDto }) {
+function SubjectSection({
+  cs,
+  onViewTopic,
+}: {
+  cs: CourseSubjectDto;
+  onViewTopic?: (topic: TopicItemCountDto) => void;
+}) {
   const [open, setOpen] = useState(true);
   const theme = getSubjectTheme(cs.subject.name);
 
@@ -250,6 +277,7 @@ function SubjectSection({ cs }: { cs: CourseSubjectDto }) {
                 chapter={chapter}
                 subjectTheme={theme}
                 defaultOpen={i === 0}
+                onViewTopic={onViewTopic}
               />
             ))
           )}
@@ -260,7 +288,13 @@ function SubjectSection({ cs }: { cs: CourseSubjectDto }) {
 }
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
-function CourseCard({ course }: { course: StudentCourseDto }) {
+function CourseCard({
+  course,
+  onViewTopic,
+}: {
+  course: StudentCourseDto;
+  onViewTopic?: (topic: TopicItemCountDto) => void;
+}) {
   const totalSubjects = course.subjects.length;
   const totalChapters = course.subjects.reduce((sum, cs) => sum + cs.chapters.length, 0);
   const totalTopics = course.subjects
@@ -339,7 +373,9 @@ function CourseCard({ course }: { course: StudentCourseDto }) {
             <p className="text-sm text-slate-400">No subjects assigned yet</p>
           </div>
         ) : (
-          course.subjects.map((cs) => <SubjectSection key={cs.id} cs={cs} />)
+          course.subjects.map((cs) => (
+            <SubjectSection key={cs.id} cs={cs} onViewTopic={onViewTopic} />
+          ))
         )}
       </div>
     </div>
@@ -349,6 +385,10 @@ function CourseCard({ course }: { course: StudentCourseDto }) {
 // ─── Main Content ─────────────────────────────────────────────────────────────
 function CoursesContent() {
   const { courses, isLoading, error, refetch } = useStudentCourses();
+  const [selectedTopic, setSelectedTopic] = useState<{
+    courseName: string;
+    topic: TopicItemCountDto;
+  } | null>(null);
 
   return (
     <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 pb-24 space-y-5">
@@ -393,9 +433,27 @@ function CoursesContent() {
       ) : (
         <div className="space-y-5">
           {courses.courses.map((course) => (
-            <CourseCard key={course.id} course={course} />
+            <CourseCard
+              key={course.id}
+              course={course}
+              onViewTopic={(topic) =>
+                setSelectedTopic({ courseName: course.displayName || course.name, topic })
+              }
+            />
           ))}
         </div>
+      )}
+
+      {/* Topic Content Preview Overlay */}
+      {selectedTopic && (
+        <StudentPreview
+          courseName={selectedTopic.courseName}
+          selectedTopicId={selectedTopic.topic.id}
+          selectedTopicName={selectedTopic.topic.name}
+          selectedTopicDescription={selectedTopic.topic.description || null}
+          subjects={[]}
+          onClose={() => setSelectedTopic(null)}
+        />
       )}
     </div>
   );

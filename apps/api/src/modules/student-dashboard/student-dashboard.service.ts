@@ -777,19 +777,18 @@ export class StudentDashboardService {
       orderBy: { displayOrder: 'asc' },
     });
 
-    // Step 7: Published topic item counts (status = PUBLISHED)
+    // Step 7: Topic item counts (active items matching tutor visibility)
     const topicItemCounts = await this.prisma.topicItems.groupBy({
       by: ['topicId'],
       where: {
         tenantId,
         topicId: { in: topics.map((t) => t.id) },
-        status: 'PUBLISHED',
         deletedAt: null,
       },
-      _count: { _all: true },
+      _count: { id: true },
     });
     const countMap = new Map(
-      topicItemCounts.map((r) => [r.topicId, r._count._all]),
+      topicItemCounts.map((r) => [r.topicId, r._count.id]),
     );
 
     // Build nested maps

@@ -20,8 +20,6 @@ import {
   GraduationCap,
   Target,
   Layers,
-  TrendingUp,
-  Megaphone,
   BookMarked,
   Contact,
   Calendar,
@@ -57,7 +55,7 @@ interface SidebarProps {
 interface NavItem {
   name: string;
   href: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   iconColor?: string;
   children?: NavItem[];
 }
@@ -123,12 +121,6 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       href: '/dashboard/tutor/batches',
       icon: Layers,
       iconColor: 'text-emerald-500',
-    },
-    {
-      name: 'Attendance',
-      href: '/dashboard/tutor/timetable',
-      icon: ClipboardCheck,
-      iconColor: 'text-teal-500',
     },
   ];
 
