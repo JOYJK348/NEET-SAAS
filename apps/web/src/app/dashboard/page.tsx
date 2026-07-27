@@ -538,7 +538,11 @@ function DashboardPageContent() {
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user?.roleCode === 'TUTOR') {
+    if (
+      !isLoading &&
+      isAuthenticated &&
+      (user?.roleCode === 'TUTOR' || user?.roleCode === 'FACULTY')
+    ) {
       router.replace('/dashboard/tutor');
     }
   }, [isLoading, isAuthenticated, user, router]);
@@ -561,8 +565,8 @@ function DashboardPageContent() {
 
   if (!user) return null;
 
-  // TUTOR / STUDENT users get redirected above; show loading while redirect is in progress
-  if (user?.roleCode === 'TUTOR' || user?.roleCode === 'STUDENT') {
+  // TUTOR / FACULTY / STUDENT users get redirected above; show loading while redirect is in progress
+  if (user?.roleCode === 'TUTOR' || user?.roleCode === 'FACULTY' || user?.roleCode === 'STUDENT') {
     return (
       <DashboardLayout>
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">

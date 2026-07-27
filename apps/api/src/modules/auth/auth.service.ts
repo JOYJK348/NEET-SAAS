@@ -106,7 +106,7 @@ export class AuthService {
       },
     );
 
-    this.tokenService.setRefreshCookie(response, refreshToken);
+    this.tokenService.setRefreshCookie(response, refreshToken, context.host);
 
     return {
       accessToken,
@@ -128,6 +128,7 @@ export class AuthService {
   async refresh(
     refreshToken: string | undefined,
     response: Response,
+    host?: string,
   ): Promise<RefreshResponse> {
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token cookie is missing');
@@ -166,27 +167,12 @@ export class AuthService {
       throw new ForbiddenException('Tenant context is required');
     }
 
-    const nextRefreshToken = this.tokenService.generateRefreshToken();
-    const nextRefreshTokenHash =
-      this.tokenService.hashRefreshToken(nextRefreshToken);
-    const nextRefreshTokenExpiresAt =
-      this.tokenService.getRefreshTokenExpiresAt();
-
     const accessToken = await this.prismaService.$transaction(
       async (prisma) => {
-        const rotationResult = await this.sessionService.rotateRefreshToken(
-          {
-            sessionId: session.id,
-            currentRefreshTokenHash: refreshTokenHash,
-            refreshTokenHash: nextRefreshTokenHash,
-            expiresAt: nextRefreshTokenExpiresAt,
-          },
-          prisma,
-        );
-
-        if (rotationResult.count !== 1) {
-          throw new UnauthorizedException('Refresh token has already rotated');
-        }
+        await prisma.userSessions.update({
+          where: { id: session.id },
+          data: { lastActiveAt: new Date() },
+        });
 
         return this.tokenService.generateAccessToken({
           sub: user.id,
@@ -198,10 +184,11 @@ export class AuthService {
       },
     );
 
-    this.tokenService.setRefreshCookie(response, nextRefreshToken);
+    this.tokenService.setRefreshCookie(response, refreshToken, host);
 
     return {
       accessToken,
+      refreshToken,
       expiresIn: this.tokenService.getAccessTokenExpiresInSeconds(),
     };
   }
@@ -213,9 +200,10 @@ export class AuthService {
   async logout(
     currentUser: AuthenticatedRequestUser,
     response: Response,
+    host?: string,
   ): Promise<AuthSuccessResponse> {
     await this.sessionService.revokeSession(currentUser.sessionId);
-    this.tokenService.clearRefreshCookie(response);
+    this.tokenService.clearRefreshCookie(response, host);
 
     return { success: true };
   }
@@ -223,9 +211,10 @@ export class AuthService {
   async logoutAll(
     currentUser: AuthenticatedRequestUser,
     response: Response,
+    host?: string,
   ): Promise<AuthSuccessResponse> {
     await this.sessionService.revokeAllSessions(currentUser.sub);
-    this.tokenService.clearRefreshCookie(response);
+    this.tokenService.clearRefreshCookie(response, host);
 
     return { success: true };
   }

@@ -786,7 +786,7 @@ function SessionDetailContent() {
 
 export default function SessionDetailsPage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <SessionDetailContent />
       </DashboardLayout>

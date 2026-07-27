@@ -71,24 +71,36 @@ export class TokenService {
     };
   }
 
-  setRefreshCookie(response: Response, refreshToken: string): void {
+  setRefreshCookie(
+    response: Response,
+    refreshToken: string,
+    host?: string,
+  ): void {
     const expires = this.getRefreshTokenExpiresAt();
+    const isLocal =
+      host && (host.includes('localhost') || host.includes('127.0.0.1'));
+    const secure = !isLocal && this.isSecureCookie();
+
     response.cookie(this.getRefreshCookieName(), refreshToken, {
       httpOnly: true,
-      secure: this.isSecureCookie(),
-      sameSite: this.isSecureCookie() ? 'none' : 'lax',
-      path: '/api/v1/auth/refresh',
+      secure,
+      sameSite: secure ? 'none' : 'lax',
+      path: '/',
       expires,
       maxAge: expires.getTime() - Date.now(),
     });
   }
 
-  clearRefreshCookie(response: Response): void {
+  clearRefreshCookie(response: Response, host?: string): void {
+    const isLocal =
+      host && (host.includes('localhost') || host.includes('127.0.0.1'));
+    const secure = !isLocal && this.isSecureCookie();
+
     response.clearCookie(this.getRefreshCookieName(), {
       httpOnly: true,
-      secure: this.isSecureCookie(),
-      sameSite: this.isSecureCookie() ? 'none' : 'lax',
-      path: '/api/v1/auth/refresh',
+      secure,
+      sameSite: secure ? 'none' : 'lax',
+      path: '/',
     });
   }
 

@@ -5,8 +5,10 @@ import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useTutorTimetable } from '@/features/tutor-dashboard/hooks/use-tutor-timetable';
+import { useTutorJoinSession } from '@/features/tutor-dashboard/hooks/use-tutor-session';
 import type { TimetableSessionDto } from '@/features/tutor-dashboard/types/timetable';
 import { ErrorState } from '@/components/ui/error-state';
+import { toast } from 'sonner';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,6 +17,10 @@ import {
   Layers,
   Calendar,
   RefreshCw,
+  Video,
+  Loader2,
+  Radio,
+  Wifi,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/loading';
@@ -29,6 +35,13 @@ const DAY_SHORT: Record<string, string> = {
   SATURDAY: 'Sat',
   SUNDAY: 'Sun',
 };
+
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 function formatDisplayDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -80,9 +93,68 @@ function getBadgeColors(status: string): string {
   }
 }
 
+// ─── Delivery Badge ───────────────────────────────────────────────────────────
+function DeliveryBadge({ mode }: { mode?: string | null }) {
+  if (!mode) return null;
+  const config = {
+    ONLINE: {
+      label: 'Online',
+      cls: 'bg-emerald-100 text-emerald-700',
+      icon: <Wifi className="w-2.5 h-2.5" />,
+    },
+    CLASSROOM: {
+      label: 'Classroom',
+      cls: 'bg-amber-100 text-amber-700',
+      icon: <MapPin className="w-2.5 h-2.5" />,
+    },
+    HYBRID: {
+      label: 'Hybrid',
+      cls: 'bg-violet-100 text-violet-700',
+      icon: <Radio className="w-2.5 h-2.5" />,
+    },
+  }[mode] ?? { label: mode, cls: 'bg-slate-100 text-slate-600', icon: null };
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
+        config.cls,
+      )}
+    >
+      {config.icon}
+      {config.label}
+    </span>
+  );
+}
+
+// ─── Live Status Badge ────────────────────────────────────────────────────────
+function LiveStatusBadge({ status }: { status?: string | null }) {
+  if (status === 'LIVE_NOW') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+        <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+        LIVE
+      </span>
+    );
+  }
+  if (status === 'COMPLETED') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
+        Done
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600">
+      Upcoming
+    </span>
+  );
+}
+
 // ─── Session Card ────────────────────────────────────────────────────────────
 
 function TimetableSessionCard({ session, date }: { session: TimetableSessionDto; date: string }) {
+  const { join, isJoining } = useTutorJoinSession();
   const isCancelled = session.sessionStatus === 'CANCELLED';
   const isRescheduled =
     session.overrideType === 'TIME_CHANGED' || session.overrideType === 'TUTOR_CHANGED';
@@ -90,16 +162,26 @@ function TimetableSessionCard({ session, date }: { session: TimetableSessionDto;
     ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
     : '';
 
+  const handleJoin = async () => {
+    try {
+      await join(session.id);
+    } catch {
+      toast.error('Cannot join class', {
+        description: 'Meeting link not configured or class has ended.',
+      });
+    }
+  };
+
   return (
     <div
       className={cn(
-        'rounded-lg border border-slate-200 border-l-[3px] p-2.5 transition-all hover:shadow-sm cursor-default',
+        'rounded-lg border border-slate-200 border-l-[3px] p-2.5 transition-all hover:shadow-sm cursor-default flex flex-col gap-1.5 bg-white',
         getStatusColors(session.sessionStatus),
         isCancelled && 'opacity-70',
       )}
     >
       {/* Date + Time */}
-      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-700 mb-1.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-700">
         <Clock className="w-3 h-3 text-slate-400" />
         <span>
           {session.startsAt} – {session.endsAt}
@@ -112,36 +194,30 @@ function TimetableSessionCard({ session, date }: { session: TimetableSessionDto;
       </div>
 
       {/* Subject */}
-      <p className="text-xs font-bold text-slate-800 leading-tight mb-1">
+      <p className="text-xs font-bold text-slate-800 leading-tight">
         {session.subject?.name || 'Unknown Subject'}
       </p>
 
       {/* Batch + Branch */}
       <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
         {session.batch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
+          <span className="flex items-center gap-1 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-100">
             <Layers className="w-2.5 h-2.5" />
             {session.batch.name}
           </span>
         )}
         {session.branch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
+          <span className="flex items-center gap-1 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-100">
             <MapPin className="w-2.5 h-2.5" />
             {session.branch.name}
           </span>
         )}
       </div>
 
-      {/* Status badge */}
-      <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-        <span
-          className={cn(
-            'text-[9px] font-bold px-1.5 py-0.5 rounded',
-            getBadgeColors(session.sessionStatus),
-          )}
-        >
-          {session.sessionStatus}
-        </span>
+      {/* Status & Delivery info */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <LiveStatusBadge status={session.liveStatus} />
+        <DeliveryBadge mode={session.deliveryMode} />
         {isRescheduled && !isCancelled && (
           <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
             RESCHEDULED
@@ -149,16 +225,35 @@ function TimetableSessionCard({ session, date }: { session: TimetableSessionDto;
         )}
       </div>
 
-      {/* Mark Attendance link */}
-      {!isCancelled && (
-        <a
-          href={`/dashboard/tutor/sessions/${session.id}`}
-          className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-800 hover:underline"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-          Mark Attendance →
-        </a>
-      )}
+      {/* Action panel */}
+      <div className="mt-1 flex flex-col gap-1.5">
+        {/* Join Button */}
+        {session.canJoin && (
+          <button
+            onClick={handleJoin}
+            disabled={isJoining}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-[10px] font-bold transition-all duration-150 min-h-[30px] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+          >
+            {isJoining ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Video className="w-3 h-3" />
+            )}
+            Join Live Class
+          </button>
+        )}
+
+        {/* Mark Attendance link */}
+        {!isCancelled && (
+          <a
+            href={`/dashboard/tutor/sessions/${session.id}`}
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-800 hover:underline"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            Mark Attendance →
+          </a>
+        )}
+      </div>
 
       {/* Cancelled reason */}
       {isCancelled && session.cancelledReason && (
@@ -192,8 +287,8 @@ function TimetableContent() {
     return { start: weekStart, end };
   }, [weekStart]);
 
-  const dateFrom = weekRange.start.toISOString().split('T')[0];
-  const dateTo = weekRange.end.toISOString().split('T')[0];
+  const dateFrom = toLocalDateString(weekRange.start);
+  const dateTo = toLocalDateString(weekRange.end);
 
   const { timetable, isLoading, error, refetch } = useTutorTimetable(dateFrom, dateTo);
 
@@ -398,7 +493,7 @@ function TimetableContent() {
                       const slots = weeklyView[day]?.filter((s) => s.startsAt === time) ?? [];
                       const dayDate = new Date(weekStart);
                       dayDate.setDate(weekStart.getDate() + dayIdx);
-                      const dateStr = dayDate.toISOString().split('T')[0];
+                      const dateStr = toLocalDateString(dayDate);
                       return (
                         <div
                           key={day}
@@ -435,7 +530,7 @@ function TimetableContent() {
 
 export default function TutorTimetablePage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <TimetableContent />
       </DashboardLayout>

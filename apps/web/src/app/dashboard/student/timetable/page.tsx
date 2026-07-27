@@ -37,6 +37,13 @@ const DAY_SHORT: Record<string, string> = {
   SUNDAY: 'Sun',
 };
 
+function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = (date.getMonth() + 1).toString().padStart(2, '0');
+  const d = date.getDate().toString().padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function formatDisplayDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
@@ -242,8 +249,8 @@ function TimetableContent() {
     return { start: weekStart, end };
   }, [weekStart]);
 
-  const dateFrom = weekRange.start.toISOString().split('T')[0];
-  const dateTo = weekRange.end.toISOString().split('T')[0];
+  const dateFrom = toLocalDateString(weekRange.start);
+  const dateTo = toLocalDateString(weekRange.end);
 
   const { timetable, isLoading, error, refetch } = useStudentTimetable(dateFrom, dateTo);
 
@@ -444,7 +451,7 @@ function TimetableContent() {
                       const slots = weeklyView[day]?.filter((s) => s.startsAt === time) ?? [];
                       const dayDate = new Date(weekStart);
                       dayDate.setDate(weekStart.getDate() + dayIdx);
-                      const dateStr = dayDate.toISOString().split('T')[0];
+                      const dateStr = toLocalDateString(dayDate);
                       return (
                         <div
                           key={day}

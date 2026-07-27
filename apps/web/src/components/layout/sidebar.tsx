@@ -483,7 +483,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 );
               })}
             </div>
-          ) : user?.roleCode === 'TUTOR' ? (
+          ) : user?.roleCode === 'TUTOR' || user?.roleCode === 'FACULTY' ? (
             <div className="space-y-1">
               {tutorNavigation.map((item) => {
                 const isActive =

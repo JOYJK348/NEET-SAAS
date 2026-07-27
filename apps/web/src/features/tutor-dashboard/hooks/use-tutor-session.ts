@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sessionService, sessionKeys } from '@/features/tutor-dashboard/services/session-service';
 import type { SessionDetailsResponseDto } from '@/features/tutor-dashboard/types/session-details';
-import type { BulkAttendanceRequest, BulkAttendanceResponse } from '@/features/tutor-dashboard/services/session-service';
+import type {
+  BulkAttendanceRequest,
+  BulkAttendanceResponse,
+} from '@/features/tutor-dashboard/services/session-service';
 
 const STALE_TIME = 15 * 1000; // 15 seconds — session data changes frequently with attendance marking
 const GC_TIME = 5 * 60 * 1000;
@@ -60,3 +63,23 @@ export function useTutorSession(sessionId: string | null): UseTutorSessionReturn
   };
 }
 
+export interface UseTutorJoinSessionReturn {
+  join: (sessionId: string) => Promise<{ sessionId: string; joinUrl: string; provider: string }>;
+  isJoining: boolean;
+  error: Error | null;
+}
+
+export function useTutorJoinSession(): UseTutorJoinSessionReturn {
+  const { mutateAsync, isPending, error } = useMutation({
+    mutationFn: (sessionId: string) => sessionService.joinSession(sessionId),
+    onSuccess: (data) => {
+      window.open(data.joinUrl, '_blank', 'noopener,noreferrer');
+    },
+  });
+
+  return {
+    join: mutateAsync,
+    isJoining: isPending,
+    error: error ?? null,
+  };
+}

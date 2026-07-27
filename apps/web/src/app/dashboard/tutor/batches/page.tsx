@@ -30,13 +30,25 @@ import type { BatchAssignmentDto } from '@/features/tutor-dashboard/types/batche
 function getStatusBadge(status: string): { label: string; className: string } {
   switch (status) {
     case 'ACTIVE':
-      return { label: 'Active', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      return {
+        label: 'Active',
+        className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      };
     case 'INACTIVE':
-      return { label: 'Inactive', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      return {
+        label: 'Inactive',
+        className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      };
     case 'COMPLETED':
-      return { label: 'Completed', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+      return {
+        label: 'Completed',
+        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      };
     case 'ARCHIVED':
-      return { label: 'Archived', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+      return {
+        label: 'Archived',
+        className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+      };
     default:
       return { label: status, className: 'bg-gray-100 text-gray-600' };
   }
@@ -65,26 +77,34 @@ function BatchCard({ assignment }: { assignment: BatchAssignmentDto }) {
       className={cn('block group', isDeactivated && 'cursor-not-allowed')}
       onClick={(e) => isDeactivated && e.preventDefault()}
     >
-      <Card className={cn(
-        'rounded-2xl border bg-white p-5 shadow-sm transition-all duration-150',
-        isDeactivated
-          ? 'border-red-200 opacity-60 saturate-0'
-          : 'border-[#E5E7EB] hover:-translate-y-0.5 hover:border-[#7C3AED]/50 hover:shadow-md cursor-pointer',
-      )}>
+      <Card
+        className={cn(
+          'rounded-2xl border bg-white p-5 shadow-sm transition-all duration-150',
+          isDeactivated
+            ? 'border-red-200 opacity-60 saturate-0'
+            : 'border-[#E5E7EB] hover:-translate-y-0.5 hover:border-[#7C3AED]/50 hover:shadow-md cursor-pointer',
+        )}
+      >
         <CardHeader className="flex flex-row items-start justify-between space-y-0 p-0 pb-3">
           <div className="flex items-start gap-3">
-            <div className={cn(
-              'p-2.5 rounded-xl transition-colors',
-              isDeactivated ? 'bg-red-100 text-red-500' : 'bg-violet-100 text-violet-600 group-hover:bg-violet-200',
-            )}>
+            <div
+              className={cn(
+                'p-2.5 rounded-xl transition-colors',
+                isDeactivated
+                  ? 'bg-red-100 text-red-500'
+                  : 'bg-violet-100 text-violet-600 group-hover:bg-violet-200',
+              )}
+            >
               <Layers className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <CardTitle className={cn(
-                  'text-base font-bold transition-colors',
-                  isDeactivated ? 'text-red-800' : 'text-[#111827] group-hover:text-[#7C3AED]',
-                )}>
+                <CardTitle
+                  className={cn(
+                    'text-base font-bold transition-colors',
+                    isDeactivated ? 'text-red-800' : 'text-[#111827] group-hover:text-[#7C3AED]',
+                  )}
+                >
                   {batch.name}
                 </CardTitle>
                 {isCourseDeactivated && (
@@ -104,7 +124,10 @@ function BatchCard({ assignment }: { assignment: BatchAssignmentDto }) {
             </div>
           </div>
           {!isDeactivated && (
-            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#7C3AED] transition-colors flex-shrink-0 mt-1" aria-hidden="true" />
+            <ChevronRight
+              className="h-4 w-4 text-gray-300 group-hover:text-[#7C3AED] transition-colors flex-shrink-0 mt-1"
+              aria-hidden="true"
+            />
           )}
         </CardHeader>
 
@@ -141,7 +164,9 @@ function BatchCard({ assignment }: { assignment: BatchAssignmentDto }) {
             )}
             <div className="flex items-center gap-1.5">
               <Users className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-              <span>{batch.studentCount} student{batch.studentCount !== 1 ? 's' : ''}</span>
+              <span>
+                {batch.studentCount} student{batch.studentCount !== 1 ? 's' : ''}
+              </span>
             </div>
             {batch.deliveryType && (
               <div className="flex items-center gap-1.5">
@@ -165,13 +190,16 @@ function BatchCard({ assignment }: { assignment: BatchAssignmentDto }) {
 
           {/* Status */}
           <div className="flex items-center gap-2 pt-1">
-            <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', statusBadge.className)}>
+            <span
+              className={cn(
+                'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                statusBadge.className,
+              )}
+            >
               {statusBadge.label}
             </span>
             {batch.maxStudents && (
-              <span className="text-[10px] text-gray-400">
-                Max {batch.maxStudents} students
-              </span>
+              <span className="text-[10px] text-gray-400">Max {batch.maxStudents} students</span>
             )}
           </div>
         </CardContent>
@@ -223,7 +251,8 @@ function MyBatchesContent() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight">My Batches</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {user?.firstName}, you are assigned to {batchList.length} batch{batchList.length !== 1 ? 'es' : ''}
+            {user?.firstName}, you are assigned to {batchList.length} batch
+            {batchList.length !== 1 ? 'es' : ''}
           </p>
         </div>
       </div>
@@ -255,11 +284,10 @@ function MyBatchesContent() {
 
 export default function MyBatchesPage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <MyBatchesContent />
       </DashboardLayout>
     </ProtectedRoute>
   );
 }
-

@@ -34,8 +34,8 @@ interface ScheduleDto {
 
 export interface TimetableSessionDto {
   id: string;
-  startsAt: string;  // HH:mm
-  endsAt: string;    // HH:mm
+  startsAt: string; // HH:mm
+  endsAt: string; // HH:mm
   subject?: SubjectDto | null;
   batch?: BatchDto | null;
   branch?: BranchDto | null;
@@ -45,11 +45,14 @@ export interface TimetableSessionDto {
   overrideType?: string | null;
   cancelledReason?: string | null;
   schedule?: ScheduleDto | null;
+  deliveryMode?: string | null;
+  liveStatus?: string | null;
+  canJoin?: boolean;
 }
 
 export interface TimetableDayDto {
-  date: string;       // YYYY-MM-DD
-  dayOfWeek: string;  // e.g. "Monday"
+  date: string; // YYYY-MM-DD
+  dayOfWeek: string; // e.g. "Monday"
   sessions: TimetableSessionDto[];
 }
 
@@ -58,4 +61,3 @@ export interface TutorTimetableResponseDto {
   toDate: string;
   timetable: TimetableDayDto[];
 }
-

@@ -4,12 +4,14 @@ import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useTutorOverview } from '@/features/tutor-dashboard/hooks/use-tutor-overview';
+import { useTutorJoinSession } from '@/features/tutor-dashboard/hooks/use-tutor-session';
 import type { TutorialSessionDto } from '@/features/tutor-dashboard/types/overview';
 import { StatsSkeleton, LoadingSpinner } from '@/components/ui/loading';
 import { ErrorState } from '@/components/ui/error-state';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import {
   BookOpen,
   Calendar,
@@ -19,6 +21,10 @@ import {
   MapPin,
   AlertCircle,
   XCircle,
+  Video,
+  Loader2,
+  Radio,
+  Wifi,
 } from 'lucide-react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -53,42 +59,114 @@ function getDayLabel(dayOfWeek: string | null): string {
   return dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1).toLowerCase();
 }
 
+// ─── Delivery Badge ───────────────────────────────────────────────────────────
+function DeliveryBadge({ mode }: { mode?: string | null }) {
+  if (!mode) return null;
+  const config = {
+    ONLINE: {
+      label: 'Online',
+      cls: 'bg-emerald-100 text-emerald-700',
+      icon: <Wifi className="w-3 h-3" />,
+    },
+    CLASSROOM: {
+      label: 'Classroom',
+      cls: 'bg-amber-100 text-amber-700',
+      icon: <MapPin className="w-3 h-3" />,
+    },
+    HYBRID: {
+      label: 'Hybrid',
+      cls: 'bg-violet-100 text-violet-700',
+      icon: <Radio className="w-3 h-3" />,
+    },
+  }[mode] ?? { label: mode, cls: 'bg-slate-100 text-slate-600', icon: null };
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+        config.cls,
+      )}
+    >
+      {config.icon}
+      {config.label}
+    </span>
+  );
+}
+
+// ─── Live Status Badge ────────────────────────────────────────────────────────
+function LiveStatusBadge({ status }: { status?: string | null }) {
+  if (status === 'LIVE_NOW') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        LIVE
+      </span>
+    );
+  }
+  if (status === 'COMPLETED') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+        Done
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+      Upcoming
+    </span>
+  );
+}
+
 // ─── Session Card ────────────────────────────────────────────────────────────
 
-function SessionCard({
-  session,
-  showDate,
-}: {
-  session: TutorialSessionDto;
-  showDate?: boolean;
-}) {
+function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
+  const { join, isJoining } = useTutorJoinSession();
   const isCancelled = session.sessionStatus === 'CANCELLED';
   const isRescheduled =
     session.overrideType === 'TIME_CHANGED' || session.overrideType === 'TUTOR_CHANGED';
 
+  const handleJoin = async () => {
+    try {
+      await join(session.id);
+    } catch {
+      toast.error('Cannot join class', {
+        description: 'Meeting link not configured or class has ended.',
+      });
+    }
+  };
+
+  const subjectColors: Record<string, string> = {
+    Physics: 'border-l-blue-400 bg-blue-50/10 hover:bg-blue-50/20',
+    Chemistry: 'border-l-emerald-400 bg-emerald-50/10 hover:bg-emerald-50/20',
+    Biology: 'border-l-rose-400 bg-rose-50/10 hover:bg-rose-50/20',
+    Botany: 'border-l-green-400 bg-green-50/10 hover:bg-green-50/20',
+    Zoology: 'border-l-pink-400 bg-pink-50/10 hover:bg-pink-50/20',
+  };
+
+  const subjectName = session.subject?.name ?? '';
+  const colorClass =
+    Object.entries(subjectColors).find(([k]) =>
+      subjectName.toLowerCase().includes(k.toLowerCase()),
+    )?.[1] ?? 'border-l-slate-300 bg-slate-50';
+
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-3 rounded-xl border transition-colors',
+        'flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border-l-4 border transition-colors',
         isCancelled
           ? 'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10'
-          : 'border-[#E5E7EB] bg-white hover:border-[#7C3AED]/20',
+          : `${colorClass} border-slate-100`,
       )}
     >
       {/* Time column */}
-      <div className="flex-shrink-0 w-16 text-center">
+      <div className="flex-shrink-0 text-center sm:text-left sm:w-20">
         <p
           className={cn(
-            'text-xs font-bold',
-            isCancelled
-              ? 'text-red-400 line-through'
-              : 'text-[#7C3AED]',
+            'text-xs font-black text-slate-900',
+            isCancelled && 'text-red-400 line-through',
           )}
         >
-          {formatTime(
-            session.startsAt,
-            session.endsAt,
-          )}
+          {formatTime(session.startsAt, session.endsAt)}
         </p>
         {showDate && session.date && (
           <p className="text-[10px] text-gray-400 mt-0.5">
@@ -119,17 +197,11 @@ function SessionCard({
               RESCHEDULED
             </span>
           )}
-          <span
-            className={cn(
-              'text-[10px] font-bold px-1.5 py-0.5 rounded',
-              getStatusBadgeClass(session.sessionStatus),
-            )}
-          >
-            {session.sessionStatus}
-          </span>
+          <LiveStatusBadge status={session.liveStatus} />
+          <DeliveryBadge mode={session.deliveryMode} />
         </div>
 
-        <div className="flex items-center gap-3 mt-1 flex-wrap text-xs text-gray-500">
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap text-xs text-gray-500">
           {session.batch && (
             <span className="flex items-center gap-1">
               <Layers className="h-3 w-3" aria-hidden="true" />
@@ -145,18 +217,36 @@ function SessionCard({
         </div>
 
         {isCancelled && session.cancelledReason && (
-          <p className="text-xs text-red-500 mt-1 italic">
-            Reason: {session.cancelledReason}
-          </p>
+          <p className="text-xs text-red-500 mt-1 italic">Reason: {session.cancelledReason}</p>
         )}
       </div>
+
+      {/* Action */}
+      {session.canJoin && (
+        <button
+          onClick={handleJoin}
+          disabled={isJoining}
+          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold transition-all duration-150 min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm shadow-emerald-200"
+        >
+          {isJoining ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Video className="w-3.5 h-3.5" />
+          )}
+          Join Live Class
+        </button>
+      )}
     </div>
   );
 }
 
 // ─── Overview Stats Row ─────────────────────────────────────────────────────
 
-function OverviewStats({ overview }: { overview: NonNullable<ReturnType<typeof useTutorOverview>['overview']> }) {
+function OverviewStats({
+  overview,
+}: {
+  overview: NonNullable<ReturnType<typeof useTutorOverview>['overview']>;
+}) {
   const stats = [
     {
       name: "Today's Classes",
@@ -252,11 +342,7 @@ function ScheduleSection({
             {activeSessions.length > 0 && (
               <div className="space-y-2">
                 {activeSessions.map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    showDate={showDate}
-                  />
+                  <SessionCard key={session.id} session={session} showDate={showDate} />
                 ))}
               </div>
             )}
@@ -275,11 +361,7 @@ function ScheduleSection({
                 </summary>
                 <div className="mt-2 space-y-2">
                   {cancelledSessions.map((session) => (
-                    <SessionCard
-                      key={session.id}
-                      session={session}
-                      showDate={showDate}
-                    />
+                    <SessionCard key={session.id} session={session} showDate={showDate} />
                   ))}
                 </div>
               </details>
@@ -347,6 +429,8 @@ function TutorDashboardContent() {
     month: 'long',
   });
 
+  const liveSessions = overview.todaysSchedule.filter((s) => s.liveStatus === 'LIVE_NOW');
+
   return (
     <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
       {/* Welcome Header */}
@@ -360,6 +444,16 @@ function TutorDashboardContent() {
           </p>
         </div>
       </div>
+
+      {/* Live Now Alert */}
+      {liveSessions.length > 0 && (
+        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+          <span className="text-sm font-bold text-emerald-800">
+            {liveSessions[0].subject?.name ?? 'A class'} is LIVE right now!
+          </span>
+        </div>
+      )}
 
       {/* Stats Row */}
       <OverviewStats overview={overview} />
@@ -389,11 +483,10 @@ function TutorDashboardContent() {
 
 export default function TutorDashboardPage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <TutorDashboardContent />
       </DashboardLayout>
     </ProtectedRoute>
   );
 }
-

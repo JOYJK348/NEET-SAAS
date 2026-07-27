@@ -57,25 +57,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshAccessToken = useCallback(async () => {
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
-      const { accessToken: newAccessToken } = data;
-      setTokens(newAccessToken);
+      await api.refreshTokens();
     } catch {
-      logoutStore();
-      router.replace('/auth/login');
+      // Ignore background failures, NEVER log out automatically
     }
-  }, [logoutStore, setTokens, router]);
+  }, []);
 
   // Background refresh that never logs out — keeps token alive silently
   const silentRefresh = useCallback(async () => {
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
-      const { accessToken: newAccessToken } = data;
-      setTokens(newAccessToken);
+      await api.refreshTokens();
     } catch {
       // Ignore — the next cycle or a user action will trigger a real refresh
     }
-  }, [setTokens]);
+  }, []);
+
+  const getAuthChannel = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      return new BroadcastChannel('neet_auth_channel');
+    }
+    return null;
+  }, []);
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
@@ -111,11 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout', { refreshToken });
-    } catch (error) {
-      console.error('Logout error:', error);
+      await api.post('/auth/logout', { refreshToken }, { skipGlobalToast: true });
+    } catch {
+      // Ignore background network/API errors — client-side session cleanup occurs in finally block
     } finally {
       logoutStore();
+      getAuthChannel()?.postMessage({ type: 'SESSION_REVOKED' });
       router.replace('/auth/login');
     }
   };
@@ -123,38 +126,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = (userData: Partial<User>) => {
     if (user) {
       setUser({ ...user, ...userData });
+      getAuthChannel()?.postMessage({ type: 'SESSION_UPDATED' });
     }
   };
+
+  const checkAuth = useCallback(async () => {
+    if (accessToken && !isAuthenticated) {
+      try {
+        const user = await api.get<User>('/auth/me');
+        setUser(user);
+        setLoading(false);
+      } catch {
+        await refreshAccessToken();
+        setLoading(false);
+      }
+    } else {
+      setLoading(false);
+    }
+  }, [accessToken, isAuthenticated, refreshAccessToken, setUser, setLoading]);
 
   // Check auth status on mount and route changes
   useEffect(() => {
     if (!hasHydrated) return;
+    checkAuth();
+  }, [hasHydrated, pathname, checkAuth]);
 
-    const checkAuth = async () => {
-      if (accessToken && !isAuthenticated) {
-        try {
-          const user = await api.get<User>('/auth/me');
-          setUser(user);
-          setLoading(false);
-        } catch {
-          await refreshAccessToken();
-        }
-      } else {
-        setLoading(false);
+  // Multi-tab listener
+  useEffect(() => {
+    const channel = getAuthChannel();
+    if (!channel) return;
+
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'SESSION_REVOKED') {
+        logoutStore();
+        router.replace('/auth/login');
       }
     };
 
-    checkAuth();
-  }, [
-    hasHydrated,
-    pathname,
-    accessToken,
-    isAuthenticated,
-    refreshAccessToken,
-    logoutStore,
-    setLoading,
-    setUser,
-  ]);
+    channel.addEventListener('message', handleMessage);
+    return () => {
+      channel.removeEventListener('message', handleMessage);
+      channel.close();
+    };
+  }, [getAuthChannel, logoutStore, router, setUser, setLoading]);
 
   // Proactive token refresh — silently keep access token fresh before it expires
   useEffect(() => {
@@ -175,8 +189,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timerId = scheduleNext();
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        silentRefresh();
+      if (document.visibilityState === 'visible' && accessToken) {
+        const exp = decodeJwtExp(accessToken);
+        if (exp) {
+          const timeLeftMs = exp * 1000 - Date.now();
+          if (timeLeftMs < 180_000) {
+            silentRefresh();
+          }
+        }
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);

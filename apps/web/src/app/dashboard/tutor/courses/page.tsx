@@ -798,7 +798,7 @@ function TutorCoursesContent() {
 // ─── Page Export ──────────────────────────────────────────────────────────────
 export default function TutorCoursesPage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <TutorCoursesContent />
       </DashboardLayout>

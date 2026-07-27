@@ -44,15 +44,15 @@ const STORAGE_KEY = 'auth-storage';
 const tabStorage = {
   getItem: (name: string) => {
     if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem(name);
+    return localStorage.getItem(name);
   },
   setItem: (name: string, value: string) => {
     if (typeof window === 'undefined') return;
-    sessionStorage.setItem(name, value);
+    localStorage.setItem(name, value);
   },
   removeItem: (name: string) => {
     if (typeof window === 'undefined') return;
-    sessionStorage.removeItem(name);
+    localStorage.removeItem(name);
   },
 };
 
@@ -77,7 +77,10 @@ export const useAuthStore = create<AuthState>()(
         }),
       setUser: (user) => set({ user }),
       setTokens: (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken: refreshToken ?? null }),
+        set((state) => ({
+          accessToken,
+          refreshToken: refreshToken !== undefined ? refreshToken : state.refreshToken,
+        })),
       logout: () =>
         set({
           user: null,

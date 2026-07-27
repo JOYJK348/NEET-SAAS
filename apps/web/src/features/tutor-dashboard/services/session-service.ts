@@ -35,13 +35,19 @@ export const sessionService = {
    * Backend verifies tutor owns the session and all student admissions belong to the batch.
    * POST /tutor-dashboard/sessions/:sessionId/attendance/bulk
    */
-  markAttendance(
-    sessionId: string,
-    data: BulkAttendanceRequest,
-  ): Promise<BulkAttendanceResponse> {
+  markAttendance(sessionId: string, data: BulkAttendanceRequest): Promise<BulkAttendanceResponse> {
     return api.post<BulkAttendanceResponse>(
       `/tutor-dashboard/sessions/${sessionId}/attendance/bulk`,
       data,
+    );
+  },
+
+  joinSession(
+    sessionId: string,
+  ): Promise<{ sessionId: string; joinUrl: string; provider: string }> {
+    return api.post<{ sessionId: string; joinUrl: string; provider: string }>(
+      `/tutor-dashboard/sessions/${sessionId}/join`,
+      {},
     );
   },
 };
@@ -50,4 +56,3 @@ export const sessionKeys = {
   all: ['tutor-session'] as const,
   detail: (sessionId: string) => [...sessionKeys.all, 'detail', sessionId] as const,
 };
-

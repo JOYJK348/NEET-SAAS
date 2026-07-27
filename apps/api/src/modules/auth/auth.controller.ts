@@ -126,6 +126,7 @@ export class AuthController {
       {
         ipAddress: this.getIpAddress(request),
         rawUserAgent: request.headers['user-agent'] || 'unknown',
+        host: request.headers['host'],
       },
       response,
     );
@@ -164,7 +165,11 @@ export class AuthController {
     @Req() request: RequestWithCookies,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.refresh(this.getRefreshCookie(request), response);
+    return this.authService.refresh(
+      this.getRefreshCookie(request),
+      response,
+      request.headers['host'],
+    );
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -192,9 +197,14 @@ export class AuthController {
   })
   logout(
     @CurrentUser() currentUser: AuthenticatedRequestUser,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.logout(currentUser, response);
+    return this.authService.logout(
+      currentUser,
+      response,
+      request.headers['host'],
+    );
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -222,9 +232,14 @@ export class AuthController {
   })
   logoutAll(
     @CurrentUser() currentUser: AuthenticatedRequestUser,
+    @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.logoutAll(currentUser, response);
+    return this.authService.logoutAll(
+      currentUser,
+      response,
+      request.headers['host'],
+    );
   }
 
   @ApiBearerAuth('JWT-auth')
@@ -284,6 +299,18 @@ export class AuthController {
   private getRefreshCookie(request: RequestWithCookies): string | undefined {
     const cookies: Record<string, string | undefined> = request.cookies ?? {};
 
-    return cookies[this.authService.getRefreshCookieName()];
+    const cookieToken = cookies[this.authService.getRefreshCookieName()];
+    if (cookieToken) return cookieToken;
+
+    // Fallback 1: Header 'x-refresh-token'
+    const headerToken = request.headers['x-refresh-token'];
+    if (typeof headerToken === 'string' && headerToken) return headerToken;
+
+    // Fallback 2: Body 'refreshToken'
+    const bodyToken = (request.body as Record<string, unknown>)
+      ?.refreshToken as string | undefined;
+    if (typeof bodyToken === 'string' && bodyToken) return bodyToken;
+
+    return undefined;
   }
 }

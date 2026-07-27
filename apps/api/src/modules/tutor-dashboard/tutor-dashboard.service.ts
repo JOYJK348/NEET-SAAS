@@ -9,6 +9,8 @@ import {
   AttendanceSessionStatusEnum,
   AttendanceStatusEnum,
   AttendanceSessions,
+  AttendanceModeType,
+  MeetingProviderEnum,
 } from '@prisma/client';
 import {
   BulkAttendanceRequestDto,
@@ -167,8 +169,11 @@ export class TutorDashboardService {
     const batchIds = [...new Set(sessions.map((s) => s.batchId))];
     const subjectIds = [...new Set(sessions.map((s) => s.subjectId))];
     const branchIds = [...new Set(sessions.map((s) => s.branchId))];
+    const scheduleIds = sessions
+      .map((s) => s.scheduleId)
+      .filter((id): id is string => id !== null);
 
-    const [batches, subjects, branches] = await Promise.all([
+    const [batches, subjects, branches, scheduleRows] = await Promise.all([
       this.prisma.batches.findMany({
         where: { tenantId, id: { in: batchIds } },
         select: { id: true, name: true, code: true },
@@ -181,29 +186,80 @@ export class TutorDashboardService {
         where: { tenantId, id: { in: branchIds } },
         select: { id: true, name: true },
       }),
+      scheduleIds.length > 0
+        ? this.prisma.schedules.findMany({
+            where: { tenantId, id: { in: scheduleIds } },
+            select: {
+              id: true,
+              deliveryMode: true,
+              meetingLink: true,
+              meetingProvider: true,
+            },
+          })
+        : Promise.resolve(
+            [] as Array<{
+              id: string;
+              deliveryMode: AttendanceModeType;
+              meetingLink: string | null;
+              meetingProvider: MeetingProviderEnum | null;
+            }>,
+          ),
     ]);
 
     const batchMap = new Map(batches.map((b) => [b.id, b]));
     const subjectMap = new Map(subjects.map((s) => [s.id, s]));
     const branchMap = new Map(branches.map((b) => [b.id, b]));
+    const scheduleMap = new Map<
+      string,
+      {
+        id: string;
+        deliveryMode: AttendanceModeType;
+        meetingLink: string | null;
+        meetingProvider: MeetingProviderEnum | null;
+      }
+    >(scheduleRows.map((s) => [s.id, s]));
 
-    return sessions.map((s) => ({
-      id: s.id,
-      date: this.toLocalDateKey(s.attendanceDate),
-      startsAt: this.formatTime(s.startsAt),
-      endsAt: this.formatTime(s.endsAt),
-      subject: subjectMap.get(s.subjectId) ?? null,
-      batch: batchMap.get(s.batchId) ?? null,
-      branch: branchMap.get(s.branchId) ?? null,
-      sessionStatus:
-        s.sessionStatus === 'DRAFT' && s.scheduleId
-          ? 'SCHEDULED'
-          : s.sessionStatus,
-      sessionSource: s.sessionSource,
-      overrideType: s.overrideType,
-      cancelledReason: s.cancelledReason,
-      dayOfWeek: this.weekdayFromDateKey(this.toLocalDateKey(s.attendanceDate)),
-    }));
+    return sessions.map((s) => {
+      const sched = s.scheduleId
+        ? (scheduleMap.get(s.scheduleId) ?? null)
+        : null;
+      const now = new Date();
+      const sessionStart = new Date(s.startsAt);
+      const sessionEnd = new Date(s.endsAt);
+      const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
+      let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
+      if (isFinished || sessionEnd < now) {
+        liveStatus = 'COMPLETED';
+      } else if (sessionStart <= now && sessionEnd >= now) {
+        liveStatus = 'LIVE_NOW';
+      }
+
+      return {
+        id: s.id,
+        date: this.toLocalDateKey(s.attendanceDate),
+        startsAt: this.formatTime(s.startsAt),
+        endsAt: this.formatTime(s.endsAt),
+        subject: subjectMap.get(s.subjectId) ?? null,
+        batch: batchMap.get(s.batchId) ?? null,
+        branch: branchMap.get(s.branchId) ?? null,
+        sessionStatus:
+          s.sessionStatus === 'DRAFT' && s.scheduleId
+            ? 'SCHEDULED'
+            : s.sessionStatus,
+        sessionSource: s.sessionSource,
+        overrideType: s.overrideType,
+        cancelledReason: s.cancelledReason,
+        dayOfWeek: this.weekdayFromDateKey(
+          this.toLocalDateKey(s.attendanceDate),
+        ),
+        deliveryMode: sched?.deliveryMode ?? null,
+        liveStatus,
+        canJoin:
+          liveStatus === 'LIVE_NOW' &&
+          (sched?.deliveryMode === 'ONLINE' ||
+            sched?.deliveryMode === 'HYBRID'),
+      };
+    });
   }
 
   // ─── MY TIMETABLE ────────────────────────────────────────────────────────
@@ -267,6 +323,9 @@ export class TutorDashboardService {
           startTime: true,
           endTime: true,
           roomId: true,
+          deliveryMode: true,
+          meetingLink: true,
+          meetingProvider: true,
         },
       }),
     ]);
@@ -302,6 +361,20 @@ export class TutorDashboardService {
       if (!timetableMap.has(dateKey)) {
         timetableMap.set(dateKey, []);
       }
+
+      const now = new Date();
+      const sessionStart = new Date(session.startsAt);
+      const sessionEnd = new Date(session.endsAt);
+      const isFinished = ['PUBLISHED', 'LOCKED'].includes(
+        session.sessionStatus,
+      );
+      let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
+      if (isFinished || sessionEnd < now) {
+        liveStatus = 'COMPLETED';
+      } else if (sessionStart <= now && sessionEnd >= now) {
+        liveStatus = 'LIVE_NOW';
+      }
+
       timetableMap.get(dateKey)!.push({
         id: session.id,
         startsAt: this.formatTime(session.startsAt),
@@ -318,6 +391,12 @@ export class TutorDashboardService {
         overrideType: session.overrideType,
         cancelledReason: session.cancelledReason,
         schedule: sched,
+        deliveryMode: sched?.deliveryMode ?? null,
+        liveStatus,
+        canJoin:
+          liveStatus === 'LIVE_NOW' &&
+          (sched?.deliveryMode === 'ONLINE' ||
+            sched?.deliveryMode === 'HYBRID'),
       });
     }
 
@@ -1148,6 +1227,61 @@ export class TutorDashboardService {
           };
         }),
       },
+    };
+  }
+
+  async joinSession(tenantId: string, userId: string, sessionId: string) {
+    const profile = await this.resolveTutor(tenantId, userId);
+    const staffProfileId = profile.userId;
+
+    const session = await this.prisma.attendanceSessions.findFirst({
+      where: { tenantId, id: sessionId, staffProfileId, deletedAt: null },
+    });
+    if (!session)
+      throw new NotFoundException('Session not found or access denied');
+
+    if ((session.sessionStatus as string) === 'CANCELLED') {
+      throw new BadRequestException('This class has been cancelled');
+    }
+
+    const now = new Date();
+    const startTime = new Date(session.startsAt);
+    const endTime = new Date(session.endsAt);
+    const earlyAllowanceMs = 15 * 60 * 1000;
+    if (now < new Date(startTime.getTime() - earlyAllowanceMs)) {
+      throw new BadRequestException(
+        'Class has not started yet (join opens 15 minutes early)',
+      );
+    }
+    if (now > endTime) {
+      throw new BadRequestException('This class has already ended');
+    }
+
+    if (!session.scheduleId) {
+      throw new BadRequestException('No schedule linked to this session');
+    }
+
+    const schedule = await this.prisma.schedules.findFirst({
+      where: { tenantId, id: session.scheduleId },
+      select: { deliveryMode: true, meetingLink: true, meetingProvider: true },
+    });
+
+    if (!schedule) throw new NotFoundException('Schedule not found');
+    if (schedule.deliveryMode === 'CLASSROOM') {
+      throw new BadRequestException(
+        'This is a classroom session — no online join link',
+      );
+    }
+    if (!schedule.meetingLink) {
+      throw new BadRequestException(
+        'Meeting link has not been configured for this session',
+      );
+    }
+
+    return {
+      sessionId: session.id,
+      joinUrl: schedule.meetingLink,
+      provider: schedule.meetingProvider || 'unknown',
     };
   }
 }

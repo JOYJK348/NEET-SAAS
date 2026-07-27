@@ -29,13 +29,25 @@ import {
 function getStatusBadge(status: string): { label: string; className: string } {
   switch (status) {
     case 'ACTIVE':
-      return { label: 'Active', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      return {
+        label: 'Active',
+        className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      };
     case 'INACTIVE':
-      return { label: 'Inactive', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      return {
+        label: 'Inactive',
+        className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      };
     case 'COMPLETED':
-      return { label: 'Completed', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+      return {
+        label: 'Completed',
+        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      };
     case 'ARCHIVED':
-      return { label: 'Archived', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+      return {
+        label: 'Archived',
+        className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+      };
     default:
       return { label: status, className: 'bg-gray-100 text-gray-600' };
   }
@@ -82,7 +94,12 @@ function StudentRow({ student }: { student: BatchStudentDto }) {
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-[#111827] truncate">{fullName}</h4>
             {statusBadge && (
-              <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0', statusBadge.className)}>
+              <span
+                className={cn(
+                  'text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0',
+                  statusBadge.className,
+                )}
+              >
                 {statusBadge.label}
               </span>
             )}
@@ -157,7 +174,9 @@ function BatchDetailContent() {
       <div className="p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
         <ErrorState
           title="Failed to load batch details"
-          message={error.message || 'Could not load student data. You may not have access to this batch.'}
+          message={
+            error.message || 'Could not load student data. You may not have access to this batch.'
+          }
           onRetry={refetch}
           variant="page"
         />
@@ -195,7 +214,12 @@ function BatchDetailContent() {
           </Link>
           <div className="flex items-center gap-3">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{batch.name}</h1>
-            <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', statusBadge.className)}>
+            <span
+              className={cn(
+                'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                statusBadge.className,
+              )}
+            >
               {statusBadge.label}
             </span>
           </div>
@@ -282,9 +306,7 @@ function BatchDetailContent() {
               description="This batch doesn't have any active students yet."
             />
           ) : (
-            students.map((s) => (
-              <StudentRow key={s.enrollmentId} student={s} />
-            ))
+            students.map((s) => <StudentRow key={s.enrollmentId} student={s} />)
           )}
         </CardContent>
       </Card>
@@ -293,13 +315,19 @@ function BatchDetailContent() {
       {(batch.startDate || batch.endDate || batch.maxStudents) && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground bg-white border border-[#E5E7EB] rounded-2xl px-5 py-3 shadow-sm flex-wrap">
           {batch.startDate && (
-            <span><strong>From:</strong> {formatDate(batch.startDate)}</span>
+            <span>
+              <strong>From:</strong> {formatDate(batch.startDate)}
+            </span>
           )}
           {batch.endDate && (
-            <span><strong>To:</strong> {formatDate(batch.endDate)}</span>
+            <span>
+              <strong>To:</strong> {formatDate(batch.endDate)}
+            </span>
           )}
           {batch.maxStudents && (
-            <span><strong>Capacity:</strong> {batch.maxStudents} students</span>
+            <span>
+              <strong>Capacity:</strong> {batch.maxStudents} students
+            </span>
           )}
           <span className="flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-green-500" aria-hidden="true" />
@@ -315,11 +343,10 @@ function BatchDetailContent() {
 
 export default function BatchStudentsPage() {
   return (
-    <ProtectedRoute allowedRoles={['TUTOR']}>
+    <ProtectedRoute allowedRoles={['TUTOR', 'FACULTY']}>
       <DashboardLayout>
         <BatchDetailContent />
       </DashboardLayout>
     </ProtectedRoute>
   );
 }
-

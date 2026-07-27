@@ -149,4 +149,22 @@ export class TutorDashboardController {
       dto,
     );
   }
+
+  @Post('sessions/:sessionId/join')
+  @ApiOperation({
+    summary: 'Join live class session',
+    description:
+      'Returns the online meeting link (Zoom, Google Meet, etc) for a scheduled session. ' +
+      'Verifies the tutor owns the session, class is online/hybrid, and session time is active.',
+  })
+  joinSession(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Param('sessionId') sessionId: string,
+  ) {
+    return this.tutorDashboardService.joinSession(
+      user.tenantId!,
+      user.sub,
+      sessionId,
+    );
+  }
 }

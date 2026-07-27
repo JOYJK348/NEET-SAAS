@@ -45,8 +45,9 @@ class ApiClient {
         if (accessToken && config.headers) {
           config.headers.Authorization = `Bearer ${accessToken}`;
         }
-        if (state.user?.tenantId && config.headers) {
-          config.headers['x-tenant-id'] = state.user.tenantId;
+        const tenantId = state.user?.tenantId || process.env.NEXT_PUBLIC_TENANT_ID;
+        if (tenantId && config.headers) {
+          config.headers['x-tenant-id'] = tenantId;
         }
         return config;
       },
@@ -74,78 +75,26 @@ class ApiClient {
           originalRequest.url?.includes('/auth/login') ||
           originalRequest.url?.includes('/auth/register') ||
           originalRequest.url?.includes('/auth/refresh') ||
+          originalRequest.url?.includes('/auth/logout') ||
           originalRequest.url?.includes('/login') ||
-          originalRequest.url?.includes('/register');
+          originalRequest.url?.includes('/register') ||
+          originalRequest.url?.includes('/logout');
 
-        // Handle 401 Unauthorized - attempt token refresh (except for login/register requests)
+        // Handle 401 Unauthorized - attempt token refresh (except for login/register/refresh requests themselves)
         if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
-          if (this.isRefreshing) {
-            // Queue the request while token is being refreshed
-            return new Promise((resolve, reject) => {
-              this.failedQueue.push({ resolve, reject });
-            })
-              .then((token) => {
-                if (originalRequest.headers) {
-                  originalRequest.headers.Authorization = `Bearer ${token}`;
-                }
-                return this.client(originalRequest);
-              })
-              .catch((err) => Promise.reject(err));
-          }
-
           originalRequest._retry = true;
-          this.isRefreshing = true;
 
           try {
-            const response = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
-              {},
-              { withCredentials: true },
-            );
-
-            const refreshData = response.data?.data ?? response.data;
-            const { accessToken: newAccessToken } = refreshData;
-            useAuthStore.getState().setTokens(newAccessToken);
-
-            // Process queued requests
-            this.failedQueue.forEach(({ resolve }) => resolve(newAccessToken));
-            this.failedQueue = [];
+            const newAccessToken = await this.refreshTokens();
 
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
             }
 
             return this.client(originalRequest);
-          } catch (refreshError) {
-            const isCancel = axios.isCancel(refreshError);
-            const isAxiosErr = axios.isAxiosError(refreshError);
-            const errorPayload = refreshError as AxiosError;
-
-            const isNetworkError = isAxiosErr && !errorPayload.response;
-            const isServerError =
-              isAxiosErr &&
-              errorPayload.response &&
-              errorPayload.response.status &&
-              errorPayload.response.status >= 500;
-
-            if (isCancel || isNetworkError || isServerError) {
-              // Aborted request, network dropout, or server error - reject queue without logging out
-              this.failedQueue.forEach(({ reject }) => reject(refreshError));
-              this.failedQueue = [];
-              return Promise.reject(refreshError);
-            }
-
-            // Refresh genuinely failed (e.g. 400/401 token invalidation) - logout user
-            this.failedQueue.forEach(({ reject }) => reject(refreshError));
-            this.failedQueue = [];
-
-            useAuthStore.getState().logout();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/auth/login';
-            }
+          } catch (refreshError: any) {
+            // Reject the request so caller receives error, but NEVER clear store or redirect to login automatically
             return Promise.reject(refreshError);
-          } finally {
-            this.isRefreshing = false;
           }
         }
 
@@ -222,6 +171,46 @@ class ApiClient {
               message || 'Unable to connect to the server. Please check your connection.',
           });
         }
+    }
+  }
+
+  // Coordinate concurrent refresh token requests
+  public async refreshTokens(): Promise<string> {
+    if (this.isRefreshing) {
+      return new Promise<string>((resolve, reject) => {
+        this.failedQueue.push({
+          resolve: (token: any) => resolve(token as string),
+          reject,
+        });
+      });
+    }
+
+    this.isRefreshing = true;
+    try {
+      const currentRefreshToken = useAuthStore.getState().refreshToken;
+      const response = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken: currentRefreshToken },
+        {
+          withCredentials: true,
+          headers: currentRefreshToken ? { 'x-refresh-token': currentRefreshToken } : {},
+        },
+      );
+
+      const refreshData = response.data?.data ?? response.data;
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshData;
+      const nextRefreshToken = newRefreshToken || currentRefreshToken;
+      useAuthStore.getState().setTokens(newAccessToken, nextRefreshToken);
+
+      this.failedQueue.forEach(({ resolve }) => resolve(newAccessToken));
+      this.failedQueue = [];
+      return newAccessToken;
+    } catch (err) {
+      this.failedQueue.forEach(({ reject }) => reject(err));
+      this.failedQueue = [];
+      throw err;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 

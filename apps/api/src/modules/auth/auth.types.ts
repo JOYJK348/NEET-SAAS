@@ -20,6 +20,7 @@ export interface AuthTokenPair {
 export interface LoginRequestContext {
   ipAddress: string;
   rawUserAgent: string;
+  host?: string;
 }
 
 export interface LoginTenantOption {
@@ -52,6 +53,7 @@ export type LoginResponse = LoginSuccessResponse | LoginTenantSelectionResponse;
 
 export interface RefreshResponse {
   accessToken: string;
+  refreshToken?: string;
   expiresIn: number;
 }
 

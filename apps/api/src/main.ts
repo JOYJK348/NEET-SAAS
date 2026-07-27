@@ -50,7 +50,7 @@ async function bootstrap() {
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders:
-      'Content-Type, Accept, Authorization, X-Requested-With, x-request-id, x-correlation-id, x-tenant-id, x-branch-id, x-academic-year-id',
+      'Content-Type, Accept, Authorization, X-Requested-With, x-request-id, x-correlation-id, x-tenant-id, x-branch-id, x-academic-year-id, x-refresh-token',
   });
 
   // Global prefixes and versioning
