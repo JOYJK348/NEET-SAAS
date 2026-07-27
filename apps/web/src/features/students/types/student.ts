@@ -43,6 +43,7 @@ export interface Student {
   emergencyContact?: string;
   bloodGroup?: string;
   aadharNumber?: string;
+  classType?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,6 +102,7 @@ export interface CreateStudentInput {
   emergencyContact?: string;
   bloodGroup?: string;
   aadharNumber?: string;
+  classType?: string;
 }
 
 export interface UpdateStudentInput extends Partial<CreateStudentInput> {

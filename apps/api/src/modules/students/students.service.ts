@@ -22,8 +22,7 @@ import {
   validateAcademicStatusTransition,
 } from './students.validation';
 import { AdmissionNumberGenerator } from '../admissions/utils/admission-number-generator';
-import { randomUUID } from 'node:crypto';
-import { hashSync } from 'bcrypt';
+import { hashSync, genSaltSync } from 'bcrypt';
 import * as XLSX from 'xlsx';
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
@@ -58,7 +57,11 @@ export class StudentsService {
     await this.checkDuplicateStudentCode(studentCode, tenantId);
     validateAge(new Date(dto.dateOfBirth));
 
-    const placeholderHash = hashSync(randomUUID(), 8);
+    // Generate login password: Stud@ + last4(phone) or fallback random
+    const rawPassword = dto.phone
+      ? `Stud@${dto.phone.replace(/\D/g, '').slice(-4)}`
+      : `Stud@${1000 + Math.floor(Math.random() * 9000)}`;
+    const passwordHash = hashSync(rawPassword, genSaltSync(10));
 
     const profile = await this.prisma.$transaction(async (tx) => {
       const user = await tx.users.create({
@@ -70,8 +73,8 @@ export class StudentsService {
           status: 'ACTIVE',
           tenantId,
           branchId: '',
-          passwordHash: placeholderHash,
-          forcePasswordChange: true,
+          passwordHash,
+          forcePasswordChange: false,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -86,6 +89,7 @@ export class StudentsService {
           gender: dto.gender,
           bloodGroup,
           academicStatus,
+          classType: (dto.classType as any) || 'CLASSROOM',
           createdBy: userId,
           updatedBy: userId,
         },
@@ -228,10 +232,36 @@ export class StudentsService {
         }
       }
 
+      // Assign STUDENT role for portal access
+      const studentRole = await tx.roles.findFirst({
+        where: { tenantId, code: 'STUDENT' },
+      });
+      if (studentRole) {
+        await tx.userRoles
+          .create({
+            data: {
+              tenantId,
+              userId: user.id,
+              roleId: studentRole.id,
+              effectiveFrom: new Date(),
+              effectiveTo: new Date('2099-12-31'),
+              revokedBy: '',
+              revokedReason: '',
+              metadata: {},
+              assignedBy: userId,
+              assignmentReason: 'Student account creation',
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          })
+          .catch(() => {});
+      }
+
       return studentProfile;
     });
 
-    return this.toResponseAsync(profile);
+    const response = await this.toResponseAsync(profile);
+    return { ...response, generatedPassword: rawPassword };
   }
 
   async findAll(
@@ -616,6 +646,7 @@ export class StudentsService {
       'Phone',
       'Gender (MALE/FEMALE/OTHER)',
       'Date of Birth (YYYY-MM-DD)',
+      'Class Type (CLASSROOM/ONLINE/HYBRID)',
       'Address',
       'City',
       'State',
@@ -632,6 +663,7 @@ export class StudentsService {
       '+919876543210',
       'MALE',
       '2006-05-15',
+      'CLASSROOM',
       '123 Main Street',
       'Sivakasi',
       'Tamil Nadu',
@@ -661,7 +693,11 @@ export class StudentsService {
     batchId?: string,
     academicYearId?: string,
     branchId?: string,
-  ): Promise<{ importedCount: number; errors: string[] }> {
+  ): Promise<{
+    importedCount: number;
+    errors: string[];
+    loginCredentials: { email: string; password: string }[];
+  }> {
     const wb = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
@@ -670,8 +706,8 @@ export class StudentsService {
 
     const errors: string[] = [];
     let importedCount = 0;
+    const loginCredentials: { email: string; password: string }[] = [];
 
-    const placeholderHash = hashSync(randomUUID(), 8);
     const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
 
     // Load active academic status maps for quick lookups
@@ -745,6 +781,15 @@ export class StudentsService {
       const parentEmail = (row['Parent Email'] || row['parentEmail'] || '')
         .toString()
         .trim();
+
+      const classTypeRaw = (
+        row['Class Type (CLASSROOM/ONLINE/HYBRID)'] ||
+        row['classType'] ||
+        'CLASSROOM'
+      )
+        .toString()
+        .trim()
+        .toUpperCase();
 
       const courseCode = (
         row['Course Code (Copy from next sheet)'] ||
@@ -847,6 +892,12 @@ export class StudentsService {
         : 'MALE';
       const studentCode = `STU-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      // Generate password: Stud@ + last4(phone)
+      const rawPassword = phone
+        ? `Stud@${phone.replace(/\D/g, '').slice(-4)}`
+        : `Stud@${1000 + Math.floor(Math.random() * 9000)}`;
+      const passwordHash = hashSync(rawPassword, genSaltSync(10));
+
       try {
         await this.prisma.$transaction(async (tx) => {
           // 1. Create User
@@ -855,23 +906,17 @@ export class StudentsService {
               email,
               firstName,
               lastName,
-              userType: 'TUTOR', // Wait, type is STUDENT
+              userType: 'STUDENT',
               status: 'ACTIVE',
               tenantId,
               branchId: mappedBatch
                 ? mappedBatch.branchId
                 : branches[0]?.id || '',
-              passwordHash: placeholderHash,
-              forcePasswordChange: true,
+              passwordHash,
+              forcePasswordChange: false,
               createdBy: userId,
               updatedBy: userId,
             },
-          });
-
-          // Explicitly set user type correctly to STUDENT
-          await tx.users.update({
-            where: { id: user.id },
-            data: { userType: 'STUDENT' },
           });
 
           // 2. Create StudentProfile
@@ -884,6 +929,9 @@ export class StudentsService {
               gender: gender,
               bloodGroup: 'O_POS',
               academicStatus: 'ACTIVE',
+              classType: ['ONLINE', 'HYBRID'].includes(classTypeRaw)
+                ? classTypeRaw
+                : 'CLASSROOM',
               createdBy: userId,
               updatedBy: userId,
             },
@@ -1007,6 +1055,7 @@ export class StudentsService {
           }
         });
 
+        loginCredentials.push({ email, password: rawPassword });
         importedCount++;
       } catch (err: any) {
         errors.push(
@@ -1016,6 +1065,6 @@ export class StudentsService {
     }
 
     /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
-    return { importedCount, errors };
+    return { importedCount, errors, loginCredentials };
   }
 }

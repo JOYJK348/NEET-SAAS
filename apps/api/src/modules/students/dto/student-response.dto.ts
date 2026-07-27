@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { GenderType, BloodGroupType, AcademicStatusEnum } from '@prisma/client';
 
 export class StudentResponseDto {
@@ -31,6 +31,9 @@ export class StudentResponseDto {
 
   @ApiProperty({ enum: AcademicStatusEnum, example: AcademicStatusEnum.ACTIVE })
   academicStatus: AcademicStatusEnum;
+
+  @ApiPropertyOptional({ example: 'Stud@1234' })
+  generatedPassword?: string;
 
   @ApiProperty({ example: '2026-07-15T10:00:00.000Z' })
   createdAt: Date;

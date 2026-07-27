@@ -9,6 +9,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { LoginCredentialsDialog } from '@/features/tutors/components/LoginCredentialsDialog';
 import { useCreateStudent, useBatches, useCourses } from '@/features/students/hooks/use-students';
 import {
   useBranchesForAdmission,
@@ -39,6 +40,11 @@ function AddStudentContent() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const { createStudent, isCreating } = useCreateStudent();
+  const [credentials, setCredentials] = useState<{
+    email: string;
+    password: string;
+    name: string;
+  } | null>(null);
   const { batches } = useBatches();
   const { courses } = useCourses();
   const { branches } = useBranchesForAdmission();
@@ -71,6 +77,7 @@ function AddStudentContent() {
     register('academicYearId');
     register('courseId');
     register('batchId');
+    register('classType');
   }, [register]);
 
   const handleFieldChange = useCallback(
@@ -125,10 +132,18 @@ function AddStudentContent() {
     async (data: StudentFormData) => {
       if (currentStep !== FORM_STEPS.length - 1) return;
       try {
-        const student = await createStudent(data);
+        const student = (await createStudent(data)) as any;
         if (student) {
           toast({ title: 'Student created successfully' });
-          router.push(`/dashboard/students/${student.id}`);
+          if (student.generatedPassword) {
+            setCredentials({
+              email: student.email,
+              password: student.generatedPassword,
+              name: `${student.firstName} ${student.lastName}`,
+            });
+          } else {
+            router.push(`/dashboard/students/${student.id}`);
+          }
         } else {
           toast({
             title: 'Failed to create student',
@@ -161,7 +176,7 @@ function AddStudentContent() {
               'state',
               'pincode',
             ];
-            const academicFields = ['courseId', 'batchId', 'admissionDate'];
+            const academicFields = ['courseId', 'batchId', 'admissionDate', 'classType'];
             const parentFields = ['parentName', 'parentPhone', 'parentEmail'];
 
             if (personalFields.includes(e.field)) stepIndex = 0;
@@ -202,6 +217,11 @@ function AddStudentContent() {
     },
     [createStudent, router, setError, setCurrentStep, currentStep],
   );
+
+  const handleCredentialsClose = useCallback(() => {
+    setCredentials(null);
+    router.push('/dashboard/students');
+  }, [router]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -304,6 +324,16 @@ function AddStudentContent() {
           </form>
         </div>
       </div>
+
+      {credentials && (
+        <LoginCredentialsDialog
+          open={true}
+          onOpenChange={handleCredentialsClose}
+          email={credentials.email}
+          password={credentials.password}
+          name={credentials.name}
+        />
+      )}
     </DashboardLayout>
   );
 }

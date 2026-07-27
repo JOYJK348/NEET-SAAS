@@ -57,6 +57,7 @@ export const academicInfoSchema = z.object({
   courseId: z.string().min(1, 'Please select a course'),
   batchId: z.string().min(1, 'Please select a batch'),
   admissionDate: z.string().min(1, 'Admission date is required'),
+  classType: z.string().min(1, 'Please select a class type'),
 });
 
 export const parentInfoSchema = z.object({
@@ -116,6 +117,7 @@ export const defaultFormValues: StudentFormData = {
   courseId: '',
   batchId: '',
   admissionDate: '',
+  classType: 'CLASSROOM',
   parentName: '',
   parentPhone: '',
   parentEmail: '',

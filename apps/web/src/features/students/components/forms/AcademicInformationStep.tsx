@@ -193,6 +193,27 @@ export function AcademicInformationStep({
             <p className="text-xs text-destructive">{errors.admissionDate.message}</p>
           )}
         </div>
+
+        {/* Class Type */}
+        <div className="space-y-2">
+          <Label htmlFor="classType">Class Type</Label>
+          <Select
+            value={values.classType || 'CLASSROOM'}
+            onValueChange={(value) => onFieldChange('classType', value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select class type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CLASSROOM">Offline / Classroom</SelectItem>
+              <SelectItem value="ONLINE">Online</SelectItem>
+              <SelectItem value="HYBRID">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+          {errors.classType && (
+            <p className="text-xs text-destructive">{errors.classType.message}</p>
+          )}
+        </div>
       </div>
     </StudentFormSection>
   );

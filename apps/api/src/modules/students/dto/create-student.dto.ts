@@ -154,4 +154,13 @@ export class CreateStudentDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsString()
   academicYearId?: string;
+
+  @ApiPropertyOptional({
+    enum: ['CLASSROOM', 'ONLINE', 'HYBRID'],
+    example: 'CLASSROOM',
+  })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsString()
+  classType?: string;
 }

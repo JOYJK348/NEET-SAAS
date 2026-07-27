@@ -85,6 +85,7 @@ function EditStudentContent() {
     register('academicYearId');
     register('courseId');
     register('batchId');
+    register('classType');
   }, [register]);
 
   // Initialize form with student data
@@ -116,6 +117,7 @@ function EditStudentContent() {
         emergencyContact: student.emergencyContact || '',
         bloodGroup: student.bloodGroup || '',
         aadharNumber: student.aadharNumber || '',
+        classType: (student as any)?.classType || 'CLASSROOM',
       });
       setInitialized(true);
     }

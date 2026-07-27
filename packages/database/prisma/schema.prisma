@@ -1067,6 +1067,7 @@ model StudentProfiles {
   gender                      GenderType
   bloodGroup                  BloodGroupType
   academicStatus              AcademicStatusEnum
+  classType                   AttendanceModeType      @default(CLASSROOM)
   createdAt                   DateTime                @default(now())
   createdBy                   String
   updatedAt                   DateTime                @default(now())
