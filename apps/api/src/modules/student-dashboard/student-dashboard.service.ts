@@ -144,7 +144,7 @@ export class StudentDashboardService {
         },
         orderBy: { startsAt: 'asc' },
       }),
-      this.prisma.attendanceSessions.count({
+      this.prisma.attendanceSessions.findMany({
         where: {
           tenantId,
           batchId: { in: batchIds },
@@ -188,6 +188,13 @@ export class StudentDashboardService {
       ctx.classType,
     );
 
+    // Enrich upcoming sessions (will also filter for CLASSROOM students)
+    const enrichedUpcoming = await this.enrichStudentSessions(
+      tenantId,
+      upcomingSessions,
+      ctx.classType,
+    );
+
     // Live-now detection
     const now = new Date();
     const liveNow = enriched.filter(
@@ -199,8 +206,8 @@ export class StudentDashboardService {
 
     return {
       stats: {
-        todaysClasses: todaysSessions.length,
-        upcomingClasses: upcomingSessions,
+        todaysClasses: enriched.length,
+        upcomingClasses: enrichedUpcoming.length,
         activeBatches: batchIds.length,
         attendanceRate, // real percentage or null if no sessions
       },
@@ -269,46 +276,55 @@ export class StudentDashboardService {
     const subjectMap = new Map(subjects.map((s) => [s.id, s]));
     const scheduleMap = new Map(scheduleRows.map((s) => [s.id, s]));
 
-    return sessions.map((s) => {
-      const sched = s.scheduleId
-        ? (scheduleMap.get(s.scheduleId) ?? null)
-        : null;
-      const now = new Date();
-      const sessionStart = new Date(s.startsAt);
-      const sessionEnd = new Date(s.endsAt);
-      const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
-      let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
-      if (isFinished || sessionEnd < now) {
-        liveStatus = 'COMPLETED';
-      } else if (sessionStart <= now && sessionEnd >= now) {
-        liveStatus = 'LIVE_NOW';
-      }
+    const enriched = sessions
+      .map((s) => {
+        const sched = s.scheduleId
+          ? (scheduleMap.get(s.scheduleId) ?? null)
+          : null;
+        const now = new Date();
+        const sessionStart = new Date(s.startsAt);
+        const sessionEnd = new Date(s.endsAt);
+        const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
+        let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
+        if (isFinished || sessionEnd < now) {
+          liveStatus = 'COMPLETED';
+        } else if (sessionStart <= now && sessionEnd >= now) {
+          liveStatus = 'LIVE_NOW';
+        }
 
-      return {
-        id: s.id,
-        date: this.toLocalDateKey(s.attendanceDate),
-        startsAt: this.formatTime(s.startsAt),
-        endsAt: this.formatTime(s.endsAt),
-        dayOfWeek: this.weekdayFromDateKey(
-          this.toLocalDateKey(s.attendanceDate),
-        ),
-        subject: subjectMap.get(s.subjectId) ?? null,
-        batch: batchMap.get(s.batchId) ?? null,
-        sessionStatus:
-          s.sessionStatus === 'DRAFT' && s.scheduleId
-            ? 'SCHEDULED'
-            : s.sessionStatus,
-        sessionSource: s.sessionSource,
-        deliveryMode: sched?.deliveryMode ?? null,
-        liveStatus,
-        // canJoin: NEVER return meetingLink here; only via /join endpoint
-        canJoin:
-          liveStatus === 'LIVE_NOW' &&
-          studentClassType !== 'CLASSROOM' &&
-          (sched?.deliveryMode === 'ONLINE' ||
-            sched?.deliveryMode === 'HYBRID'),
-      };
-    });
+        return {
+          id: s.id,
+          date: this.toLocalDateKey(s.attendanceDate),
+          startsAt: this.formatTime(s.startsAt),
+          endsAt: this.formatTime(s.endsAt),
+          dayOfWeek: this.weekdayFromDateKey(
+            this.toLocalDateKey(s.attendanceDate),
+          ),
+          subject: subjectMap.get(s.subjectId) ?? null,
+          batch: batchMap.get(s.batchId) ?? null,
+          sessionStatus:
+            s.sessionStatus === 'DRAFT' && s.scheduleId
+              ? 'SCHEDULED'
+              : s.sessionStatus,
+          sessionSource: s.sessionSource,
+          deliveryMode: sched?.deliveryMode ?? null,
+          liveStatus,
+          // canJoin: NEVER return meetingLink here; only via /join endpoint
+          canJoin:
+            liveStatus === 'LIVE_NOW' &&
+            studentClassType !== 'CLASSROOM' &&
+            (sched?.deliveryMode === 'ONLINE' ||
+              sched?.deliveryMode === 'HYBRID'),
+        };
+      })
+      .filter(
+        (s) =>
+          studentClassType !== 'CLASSROOM' ||
+          s.deliveryMode === null ||
+          s.deliveryMode === 'CLASSROOM',
+      );
+
+    return enriched;
   }
 
   // ─── PHASE 3: TIMETABLE ─────────────────────────────────────────────────
