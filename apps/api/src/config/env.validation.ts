@@ -21,6 +21,12 @@ export const EnvSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional().default(''),
   R2_BUCKET_NAME: z.string().optional().default(''),
   R2_ENDPOINT: z.string().url().optional().or(z.string().length(0)),
+  SUPABASE_URL: z
+    .string()
+    .optional()
+    .default('https://uhxdqlzquzblijjftmqy.supabase.co'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(''),
+  SUPABASE_STORAGE_PRIVATE_BUCKET: z.string().default('private-files'),
   JITSI_SECRET_KEY: z.string().optional().default(''),
   JITSI_APP_ID: z.string().optional().default(''),
   RAZORPAY_KEY_ID: z.string().optional().default(''),

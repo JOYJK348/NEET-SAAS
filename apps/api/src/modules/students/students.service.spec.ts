@@ -44,6 +44,7 @@ describe('StudentsService', () => {
   let prismaService: any;
   let tenantScoped: any;
   let admissionNumberGenerator: any;
+  let storageService: any;
   let service: StudentsService;
 
   const defaultDto = {
@@ -88,10 +89,15 @@ describe('StudentsService', () => {
       generate: jest.fn().mockResolvedValue('ADM-2026-0001'),
     };
 
+    storageService = {
+      uploadFile: jest.fn().mockResolvedValue({ id: 'file-1' }),
+    };
+
     service = new StudentsService(
       prismaService,
       tenantScoped,
       admissionNumberGenerator,
+      storageService,
     );
   });
 

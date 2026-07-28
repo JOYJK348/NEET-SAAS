@@ -16,6 +16,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as express from 'express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -190,6 +192,31 @@ export class StudentsController {
       batchId,
       academicYearId,
       branchId,
+    );
+  }
+
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload avatar profile photo for student' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  async uploadAvatar(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.studentsService.uploadAvatar(
+      id,
+      file,
+      user.tenantId!,
+      user.sub,
     );
   }
 }

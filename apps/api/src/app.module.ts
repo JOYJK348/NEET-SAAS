@@ -20,6 +20,7 @@ import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { TutorDashboardModule } from './modules/tutor-dashboard/tutor-dashboard.module';
 import { StudentDashboardModule } from './modules/student-dashboard/student-dashboard.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
     TutorDashboardModule,
     StudentDashboardModule,
     AttendanceModule,
+    StorageModule,
     HealthModule,
   ],
   controllers: [],

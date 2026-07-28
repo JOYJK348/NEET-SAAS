@@ -1248,7 +1248,7 @@ model StaffDepartments {
   updatedByusers               Users         @relation("staff_departments_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
 
   @@id([staffProfileId, branchId, departmentId])
-  @@unique([tenantId, branchId, departmentId])
+  @@index([tenantId, branchId, departmentId])
 }
 
 model StaffSubjects {
@@ -4568,25 +4568,29 @@ model StorageObjects {
 }
 
 model FileUploads {
-  id              String     @id @default(uuid())
-  tenantId        String
-  fileName        String
-  fileSizeBytes   BigInt
-  mimeType        String
-  uploadStatus    String     @default("PENDING")
-  chunksTotal     Int        @default(1)
-  chunksUploaded  Int        @default(0)
-  storageObjectId String
-  createdAt       DateTime   @default(now())
-  createdBy       String
-  updatedAt       DateTime   @default(now())
-  updatedBy       String
-  deletedAt       DateTime?
-  deletedBy       String?
-  version         Int        @default(1)
-  tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  id               String           @id @default(uuid())
+  tenantId         String
+  originalFileName String
+  storedFileName   String
+  fileSizeBytes    BigInt
+  mimeType         String
+  checksum         String?
+  metadata         Json?
+  fileType         FileCategoryEnum
+  moduleCode       FileModuleEnum
+  bucket           BucketTypeEnum
+
+  createdAt        DateTime         @default(now())
+  createdBy        String
+  updatedAt        DateTime         @updatedAt
+  updatedBy        String
+  deletedAt        DateTime?
+  deletedBy        String?
+
+  tenant           Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
 
   @@unique([tenantId, id])
+  @@index([tenantId, moduleCode])
 }
 
 model BackgroundJobs {
@@ -5885,6 +5889,33 @@ enum DocumentCategoryEnum {
 enum DocumentVisibilityType {
   PUBLIC
   PRIVATE
+}
+
+enum FileModuleEnum {
+  EXAMS
+  SUBMISSIONS
+  LIVE_RECORDINGS
+  PROFILES
+  DOCUMENTS
+  ASSIGNMENTS
+  IMPORTS
+  EXPORTS
+}
+
+enum FileCategoryEnum {
+  QUESTION_PAPER
+  ANSWER_SHEET
+  LIVE_RECORDING
+  PROFILE_PHOTO
+  DOCUMENT
+  IMAGE
+  SPREADSHEET
+  CERTIFICATE
+}
+
+enum BucketTypeEnum {
+  PRIVATE
+  PUBLIC
 }
 
 enum EmploymentStatusEnum {

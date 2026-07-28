@@ -2,7 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Inject,
 } from '@nestjs/common';
+import { FileCategoryEnum, FileModuleEnum } from '@prisma/client';
+import { STORAGE_SERVICE_TOKEN } from '../storage/interfaces/storage.interface';
+import type { IStorageService } from '../storage/interfaces/storage.interface';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../common/utils/tenant-scoped-prisma';
 import {
@@ -39,7 +43,34 @@ export class StudentsService {
     private readonly prisma: PrismaService,
     private readonly tenantScoped: TenantScopedPrisma,
     private readonly admissionNumberGenerator: AdmissionNumberGenerator,
+    @Inject(STORAGE_SERVICE_TOKEN)
+    private readonly storageService: IStorageService,
   ) {}
+
+  async uploadAvatar(
+    studentId: string,
+    file: Express.Multer.File,
+    tenantId: string,
+    userId: string,
+  ) {
+    const student = await this.prisma.studentProfiles.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { userId: studentId }),
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const fileUpload = await this.storageService.uploadFile({
+      tenantId,
+      userId,
+      file,
+      fileType: FileCategoryEnum.PROFILE_PHOTO,
+      moduleCode: FileModuleEnum.PROFILES,
+    });
+
+    return { avatarFileUploadId: fileUpload.id, fileUpload };
+  }
 
   async create(
     dto: CreateStudentDto,
