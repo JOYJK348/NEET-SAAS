@@ -1,5 +1,6 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppService } from './app.service';
 import { HealthModule } from './modules/health/health.module';
 import { ConfigModule } from './common/config/config.module';
@@ -24,6 +25,13 @@ import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 1000,
+      },
+    ]),
     ConfigModule,
     RequestContextModule,
     LoggerModule,

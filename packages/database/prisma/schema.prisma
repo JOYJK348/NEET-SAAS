@@ -1165,6 +1165,7 @@ model StudentAdmissions {
   studentProfileIstudent_profile StudentProfiles          @relation("student_admissions_student_profile_id_to_student_profiles", fields: [studentProfileId], references: [userId], onDelete: SetNull)
   tenant                         Institutes               @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
   updatedByusers                 Users                    @relation("student_admissions_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+  examSubmissions                ExamSubmissions[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, admissionNumber])
@@ -1645,8 +1646,17 @@ model Exams {
   negativeMarkingEnabled  Boolean               @default(false)
   negativeMarkingValue    Decimal
   durationMinutes         Int                   @default(180)
+  graceMinutes            Int                   @default(0)
   scheduledStartAt        DateTime
   scheduledEndAt          DateTime
+  examWindowStart         DateTime              @default(now())
+  examWindowEnd           DateTime              @default(now())
+  requireFullDurationWindow Boolean             @default(false)
+  allowLateUpload         Boolean               @default(false)
+  allowReplaceUpload      Boolean               @default(true)
+  sectionConfig           Json                  @default("[]")
+  omrTemplateFileId       String?
+  omrTemplateSchema       Json?
   publishStatus           ExamPublishStatusEnum
   publishedBy             String
   publishedAt             DateTime
@@ -1654,6 +1664,8 @@ model Exams {
   publishedDevice         String
   resultsPublishedAt      DateTime
   resultsPublishedBy      String
+  evaluationLockedAt      DateTime?
+  evaluationLockedBy      String?
   instructions            String
   calculatorAllowed       Boolean               @default(false)
   roughSheetAllowed       Boolean               @default(true)
@@ -1665,6 +1677,12 @@ model Exams {
   lockedAt                DateTime
   lockedBy                String
   status                  ExamStatusEnum
+  isSubmissionLocked      Boolean               @default(false)
+  submissionLockedAt      DateTime?
+  isClosed                Boolean               @default(false)
+  closedAt                DateTime?
+  questionPaperFileId    String?
+  answerKeyFileId        String?
   createdAt               DateTime              @default(now())
   createdBy               String
   updatedAt               DateTime              @default(now())
@@ -1677,6 +1695,10 @@ model Exams {
   resultsPublishedByusers Users                 @relation("exams_results_published_by_to_users", fields: [resultsPublishedBy], references: [id], onDelete: SetNull)
   tenant                  Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
   updatedByusers          Users                 @relation("exams_updated_by_to_users", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  questionPaperFile       FileUploads?          @relation("ExamQuestionPaperFile", fields: [questionPaperFileId], references: [id], onDelete: SetNull)
+  answerKeyFile           FileUploads?          @relation("ExamAnswerKeyFile", fields: [answerKeyFileId], references: [id], onDelete: SetNull)
+  submissions             ExamSubmissions[]
 
   @@unique([tenantId, id])
 }
@@ -4587,11 +4609,16 @@ model FileUploads {
   deletedAt        DateTime?
   deletedBy        String?
 
-  tenant           Institutes       @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  tenant                         Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  examQuestionPaperFiles         Exams[]               @relation("ExamQuestionPaperFile")
+  examAnswerKeyFiles             Exams[]               @relation("ExamAnswerKeyFile")
+  examSubmissionAnswerSheetFiles ExamSubmissions[]     @relation("AnswerSheetFile")
+  submissionFiles                ExamSubmissionFiles[]
 
   @@unique([tenantId, id])
   @@index([tenantId, moduleCode])
 }
+
 
 model BackgroundJobs {
   id             String                  @id @default(uuid())
@@ -5950,8 +5977,31 @@ enum ExamPublishStatusEnum {
   DRAFT
   SCHEDULED
   PUBLISHED
+  LOCKED
+  UNDER_REVIEW
+  ADMIN_REVIEW
+  RESULT_PUBLISHED
   ARCHIVED
   CANCELLED
+}
+
+enum SubmissionTimelineEvent {
+  STARTED
+  QP_DOWNLOADED
+  ANSWER_SHEET_UPLOADED
+  ANSWER_SHEET_REPLACED
+  HEARTBEAT
+  TUTOR_OPENED
+  EVALUATED
+  RETURNED
+  APPROVED
+  RESULTS_PUBLISHED
+}
+
+enum SubmissionFileTypeEnum {
+  CURRENT
+  OLD
+  REPLACED
 }
 
 enum ExamStatusEnum {
@@ -6617,3 +6667,123 @@ model NotificationEvents {
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, scheduledAt])
 }
+
+enum ExamSubmissionStatusEnum {
+  SUBMITTED
+  LATE
+  ABSENT
+}
+
+model ExamSubmissions {
+  id                       String                   @id @default(uuid())
+  tenantId                 String
+  examId                   String
+  studentAdmissionId       String
+  answerSheetFileId        String?
+  status                   ExamSubmissionStatusEnum @default(SUBMITTED)
+  evaluationStatus         EvaluationStatusEnum     @default(PENDING)
+
+  submittedAt              DateTime?
+  startedAt                DateTime?
+  calculatedEndAt          DateTime?
+  graceEndAt               DateTime?
+  lastSeenAt               DateTime?
+  qpDownloadedAt           DateTime?
+  evaluationStartedAt      DateTime?
+  evaluationCompletedAt    DateTime?
+
+  evaluatedByUserId        String?
+  evaluatedAt              DateTime?
+  tutorNotes               String?
+  obtainedMarks            Decimal                  @default(0.0)
+  marksBreakdown           Json?
+  evaluationVersion        Int                      @default(1)
+  evaluationApproved       Boolean                  @default(false)
+  approvedByUserId         String?
+  approvedAt               DateTime?
+  rejectionReason          String?
+
+  aiConfidenceScore        Float?
+  aiDetectedAnswers        Json?
+  rank                     Int?
+  percentile               Float?
+
+  isResultsPublished       Boolean                  @default(false)
+  resultsPublishedAt       DateTime?
+  resultsPublishedByUserId String?
+
+  createdAt                DateTime                 @default(now())
+  createdBy                String
+  updatedAt                DateTime                 @updatedAt
+  updatedBy                String
+  deletedAt                DateTime?
+  deletedBy                String?
+
+  exam                     Exams                    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentAdmission         StudentAdmissions        @relation(fields: [studentAdmissionId], references: [id], onDelete: Cascade)
+  answerSheetFile          FileUploads?             @relation("AnswerSheetFile", fields: [answerSheetFileId], references: [id], onDelete: SetNull)
+  history                  ExamSubmissionHistory[]
+  timeline                 ExamSubmissionTimeline[]
+  submissionFiles          ExamSubmissionFiles[]
+
+  @@unique([tenantId, id])
+  @@unique([examId, studentAdmissionId])
+  @@index([tenantId, examId])
+  @@index([tenantId, studentAdmissionId])
+}
+
+model ExamSubmissionHistory {
+  id             String          @id @default(uuid())
+  tenantId       String
+  submissionId   String
+  editedByUserId String
+  editedAt       DateTime        @default(now())
+  oldMarks       Decimal
+  newMarks       Decimal
+  oldBreakdown   Json?
+  newBreakdown   Json?
+  reason         String?
+
+  submission     ExamSubmissions @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([tenantId, submissionId])
+}
+
+model ExamSubmissionTimeline {
+  id           String                  @id @default(uuid())
+  tenantId     String
+  submissionId String
+  event        SubmissionTimelineEvent
+  metadata     Json?
+  createdAt    DateTime                @default(now())
+  createdBy    String?
+
+  submission   ExamSubmissions         @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([tenantId, submissionId])
+  @@index([tenantId, event, createdAt])
+  @@index([submissionId, createdAt])
+  @@index([tenantId, event])
+  @@index([tenantId, createdAt])
+}
+
+model ExamSubmissionFiles {
+  id           String                 @id @default(uuid())
+  tenantId     String
+  submissionId String
+  fileUploadId String
+  fileType     SubmissionFileTypeEnum @default(CURRENT)
+  uploadedAt   DateTime               @default(now())
+  uploadedBy   String
+
+  submission   ExamSubmissions        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fileUpload   FileUploads            @relation(fields: [fileUploadId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([tenantId, submissionId])
+  @@index([submissionId, uploadedAt])
+  @@index([tenantId, fileType])
+}
+

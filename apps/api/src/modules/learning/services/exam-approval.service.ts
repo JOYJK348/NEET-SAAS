@@ -1,0 +1,382 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../../../common/prisma/prisma.service';
+import { PublishChecklistService } from './publish-checklist.service';
+import { RankingService } from './ranking.service';
+import { TimelineService } from './timeline.service';
+import { ExamPublishStatusEnum, SubmissionTimelineEvent } from '@prisma/client';
+
+@Injectable()
+export class ExamApprovalService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly publishChecklistService: PublishChecklistService,
+    private readonly rankingService: RankingService,
+    private readonly timelineService: TimelineService,
+  ) {}
+
+  /**
+   * Generates evaluation review summary and statistics for Tenant Admin review screen
+   */
+  async getReviewSummary(tenantId: string, examId: string) {
+    const exam = await this.prisma.exams.findFirst({
+      where: { id: examId, tenantId, deletedAt: null },
+    });
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const totalSubmissions = await this.prisma.examSubmissions.count({
+      where: { tenantId, examId, deletedAt: null },
+    });
+
+    const submittedCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        status: { in: ['SUBMITTED', 'LATE'] },
+        deletedAt: null,
+      },
+    });
+
+    const absentCount = await this.prisma.examSubmissions.count({
+      where: { tenantId, examId, status: 'ABSENT', deletedAt: null },
+    });
+
+    const evaluatedCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        evaluationStatus: 'COMPLETED',
+        deletedAt: null,
+      },
+    });
+
+    const pendingEvaluationCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        status: { not: 'ABSENT' },
+        evaluationStatus: { not: 'COMPLETED' },
+        deletedAt: null,
+      },
+    });
+
+    const approvedCount = await this.prisma.examSubmissions.count({
+      where: { tenantId, examId, evaluationApproved: true, deletedAt: null },
+    });
+
+    const unapprovedCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        status: { not: 'ABSENT' },
+        evaluationApproved: false,
+        deletedAt: null,
+      },
+    });
+
+    const returnedCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        evaluationStatus: 'RE_EVALUATION',
+        deletedAt: null,
+      },
+    });
+
+    const aggregatedMarks = await this.prisma.examSubmissions.aggregate({
+      where: {
+        tenantId,
+        examId,
+        evaluationStatus: 'COMPLETED',
+        status: { not: 'ABSENT' },
+        deletedAt: null,
+      },
+      _avg: { obtainedMarks: true },
+      _max: { obtainedMarks: true },
+      _min: { obtainedMarks: true },
+    });
+
+    return {
+      examId: exam.id,
+      title: exam.title,
+      publishStatus: exam.publishStatus,
+      isClosed: exam.isClosed,
+      evaluationLockedAt: exam.evaluationLockedAt,
+      evaluationLockedBy: exam.evaluationLockedBy,
+      resultsPublishedAt: exam.resultsPublishedAt,
+      stats: {
+        totalSubmissions,
+        submittedCount,
+        absentCount,
+        evaluatedCount,
+        pendingEvaluationCount,
+        approvedCount,
+        unapprovedCount,
+        returnedCount,
+        averageMarks: aggregatedMarks._avg.obtainedMarks
+          ? Number(aggregatedMarks._avg.obtainedMarks)
+          : 0,
+        highestMarks: aggregatedMarks._max.obtainedMarks
+          ? Number(aggregatedMarks._max.obtainedMarks)
+          : 0,
+        lowestMarks: aggregatedMarks._min.obtainedMarks
+          ? Number(aggregatedMarks._min.obtainedMarks)
+          : 0,
+      },
+    };
+  }
+
+  /**
+   * Admin approves a single submission's evaluation
+   */
+  async approveSubmission(
+    tenantId: string,
+    examId: string,
+    submissionId: string,
+    adminUserId: string,
+  ) {
+    const submission = await this.prisma.examSubmissions.findFirst({
+      where: { id: submissionId, examId, tenantId, deletedAt: null },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    if (submission.isResultsPublished) {
+      throw new ForbiddenException(
+        'Results are already published for this exam',
+      );
+    }
+
+    const now = new Date();
+    const updated = await this.prisma.examSubmissions.update({
+      where: { id: submissionId },
+      data: {
+        evaluationApproved: true,
+        approvedByUserId: adminUserId,
+        approvedAt: now,
+        rejectionReason: null,
+        updatedBy: adminUserId,
+      },
+    });
+
+    await this.timelineService.logEvent(
+      tenantId,
+      submissionId,
+      SubmissionTimelineEvent.APPROVED,
+      adminUserId,
+    );
+
+    return updated;
+  }
+
+  /**
+   * Admin rejects/returns a submission evaluation to tutor with mandatory reason
+   */
+  async rejectSubmission(
+    tenantId: string,
+    examId: string,
+    submissionId: string,
+    adminUserId: string,
+    reason: string,
+  ) {
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestException(
+        'Rejection reason is mandatory when returning evaluation to tutor',
+      );
+    }
+
+    const submission = await this.prisma.examSubmissions.findFirst({
+      where: { id: submissionId, examId, tenantId, deletedAt: null },
+    });
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    if (submission.isResultsPublished) {
+      throw new ForbiddenException(
+        'Results are already published for this exam',
+      );
+    }
+
+    const updated = await this.prisma.examSubmissions.update({
+      where: { id: submissionId },
+      data: {
+        evaluationApproved: false,
+        evaluationStatus: 'RE_EVALUATION',
+        rejectionReason: reason,
+        updatedBy: adminUserId,
+      },
+    });
+
+    await this.timelineService.logEvent(
+      tenantId,
+      submissionId,
+      SubmissionTimelineEvent.RETURNED,
+      adminUserId,
+      { reason },
+    );
+
+    return updated;
+  }
+
+  /**
+   * Bulk approve all evaluated submissions and lock evaluation phase (`ADMIN_REVIEW`)
+   */
+  async approveAll(tenantId: string, examId: string, adminUserId: string) {
+    const exam = await this.prisma.exams.findFirst({
+      where: { id: examId, tenantId, deletedAt: null },
+    });
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const unevaluatedCount = await this.prisma.examSubmissions.count({
+      where: {
+        tenantId,
+        examId,
+        status: { not: 'ABSENT' },
+        evaluationStatus: { not: 'COMPLETED' },
+        deletedAt: null,
+      },
+    });
+
+    if (unevaluatedCount > 0) {
+      throw new BadRequestException(
+        `Cannot approve all. ${unevaluatedCount} non-absent submissions are still pending evaluation.`,
+      );
+    }
+
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Bulk approve all evaluated non-absent submissions
+      await tx.examSubmissions.updateMany({
+        where: {
+          tenantId,
+          examId,
+          status: { not: 'ABSENT' },
+          evaluationStatus: 'COMPLETED',
+          deletedAt: null,
+        },
+        data: {
+          evaluationApproved: true,
+          approvedByUserId: adminUserId,
+          approvedAt: now,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 2. Lock evaluation on Exams model and set publishStatus = ADMIN_REVIEW
+      const updatedExam = await tx.exams.update({
+        where: { id: examId },
+        data: {
+          evaluationLockedAt: now,
+          evaluationLockedBy: adminUserId,
+          publishStatus: ExamPublishStatusEnum.ADMIN_REVIEW,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 3. Log timeline event for evaluated submissions
+      const submissions = await tx.examSubmissions.findMany({
+        where: { tenantId, examId, status: { not: 'ABSENT' }, deletedAt: null },
+        select: { id: true },
+      });
+
+      for (const sub of submissions) {
+        await this.timelineService.logEvent(
+          tenantId,
+          sub.id,
+          SubmissionTimelineEvent.APPROVED,
+          adminUserId,
+          { bulkApproved: true },
+          tx,
+        );
+      }
+
+      return { approvedCount: submissions.length, exam: updatedExam };
+    });
+  }
+
+  /**
+   * Pre-flight checklist validation
+   */
+  async getPublishChecklist(tenantId: string, examId: string) {
+    return this.publishChecklistService.validateChecklist(tenantId, examId);
+  }
+
+  /**
+   * Final atomic result publication after passing pre-flight checklist
+   */
+  async publishResults(tenantId: string, examId: string, adminUserId: string) {
+    const checklist = await this.publishChecklistService.validateChecklist(
+      tenantId,
+      examId,
+    );
+
+    if (!checklist.canPublish) {
+      throw new BadRequestException(
+        'Publish checklist failed. Ensure all evaluations are completed, approved, and locked.',
+      );
+    }
+
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Calculate ranks and percentiles
+      await this.rankingService.calculateExamRanks(tenantId, examId, tx);
+
+      // 2. Mark non-absent submissions as published
+      await tx.examSubmissions.updateMany({
+        where: { tenantId, examId, status: { not: 'ABSENT' }, deletedAt: null },
+        data: {
+          isResultsPublished: true,
+          resultsPublishedAt: now,
+          resultsPublishedByUserId: adminUserId,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 3. Mark Exam model as RESULT_PUBLISHED
+      const updatedExam = await tx.exams.update({
+        where: { id: examId },
+        data: {
+          resultsPublishedAt: now,
+          resultsPublishedBy: adminUserId,
+          publishStatus: ExamPublishStatusEnum.RESULT_PUBLISHED,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 4. Log timeline RESULTS_PUBLISHED for all submissions
+      const submissions = await tx.examSubmissions.findMany({
+        where: { tenantId, examId, deletedAt: null },
+        select: { id: true },
+      });
+
+      for (const sub of submissions) {
+        await this.timelineService.logEvent(
+          tenantId,
+          sub.id,
+          SubmissionTimelineEvent.RESULTS_PUBLISHED,
+          adminUserId,
+          undefined,
+          tx,
+        );
+      }
+
+      return updatedExam;
+    });
+  }
+}
