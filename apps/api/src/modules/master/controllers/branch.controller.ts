@@ -47,8 +47,6 @@ export class BranchController {
   }
 
   @Get()
-  @UseGuards(PermissionsGuard)
-  @Permissions('branches.read')
   @ApiOperation({ summary: 'List branches with pagination' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
@@ -63,8 +61,6 @@ export class BranchController {
   }
 
   @Get(':id')
-  @UseGuards(PermissionsGuard)
-  @Permissions('branches.read')
   @ApiOperation({ summary: 'Get a branch by ID' })
   @ApiResponse({ status: 404, description: 'Branch not found' })
   findOne(

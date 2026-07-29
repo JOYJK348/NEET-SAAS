@@ -60,7 +60,13 @@ export class StudentDashboardService {
     });
 
     if (!profile) {
-      throw new NotFoundException('Student profile not found');
+      return {
+        userId,
+        tenantId,
+        studentAdmissionId: '',
+        classType: 'CLASSROOM',
+        activeEnrollments: [],
+      };
     }
 
     // Step 2: Resolve most recent ACTIVE admission for this student
@@ -76,7 +82,13 @@ export class StudentDashboardService {
     });
 
     if (!admission) {
-      throw new NotFoundException('No active admission found for this student');
+      return {
+        userId,
+        tenantId,
+        studentAdmissionId: '',
+        classType: profile.classType || 'CLASSROOM',
+        activeEnrollments: [],
+      };
     }
 
     // Step 3: Find all ACTIVE batch enrollments for this admission
@@ -418,6 +430,9 @@ export class StudentDashboardService {
   async joinSession(tenantId: string, userId: string, sessionId: string) {
     // Gate 1: JWT student context
     const ctx = await this.resolveStudentContext(tenantId, userId);
+    if (!ctx.studentAdmissionId) {
+      throw new NotFoundException('Student profile or active admission not found');
+    }
     const batchIds = ctx.activeEnrollments.map((e) => e.batchId);
 
     // Gate 2: Session exists

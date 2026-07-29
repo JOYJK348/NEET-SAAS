@@ -133,16 +133,16 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl shadow-2xl text-slate-100 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-3xl shadow-2xl text-slate-800 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-400" />
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
               Create Offline OMR Exam
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
               Step {step} of 4:{' '}
               {step === 1
                 ? 'Basic Details'
@@ -155,14 +155,14 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Step Indicator */}
-        <div className="grid grid-cols-4 border-b border-slate-800 text-xs font-semibold bg-slate-950/40">
+        <div className="grid grid-cols-4 border-b border-slate-200 text-xs font-semibold bg-slate-50/50">
           {[
             { num: 1, label: 'Basic Info' },
             { num: 2, label: 'Timing Window' },
@@ -172,12 +172,12 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
             <button
               key={s.num}
               onClick={() => setStep(s.num as any)}
-              className={`py-3 px-4 text-center border-b-2 transition ${
+              className={`py-3 px-4 text-center border-b-2 font-bold transition ${
                 step === s.num
-                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10'
+                  ? 'border-indigo-600 text-indigo-600 bg-indigo-50/80'
                   : step > s.num
-                    ? 'border-emerald-500/50 text-emerald-400'
-                    : 'border-transparent text-slate-500'
+                    ? 'border-emerald-500/50 text-emerald-700'
+                    : 'border-transparent text-slate-400'
               }`}
             >
               {s.num}. {s.label}
@@ -186,11 +186,11 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
         </div>
 
         {/* Body Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white">
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Exam Title *
                 </label>
                 <input
@@ -198,17 +198,17 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   placeholder="e.g. NEET Grand Test 05 — Full Syllabus"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Course</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Course</label>
                   <select
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   >
                     <option value="">Select Course...</option>
                     {courses.map((c) => (
@@ -220,11 +220,11 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Batch</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Batch</label>
                   <select
                     value={batchId}
                     onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   >
                     <option value="">Select Batch...</option>
                     {batches.map((b) => (
@@ -530,11 +530,11 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
         </div>
 
         {/* Footer Controls */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/80">
           <button
             disabled={step === 1}
             onClick={() => setStep((step - 1) as any)}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 rounded-lg text-sm font-semibold transition"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 rounded-lg text-sm font-semibold transition"
           >
             Previous
           </button>

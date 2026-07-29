@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, User } from '@/stores/auth-store';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -38,6 +39,7 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const {
     user,
     isAuthenticated,
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
+    queryClient.clear();
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
     try {
       const data = await api.post<{ user: User; accessToken: string; refreshToken: string }>(
@@ -95,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (registerData: RegisterData) => {
     setLoading(true);
+    queryClient.clear();
     try {
       const response = await api.post<{ user: User; accessToken: string; refreshToken: string }>(
         '/auth/register',
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      queryClient.clear();
       logoutStore();
       router.replace('/auth/login');
     }
