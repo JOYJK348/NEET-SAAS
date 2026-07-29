@@ -36,12 +36,35 @@ export class TutorExamsService {
     const take = limit || 20;
     const skip = page ? (page - 1) * take : 0;
 
+    const staffProfile = await this.prisma.staffProfiles.findFirst({
+      where: { userId: tutorUserId, tenantId, deletedAt: null },
+      include: {
+        staff_batch_assignmentss: {
+          where: { deletedAt: null, isActive: true },
+          select: { batchId: true },
+        },
+      },
+    });
+
+    const assignedBatchIds = (staffProfile?.staff_batch_assignmentss || [])
+      .map((a) => a.batchId)
+      .filter(Boolean);
+
+    const examWhere: Prisma.ExamsWhereInput = {
+      tenantId,
+      deletedAt: null,
+    };
+
+    if (assignedBatchIds.length > 0) {
+      examWhere.batchId = { in: assignedBatchIds };
+    }
+
     const [total, exams] = await Promise.all([
       this.prisma.exams.count({
-        where: { tenantId, deletedAt: null },
+        where: examWhere,
       }),
       this.prisma.exams.findMany({
-        where: { tenantId, deletedAt: null },
+        where: examWhere,
         orderBy: { scheduledStartAt: 'desc' },
         skip,
         take,
