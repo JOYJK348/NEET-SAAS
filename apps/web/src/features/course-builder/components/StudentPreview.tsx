@@ -283,15 +283,25 @@ function TopicContentView({ item }: { item: TopicItem }) {
               </p>
             </div>
             {item.fileUrl && (
-              <a
-                href={item.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all shrink-0"
-              >
-                <Download className="h-3.5 w-3.5" />
-                View
-              </a>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={item.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-violet-50 border border-violet-200 text-xs font-bold text-violet-700 hover:bg-violet-100 transition-all shrink-0"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  View
+                </a>
+                <a
+                  href={item.fileUrl}
+                  download={meta.fileName ?? 'document.pdf'}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all shrink-0"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </a>
+              </div>
             )}
           </div>
         </div>
