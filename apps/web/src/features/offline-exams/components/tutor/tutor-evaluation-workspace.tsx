@@ -36,27 +36,49 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
 
   useEffect(() => {
     if (detail) {
-      const config = detail.sectionConfig || [];
-      const existingBreakdown = detail.marksBreakdown || [];
+      const config = (detail.sectionConfig || []) as any[];
+      const existingBreakdown = (detail.marksBreakdown || []) as any[];
+      const studentTotalObtained = Number(detail.obtainedMarks || 0);
 
       if (existingBreakdown.length > 0) {
         setSectionMarks(
           existingBreakdown.map((item) => ({
-            sectionId: item.sectionId,
-            sectionName: item.sectionName,
-            obtainedMarks: Number(item.obtainedMarks || 0),
-            maxMarks: Number(item.maxMarks || 100),
+            sectionId: item.sectionId || item.id,
+            sectionName: item.sectionName || item.name || 'Section',
+            obtainedMarks: Number(item.obtainedMarks ?? 0),
+            maxMarks: Number(item.maxMarks ?? item.marks ?? item.totalMarks ?? 100),
           })),
         );
       } else if (config.length > 0) {
-        setSectionMarks(
-          config.map((sec) => ({
-            sectionId: sec.sectionId || sec.id,
-            sectionName: sec.name,
-            obtainedMarks: 0,
-            maxMarks: Number(sec.maxMarks || 100),
-          })),
+        const totalExamMax = config.reduce(
+          (sum, sec) => sum + Number(sec.maxMarks ?? sec.marks ?? sec.totalMarks ?? 100),
+          0,
         );
+
+        setSectionMarks(
+          config.map((sec) => {
+            const secMax = Number(sec.maxMarks ?? sec.marks ?? sec.totalMarks ?? 100);
+            const defaultObtained =
+              studentTotalObtained > 0 && totalExamMax > 0
+                ? Math.round((studentTotalObtained * secMax) / totalExamMax)
+                : 0;
+
+            return {
+              sectionId: sec.sectionId || sec.id,
+              sectionName: sec.name || sec.sectionName || 'Section',
+              obtainedMarks: defaultObtained,
+              maxMarks: secMax,
+            };
+          }),
+        );
+      } else {
+        setSectionMarks([
+          {
+            sectionName: 'General Section',
+            obtainedMarks: studentTotalObtained,
+            maxMarks: Number(detail.totalMarks || 100),
+          },
+        ]);
       }
 
       setTutorNotes(detail.tutorNotes || '');
