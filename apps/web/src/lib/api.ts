@@ -136,9 +136,13 @@ class ApiClient {
               return Promise.reject(refreshError);
             }
 
-            // Reject queued requests without logging out the user
+            // Reject queued requests and log out the user
             this.failedQueue.forEach(({ reject }) => reject(refreshError));
             this.failedQueue = [];
+            useAuthStore.getState().logout();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/auth/login';
+            }
             return Promise.reject(refreshError);
           } finally {
             this.isRefreshing = false;
