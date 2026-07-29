@@ -69,21 +69,21 @@ export class StorageController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        fileType: { type: 'string', example: 'QUESTION_PAPER' },
-        moduleCode: { type: 'string', example: 'EXAMS' },
+        fileType: { type: 'string', example: 'DOCUMENT' },
+        moduleCode: { type: 'string', example: 'DOCUMENTS' },
         bucket: { type: 'string', example: 'PRIVATE' },
         metadata: { type: 'string', example: '{"pages":10}' },
       },
     },
   })
   @ApiResponse({ status: 201, description: 'File uploaded successfully' })
-  uploadFile(
+  async uploadFile(
     @UploadedFile() file: MulterFile,
     @Body() dto: UploadFileDto,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     const metadata = this.parseMetadata(dto.metadata);
-    return this.storageService.uploadFile({
+    const record = await this.storageService.uploadFile({
       tenantId: user.tenantId!,
       userId: user.sub,
       file,
@@ -92,6 +92,32 @@ export class StorageController {
       bucket: dto.bucket,
       metadata,
     });
+
+    let signedUrl = '';
+    try {
+      signedUrl = await this.storageService.createSignedUrl({
+        tenantId: user.tenantId!,
+        fileUploadId: record.id,
+      });
+    } catch {
+      // fallback
+    }
+
+    return {
+      id: record.id,
+      tenantId: record.tenantId,
+      originalFileName: record.originalFileName,
+      storedFileName: record.storedFileName,
+      fileSizeBytes: Number(record.fileSizeBytes),
+      mimeType: record.mimeType,
+      metadata: record.metadata,
+      fileType: record.fileType,
+      moduleCode: record.moduleCode,
+      bucket: record.bucket,
+      signedUrl,
+      fileUrl: signedUrl,
+      storagePath: record.storedFileName,
+    };
   }
 
   @Put(':fileUploadId')
@@ -99,20 +125,46 @@ export class StorageController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Safely replace existing file upload in-place' })
   @ApiResponse({ status: 200, description: 'File replaced successfully' })
-  replaceFile(
+  async replaceFile(
     @Param('fileUploadId') fileUploadId: string,
     @UploadedFile() file: MulterFile,
     @Body() dto: UploadFileDto,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     const metadata = this.parseMetadata(dto.metadata);
-    return this.storageService.replaceFile({
+    const record = await this.storageService.replaceFile({
       tenantId: user.tenantId!,
       fileUploadId,
       userId: user.sub,
       file,
       metadata,
     });
+
+    let signedUrl = '';
+    try {
+      signedUrl = await this.storageService.createSignedUrl({
+        tenantId: user.tenantId!,
+        fileUploadId: record.id,
+      });
+    } catch {
+      // fallback
+    }
+
+    return {
+      id: record.id,
+      tenantId: record.tenantId,
+      originalFileName: record.originalFileName,
+      storedFileName: record.storedFileName,
+      fileSizeBytes: Number(record.fileSizeBytes),
+      mimeType: record.mimeType,
+      metadata: record.metadata,
+      fileType: record.fileType,
+      moduleCode: record.moduleCode,
+      bucket: record.bucket,
+      signedUrl,
+      fileUrl: signedUrl,
+      storagePath: record.storedFileName,
+    };
   }
 
   @Get(':fileUploadId/url')
@@ -180,13 +232,17 @@ export class StorageController {
     status: 200,
     description: 'Returns FileUploads database record',
   })
-  getMetadata(
+  async getMetadata(
     @Param('fileUploadId') fileUploadId: string,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
-    return this.storageService.getMetadata({
+    const record = await this.storageService.getMetadata({
       tenantId: user.tenantId!,
       fileUploadId,
     });
+    return {
+      ...record,
+      fileSizeBytes: Number(record.fileSizeBytes),
+    };
   }
 }
