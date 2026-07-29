@@ -37,17 +37,36 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
   useEffect(() => {
     if (detail) {
       const config = (detail.sectionConfig || []) as any[];
-      const existingBreakdown = (detail.marksBreakdown || []) as any[];
+      const rawBreakdown = (detail.marksBreakdown || []) as any[];
       const studentTotalObtained = Number(detail.obtainedMarks || 0);
 
-      if (existingBreakdown.length > 0) {
+      const breakdownSum = rawBreakdown.reduce(
+        (sum, item) => sum + Number(item.obtainedMarks || 0),
+        0,
+      );
+
+      const hasValidBreakdown =
+        rawBreakdown.length > 0 && (breakdownSum > 0 || studentTotalObtained === 0);
+
+      if (hasValidBreakdown) {
         setSectionMarks(
-          existingBreakdown.map((item) => ({
-            sectionId: item.sectionId || item.id,
-            sectionName: item.sectionName || item.name || 'Section',
-            obtainedMarks: Number(item.obtainedMarks ?? 0),
-            maxMarks: Number(item.maxMarks ?? item.marks ?? item.totalMarks ?? 100),
-          })),
+          rawBreakdown.map((item, idx) => {
+            const matchedConfig = config[idx] || {};
+            const secName =
+              item.sectionName && item.sectionName !== 'Section'
+                ? item.sectionName
+                : matchedConfig.name || matchedConfig.sectionName || `Section ${idx + 1}`;
+            const secMax = Number(
+              matchedConfig.maxMarks ?? matchedConfig.marks ?? item.maxMarks ?? 100,
+            );
+
+            return {
+              sectionId: item.sectionId || item.id || matchedConfig.id || matchedConfig.sectionId,
+              sectionName: secName,
+              obtainedMarks: Number(item.obtainedMarks ?? 0),
+              maxMarks: secMax > 0 ? secMax : 100,
+            };
+          }),
         );
       } else if (config.length > 0) {
         const totalExamMax = config.reduce(
@@ -56,7 +75,7 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
         );
 
         setSectionMarks(
-          config.map((sec) => {
+          config.map((sec, idx) => {
             const secMax = Number(sec.maxMarks ?? sec.marks ?? sec.totalMarks ?? 100);
             const defaultObtained =
               studentTotalObtained > 0 && totalExamMax > 0
@@ -64,10 +83,10 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
                 : 0;
 
             return {
-              sectionId: sec.sectionId || sec.id,
-              sectionName: sec.name || sec.sectionName || 'Section',
+              sectionId: sec.sectionId || sec.id || `sec-${idx}`,
+              sectionName: sec.name || sec.sectionName || `Section ${idx + 1}`,
               obtainedMarks: defaultObtained,
-              maxMarks: secMax,
+              maxMarks: secMax > 0 ? secMax : 100,
             };
           }),
         );
