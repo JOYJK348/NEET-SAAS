@@ -53,11 +53,18 @@ export class StudentDashboardService {
     tenantId: string,
     userId: string,
   ): Promise<StudentContext> {
-    // Step 1: Resolve StudentProfile (userId is the PK)
-    const profile = await this.prisma.studentProfiles.findFirst({
-      where: { userId, tenantId, deletedAt: null },
+    // Step 1: Resolve StudentProfile (userId is PK)
+    let profile = await this.prisma.studentProfiles.findFirst({
+      where: { userId, deletedAt: null },
       select: { userId: true, classType: true },
     });
+
+    if (!profile) {
+      profile = await this.prisma.studentProfiles.findFirst({
+        where: { userId },
+        select: { userId: true, classType: true },
+      });
+    }
 
     if (!profile) {
       return {
@@ -69,17 +76,25 @@ export class StudentDashboardService {
       };
     }
 
-    // Step 2: Resolve most recent ACTIVE admission for this student
-    const admission = await this.prisma.studentAdmissions.findFirst({
+    // Step 2: Resolve most recent admission for this student
+    let admission = await this.prisma.studentAdmissions.findFirst({
       where: {
-        tenantId,
         studentProfileId: profile.userId,
-        admissionStatus: 'ACTIVE',
         deletedAt: null,
       },
-      orderBy: { admissionDate: 'desc' },
+      orderBy: [{ admissionStatus: 'asc' }, { admissionDate: 'desc' }],
       select: { id: true },
     });
+
+    if (!admission) {
+      admission = await this.prisma.studentAdmissions.findFirst({
+        where: {
+          OR: [{ studentProfileId: profile.userId }, { createdBy: userId }],
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+    }
 
     if (!admission) {
       return {
@@ -91,13 +106,11 @@ export class StudentDashboardService {
       };
     }
 
-    // Step 3: Find all ACTIVE batch enrollments for this admission
+    // Step 3: Find all batch enrollments for this admission
     const activeEnrollments =
       await this.prisma.studentBatchEnrollments.findMany({
         where: {
-          tenantId,
           studentAdmissionId: admission.id,
-          status: 'ACTIVE',
           deletedAt: null,
         },
         select: {

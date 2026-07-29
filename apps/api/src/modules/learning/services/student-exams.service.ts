@@ -35,25 +35,33 @@ export class StudentExamsService {
 
   private async getStudentAdmission(tenantId: string, userId: string) {
     let admission = await this.prisma.studentAdmissions.findFirst({
-      where: { studentProfileId: userId, tenantId, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
+      where: { studentProfileId: userId, deletedAt: null },
+      orderBy: [{ admissionStatus: 'asc' }, { createdAt: 'desc' }],
     });
 
     if (!admission) {
       const profile = await this.prisma.studentProfiles.findFirst({
-        where: { userId, tenantId, deletedAt: null },
+        where: { userId, deletedAt: null },
       });
 
       if (profile) {
         admission = await this.prisma.studentAdmissions.findFirst({
           where: {
             studentProfileId: profile.userId,
-            tenantId,
             deletedAt: null,
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ admissionStatus: 'asc' }, { createdAt: 'desc' }],
         });
       }
+    }
+
+    if (!admission) {
+      admission = await this.prisma.studentAdmissions.findFirst({
+        where: {
+          OR: [{ studentProfileId: userId }, { createdBy: userId }],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
     }
 
     if (!admission) {
@@ -79,12 +87,15 @@ export class StudentExamsService {
       };
     }
 
-    const enrollment = await this.prisma.studentBatchEnrollments.findFirst({
-      where: { studentAdmissionId: admission.id, tenantId, deletedAt: null },
-      orderBy: { createdAt: 'desc' },
+    const enrollments = await this.prisma.studentBatchEnrollments.findMany({
+      where: { studentAdmissionId: admission.id, deletedAt: null },
+      select: { batchId: true },
     });
 
-    return { admission, batchId: enrollment?.batchId ?? null };
+    const batchIds = enrollments.map((e) => e.batchId).filter(Boolean);
+    const batchId = batchIds[0] ?? null;
+
+    return { admission, batchIds, batchId };
   }
 
   async getMyExams(
@@ -93,7 +104,10 @@ export class StudentExamsService {
     page?: number,
     limit?: number,
   ) {
-    const { batchId } = await this.getStudentAdmission(tenantId, userId);
+    const { admission, batchIds } = await this.getStudentAdmission(
+      tenantId,
+      userId,
+    );
 
     const take = limit || 20;
     const skip = page ? (page - 1) * take : 0;
@@ -104,9 +118,9 @@ export class StudentExamsService {
       deletedAt: null,
     };
 
-    if (batchId) {
+    if (batchIds.length > 0) {
       examWhere.OR = [
-        { batchId },
+        { batchId: { in: batchIds } },
         { batchId: 'batch-default' },
         { batchId: '' },
       ];
@@ -132,14 +146,17 @@ export class StudentExamsService {
           'system',
         );
 
-        const submission = await this.prisma.examSubmissions.findFirst({
-          where: {
-            tenantId,
-            examId: exam.id,
-            deletedAt: null,
-          },
-          orderBy: { createdAt: 'desc' },
-        });
+        const submission = admission?.id
+          ? await this.prisma.examSubmissions.findFirst({
+              where: {
+                tenantId,
+                examId: exam.id,
+                studentAdmissionId: admission.id,
+                deletedAt: null,
+              },
+              orderBy: { createdAt: 'desc' },
+            })
+          : null;
 
         const derivedStatus = this.examStateService.getExamState(exam, now);
         const canStart = this.examStateService.canStudentStart(exam, now);
@@ -206,7 +223,7 @@ export class StudentExamsService {
     examId: string,
     metadata?: Record<string, unknown>,
   ) {
-    const { admission, batchId } = await this.getStudentAdmission(
+    const { admission, batchIds, batchId } = await this.getStudentAdmission(
       tenantId,
       userId,
     );
@@ -220,7 +237,7 @@ export class StudentExamsService {
       },
     });
 
-    if (!exam || (batchId && exam.batchId !== batchId)) {
+    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
       throw new NotFoundException(
         'Exam not found or not assigned to your batch',
       );
@@ -410,7 +427,7 @@ export class StudentExamsService {
   }
 
   async getExamDetail(tenantId: string, userId: string, examId: string) {
-    const { admission, batchId } = await this.getStudentAdmission(
+    const { admission, batchIds, batchId } = await this.getStudentAdmission(
       tenantId,
       userId,
     );
@@ -419,7 +436,7 @@ export class StudentExamsService {
       where: { id: examId, tenantId, deletedAt: null },
     });
 
-    if (!exam || (batchId && exam.batchId !== batchId)) {
+    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
       throw new NotFoundException(
         'Exam not found or not assigned to your batch',
       );
@@ -506,7 +523,7 @@ export class StudentExamsService {
     file: Express.Multer.File,
     metadata?: Record<string, unknown>,
   ) {
-    const { admission, batchId } = await this.getStudentAdmission(
+    const { admission, batchIds, batchId } = await this.getStudentAdmission(
       tenantId,
       userId,
     );
@@ -515,7 +532,7 @@ export class StudentExamsService {
       where: { id: examId, tenantId, deletedAt: null },
     });
 
-    if (!exam || (batchId && exam.batchId !== batchId)) {
+    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
       throw new NotFoundException(
         'Exam not found or not assigned to your batch',
       );

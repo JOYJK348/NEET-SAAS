@@ -178,16 +178,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let timerId = scheduleNext();
 
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+    const onResume = () => {
+      if (document.visibilityState === 'visible' || document.hasFocus()) {
         silentRefresh();
       }
     };
-    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    document.addEventListener('visibilitychange', onResume);
+    window.addEventListener('focus', onResume);
+    window.addEventListener('online', onResume);
 
     return () => {
       clearTimeout(timerId);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('visibilitychange', onResume);
+      window.removeEventListener('focus', onResume);
+      window.removeEventListener('online', onResume);
     };
   }, [isAuthenticated, accessToken, silentRefresh]);
 
