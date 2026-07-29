@@ -45,8 +45,8 @@ export function PdfDocumentForm({
     try {
       const formData = new FormData();
       formData.append('file', f);
-      formData.append('moduleCode', 'COURSE_BUILDER');
-      formData.append('fileType', 'PDF_DOCUMENT');
+      formData.append('moduleCode', 'DOCUMENTS');
+      formData.append('fileType', 'DOCUMENT');
 
       const res: any = await api.post('/storage/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
