@@ -13,6 +13,7 @@ import type { PaginatedResult } from '../../../common/dto/query-params.dto';
 import { CreateTutorDto } from './dto/create-tutor.dto';
 import { UpdateTutorDto } from './dto/update-tutor.dto';
 import { QueryTutorDto } from './dto/query-tutor.dto';
+import XLSX from 'xlsx';
 
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -213,22 +214,24 @@ export class TutorService {
         where: { tenantId, code: 'TUTOR' },
       });
       if (tutorRole) {
-        await tx.userRoles.create({
-          data: {
-            tenantId,
-            userId: user.id,
-            roleId: tutorRole.id,
-            effectiveFrom: new Date(),
-            effectiveTo: new Date('2099-12-31'),
-            assignedBy: userId,
-            assignmentReason: 'Tutor account creation',
-            revokedBy: '',
-            revokedReason: '',
-            metadata: {},
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        }).catch(() => {});
+        await tx.userRoles
+          .create({
+            data: {
+              tenantId,
+              userId: user.id,
+              roleId: tutorRole.id,
+              effectiveFrom: new Date(),
+              effectiveTo: new Date('2099-12-31'),
+              assignedBy: userId,
+              assignmentReason: 'Tutor account creation',
+              revokedBy: '',
+              revokedReason: '',
+              metadata: {},
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          })
+          .catch(() => {});
       }
 
       return this.findOneInTx(tx, user.id, tenantId);
@@ -664,13 +667,7 @@ export class TutorService {
   }
 
   async generateBulkImportTemplate(tenantId: string): Promise<Buffer> {
-    const XLSX = require('xlsx');
-
-    // 1. Fetch active courses and batches reference data if needed
-    const courses = await this.prisma.courses.findMany({
-      where: { tenantId, deletedAt: null },
-      select: { code: true },
-    });
+    // 1. Fetch active subjects reference data
 
     // 1. Fetch active subjects reference data
     const subjects = await this.prisma.subjects.findMany({
@@ -745,11 +742,10 @@ export class TutorService {
     errors: string[];
     loginCredentials?: Array<{ email: string; password: string }>;
   }> {
-    const XLSX = require('xlsx');
     const wb = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws) as any[];
+    const rows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
 
     const errors: string[] = [];
     const loginCredentials: Array<{ email: string; password: string }> = [];
@@ -779,14 +775,6 @@ export class TutorService {
         .trim()
         .toLowerCase();
       const phone = (row['Phone'] || row['phone'] || '').toString().trim();
-      const genderRaw = (
-        row['Gender (MALE/FEMALE/OTHER)'] ||
-        row['gender'] ||
-        'MALE'
-      )
-        .toString()
-        .trim()
-        .toUpperCase();
 
       const designationName = (row['Designation (e.g. Faculty)'] || 'Faculty')
         .toString()
@@ -879,9 +867,6 @@ export class TutorService {
         }
       }
 
-      const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw)
-        ? genderRaw
-        : 'MALE';
       const employeeCode = `TUT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
       try {
@@ -923,7 +908,7 @@ export class TutorService {
           }
 
           // 2. Create Staff Profile
-          const profile = await tx.staffProfiles.create({
+          await tx.staffProfiles.create({
             data: {
               userId: user.id,
               tenantId,

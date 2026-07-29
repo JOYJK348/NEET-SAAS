@@ -32,6 +32,8 @@ export interface StudentExamItem {
   submission?: {
     id: string;
     status: string;
+    evaluationStatus?: string;
+    isResultsPublished?: boolean;
     startedAt?: string | null;
     submittedAt?: string | null;
     obtainedMarks?: number;

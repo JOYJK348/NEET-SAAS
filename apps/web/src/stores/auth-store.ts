@@ -77,7 +77,10 @@ export const useAuthStore = create<AuthState>()(
         }),
       setUser: (user) => set({ user }),
       setTokens: (accessToken, refreshToken) =>
-        set({ accessToken, refreshToken: refreshToken ?? null }),
+        set((state) => ({
+          accessToken,
+          refreshToken: refreshToken !== undefined ? refreshToken : state.refreshToken,
+        })),
       logout: () =>
         set({
           user: null,
@@ -93,7 +96,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => tabStorage),
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? localStorage : ({} as Storage),
+      ),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

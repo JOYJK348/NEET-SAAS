@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsEnum,
@@ -70,6 +71,12 @@ export class CreateExamDto {
   @Min(1)
   durationMinutes: number;
 
+  @ApiPropertyOptional({ description: 'Grace period in minutes' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  graceMinutes?: number;
+
   @ApiProperty({ description: 'Scheduled start timestamp' })
   @IsDateString()
   scheduledStartAt: string;
@@ -77,6 +84,42 @@ export class CreateExamDto {
   @ApiProperty({ description: 'Scheduled end timestamp' })
   @IsDateString()
   scheduledEndAt: string;
+
+  @ApiPropertyOptional({ description: 'Exam window start timestamp' })
+  @IsOptional()
+  @IsDateString()
+  examWindowStart?: string;
+
+  @ApiPropertyOptional({ description: 'Exam window end timestamp' })
+  @IsOptional()
+  @IsDateString()
+  examWindowEnd?: string;
+
+  @ApiPropertyOptional({
+    description: 'Require full duration window remaining',
+  })
+  @IsOptional()
+  @IsBoolean()
+  requireFullDurationWindow?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow student upload during grace period',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowLateUpload?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Allow student to replace uploaded answer sheet',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowReplaceUpload?: boolean;
+
+  @ApiPropertyOptional({ description: 'Section configuration list' })
+  @IsOptional()
+  @IsArray()
+  sectionConfig?: Record<string, unknown>[];
 
   @ApiPropertyOptional({ description: 'Exam instructions for students' })
   @IsOptional()

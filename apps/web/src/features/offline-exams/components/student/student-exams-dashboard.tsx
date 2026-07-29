@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useStartExam, useStudentExams } from '../../hooks/use-student-exams';
 import type { StudentExamItem } from '../../types/student-exams';
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   Award,
   Calendar,
@@ -18,20 +20,79 @@ import {
   X,
 } from 'lucide-react';
 
+const formatExamDateTime = (dateStr?: string | null) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
 export function StudentExamsDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('LIVE');
   const [startingExam, setStartingExam] = useState<StudentExamItem | null>(null);
 
-  const { data: exams, isLoading } = useStudentExams();
+  const { data: response, isLoading } = useStudentExams();
   const startExamMutation = useStartExam();
 
-  const filteredExams = (exams || []).filter((exam) => {
-    const status = exam.studentExamStatus;
-    if (activeTab === 'UPCOMING') return status === 'UPCOMING' || status === 'PUBLISHED';
-    if (activeTab === 'LIVE')
-      return status === 'LIVE' || status === 'SUBMITTED' || status === 'LATE';
-    if (activeTab === 'SUBMITTED') return status === 'SUBMITTED' || status === 'UNDER_EVALUATION';
-    if (activeTab === 'RESULTS') return status === 'RESULT_PUBLISHED';
+  const examList: StudentExamItem[] = Array.isArray(response)
+    ? response
+    : Array.isArray((response as any)?.data)
+      ? (response as any).data
+      : [];
+
+  const isExamLive = (e: StudentExamItem) => {
+    if (!!e.submission) return false;
+    if (e.studentExamStatus === 'LIVE') return true;
+    const now = new Date();
+    const start = new Date(e.examWindowStart);
+    const end = new Date(e.examWindowEnd);
+    return now >= start && now <= end && e.studentExamStatus !== 'RESULT_PUBLISHED';
+  };
+
+  const isExamUpcoming = (e: StudentExamItem) => {
+    if (!!e.submission) return false;
+    if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') return true;
+    const now = new Date();
+    const start = new Date(e.examWindowStart);
+    return now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
+  };
+
+  const liveCount = examList.filter(isExamLive).length;
+  const upcomingCount = examList.filter(isExamUpcoming).length;
+  const submittedCount = examList.filter(
+    (e) =>
+      !!e.submission &&
+      e.studentExamStatus !== 'RESULT_PUBLISHED' &&
+      !e.submission?.isResultsPublished,
+  ).length;
+  const resultsCount = examList.filter(
+    (e) => e.studentExamStatus === 'RESULT_PUBLISHED' || !!e.submission?.isResultsPublished,
+  ).length;
+
+  const filteredExams = examList.filter((exam) => {
+    const isResultPub =
+      exam.studentExamStatus === 'RESULT_PUBLISHED' || !!exam.submission?.isResultsPublished;
+
+    if (activeTab === 'RESULTS') {
+      return isResultPub;
+    }
+    if (activeTab === 'SUBMITTED') {
+      return !!exam.submission && !isResultPub;
+    }
+    if (activeTab === 'LIVE') {
+      return isExamLive(exam);
+    }
+    if (activeTab === 'UPCOMING') {
+      return isExamUpcoming(exam);
+    }
     return true;
   });
 
@@ -45,7 +106,18 @@ export function StudentExamsDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950">
+    <div className="p-4 sm:p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 w-full">
+      {/* Top Navigation Action */}
+      <div>
+        <button
+          onClick={() => router.push('/dashboard/student')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          Back to Student Dashboard
+        </button>
+      </div>
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
@@ -61,23 +133,32 @@ export function StudentExamsDashboard() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800 text-xs font-semibold">
+      <div className="flex items-center gap-2 border-b border-slate-800 text-xs font-semibold overflow-x-auto">
         {[
-          { key: 'LIVE', label: 'Live & Active Exams' },
-          { key: 'UPCOMING', label: 'Upcoming Exams' },
-          { key: 'SUBMITTED', label: 'Submitted / Under Evaluation' },
-          { key: 'RESULTS', label: 'Results & Scorecards' },
+          { key: 'LIVE', label: 'Live & Active Exams', count: liveCount },
+          { key: 'UPCOMING', label: 'Upcoming Exams', count: upcomingCount },
+          { key: 'SUBMITTED', label: 'Submitted / Under Evaluation', count: submittedCount },
+          { key: 'RESULTS', label: 'Results & Scorecards', count: resultsCount },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className={`pb-3 px-4 border-b-2 font-bold transition ${
+            className={`pb-3 px-4 border-b-2 font-bold transition flex items-center gap-2 shrink-0 ${
               activeTab === tab.key
                 ? 'border-indigo-500 text-indigo-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            {tab.label}
+            <span>{tab.label}</span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                activeTab === tab.key
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                  : 'bg-slate-800 text-slate-400'
+              }`}
+            >
+              {tab.count}
+            </span>
           </button>
         ))}
       </div>
@@ -123,22 +204,16 @@ export function StudentExamsDashboard() {
 
                   {/* Window Details Box */}
                   <div className="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1.5 text-xs text-slate-300">
-                    <div className="flex items-center justify-between text-slate-400">
-                      <span>Window Start:</span>
-                      <span className="font-semibold text-slate-200">
-                        {new Date(exam.examWindowStart).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                    <div className="flex items-center justify-between text-slate-400 gap-2">
+                      <span className="shrink-0">Window Start:</span>
+                      <span className="font-semibold text-slate-200 font-mono text-right">
+                        {formatExamDateTime(exam.examWindowStart)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-slate-400">
-                      <span>Window End:</span>
-                      <span className="font-semibold text-slate-200">
-                        {new Date(exam.examWindowEnd).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                    <div className="flex items-center justify-between text-slate-400 gap-2">
+                      <span className="shrink-0">Window End:</span>
+                      <span className="font-semibold text-slate-200 font-mono text-right">
+                        {formatExamDateTime(exam.examWindowEnd)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-slate-400 pt-1 border-t border-slate-900">
@@ -152,12 +227,20 @@ export function StudentExamsDashboard() {
 
                 {/* Card Action Controls */}
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                  {exam.studentExamStatus === 'RESULT_PUBLISHED' ? (
+                  {exam.studentExamStatus === 'RESULT_PUBLISHED' ||
+                  exam.submission?.isResultsPublished ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}/result`}
                       className="w-full text-center px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-2"
                     >
                       <Award className="w-4 h-4" /> View Scorecard & Rank
+                    </Link>
+                  ) : isSubmitted ? (
+                    <Link
+                      href={`/dashboard/student/exams/${exam.id}`}
+                      className="w-full text-center px-4 py-2.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-xl text-xs font-bold shadow transition flex items-center justify-center gap-2 hover:bg-amber-500/30"
+                    >
+                      <FileText className="w-4 h-4 text-amber-400" /> Submitted (Under Evaluation)
                     </Link>
                   ) : isStarted ? (
                     <Link
@@ -169,7 +252,7 @@ export function StudentExamsDashboard() {
                   ) : (
                     <button
                       onClick={() => setStartingExam(exam)}
-                      disabled={!exam.canStart}
+                      disabled={!exam.canStart && exam.studentExamStatus !== 'LIVE'}
                       className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/30 transition flex items-center justify-center gap-2"
                     >
                       <Play className="w-4 h-4 fill-white" />

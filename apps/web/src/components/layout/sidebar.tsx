@@ -122,6 +122,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       icon: Layers,
       iconColor: 'text-emerald-500',
     },
+    {
+      name: 'Evaluate Exams',
+      href: '/dashboard/tutor/exams',
+      icon: Target,
+      iconColor: 'text-purple-500',
+    },
   ];
 
   const studentNavigation = [
@@ -154,6 +160,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       href: '/dashboard/student/attendance',
       icon: Target,
       iconColor: 'text-amber-500',
+    },
+    {
+      name: 'Exams',
+      href: '/dashboard/student/exams',
+      icon: FileText,
+      iconColor: 'text-indigo-500',
     },
   ];
 
@@ -238,9 +250,10 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         },
         { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
         { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
-        { name: 'Examinations', href: '#', icon: Target, iconColor: 'text-red-500' },
+        { name: 'Examinations', href: '/dashboard/exams', icon: Target, iconColor: 'text-red-500' },
       ],
     },
+
     {
       category: 'Schedule',
       items: [

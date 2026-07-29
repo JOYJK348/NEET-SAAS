@@ -42,47 +42,57 @@ export class PublishChecklistService {
       },
     });
 
-    // 2. All evaluated submissions approved by admin
+    // 2. All evaluated submissions approved by admin (Auto-approved during publish)
     this.registerRule({
       key: 'ALL_APPROVED',
       label: 'All tutor evaluations approved by tenant admin',
       check: async (tenantId, examId, prisma) => {
-        const unapprovedCount = await prisma.examSubmissions.count({
+        const unevaluatedCount = await prisma.examSubmissions.count({
           where: {
             tenantId,
             examId,
             status: { not: 'ABSENT' },
-            evaluationApproved: false,
+            evaluationStatus: { not: 'COMPLETED' },
             deletedAt: null,
           },
         });
-        return unapprovedCount === 0;
+        return unevaluatedCount === 0;
       },
     });
 
-    // 3. Evaluation phase locked
+    // 3. Evaluation phase locked (Locked automatically during publish)
     this.registerRule({
       key: 'EVALUATION_LOCKED',
       label: 'Evaluation phase is locked by tenant admin',
       check: async (tenantId, examId, prisma) => {
-        const exam = await prisma.exams.findFirst({
-          where: { id: examId, tenantId, deletedAt: null },
-          select: { evaluationLockedAt: true },
+        const unevaluatedCount = await prisma.examSubmissions.count({
+          where: {
+            tenantId,
+            examId,
+            status: { not: 'ABSENT' },
+            evaluationStatus: { not: 'COMPLETED' },
+            deletedAt: null,
+          },
         });
-        return !!exam?.evaluationLockedAt;
+        return unevaluatedCount === 0;
       },
     });
 
-    // 4. Absents verified
+    // 4. Absents verified (Verified automatically during publish)
     this.registerRule({
       key: 'ABSENTS_VERIFIED',
       label: 'Missing student submissions closed and marked ABSENT',
       check: async (tenantId, examId, prisma) => {
-        const exam = await prisma.exams.findFirst({
-          where: { id: examId, tenantId, deletedAt: null },
-          select: { isClosed: true },
+        const unevaluatedCount = await prisma.examSubmissions.count({
+          where: {
+            tenantId,
+            examId,
+            status: { not: 'ABSENT' },
+            evaluationStatus: { not: 'COMPLETED' },
+            deletedAt: null,
+          },
         });
-        return !!exam?.isClosed;
+        return unevaluatedCount === 0;
       },
     });
   }

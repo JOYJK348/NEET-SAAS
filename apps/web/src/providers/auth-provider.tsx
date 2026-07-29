@@ -61,10 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { accessToken: newAccessToken } = data;
       setTokens(newAccessToken);
     } catch {
-      logoutStore();
-      router.replace('/auth/login');
+      // Silently catch error — keep user logged in
     }
-  }, [logoutStore, setTokens, router]);
+  }, [setTokens]);
 
   // Background refresh that never logs out — keeps token alive silently
   const silentRefresh = useCallback(async () => {

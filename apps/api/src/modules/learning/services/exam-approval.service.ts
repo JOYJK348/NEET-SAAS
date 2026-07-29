@@ -334,10 +334,41 @@ export class ExamApprovalService {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Calculate ranks and percentiles
+      // 1. Auto approve all evaluated submissions
+      await tx.examSubmissions.updateMany({
+        where: {
+          tenantId,
+          examId,
+          status: { not: 'ABSENT' },
+          deletedAt: null,
+        },
+        data: {
+          evaluationApproved: true,
+          approvedByUserId: adminUserId,
+          approvedAt: now,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 2. Lock exam evaluation & close exam
+      const updatedExam = await tx.exams.update({
+        where: { id: examId },
+        data: {
+          evaluationLockedAt: now,
+          evaluationLockedBy: adminUserId,
+          isClosed: true,
+          closedAt: now,
+          resultsPublishedAt: now,
+          resultsPublishedBy: adminUserId,
+          publishStatus: ExamPublishStatusEnum.RESULT_PUBLISHED,
+          updatedBy: adminUserId,
+        },
+      });
+
+      // 3. Calculate ranks and percentiles
       await this.rankingService.calculateExamRanks(tenantId, examId, tx);
 
-      // 2. Mark non-absent submissions as published
+      // 4. Mark non-absent submissions as published
       await tx.examSubmissions.updateMany({
         where: { tenantId, examId, status: { not: 'ABSENT' }, deletedAt: null },
         data: {
@@ -348,18 +379,7 @@ export class ExamApprovalService {
         },
       });
 
-      // 3. Mark Exam model as RESULT_PUBLISHED
-      const updatedExam = await tx.exams.update({
-        where: { id: examId },
-        data: {
-          resultsPublishedAt: now,
-          resultsPublishedBy: adminUserId,
-          publishStatus: ExamPublishStatusEnum.RESULT_PUBLISHED,
-          updatedBy: adminUserId,
-        },
-      });
-
-      // 4. Log timeline RESULTS_PUBLISHED for all submissions
+      // 5. Log timeline RESULTS_PUBLISHED for all submissions
       const submissions = await tx.examSubmissions.findMany({
         where: { tenantId, examId, deletedAt: null },
         select: { id: true },

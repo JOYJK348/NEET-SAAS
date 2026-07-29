@@ -164,3 +164,27 @@ export function usePublishResults() {
     },
   });
 }
+
+export function useUploadQuestionPaper() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      adminExamsService.uploadQuestionPaper(id, file),
+    onSuccess: () => {
+      toast.success('Question Paper uploaded successfully to Supabase Storage!');
+      queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+    },
+  });
+}
+
+export function useUploadAnswerKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) =>
+      adminExamsService.uploadAnswerKey(id, file),
+    onSuccess: () => {
+      toast.success('Answer Key uploaded successfully to Supabase Storage!');
+      queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+    },
+  });
+}

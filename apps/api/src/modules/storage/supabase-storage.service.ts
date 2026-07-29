@@ -167,6 +167,37 @@ export class SupabaseStorageService implements IStorageService {
     }
   }
 
+  /** Ensures target Supabase storage bucket exists before uploading */
+  private async ensureBucketExists(bucketName: string): Promise<void> {
+    try {
+      const { data, error } =
+        await this.supabaseClient.storage.getBucket(bucketName);
+      if (error || !data) {
+        this.logger.warn(
+          `Bucket '${bucketName}' not found. Creating private storage bucket...`,
+        );
+        const { error: createErr } =
+          await this.supabaseClient.storage.createBucket(bucketName, {
+            public: false,
+            fileSizeLimit: 52428800, // 50MB limit
+          });
+        if (createErr) {
+          this.logger.error(
+            `Failed to auto-create bucket '${bucketName}': ${createErr.message}`,
+          );
+        } else {
+          this.logger.log(
+            `Successfully auto-created storage bucket '${bucketName}' in Supabase.`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Error inspecting bucket '${bucketName}': ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   // --- BUSINESS INTERFACE METHODS (PHASE 4) ---
 
   /**
@@ -194,6 +225,8 @@ export class SupabaseStorageService implements IStorageService {
     this.validateFilePayload(file, fileType);
 
     const bucketName = this.resolveBucketName(bucket);
+    await this.ensureBucketExists(bucketName);
+
     const { storedFileName } = this.preserveExtension(file.originalname);
     const now = new Date();
     const storagePath = this.generateStoragePath(

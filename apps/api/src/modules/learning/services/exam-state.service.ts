@@ -28,6 +28,9 @@ export class ExamStateService {
     now: Date = new Date(),
   ): DerivedExamState {
     if (exam.publishStatus === ExamPublishStatusEnum.PUBLISHED) {
+      if (now < exam.examWindowStart) {
+        return 'SCHEDULED';
+      }
       if (
         now >= exam.examWindowStart &&
         now <= exam.examWindowEnd &&
@@ -51,6 +54,7 @@ export class ExamStateService {
       examWindowStart: Date;
       examWindowEnd: Date;
       durationMinutes: number;
+      graceMinutes?: number;
       requireFullDurationWindow: boolean;
       isClosed?: boolean;
     },
@@ -61,7 +65,9 @@ export class ExamStateService {
     if (now < exam.examWindowStart || now > exam.examWindowEnd) return false;
 
     if (exam.requireFullDurationWindow) {
-      const remainingMs = exam.examWindowEnd.getTime() - now.getTime();
+      const graceMs = (exam.graceMinutes || 0) * 60 * 1000;
+      const remainingMs =
+        exam.examWindowEnd.getTime() - now.getTime() + graceMs;
       const requiredMs = exam.durationMinutes * 60 * 1000;
       if (remainingMs < requiredMs) return false;
     }
@@ -79,9 +85,11 @@ export class ExamStateService {
     },
     allowLateUpload: boolean,
     now: Date = new Date(),
+    examWindowEnd?: Date,
   ): 'ALLOWED' | 'GRACE' | 'EXPIRED' {
-    if (!submission.startedAt || !submission.calculatedEndAt) return 'EXPIRED';
-    if (now <= submission.calculatedEndAt) return 'ALLOWED';
+    if (!submission.startedAt) return 'EXPIRED';
+    const endAt = submission.calculatedEndAt || examWindowEnd;
+    if (endAt && now <= endAt) return 'ALLOWED';
     if (
       submission.graceEndAt &&
       now <= submission.graceEndAt &&
@@ -89,6 +97,7 @@ export class ExamStateService {
     ) {
       return 'GRACE';
     }
+    if (examWindowEnd && now <= examWindowEnd) return 'ALLOWED';
     return 'EXPIRED';
   }
 

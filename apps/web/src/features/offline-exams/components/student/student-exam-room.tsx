@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   useGetQuestionPaperUrl,
@@ -9,6 +10,7 @@ import {
 } from '../../hooks/use-student-exams';
 import {
   AlertTriangle,
+  ArrowLeft,
   CheckCircle2,
   Clock,
   Download,
@@ -27,6 +29,7 @@ interface StudentExamRoomProps {
 }
 
 export function StudentExamRoom({ examId }: StudentExamRoomProps) {
+  const router = useRouter();
   const { data: exam, isLoading, refetch } = useStudentExamDetail(examId);
 
   const isStarted = !!exam?.submission?.startedAt;
@@ -42,7 +45,17 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   }
 
   if (!exam) {
-    return <div className="py-24 text-center text-slate-400">Exam not found or unavailable.</div>;
+    return (
+      <div className="p-6 text-center space-y-4 max-w-md mx-auto">
+        <p className="text-slate-400">Exam not found or unavailable.</p>
+        <button
+          onClick={() => router.push('/dashboard/student/exams')}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-700 transition"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Exams Dashboard
+        </button>
+      </div>
+    );
   }
 
   const remainingSeconds = exam.remainingSeconds || 0;
@@ -84,7 +97,18 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   };
 
   return (
-    <div className="p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 w-full">
+      {/* Top Navigation Action */}
+      <div>
+        <button
+          onClick={() => router.push('/dashboard/student/exams')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          Back to Exams Dashboard
+        </button>
+      </div>
+
       {/* Top Session Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
         <div>

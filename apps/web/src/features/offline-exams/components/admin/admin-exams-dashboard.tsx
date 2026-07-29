@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAdminExams, usePublishExam } from '../../hooks/use-admin-exams';
 import type { ExamItem } from '../../types/admin-exams';
@@ -7,8 +8,10 @@ import { CreateExamModal } from './create-exam-modal';
 import { LiveDashboardModal } from './live-dashboard-modal';
 import { ReviewQueueModal } from './review-queue-modal';
 import { PostPublishAnalyticsModal } from './post-publish-analytics-modal';
+import { UploadFilesModal } from './upload-files-modal';
 import {
   Activity,
+  ArrowLeft,
   Award,
   BarChart3,
   Calendar,
@@ -20,9 +23,11 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Upload,
 } from 'lucide-react';
 
 export function AdminExamsDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -31,6 +36,7 @@ export function AdminExamsDashboard() {
   const [liveModalExamId, setLiveModalExamId] = useState<string | null>(null);
   const [reviewModalExamId, setReviewModalExamId] = useState<string | null>(null);
   const [analyticsModalExamId, setAnalyticsModalExamId] = useState<string | null>(null);
+  const [uploadModalExam, setUploadModalExam] = useState<ExamItem | null>(null);
 
   const { data: response, isLoading } = useAdminExams();
   const publishExamMutation = usePublishExam();
@@ -106,7 +112,23 @@ export function AdminExamsDashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950">
+    <div className="p-4 sm:p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 w-full">
+      {/* Top Navigation Action */}
+      <div>
+        <button
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push('/dashboard');
+            }
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          Back to Dashboard
+        </button>
+      </div>
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
@@ -272,6 +294,18 @@ export function AdminExamsDashboard() {
 
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setUploadModalExam(exam)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                            exam.questionPaperFileId
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'
+                          }`}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          {exam.questionPaperFileId ? 'QP Uploaded' : 'Upload QP'}
+                        </button>
+
                         {exam.publishStatus === 'DRAFT' && (
                           <button
                             onClick={() => publishExamMutation.mutate(exam.id)}
@@ -321,6 +355,13 @@ export function AdminExamsDashboard() {
           </table>
         </div>
       </div>
+
+      {/* Upload Files / QP Modal */}
+      <UploadFilesModal
+        exam={uploadModalExam}
+        isOpen={!!uploadModalExam}
+        onClose={() => setUploadModalExam(null)}
+      />
 
       {/* Create Exam Modal */}
       <CreateExamModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />

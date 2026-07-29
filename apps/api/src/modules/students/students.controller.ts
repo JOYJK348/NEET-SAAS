@@ -13,7 +13,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as express from 'express';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -155,7 +155,7 @@ export class StudentsController {
       'Download dynamic bulk import template with live validation dropdown ranges',
   })
   async downloadTemplate(
-    @Res() res: express.Response,
+    @Res() res: Response,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     const buffer = await this.studentsService.generateBulkImportTemplate(

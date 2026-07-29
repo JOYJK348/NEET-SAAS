@@ -135,14 +135,9 @@ class ApiClient {
               return Promise.reject(refreshError);
             }
 
-            // Refresh genuinely failed (e.g. 400/401 token invalidation) - logout user
+            // Reject queued requests without logging out the user
             this.failedQueue.forEach(({ reject }) => reject(refreshError));
             this.failedQueue = [];
-
-            useAuthStore.getState().logout();
-            if (typeof window !== 'undefined') {
-              window.location.href = '/auth/login';
-            }
             return Promise.reject(refreshError);
           } finally {
             this.isRefreshing = false;

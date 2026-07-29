@@ -8,6 +8,7 @@ import { STORAGE_SERVICE_TOKEN } from '../../storage/interfaces/storage.interfac
 import type { IStorageService } from '../../storage/interfaces/storage.interface';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { TenantScopedPrisma } from '../../../common/utils/tenant-scoped-prisma';
+import type { Prisma } from '@prisma/client';
 import {
   paginateAndMap,
   buildPrismaOrderBy,
@@ -41,6 +42,10 @@ export class AdminExamsService {
   async createExam(tenantId: string, userId: string, dto: CreateExamDto) {
     const start = new Date(dto.scheduledStartAt);
     const end = new Date(dto.scheduledEndAt);
+    const windowStart = dto.examWindowStart
+      ? new Date(dto.examWindowStart)
+      : start;
+    const windowEnd = dto.examWindowEnd ? new Date(dto.examWindowEnd) : end;
 
     if (start >= end) {
       throw new BadRequestException(
@@ -64,20 +69,28 @@ export class AdminExamsService {
         negativeMarkingEnabled: dto.negativeMarkingEnabled ?? false,
         negativeMarkingValue: dto.negativeMarkingValue ?? 0,
         durationMinutes: dto.durationMinutes,
+        graceMinutes: dto.graceMinutes ?? 15,
         scheduledStartAt: start,
         scheduledEndAt: end,
+        examWindowStart: windowStart,
+        examWindowEnd: windowEnd,
+        requireFullDurationWindow: dto.requireFullDurationWindow ?? false,
+        allowLateUpload: dto.allowLateUpload ?? true,
+        allowReplaceUpload: dto.allowReplaceUpload ?? true,
+        sectionConfig: (dto.sectionConfig ??
+          []) as unknown as Prisma.InputJsonValue,
         instructions: dto.instructions || '',
         publishStatus: 'DRAFT',
         status: ExamStatusEnum.ACTIVE,
         questionPaperId: '',
         omrTemplateId: '',
         omrSheetCount: 0,
-        publishedBy: '',
+        publishedBy: userId,
         publishedAt: new Date(0),
         publishedFromIp: '',
         publishedDevice: '',
         resultsPublishedAt: new Date(0),
-        resultsPublishedBy: '',
+        resultsPublishedBy: userId,
         lockedAt: new Date(0),
         lockedBy: '',
         publishedVersion: 1,
@@ -123,11 +136,23 @@ export class AdminExamsService {
       data.negativeMarkingValue = dto.negativeMarkingValue;
     if (dto.durationMinutes !== undefined)
       data.durationMinutes = dto.durationMinutes;
+    if (dto.graceMinutes !== undefined) data.graceMinutes = dto.graceMinutes;
     if (dto.instructions !== undefined) data.instructions = dto.instructions;
     if (dto.scheduledStartAt !== undefined)
       data.scheduledStartAt = new Date(dto.scheduledStartAt);
     if (dto.scheduledEndAt !== undefined)
       data.scheduledEndAt = new Date(dto.scheduledEndAt);
+    if (dto.examWindowStart !== undefined)
+      data.examWindowStart = new Date(dto.examWindowStart);
+    if (dto.examWindowEnd !== undefined)
+      data.examWindowEnd = new Date(dto.examWindowEnd);
+    if (dto.requireFullDurationWindow !== undefined)
+      data.requireFullDurationWindow = dto.requireFullDurationWindow;
+    if (dto.allowLateUpload !== undefined)
+      data.allowLateUpload = dto.allowLateUpload;
+    if (dto.allowReplaceUpload !== undefined)
+      data.allowReplaceUpload = dto.allowReplaceUpload;
+    if (dto.sectionConfig !== undefined) data.sectionConfig = dto.sectionConfig;
 
     return this.prisma.exams.update({
       where: { id: examId },
@@ -238,7 +263,19 @@ export class AdminExamsService {
       },
     });
 
-    return { fileUpload, exam: updatedExam };
+    return {
+      message: 'Question paper uploaded successfully',
+      fileUpload: {
+        ...fileUpload,
+        fileSizeBytes: Number(fileUpload.fileSizeBytes),
+      },
+      exam: {
+        ...updatedExam,
+        totalMarks: Number(updatedExam.totalMarks),
+        passingMarks: Number(updatedExam.passingMarks),
+        negativeMarkingValue: Number(updatedExam.negativeMarkingValue),
+      },
+    };
   }
 
   async uploadAnswerKey(
@@ -271,7 +308,19 @@ export class AdminExamsService {
       },
     });
 
-    return { fileUpload, exam: updatedExam };
+    return {
+      message: 'Answer key uploaded successfully',
+      fileUpload: {
+        ...fileUpload,
+        fileSizeBytes: Number(fileUpload.fileSizeBytes),
+      },
+      exam: {
+        ...updatedExam,
+        totalMarks: Number(updatedExam.totalMarks),
+        passingMarks: Number(updatedExam.passingMarks),
+        negativeMarkingValue: Number(updatedExam.negativeMarkingValue),
+      },
+    };
   }
 
   async publishExam(tenantId: string, userId: string, examId: string) {

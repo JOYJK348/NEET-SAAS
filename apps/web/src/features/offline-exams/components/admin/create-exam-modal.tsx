@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useBatches, useCourses } from '@/features/students/hooks/use-students';
 import { useCreateExam } from '../../hooks/use-admin-exams';
 import type { SectionConfigItem } from '../../types/admin-exams';
 import {
@@ -23,6 +24,9 @@ interface CreateExamModalProps {
 
 export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+
+  const { courses } = useCourses();
+  const { batches } = useBatches();
 
   // Form state
   const [courseId, setCourseId] = useState('');
@@ -74,30 +78,50 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
     setSections(updated);
   };
 
+  const parseLocalDateTime = (str: string): string => {
+    if (!str) return new Date().toISOString();
+    const parts = str.split(/[-T:]/).map(Number);
+    if (parts.length >= 5) {
+      return new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]).toISOString();
+    }
+    return new Date(str).toISOString();
+  };
+
   const handleSubmit = () => {
+    const nowIso = new Date().toISOString();
+    const futureIso = new Date(Date.now() + 86400000).toISOString();
+
+    const startIso = scheduledStartAt ? parseLocalDateTime(scheduledStartAt) : nowIso;
+    const endIso = scheduledEndAt ? parseLocalDateTime(scheduledEndAt) : futureIso;
+    const winStartIso = examWindowStart ? parseLocalDateTime(examWindowStart) : startIso;
+    const winEndIso = examWindowEnd ? parseLocalDateTime(examWindowEnd) : endIso;
+
+    const selectedCourseId = courseId || courses[0]?.id || 'course-default';
+    const selectedBatchId = batchId || batches[0]?.id || 'batch-default';
+
     createExamMutation.mutate(
       {
-        courseId: courseId || 'course-default',
-        batchId: batchId || 'batch-default',
+        courseId: selectedCourseId,
+        batchId: selectedBatchId,
         subjectId: subjectId || 'subject-default',
         academicYearId: academicYearId || 'year-default',
         title,
         description,
-        examType,
-        mode,
-        totalMarks,
-        passingMarks,
-        negativeMarkingEnabled,
-        negativeMarkingValue,
-        durationMinutes,
-        graceMinutes,
-        scheduledStartAt: scheduledStartAt || new Date().toISOString(),
-        scheduledEndAt: scheduledEndAt || new Date(Date.now() + 86400000).toISOString(),
-        examWindowStart: examWindowStart || new Date().toISOString(),
-        examWindowEnd: examWindowEnd || new Date(Date.now() + 86400000).toISOString(),
-        requireFullDurationWindow,
-        allowLateUpload,
-        allowReplaceUpload,
+        examType: examType as any,
+        mode: mode as any,
+        totalMarks: Number(totalMarks),
+        passingMarks: Number(passingMarks),
+        negativeMarkingEnabled: Boolean(negativeMarkingEnabled),
+        negativeMarkingValue: Number(negativeMarkingValue),
+        durationMinutes: Number(durationMinutes),
+        graceMinutes: Number(graceMinutes),
+        scheduledStartAt: startIso,
+        scheduledEndAt: endIso,
+        examWindowStart: winStartIso,
+        examWindowEnd: winEndIso,
+        requireFullDurationWindow: Boolean(requireFullDurationWindow),
+        allowLateUpload: Boolean(allowLateUpload),
+        allowReplaceUpload: Boolean(allowReplaceUpload),
         sectionConfig: sections,
       },
       {
@@ -176,6 +200,40 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Course</label>
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Select Course...</option>
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Batch</label>
+                  <select
+                    value={batchId}
+                    onChange={(e) => setBatchId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">Select Batch...</option>
+                    {batches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>

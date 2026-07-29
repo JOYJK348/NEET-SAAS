@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * One-time migration: Assign TUTOR role to all existing tutors missing userRoles.
  * Usage: npx ts-node src/scripts/fix-tutor-roles.ts
@@ -38,7 +39,13 @@ async function main() {
 
   const tutors = await prisma.users.findMany({
     where: { userType: 'TUTOR', deletedAt: null },
-    select: { id: true, email: true, tenantId: true, firstName: true, lastName: true },
+    select: {
+      id: true,
+      email: true,
+      tenantId: true,
+      firstName: true,
+      lastName: true,
+    },
   });
 
   console.log(`📊 Total tutors found: ${tutors.length}`);

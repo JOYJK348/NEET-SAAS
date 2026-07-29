@@ -1,11 +1,13 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTutorSubmissionsBuckets } from '../../hooks/use-tutor-exams';
 import type { TutorSubmissionListItem } from '../../types/tutor-exams';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   Clock,
@@ -21,6 +23,7 @@ interface TutorSubmissionsBucketsProps {
 }
 
 export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsProps) {
+  const router = useRouter();
   const { data: buckets, isLoading } = useTutorSubmissionsBuckets(examId);
 
   const [activeTab, setActiveTab] = useState<
@@ -35,7 +38,17 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
   }
 
   if (!buckets) {
-    return <div className="py-24 text-center text-slate-400">Exam workload data not found.</div>;
+    return (
+      <div className="p-6 text-center space-y-4 max-w-md mx-auto">
+        <p className="text-slate-400">Exam workload data not found.</p>
+        <button
+          onClick={() => router.push('/dashboard/tutor/exams')}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-700 transition"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Tutor Exams
+        </button>
+      </div>
+    );
   }
 
   let listToDisplay: TutorSubmissionListItem[] = [];
@@ -52,7 +65,17 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
   );
 
   return (
-    <div className="p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950">
+    <div className="p-4 sm:p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 w-full">
+      {/* Top Navigation Action */}
+      <div>
+        <button
+          onClick={() => router.push('/dashboard/tutor/exams')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          Back to Tutor Exams
+        </button>
+      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>

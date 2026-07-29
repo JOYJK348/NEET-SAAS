@@ -1,9 +1,12 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTutorAssignedExams } from '../../hooks/use-tutor-exams';
+import type { TutorExamItem } from '../../types/tutor-exams';
 import {
   AlertCircle,
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Calendar,
@@ -16,14 +19,31 @@ import {
 } from 'lucide-react';
 
 export function TutorExamsDashboard() {
-  const { data: exams, isLoading } = useTutorAssignedExams();
+  const router = useRouter();
+  const { data: response, isLoading } = useTutorAssignedExams();
 
-  const totalPending = (exams || []).reduce((acc, e) => acc + e.pendingEvaluations, 0);
-  const totalCompleted = (exams || []).reduce((acc, e) => acc + e.completedEvaluations, 0);
-  const totalReturned = (exams || []).reduce((acc, e) => acc + e.returnedEvaluations, 0);
+  const exams: TutorExamItem[] = Array.isArray(response)
+    ? response
+    : Array.isArray((response as any)?.data)
+      ? (response as any).data
+      : [];
+
+  const totalPending = exams.reduce((acc, e) => acc + e.pendingEvaluations, 0);
+  const totalCompleted = exams.reduce((acc, e) => acc + e.completedEvaluations, 0);
+  const totalReturned = exams.reduce((acc, e) => acc + e.returnedEvaluations, 0);
 
   return (
-    <div className="p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950">
+    <div className="p-4 sm:p-6 space-y-6 text-slate-100 min-h-screen bg-slate-950 w-full">
+      {/* Top Navigation Action */}
+      <div>
+        <button
+          onClick={() => router.push('/dashboard/tutor')}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-sm"
+        >
+          <ArrowLeft className="w-4 h-4 text-indigo-400" />
+          Back to Tutor Dashboard
+        </button>
+      </div>
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
