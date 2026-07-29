@@ -198,7 +198,7 @@ export function AdminExamsDashboard() {
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto p-1 bg-white rounded-xl border border-slate-200 max-w-full shadow-sm">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 p-1.5 bg-white rounded-xl border border-slate-200 shadow-sm w-full sm:w-auto">
           {[
             { key: 'ALL', label: 'All Exams' },
             { key: 'DRAFT', label: 'Drafts' },
@@ -209,7 +209,7 @@ export function AdminExamsDashboard() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+              className={`px-3 py-2 rounded-lg text-xs font-bold text-center transition last:col-span-2 sm:last:col-span-1 ${
                 activeTab === tab.key
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'

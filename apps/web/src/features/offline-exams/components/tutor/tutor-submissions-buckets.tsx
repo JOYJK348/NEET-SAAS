@@ -90,7 +90,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
 
       {/* Tabs & Search */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-1 p-1 bg-white rounded-xl border border-slate-200 text-xs font-semibold shadow-sm">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 p-1.5 bg-white rounded-xl border border-slate-200 text-xs font-semibold shadow-sm w-full sm:w-auto">
           {[
             { key: 'PENDING', label: `Today's Pending (${buckets.todaysPending?.length || 0})` },
             { key: 'OVERDUE', label: `Overdue (${buckets.overdue?.length || 0})` },
@@ -101,7 +101,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-3.5 py-1.5 rounded-lg transition ${
+              className={`px-3 py-2 rounded-lg text-center transition last:col-span-2 sm:last:col-span-1 ${
                 activeTab === tab.key
                   ? 'bg-indigo-600 text-white font-bold shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'

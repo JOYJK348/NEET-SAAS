@@ -133,28 +133,28 @@ export function StudentExamsDashboard() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 text-xs font-semibold overflow-x-auto">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-slate-200 text-xs font-semibold pb-3">
         {[
           { key: 'LIVE', label: 'Live & Active Exams', count: liveCount },
           { key: 'UPCOMING', label: 'Upcoming Exams', count: upcomingCount },
-          { key: 'SUBMITTED', label: 'Submitted / Under Evaluation', count: submittedCount },
+          { key: 'SUBMITTED', label: 'Submitted', count: submittedCount },
           { key: 'RESULTS', label: 'Results & Scorecards', count: resultsCount },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className={`pb-3 px-4 border-b-2 font-bold transition flex items-center gap-2 shrink-0 ${
+            className={`py-2 px-3 sm:px-4 rounded-xl font-bold transition flex items-center justify-between sm:justify-start gap-2 border ${
               activeTab === tab.key
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
             <span>{tab.label}</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 activeTab === tab.key
-                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                  : 'bg-slate-200/80 text-slate-600'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-100 text-slate-700'
               }`}
             >
               {tab.count}
