@@ -37,7 +37,7 @@ export class TutorExamsService {
     const skip = page ? (page - 1) * take : 0;
 
     const staffProfile = await this.prisma.staffProfiles.findFirst({
-      where: { userId: tutorUserId, tenantId, deletedAt: null },
+      where: { userId: tutorUserId, deletedAt: null },
       include: {
         staff_batch_assignmentss: {
           where: { deletedAt: null, isActive: true },

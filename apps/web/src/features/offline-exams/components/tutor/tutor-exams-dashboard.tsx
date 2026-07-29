@@ -20,7 +20,7 @@ import {
 
 export function TutorExamsDashboard() {
   const router = useRouter();
-  const { data: response, isLoading } = useTutorAssignedExams();
+  const { data: response, isLoading, refetch } = useTutorAssignedExams();
 
   const exams: TutorExamItem[] = Array.isArray(response)
     ? response
@@ -35,13 +35,21 @@ export function TutorExamsDashboard() {
   return (
     <div className="p-4 sm:p-6 space-y-6 text-slate-800 min-h-screen bg-slate-50 w-full">
       {/* Top Navigation Action */}
-      <div>
+      <div className="flex items-center justify-between">
         <button
           onClick={() => router.push('/dashboard/tutor')}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm"
         >
           <ArrowLeft className="w-4 h-4 text-indigo-600" />
           Back to Tutor Dashboard
+        </button>
+
+        <button
+          onClick={() => refetch()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition shadow-sm"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Refresh Workload Queue
         </button>
       </div>
 

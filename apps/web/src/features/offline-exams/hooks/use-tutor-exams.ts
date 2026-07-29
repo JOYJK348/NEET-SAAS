@@ -15,6 +15,10 @@ export function useTutorAssignedExams() {
   return useQuery({
     queryKey: tutorExamKeys.assigned(),
     queryFn: () => tutorExamsService.getMyAssignedExams(),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -23,6 +27,10 @@ export function useTutorSubmissionsBuckets(examId: string) {
     queryKey: tutorExamKeys.buckets(examId),
     queryFn: () => tutorExamsService.getExamSubmissionsBuckets(examId),
     enabled: !!examId,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -31,6 +39,10 @@ export function useTutorSubmissionDetail(examId: string, submissionId: string) {
     queryKey: tutorExamKeys.detail(examId, submissionId),
     queryFn: () => tutorExamsService.getSubmissionDetail(examId, submissionId),
     enabled: !!examId && !!submissionId,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
