@@ -274,9 +274,16 @@ function TimetableContent() {
     for (const day of WEEKDAYS) grouped[day] = [];
     if (timetable?.timetable) {
       for (const day of timetable.timetable) {
-        const date = new Date(day.date + 'T00:00:00');
-        const dayName = WEEKDAYS[date.getDay() === 0 ? 6 : date.getDay() - 1];
-        if (grouped[dayName]) grouped[dayName] = day.sessions;
+        const dayName = day.dayOfWeek
+          ? day.dayOfWeek.toUpperCase()
+          : (() => {
+              const [y, m, d] = day.date.split('-').map(Number);
+              const dateObj = new Date(y, (m || 1) - 1, d || 1);
+              return WEEKDAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+            })();
+        if (grouped[dayName]) {
+          grouped[dayName] = [...grouped[dayName], ...(day.sessions || [])];
+        }
       }
     }
     return grouped;

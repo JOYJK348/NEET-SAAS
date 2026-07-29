@@ -342,13 +342,7 @@ export class StudentDashboardService {
             (sched?.deliveryMode === 'ONLINE' ||
               sched?.deliveryMode === 'HYBRID'),
         };
-      })
-      .filter(
-        (s) =>
-          studentClassType !== 'CLASSROOM' ||
-          s.deliveryMode === null ||
-          s.deliveryMode === 'CLASSROOM',
-      );
+      });
 
     return enriched;
   }
@@ -371,11 +365,7 @@ export class StudentDashboardService {
     // Default: current week (Mon–Sun)
     const today = new Date();
     const fromDate = dateFrom
-      ? (() => {
-          const d = new Date(dateFrom);
-          d.setHours(0, 0, 0, 0);
-          return d;
-        })()
+      ? new Date(`${dateFrom}T00:00:00`)
       : (() => {
           const d = new Date(today);
           const dow = d.getDay();
@@ -385,11 +375,7 @@ export class StudentDashboardService {
         })();
 
     const toDate = dateTo
-      ? (() => {
-          const d = new Date(dateTo);
-          d.setHours(23, 59, 59, 999);
-          return d;
-        })()
+      ? new Date(`${dateTo}T23:59:59.999`)
       : (() => {
           const d = new Date(fromDate);
           d.setDate(d.getDate() + 6);
