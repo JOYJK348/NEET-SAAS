@@ -106,11 +106,12 @@ export class StudentDashboardService {
       };
     }
 
-    // Step 3: Find all batch enrollments for this admission
+    // Step 3: Find active batch enrollments for this admission
     const activeEnrollments =
       await this.prisma.studentBatchEnrollments.findMany({
         where: {
           studentAdmissionId: admission.id,
+          status: 'ACTIVE',
           deletedAt: null,
         },
         select: {
@@ -528,7 +529,18 @@ export class StudentDashboardService {
       return { batches: [] };
     }
 
-    const batchIds = ctx.activeEnrollments.map((e) => e.batchId);
+    // Deduplicate active enrollments by batchId
+    const uniqueEnrollmentMap = new Map<string, (typeof ctx.activeEnrollments)[0]>();
+    for (const enrollment of ctx.activeEnrollments) {
+      if (!uniqueEnrollmentMap.has(enrollment.batchId)) {
+        uniqueEnrollmentMap.set(enrollment.batchId, enrollment);
+      } else if (enrollment.isPrimary) {
+        uniqueEnrollmentMap.set(enrollment.batchId, enrollment);
+      }
+    }
+    const uniqueEnrollments = Array.from(uniqueEnrollmentMap.values());
+
+    const batchIds = uniqueEnrollments.map((e) => e.batchId);
 
     const batches = await this.prisma.batches.findMany({
       where: { tenantId, id: { in: batchIds } },
@@ -593,7 +605,7 @@ export class StudentDashboardService {
     );
 
     return {
-      batches: ctx.activeEnrollments
+      batches: uniqueEnrollments
         .map((enrollment) => {
           const batch = batches.find((b) => b.id === enrollment.batchId);
           if (!batch) return null;
