@@ -10,6 +10,14 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import type { AuthenticatedRequest } from './auth-guard.types';
 
+const ADMIN_ROLES = new Set([
+  'TENANT_ADMIN',
+  'SUPER_ADMIN',
+  'ADMIN',
+  'ADMINISTRATOR',
+  'OWNER',
+]);
+
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
@@ -33,6 +41,20 @@ export class PermissionsGuard implements CanActivate {
 
     if (!user) {
       throw new UnauthorizedException('Authentication is required');
+    }
+
+    const tokenRole = (user.roleCode || '').toUpperCase();
+    if (ADMIN_ROLES.has(tokenRole)) {
+      return true;
+    }
+
+    const dbUser = await this.prismaService.users.findUnique({
+      where: { id: user.sub },
+      select: { userType: true },
+    });
+
+    if (dbUser?.userType && ADMIN_ROLES.has(dbUser.userType.toUpperCase())) {
+      return true;
     }
 
     const rolePermissions = await this.prismaService.rolePermissions.findMany({
