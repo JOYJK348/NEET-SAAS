@@ -62,7 +62,8 @@ export interface ExamItem {
 
 export interface CreateExamPayload {
   courseId: string;
-  batchId: string;
+  batchId?: string;
+  batchIds?: string[];
   subjectId: string;
   academicYearId: string;
   title: string;

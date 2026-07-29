@@ -30,7 +30,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
 
   // Form state
   const [courseId, setCourseId] = useState('');
-  const [batchId, setBatchId] = useState('');
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [subjectId, setSubjectId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
   const [title, setTitle] = useState('');
@@ -88,21 +88,22 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   };
 
   const handleSubmit = () => {
-    const nowIso = new Date().toISOString();
-    const futureIso = new Date(Date.now() + 86400000).toISOString();
+    const startIso = parseLocalDateTime(scheduledStartAt);
+    const futureDate = new Date(Date.now() + durationMinutes * 60 * 1000);
+    const futureIso = futureDate.toISOString();
 
-    const startIso = scheduledStartAt ? parseLocalDateTime(scheduledStartAt) : nowIso;
     const endIso = scheduledEndAt ? parseLocalDateTime(scheduledEndAt) : futureIso;
     const winStartIso = examWindowStart ? parseLocalDateTime(examWindowStart) : startIso;
     const winEndIso = examWindowEnd ? parseLocalDateTime(examWindowEnd) : endIso;
 
     const selectedCourseId = courseId || courses[0]?.id || 'course-default';
-    const selectedBatchId = batchId || batches[0]?.id || 'batch-default';
+    const finalBatchIds =
+      selectedBatchIds.length > 0 ? selectedBatchIds : [batches[0]?.id || 'batch-default'];
 
     createExamMutation.mutate(
       {
         courseId: selectedCourseId,
-        batchId: selectedBatchId,
+        batchIds: finalBatchIds,
         subjectId: subjectId || 'subject-default',
         academicYearId: academicYearId || 'year-default',
         title,
@@ -202,7 +203,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Course</label>
                   <select
@@ -220,19 +221,55 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Batch</label>
-                  <select
-                    value={batchId}
-                    onChange={(e) => setBatchId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
-                  >
-                    <option value="">Select Batch...</option>
-                    {batches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700">
+                      Target Batches * ({selectedBatchIds.length} Selected)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (selectedBatchIds.length === batches.length) {
+                          setSelectedBatchIds([]);
+                        } else {
+                          setSelectedBatchIds(batches.map((b) => b.id));
+                        }
+                      }}
+                      className="text-[11px] text-indigo-600 font-bold hover:underline"
+                    >
+                      {selectedBatchIds.length === batches.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    {batches.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-2">No batches found</p>
+                    ) : (
+                      batches.map((b) => (
+                        <label
+                          key={b.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-medium cursor-pointer transition ${
+                            selectedBatchIds.includes(b.id)
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-bold shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedBatchIds.includes(b.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBatchIds([...selectedBatchIds, b.id]);
+                              } else {
+                                setSelectedBatchIds(selectedBatchIds.filter((id) => id !== b.id));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span>{b.name}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -519,6 +556,14 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   <p>
                     Sections:{' '}
                     <span className="text-slate-900 font-semibold">{sections.map((s) => s.name).join(', ')}</span>
+                  </p>
+                  <p>
+                    Target Batches:{' '}
+                    <span className="text-indigo-700 font-bold">
+                      {selectedBatchIds.length === 0
+                        ? 'Default Batch'
+                        : `${selectedBatchIds.length} Batches Selected`}
+                    </span>
                   </p>
                   <p>
                     Status: <span className="text-amber-700 font-bold">Will save as DRAFT</span>

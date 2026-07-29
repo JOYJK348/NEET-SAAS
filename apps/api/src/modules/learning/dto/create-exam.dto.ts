@@ -16,9 +16,15 @@ export class CreateExamDto {
   @IsString()
   courseId: string;
 
-  @ApiProperty({ description: 'Target Batch ID' })
+  @ApiPropertyOptional({ description: 'Target Batch ID' })
+  @IsOptional()
   @IsString()
-  batchId: string;
+  batchId?: string;
+
+  @ApiPropertyOptional({ description: 'Target Batch IDs for multi-batch exam assignment' })
+  @IsOptional()
+  @IsArray()
+  batchIds?: string[];
 
   @ApiProperty({ description: 'Target Subject ID' })
   @IsString()
