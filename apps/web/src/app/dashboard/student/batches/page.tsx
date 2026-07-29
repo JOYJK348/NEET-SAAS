@@ -14,7 +14,6 @@ import {
   MapPin,
   Radio,
   Star,
-  Users,
   Video,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -192,20 +191,6 @@ function BatchCard({ enrollment }: { enrollment: StudentEnrollmentDto }) {
             </p>
             <p className="text-xs font-bold text-slate-800 mt-0.5">
               {batch.academicYear?.name ?? '—'}
-            </p>
-          </div>
-        </div>
-
-        {/* Students */}
-        <div className="flex items-start gap-2">
-          <Users className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Students
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">
-              {batch.totalEnrolled}
-              {batch.maxStudents ? ` / ${batch.maxStudents}` : ''}
             </p>
           </div>
         </div>
