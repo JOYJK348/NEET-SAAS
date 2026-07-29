@@ -16,6 +16,9 @@ export function ExternalLinkForm({
   const [url, setUrl] = useState(externalUrl ?? '');
   const [siteName, setSiteName] = useState((metadata?.siteName as string) ?? '');
   const [displayTitle, setDisplayTitle] = useState((metadata?.title as string) ?? '');
+  const [durationMins, setDurationMins] = useState<number | string>(
+    (metadata?.durationMins as number | string) ?? ''
+  );
 
   useEffect(() => {
     if (url && url !== externalUrl) {
@@ -26,17 +29,24 @@ export function ExternalLinkForm({
     }
   }, [url, externalUrl]);
 
-  const sync = (partial: { externalUrl?: string; siteName?: string; title?: string }) => {
+  const sync = (partial: {
+    externalUrl?: string;
+    siteName?: string;
+    title?: string;
+    durationMins?: number | string;
+  }) => {
     const data: { externalUrl: string; metadata: Record<string, unknown> } = {
       externalUrl: partial.externalUrl ?? url,
       metadata: {
         siteName: partial.siteName ?? siteName,
         title: partial.title ?? displayTitle,
+        durationMins: partial.durationMins ?? durationMins,
       },
     };
     if (partial.externalUrl) data.externalUrl = partial.externalUrl;
     if (partial.siteName) data.metadata.siteName = partial.siteName;
     if (partial.title) data.metadata.title = partial.title;
+    if (partial.durationMins !== undefined) data.metadata.durationMins = partial.durationMins;
     onChange?.(data);
   };
 
@@ -98,20 +108,39 @@ export function ExternalLinkForm({
               </div>
             </div>
           </div>
-          <div className="px-3 py-2 space-y-1.5">
-            <div className="space-y-0.5">
-              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                Site Name
-              </label>
-              <input
-                value={siteName}
-                onChange={(e) => {
-                  setSiteName(e.target.value);
-                  sync({ siteName: e.target.value });
-                }}
-                placeholder="e.g. YouTube, Khan Academy"
-                className="w-full text-[11px] text-gray-600 bg-transparent outline-none border-b border-transparent focus:border-violet-300 placeholder:text-gray-300"
-              />
+          <div className="px-3 py-2 space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-0.5">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Site Name
+                </label>
+                <input
+                  value={siteName}
+                  onChange={(e) => {
+                    setSiteName(e.target.value);
+                    sync({ siteName: e.target.value });
+                  }}
+                  placeholder="e.g. YouTube, Vimeo"
+                  className="w-full text-[11px] text-gray-600 bg-transparent outline-none border-b border-gray-200 focus:border-violet-300 placeholder:text-gray-300 py-0.5"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Duration (Minutes)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={durationMins}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                    setDurationMins(val);
+                    sync({ durationMins: val });
+                  }}
+                  placeholder="e.g. 15"
+                  className="w-full text-[11px] text-gray-600 bg-transparent outline-none border-b border-gray-200 focus:border-violet-300 placeholder:text-gray-300 py-0.5"
+                />
+              </div>
             </div>
           </div>
         </div>

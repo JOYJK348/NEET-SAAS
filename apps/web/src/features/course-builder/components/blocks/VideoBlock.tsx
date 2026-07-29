@@ -48,8 +48,13 @@ export function VideoBlock({
   );
 
   const handleSave = useCallback(() => {
+    const durationVal = editMetadata?.durationMins
+      ? Number(editMetadata.durationMins)
+      : item.durationMins || null;
+
     onSave(item, {
       externalUrl: editExternalUrl || null,
+      durationMins: durationVal,
       metadata: editMetadata,
     });
   }, [item, editExternalUrl, editMetadata, onSave]);

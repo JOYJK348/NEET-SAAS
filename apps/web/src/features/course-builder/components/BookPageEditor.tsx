@@ -433,6 +433,8 @@ export function BookPageEditor({ topicId, topicData }: BookPageEditorProps) {
           topicId,
           type: item.type,
           title: `${item.title} (Copy)`,
+          description: item.description ?? undefined,
+          durationMins: item.durationMins ?? undefined,
           content: (item.content ?? undefined) as unknown as Record<string, unknown> | undefined,
           fileUrl: item.fileUrl ?? undefined,
           externalUrl: item.externalUrl ?? undefined,

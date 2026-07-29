@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { File, Upload, X, FileText } from 'lucide-react';
+import { File, Upload, X, FileText, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
@@ -21,6 +23,7 @@ export function PdfDocumentForm({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState<{ name: string; size: number } | null>(
     fileUrl
       ? {
@@ -31,16 +34,44 @@ export function PdfDocumentForm({
   );
   const [pageCount, setPageCount] = useState((metadata?.pageCount as number) ?? 0);
 
-  const handleFile = (f: File) => {
-    if (f.type !== 'application/pdf') return;
+  const handleFile = async (f: File) => {
+    if (f.type !== 'application/pdf' && !f.name.endsWith('.pdf')) {
+      toast.error('Please upload a valid PDF document.');
+      return;
+    }
     setFile({ name: f.name, size: f.size });
-    const url = URL.createObjectURL(f);
-    onChange?.({
-      fileUrl: url,
-      fileName: f.name,
-      fileSize: f.size,
-      metadata: { pageCount, fileName: f.name, fileSize: f.size },
-    });
+    setIsUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', f);
+      formData.append('moduleCode', 'COURSE_BUILDER');
+      formData.append('fileType', 'PDF_DOCUMENT');
+
+      const res: any = await api.post('/storage/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const uploadedUrl =
+        res.signedUrl || res.fileUrl || res.url || res.storagePath || res.key;
+
+      toast.success('PDF document uploaded to storage bucket successfully!');
+      onChange?.({
+        fileUrl: uploadedUrl,
+        fileName: f.name,
+        fileSize: f.size,
+        metadata: {
+          pageCount,
+          fileName: f.name,
+          fileSize: f.size,
+          fileUploadId: res.id,
+        },
+      });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to upload PDF to storage bucket.');
+      setFile(null);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -74,7 +105,13 @@ export function PdfDocumentForm({
             if (f) handleFile(f);
           }}
         />
-        {file ? (
+        {isUploading ? (
+          <div className="flex flex-col items-center justify-center py-2">
+            <Loader2 className="h-6 w-6 text-violet-600 animate-spin mb-2" />
+            <p className="text-xs font-bold text-gray-700">Uploading PDF to Bucket...</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">Please wait while the file is saved</p>
+          </div>
+        ) : file ? (
           <div className="flex items-center gap-3 w-full max-w-xs">
             <div className="flex items-center justify-center w-12 h-14 rounded-xl bg-red-50 border border-red-100 shrink-0">
               <File className="h-6 w-6 text-red-500" />
