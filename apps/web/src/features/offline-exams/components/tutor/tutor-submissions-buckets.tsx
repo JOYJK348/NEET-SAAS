@@ -132,7 +132,6 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
               <tr>
                 <th className="py-3.5 px-4">Student</th>
                 <th className="py-3.5 px-4">Submitted At</th>
-                <th className="py-3.5 px-4">Version</th>
                 <th className="py-3.5 px-4">Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
@@ -140,7 +139,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={4} className="py-12 text-center text-slate-400">
                     No student submissions found in this category.
                   </td>
                 </tr>
@@ -156,10 +155,6 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
 
                     <td className="py-4 px-4 text-slate-600">
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString() : 'N/A'}
-                    </td>
-
-                    <td className="py-4 px-4 font-mono font-bold text-indigo-700">
-                      v{sub.evaluationVersion || 1}
                     </td>
 
                     <td className="py-4 px-4">

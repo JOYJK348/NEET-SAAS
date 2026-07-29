@@ -163,9 +163,6 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full font-mono">
-            Version v{detail.evaluationVersion || 1}
-          </span>
           {isReadOnly ? (
             <span className="px-3 py-1 bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold rounded-full flex items-center gap-1">
               <Lock className="w-3.5 h-3.5" /> Read-Only
@@ -276,10 +273,6 @@ export function TutorEvaluationWorkspace({ examId, submissionId }: TutorEvaluati
                 <span className="text-slate-700">
                   {detail.submittedAt ? new Date(detail.submittedAt).toLocaleString() : 'N/A'}
                 </span>
-              </p>
-              <p>
-                Version:{' '}
-                <span className="text-indigo-700 font-bold">v{detail.evaluationVersion || 1}</span>
               </p>
             </div>
           </div>
