@@ -141,7 +141,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
               {filteredList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400">
-                    No submissions in this bucket.
+                    No student submissions found in this category.
                   </td>
                 </tr>
               ) : (

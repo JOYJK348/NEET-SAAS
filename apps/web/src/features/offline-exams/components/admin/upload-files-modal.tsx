@@ -75,7 +75,7 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
               </h4>
               {exam.questionPaperFileId ? (
                 <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
-                  <FileCheck className="w-3 h-3" /> Uploaded to Supabase
+                  <FileCheck className="w-3 h-3" /> Uploaded & Verified
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold rounded-full">
@@ -125,7 +125,7 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
               </h4>
               {exam.answerKeyFileId ? (
                 <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
-                  <FileCheck className="w-3 h-3" /> Uploaded to Supabase
+                  <FileCheck className="w-3 h-3" /> Uploaded & Verified
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 bg-slate-200/80 text-slate-600 text-[11px] font-bold rounded-full">
