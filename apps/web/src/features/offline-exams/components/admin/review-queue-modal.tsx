@@ -239,6 +239,111 @@ export function ReviewQueueModal({ examId, isOpen, onClose }: ReviewQueueModalPr
                   </div>
                 </div>
               )}
+
+              {/* Submissions Audit Table */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Student Submissions & Evaluator Tutor Audit
+                  </h4>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {summary?.submissions?.length || 0} Records
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-slate-100 text-slate-600 uppercase font-semibold text-[11px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-3 px-4">Student</th>
+                        <th className="py-3 px-4">Evaluated By (Tutor)</th>
+                        <th className="py-3 px-4">Obtained Marks</th>
+                        <th className="py-3 px-4">Approval Status</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {!summary?.submissions || summary.submissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-slate-400">
+                            No student submissions found.
+                          </td>
+                        </tr>
+                      ) : (
+                        summary.submissions.map((sub) => (
+                          <tr key={sub.id} className="hover:bg-slate-50/60 transition">
+                            <td className="py-3.5 px-4">
+                              <p className="font-bold text-slate-900">{sub.studentName}</p>
+                              <p className="text-[11px] text-slate-500 font-mono">
+                                {sub.studentAdmissionId}
+                              </p>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              {sub.evaluatedByName ? (
+                                <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-lg inline-flex items-center gap-1.5 shadow-sm">
+                                  <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                                  Evaluated by {sub.evaluatedByName}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic text-[11px]">
+                                  Pending Evaluation
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4 font-mono font-bold text-teal-700 text-sm">
+                              {sub.obtainedMarks} pts
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              {sub.evaluationApproved ? (
+                                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-full">
+                                  APPROVED
+                                </span>
+                              ) : sub.evaluationStatus === 'RE_EVALUATION' ? (
+                                <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-full">
+                                  RETURNED TO TUTOR
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-full">
+                                  PENDING APPROVAL
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              {!isLocked && !isPublished && (
+                                <div className="flex items-center justify-end gap-2">
+                                  {!sub.evaluationApproved && (
+                                    <button
+                                      onClick={() => handleApproveSingle(sub.id)}
+                                      disabled={approveMutation.isPending}
+                                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
+                                    >
+                                      Approve
+                                    </button>
+                                  )}
+                                  {sub.evaluationStatus !== 'RE_EVALUATION' && (
+                                    <button
+                                      onClick={() => {
+                                        setRejectingId(sub.id);
+                                        setRejectReason('');
+                                      }}
+                                      className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition shadow-sm"
+                                    >
+                                      Return
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           )}
         </div>

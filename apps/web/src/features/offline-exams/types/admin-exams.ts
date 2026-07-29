@@ -86,6 +86,21 @@ export interface CreateExamPayload {
   instructions?: string;
 }
 
+export interface ReviewSubmissionListItem {
+  id: string;
+  studentAdmissionId: string;
+  studentName: string;
+  status: string;
+  evaluationStatus: string;
+  evaluationApproved: boolean;
+  obtainedMarks: number;
+  evaluatedByUserId?: string | null;
+  evaluatedByName?: string | null;
+  evaluatedAt?: string | null;
+  rejectionReason?: string | null;
+  submittedAt?: string | null;
+}
+
 export interface ReviewSummaryResponse {
   examId: string;
   title: string;
@@ -107,6 +122,7 @@ export interface ReviewSummaryResponse {
     highestMarks: number;
     lowestMarks: number;
   };
+  submissions?: ReviewSubmissionListItem[];
 }
 
 export interface LiveDashboardResponse {

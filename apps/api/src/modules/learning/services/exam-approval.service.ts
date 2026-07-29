@@ -90,17 +90,82 @@ export class ExamApprovalService {
       },
     });
 
-    const aggregatedMarks = await this.prisma.examSubmissions.aggregate({
-      where: {
-        tenantId,
-        examId,
-        evaluationStatus: 'COMPLETED',
-        status: { not: 'ABSENT' },
-        deletedAt: null,
-      },
-      _avg: { obtainedMarks: true },
-      _max: { obtainedMarks: true },
-      _min: { obtainedMarks: true },
+    const [aggregatedMarks, rawSubmissions] = await Promise.all([
+      this.prisma.examSubmissions.aggregate({
+        where: {
+          tenantId,
+          examId,
+          evaluationStatus: 'COMPLETED',
+          status: { not: 'ABSENT' },
+          deletedAt: null,
+        },
+        _avg: { obtainedMarks: true },
+        _max: { obtainedMarks: true },
+        _min: { obtainedMarks: true },
+      }),
+      this.prisma.examSubmissions.findMany({
+        where: { tenantId, examId, deletedAt: null },
+        include: {
+          studentAdmission: {
+            include: {
+              studentProfileIstudent_profile: {
+                include: { userIdusers: true },
+              },
+            },
+          },
+        },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
+
+    const evaluatorUserIds = Array.from(
+      new Set(
+        rawSubmissions
+          .map((s) => s.evaluatedByUserId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    const evaluatorUsers =
+      evaluatorUserIds.length > 0
+        ? await this.prisma.users.findMany({
+            where: { id: { in: evaluatorUserIds } },
+            select: { id: true, firstName: true, lastName: true, email: true },
+          })
+        : [];
+
+    const evaluatorMap = new Map(
+      evaluatorUsers.map((u) => [
+        u.id,
+        `${u.firstName} ${u.lastName}`.trim() || u.email,
+      ]),
+    );
+
+    const submissions = rawSubmissions.map((sub) => {
+      const studentUser =
+        sub.studentAdmission?.studentProfileIstudent_profile?.userIdusers;
+      const studentName = studentUser
+        ? `${studentUser.firstName} ${studentUser.lastName}`.trim()
+        : 'Student';
+
+      const evaluatorName = sub.evaluatedByUserId
+        ? evaluatorMap.get(sub.evaluatedByUserId) || 'Assigned Tutor'
+        : null;
+
+      return {
+        id: sub.id,
+        studentAdmissionId: sub.studentAdmissionId,
+        studentName,
+        status: sub.status,
+        evaluationStatus: sub.evaluationStatus,
+        evaluationApproved: sub.evaluationApproved,
+        obtainedMarks: Number(sub.obtainedMarks),
+        evaluatedByUserId: sub.evaluatedByUserId,
+        evaluatedByName: evaluatorName,
+        evaluatedAt: sub.evaluatedAt,
+        rejectionReason: sub.rejectionReason,
+        submittedAt: sub.submittedAt,
+      };
     });
 
     return {
@@ -130,6 +195,7 @@ export class ExamApprovalService {
           ? Number(aggregatedMarks._min.obtainedMarks)
           : 0,
       },
+      submissions,
     };
   }
 
