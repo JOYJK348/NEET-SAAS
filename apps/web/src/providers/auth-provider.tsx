@@ -58,8 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const refreshAccessToken = useCallback(async () => {
+    const rfToken = useAuthStore.getState().refreshToken;
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
+      const data = await api.post<{ accessToken: string }>(
+        '/auth/refresh',
+        rfToken ? { refreshToken: rfToken } : {},
+        { skipGlobalToast: true },
+      );
       const { accessToken: newAccessToken } = data;
       setTokens(newAccessToken);
     } catch {
@@ -69,8 +74,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Background refresh that never logs out — keeps token alive silently
   const silentRefresh = useCallback(async () => {
+    const token = useAuthStore.getState().accessToken;
+    if (token) {
+      const exp = decodeJwtExp(token);
+      // If token still has more than 5 minutes remaining, skip refresh
+      if (exp && exp * 1000 - Date.now() > 5 * 60 * 1000) {
+        return;
+      }
+    }
+
+    const rfToken = useAuthStore.getState().refreshToken;
     try {
-      const data = await api.post<{ accessToken: string }>('/auth/refresh', {});
+      const data = await api.post<{ accessToken: string }>(
+        '/auth/refresh',
+        rfToken ? { refreshToken: rfToken } : {},
+        { skipGlobalToast: true },
+      );
       const { accessToken: newAccessToken } = data;
       setTokens(newAccessToken);
     } catch {
@@ -179,19 +198,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timerId = scheduleNext();
 
     const onResume = () => {
-      if (document.visibilityState === 'visible' || document.hasFocus()) {
+      if (document.visibilityState === 'visible') {
         silentRefresh();
       }
     };
 
     document.addEventListener('visibilitychange', onResume);
-    window.addEventListener('focus', onResume);
     window.addEventListener('online', onResume);
 
     return () => {
       clearTimeout(timerId);
       document.removeEventListener('visibilitychange', onResume);
-      window.removeEventListener('focus', onResume);
       window.removeEventListener('online', onResume);
     };
   }, [isAuthenticated, accessToken, silentRefresh]);

@@ -97,9 +97,10 @@ class ApiClient {
           this.isRefreshing = true;
 
           try {
+            const rfToken = useAuthStore.getState().refreshToken;
             const response = await axios.post(
               `${API_BASE_URL}/auth/refresh`,
-              {},
+              rfToken ? { refreshToken: rfToken } : {},
               { withCredentials: true },
             );
 
