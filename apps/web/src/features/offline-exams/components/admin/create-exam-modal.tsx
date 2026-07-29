@@ -237,7 +237,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Description / Instructions
                 </label>
                 <textarea
@@ -245,19 +245,19 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   placeholder="e.g. Darken bubbles completely using black ballpoint pen only..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Exam Type
                   </label>
                   <select
                     value={examType}
                     onChange={(e) => setExamType(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   >
                     <option value="WEEKLY">Weekly Test</option>
                     <option value="MONTHLY">Monthly Test</option>
@@ -268,11 +268,11 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Mode</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mode</label>
                   <select
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   >
                     <option value="OFFLINE">Offline OMR</option>
                     <option value="HYBRID">Hybrid</option>
@@ -285,10 +285,10 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
 
           {step === 2 && (
             <div className="space-y-4">
-              <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-300 flex items-start gap-3">
-                <Clock className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+              <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-800 flex items-start gap-3 shadow-sm">
+                <Clock className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-indigo-200 mb-0.5">
+                  <p className="font-bold text-indigo-900 mb-0.5">
                     Exam Window vs Student Duration
                   </p>
                   <p>
@@ -301,62 +301,62 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Exam Window Start *
                   </label>
                   <input
                     type="datetime-local"
                     value={examWindowStart}
                     onChange={(e) => setExamWindowStart(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Exam Window End *
                   </label>
                   <input
                     type="datetime-local"
                     value={examWindowEnd}
                     onChange={(e) => setExamWindowEnd(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Student Duration (Minutes) *
                   </label>
                   <input
                     type="number"
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Grace Period (Minutes)
                   </label>
                   <input
                     type="number"
                     value={graceMinutes}
                     onChange={(e) => setGraceMinutes(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
-                  <p className="text-sm font-semibold text-slate-200">
+                  <p className="text-sm font-bold text-slate-900">
                     Require Full Duration Available
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-500">
                     If enabled, blocks student start if remaining window time is less than duration
                     minutes.
                   </p>
@@ -365,7 +365,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   type="checkbox"
                   checked={requireFullDurationWindow}
                   onChange={(e) => setRequireFullDurationWindow(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                  className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -375,46 +375,46 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Total Marks *
                   </label>
                   <input
                     type="number"
                     value={totalMarks}
                     onChange={(e) => setTotalMarks(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Passing Marks *
                   </label>
                   <input
                     type="number"
                     value={passingMarks}
                     onChange={(e) => setPassingMarks(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
               </div>
 
               {/* Section Configuration */}
-              <div className="border border-slate-800 rounded-xl p-4 bg-slate-950/60 space-y-3">
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-indigo-400" />
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-indigo-600" />
                       Dynamic Section Breakdown
                     </h4>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Tutor evaluation form will dynamically build input fields from these sections.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleAddSection}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-xs font-semibold border border-indigo-500/30 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold border border-indigo-200 transition shadow-sm"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add Section
@@ -425,16 +425,16 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   {sections.map((sec, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-3 bg-slate-900 p-2.5 rounded-lg border border-slate-800"
+                      className="flex items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm"
                     >
                       <input
                         type="text"
                         placeholder="Section Name (e.g. Physics)"
                         value={sec.name}
                         onChange={(e) => handleSectionChange(idx, 'name', e.target.value)}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs focus:outline-none focus:border-indigo-500"
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                       />
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                         <span>Max Marks:</span>
                         <input
                           type="number"
@@ -442,13 +442,13 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                           onChange={(e) =>
                             handleSectionChange(idx, 'maxMarks', Number(e.target.value))
                           }
-                          className="w-20 bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-center focus:outline-none focus:border-indigo-500"
+                          className="w-20 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-xs text-center text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveSection(idx)}
-                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded"
+                        className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -462,10 +462,10 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
           {step === 4 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-sm font-semibold text-slate-200">Allow Replace Upload</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-sm font-bold text-slate-900">Allow Replace Upload</p>
+                    <p className="text-xs text-slate-500">
                       Students can re-upload before window ends
                     </p>
                   </div>
@@ -473,55 +473,55 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                     type="checkbox"
                     checked={allowReplaceUpload}
                     onChange={(e) => setAllowReplaceUpload(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-sm font-semibold text-slate-200">Allow Late Upload</p>
-                    <p className="text-xs text-slate-400">Allow uploads during grace period</p>
+                    <p className="text-sm font-bold text-slate-900">Allow Late Upload</p>
+                    <p className="text-xs text-slate-500">Allow uploads during grace period</p>
                   </div>
                   <input
                     type="checkbox"
                     checked={allowLateUpload}
                     onChange={(e) => setAllowLateUpload(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                    className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </div>
               </div>
 
               {/* Summary Box */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
-                <h4 className="font-semibold text-slate-200 text-sm mb-2">Exam Creation Summary</h4>
-                <div className="grid grid-cols-2 gap-2 text-slate-400">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                <h4 className="font-bold text-slate-900 text-sm mb-2">Exam Creation Summary</h4>
+                <div className="grid grid-cols-2 gap-2 text-slate-600">
                   <p>
-                    Title: <span className="text-slate-200">{title || 'Untitled Exam'}</span>
+                    Title: <span className="text-slate-900 font-semibold">{title || 'Untitled Exam'}</span>
                   </p>
                   <p>
                     Type/Mode:{' '}
-                    <span className="text-slate-200">
+                    <span className="text-slate-900 font-semibold">
                       {examType} / {mode}
                     </span>
                   </p>
                   <p>
                     Duration:{' '}
-                    <span className="text-slate-200">
+                    <span className="text-slate-900 font-semibold">
                       {durationMinutes} min (Grace: {graceMinutes} min)
                     </span>
                   </p>
                   <p>
                     Marks:{' '}
-                    <span className="text-slate-200">
+                    <span className="text-slate-900 font-semibold">
                       {totalMarks} (Pass: {passingMarks})
                     </span>
                   </p>
                   <p>
                     Sections:{' '}
-                    <span className="text-slate-200">{sections.map((s) => s.name).join(', ')}</span>
+                    <span className="text-slate-900 font-semibold">{sections.map((s) => s.name).join(', ')}</span>
                   </p>
                   <p>
-                    Status: <span className="text-amber-400 font-semibold">Will save as DRAFT</span>
+                    Status: <span className="text-amber-700 font-bold">Will save as DRAFT</span>
                   </p>
                 </div>
               </div>
