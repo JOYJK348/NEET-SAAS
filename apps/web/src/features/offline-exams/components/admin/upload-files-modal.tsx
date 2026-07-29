@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useUploadAnswerKey, useUploadQuestionPaper } from '../../hooks/use-admin-exams';
+import {
+  useAdminExamDetail,
+  useUploadAnswerKey,
+  useUploadQuestionPaper,
+} from '../../hooks/use-admin-exams';
 import type { ExamItem } from '../../types/admin-exams';
-import { FileCheck, FileText, Upload, X } from 'lucide-react';
+import { Eye, FileCheck, FileText, Upload, X } from 'lucide-react';
 
 interface UploadFilesModalProps {
   exam: ExamItem | null;
@@ -14,6 +18,8 @@ interface UploadFilesModalProps {
 export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProps) {
   const [qpFile, setQpFile] = useState<File | null>(null);
   const [akFile, setAkFile] = useState<File | null>(null);
+
+  const { data: detail } = useAdminExamDetail(exam?.id || '');
 
   const uploadQPMutation = useUploadQuestionPaper();
   const uploadAKMutation = useUploadAnswerKey();
@@ -44,6 +50,9 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
     );
   };
 
+  const qpSignedUrl = detail?.questionPaperSignedUrl;
+  const akSignedUrl = detail?.answerKeySignedUrl;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
       <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl text-slate-800 overflow-hidden flex flex-col">
@@ -52,7 +61,7 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
           <div>
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Upload className="w-5 h-5 text-indigo-600" />
-              Upload Exam Documents
+              Upload & View Exam Documents
             </h3>
             <p className="text-xs text-slate-500 font-medium mt-0.5">{exam.title}</p>
           </div>
@@ -73,15 +82,26 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
                 <FileText className="w-4 h-4 text-indigo-600" />
                 Question Paper (PDF)
               </h4>
-              {exam.questionPaperFileId ? (
-                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
-                  <FileCheck className="w-3 h-3" /> Uploaded & Verified
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold rounded-full">
-                  Missing PDF
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {qpSignedUrl && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(qpSignedUrl, '_blank')}
+                    className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View QP
+                  </button>
+                )}
+                {exam.questionPaperFileId ? (
+                  <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <FileCheck className="w-3 h-3" /> Uploaded & Verified
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold rounded-full">
+                    Missing PDF
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-xs text-slate-500 font-medium">
@@ -123,15 +143,26 @@ export function UploadFilesModal({ exam, isOpen, onClose }: UploadFilesModalProp
                 <FileText className="w-4 h-4 text-emerald-600" />
                 Answer Key (PDF)
               </h4>
-              {exam.answerKeyFileId ? (
-                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
-                  <FileCheck className="w-3 h-3" /> Uploaded & Verified
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 bg-slate-200/80 text-slate-600 text-[11px] font-bold rounded-full">
-                  Optional
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {akSignedUrl && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(akSignedUrl, '_blank')}
+                    className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Key
+                  </button>
+                )}
+                {exam.answerKeyFileId ? (
+                  <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold rounded-full flex items-center gap-1">
+                    <FileCheck className="w-3 h-3" /> Uploaded & Verified
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 bg-slate-200/80 text-slate-600 text-[11px] font-bold rounded-full">
+                    Optional
+                  </span>
+                )}
+              </div>
             </div>
 
             <p className="text-xs text-slate-500 font-medium">
