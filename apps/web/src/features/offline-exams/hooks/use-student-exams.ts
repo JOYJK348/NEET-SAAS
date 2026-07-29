@@ -14,6 +14,10 @@ export function useStudentExams() {
   return useQuery({
     queryKey: studentExamKeys.list(),
     queryFn: () => studentExamsService.getMyExams(),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -23,6 +27,9 @@ export function useStudentExamDetail(id: string) {
     queryFn: () => studentExamsService.getExamDetail(id),
     enabled: !!id,
     refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
   });
 }
 
@@ -31,6 +38,10 @@ export function useStudentResult(id: string) {
     queryKey: studentExamKeys.result(id),
     queryFn: () => studentExamsService.getResult(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 

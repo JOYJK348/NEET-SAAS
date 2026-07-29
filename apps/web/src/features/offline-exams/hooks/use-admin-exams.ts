@@ -20,6 +20,10 @@ export function useAdminExams(params?: Record<string, any>) {
   return useQuery({
     queryKey: adminExamKeys.list(params),
     queryFn: () => adminExamsService.getExams(params),
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -28,6 +32,10 @@ export function useAdminExamDetail(id: string) {
     queryKey: adminExamKeys.detail(id),
     queryFn: () => adminExamsService.getExamById(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -36,6 +44,10 @@ export function useAdminReviewSummary(id: string) {
     queryKey: adminExamKeys.review(id),
     queryFn: () => adminExamsService.getReviewSummary(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -45,6 +57,9 @@ export function useAdminLiveDashboard(id: string, refetchInterval: number = 1500
     queryFn: () => adminExamsService.getLiveDashboard(id),
     enabled: !!id,
     refetchInterval,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
   });
 }
 
@@ -53,6 +68,10 @@ export function useAdminPostPublishAnalytics(id: string) {
     queryKey: adminExamKeys.analytics(id),
     queryFn: () => adminExamsService.getPostPublishAnalytics(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -61,6 +80,10 @@ export function useAdminSectionAnalytics(id: string) {
     queryKey: adminExamKeys.sections(id),
     queryFn: () => adminExamsService.getSectionAnalytics(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -69,6 +92,10 @@ export function useAdminTopStudents(id: string, limit: number = 10) {
     queryKey: adminExamKeys.top(id),
     queryFn: () => adminExamsService.getTopStudents(id, limit),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -77,6 +104,10 @@ export function useAdminBottomStudents(id: string, limit: number = 10) {
     queryKey: adminExamKeys.bottom(id),
     queryFn: () => adminExamsService.getBottomStudents(id, limit),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
+    staleTime: 1000 * 10,
   });
 }
 
@@ -85,6 +116,9 @@ export function useAdminPublishChecklist(id: string) {
     queryKey: adminExamKeys.checklist(id),
     queryFn: () => adminExamsService.getPublishChecklist(id),
     enabled: !!id,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 3,
   });
 }
 

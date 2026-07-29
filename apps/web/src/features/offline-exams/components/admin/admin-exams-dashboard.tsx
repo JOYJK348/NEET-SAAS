@@ -21,6 +21,7 @@ import {
   Filter,
   MoreVertical,
   Plus,
+  RotateCcw,
   Search,
   ShieldCheck,
   Upload,
@@ -38,7 +39,7 @@ export function AdminExamsDashboard() {
   const [analyticsModalExamId, setAnalyticsModalExamId] = useState<string | null>(null);
   const [uploadModalExam, setUploadModalExam] = useState<ExamItem | null>(null);
 
-  const { data: response, isLoading } = useAdminExams();
+  const { data: response, isLoading, refetch } = useAdminExams();
   const publishExamMutation = usePublishExam();
 
   const exams = response?.data || [];
@@ -131,13 +132,22 @@ export function AdminExamsDashboard() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-600/20 transition flex items-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Create New Exam
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5 shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Refresh List
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-600/20 transition flex items-center gap-2 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Create New Exam
+          </button>
+        </div>
       </div>
 
       {/* Top Stats Cards */}
