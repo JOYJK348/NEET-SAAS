@@ -320,6 +320,17 @@ export class TutorExamsService {
         .catch(() => null);
     }
 
+    let answerKeySignedUrl: string | null = null;
+    if (submission.exam.answerKeyFileId) {
+      answerKeySignedUrl = await this.storageService
+        .createSignedUrl({
+          tenantId,
+          fileUploadId: submission.exam.answerKeyFileId,
+          download: false,
+        })
+        .catch(() => null);
+    }
+
     const studentUser =
       submission.studentAdmission?.studentProfileIstudent_profile?.userIdusers;
 
@@ -354,6 +365,7 @@ export class TutorExamsService {
         submission,
       ),
       answerSheetSignedUrl,
+      answerKeySignedUrl,
       history: submission.history.map((h) => ({
         id: h.id,
         editedByUserId: h.editedByUserId,

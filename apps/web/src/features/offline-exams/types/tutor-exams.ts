@@ -86,6 +86,7 @@ export interface TutorSubmissionDetailResponse {
   isResultsPublished: boolean;
   isEvaluationLocked: boolean;
   answerSheetSignedUrl?: string | null;
+  answerKeySignedUrl?: string | null;
   history: EvaluationAuditHistoryItem[];
   timeline: Array<{
     id: string;
