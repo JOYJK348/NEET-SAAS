@@ -44,7 +44,7 @@ export function UploadDocumentBlock({
 
   const handleSave = useCallback(() => {
     onSave(item, {
-      fileUrl: editFileUrl || null,
+      fileUrl: editFileUrl || undefined,
       metadata: editMetadata,
     });
   }, [item, editFileUrl, editMetadata, onSave]);

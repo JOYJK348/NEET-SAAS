@@ -7,6 +7,7 @@ import {
   IsInt,
   Min,
   IsObject,
+  ValidateIf,
 } from 'class-validator';
 import { TopicItemType } from '@prisma/client';
 
@@ -27,38 +28,45 @@ export class CreateTopicItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsString()
-  description?: string;
+  description?: string | null;
 
   @ApiPropertyOptional({ description: 'JSON content for TEXT type' })
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsObject()
-  content?: Record<string, unknown>;
+  content?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({ description: 'Storage URL for PDF/VIDEO' })
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsString()
-  fileUrl?: string;
+  fileUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'External URL for LINK/VIDEO' })
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsString()
-  externalUrl?: string;
+  externalUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Metadata JSON' })
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsObject()
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsInt()
-  @Min(1)
-  displayOrder?: number;
+  @Min(0)
+  displayOrder?: number | null;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined)
   @IsInt()
-  @Min(1)
-  durationMins?: number;
+  @Min(0)
+  durationMins?: number | null;
 }
