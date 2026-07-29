@@ -38,42 +38,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar isMobile={isMobile} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
       <div className={cn('transition-all duration-300', isMobile ? '' : 'lg:pl-64')}>
         <Header isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />
-        <main className={cn('p-4 lg:p-6 pb-20 lg:pb-6', 'transition-all duration-300')}>
+        <main className={cn('p-4 lg:p-6 pb-6', 'transition-all duration-300')}>
           {children}
         </main>
       </div>
-
-      {/* Mobile Bottom Navigation */}
-      {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex justify-around items-center h-16 px-2 shadow-lg">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex flex-col items-center justify-center flex-1 h-full text-xs font-medium transition-colors',
-                  isActive
-                    ? 'text-primary'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400',
-                )}
-              >
-                <Icon className="h-5 w-5 mb-0.5" />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
-          <button
-            onClick={() => setIsMobileOpen(true)}
-            className="flex flex-col items-center justify-center flex-1 h-full text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400"
-          >
-            <Menu className="h-5 w-5 mb-0.5" />
-            <span>More</span>
-          </button>
-        </nav>
-      )}
     </div>
   );
 }
