@@ -194,9 +194,7 @@ export function AdminExamsDashboard() {
             { key: 'DRAFT', label: 'Drafts' },
             { key: 'PUBLISHED', label: 'Published / Live' },
             { key: 'UNDER_REVIEW', label: 'Under Review' },
-            { key: 'ADMIN_REVIEW', label: 'Admin Review' },
             { key: 'RESULT_PUBLISHED', label: 'Results Live' },
-            { key: 'ARCHIVED', label: 'Archived' },
           ].map((tab) => (
             <button
               key={tab.key}
