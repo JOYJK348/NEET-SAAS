@@ -29,6 +29,8 @@ export class ExamClosureService {
     }
 
     const now = new Date();
+    const isSystemUser = !userId || userId === 'system';
+    const actorUserId = isSystemUser ? (exam.createdBy || exam.updatedBy) : userId;
 
     return this.prisma.$transaction(async (tx) => {
       // 1. Re-check isClosed inside transaction to prevent race conditions
@@ -48,7 +50,7 @@ export class ExamClosureService {
           closedAt: now,
           isSubmissionLocked: true,
           submissionLockedAt: currentExam.submissionLockedAt ?? now,
-          updatedBy: userId,
+          updatedBy: actorUserId,
         },
       });
 
@@ -77,14 +79,26 @@ export class ExamClosureService {
         existingSubmissions.map((s) => s.studentAdmissionId),
       );
 
-      // 5. Filter enrolled students who have no submission record
+      const validAdmissions = await tx.studentAdmissions.findMany({
+        where: {
+          id: { in: enrollments.map((e) => e.studentAdmissionId) },
+          tenantId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      const validAdmissionIds = new Set(validAdmissions.map((a) => a.id));
+
+      // 5. Filter enrolled students who have no submission record and have a valid admission record
       const absentAdmissionIds = Array.from(
         new Set(
           enrollments
             .map((e) => e.studentAdmissionId)
             .filter(
               (id): id is string =>
-                Boolean(id) && !existingAdmissionIds.has(id),
+                Boolean(id) &&
+                validAdmissionIds.has(id) &&
+                !existingAdmissionIds.has(id),
             ),
         ),
       );
@@ -101,8 +115,8 @@ export class ExamClosureService {
         status: ExamSubmissionStatusEnum.ABSENT,
         evaluationStatus: EvaluationStatusEnum.PENDING,
         obtainedMarks: 0.0,
-        createdBy: userId,
-        updatedBy: userId,
+        createdBy: actorUserId,
+        updatedBy: actorUserId,
       }));
 
       await tx.examSubmissions.createMany({

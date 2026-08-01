@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Inject,
 } from '@nestjs/common';
 import { FileCategoryEnum, FileModuleEnum } from '@prisma/client';
@@ -288,11 +289,334 @@ export class StudentsService {
           .catch(() => {});
       }
 
-      return studentProfile;
+      // Handle Parent Portal Account Creation if enabled
+      let parentPortalInfo: {
+        existingAccount: boolean;
+        email?: string;
+        generatedPassword?: string;
+        message?: string;
+      } | null = null;
+
+      if (dto.isParentPortalEnabled && dto.parentEmail && dto.parentEmail.trim()) {
+        const pEmail = dto.parentEmail.trim().toLowerCase();
+        const relationshipType = (dto.parentRelationshipType as any) || 'FATHER';
+
+        // Find or create PARENT role in tenant
+        let parentRole = await tx.roles.findFirst({
+          where: { tenantId, code: 'PARENT' },
+        });
+        if (!parentRole) {
+          parentRole = await tx.roles
+            .create({
+              data: {
+                tenantId,
+                code: 'PARENT',
+                name: 'Parent',
+                roleType: 'SYSTEM',
+                isDefault: false,
+                isEditable: false,
+                isDeletable: false,
+                priority: 1,
+                metadata: {},
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            })
+            .catch(() => null);
+        }
+
+        // Check if parent user already exists in this tenant
+        let parentUser = await tx.users.findFirst({
+          where: { tenantId, email: pEmail, deletedAt: null },
+        });
+
+        if (parentUser) {
+          // Relationship mismatch check
+          const existingLink = await tx.studentParents.findFirst({
+            where: { parentProfileId: parentUser.id, tenantId, deletedAt: null },
+          });
+          if (existingLink && existingLink.relationshipType !== relationshipType) {
+            throw new BadRequestException(
+              `This parent email (${pEmail}) is already registered as ${existingLink.relationshipType}. Cannot re-link as ${relationshipType}.`,
+            );
+          }
+
+          // Existing Parent Account — Reuse!
+          let parentProfile = await tx.parentProfiles.findFirst({
+            where: { userId: parentUser.id, tenantId },
+          });
+          if (!parentProfile) {
+            parentProfile = await tx.parentProfiles.create({
+              data: {
+                userId: parentUser.id,
+                tenantId,
+                occupation: '',
+                educationLevel: '',
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+          }
+
+          if (parentRole) {
+            const existingRole = await tx.userRoles.findFirst({
+              where: { tenantId, userId: parentUser.id, roleId: parentRole.id },
+            });
+            if (!existingRole) {
+              await tx.userRoles
+                .create({
+                  data: {
+                    tenantId,
+                    userId: parentUser.id,
+                    roleId: parentRole.id,
+                    effectiveFrom: new Date(),
+                    effectiveTo: new Date('2099-12-31'),
+                    revokedBy: '',
+                    revokedReason: '',
+                    metadata: {},
+                    assignedBy: userId,
+                    assignmentReason: 'Auto-assigned during student registration',
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                })
+                .catch(() => {});
+            }
+          }
+
+          // Link Student ↔ Parent
+          await tx.studentParents
+            .upsert({
+              where: {
+                studentProfileId_parentProfileId: {
+                  studentProfileId: user.id,
+                  parentProfileId: parentUser.id,
+                },
+              },
+              create: {
+                tenantId,
+                studentProfileId: user.id,
+                parentProfileId: parentUser.id,
+                relationshipType,
+                isPrimaryGuardian: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+              update: {
+                relationshipType,
+                isPrimaryGuardian: true,
+                updatedBy: userId,
+              },
+            })
+            .catch(() => {});
+
+          parentPortalInfo = {
+            existingAccount: true,
+            email: pEmail,
+            message: 'Existing parent account linked successfully.',
+          };
+        } else {
+          // Create New Parent Account
+          const rawParentPassword = `ISML@${Math.floor(100000 + Math.random() * 900000)}`;
+          const parentPasswordHash = hashSync(rawParentPassword, genSaltSync(10));
+          const pNameParts = (dto.parentName || 'Parent').trim().split(' ');
+          const pFirstName = pNameParts[0] || 'Parent';
+          const pLastName = pNameParts.slice(1).join(' ') || '';
+
+          parentUser = await tx.users.create({
+            data: {
+              tenantId,
+              branchId: '',
+              email: pEmail,
+              firstName: pFirstName,
+              lastName: pLastName,
+              userType: 'PARENT',
+              status: 'ACTIVE',
+              passwordHash: parentPasswordHash,
+              forcePasswordChange: true,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          await tx.parentProfiles.create({
+            data: {
+              userId: parentUser.id,
+              tenantId,
+              occupation: '',
+              educationLevel: '',
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          if (parentRole) {
+            await tx.userRoles
+              .create({
+                data: {
+                  tenantId,
+                  userId: parentUser.id,
+                  roleId: parentRole.id,
+                  effectiveFrom: new Date(),
+                  effectiveTo: new Date('2099-12-31'),
+                  revokedBy: '',
+                  revokedReason: '',
+                  metadata: {},
+                  assignedBy: userId,
+                  assignmentReason: 'Auto-created during student registration',
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              })
+              .catch(() => {});
+          }
+
+          await tx.studentParents
+            .create({
+              data: {
+                tenantId,
+                studentProfileId: user.id,
+                parentProfileId: parentUser.id,
+                relationshipType,
+                isPrimaryGuardian: true,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            })
+            .catch(() => {});
+
+          parentPortalInfo = {
+            existingAccount: false,
+            email: pEmail,
+            generatedPassword: rawParentPassword,
+          };
+        }
+      }
+
+      return { studentProfile, parentPortalInfo };
     });
 
-    const response = await this.toResponseAsync(profile);
-    return { ...response, generatedPassword: rawPassword };
+    const response = await this.toResponseAsync(profile.studentProfile);
+    return {
+      ...response,
+      generatedPassword: rawPassword,
+      parentPortalInfo: profile.parentPortalInfo,
+    };
+  }
+
+  async getParentPortalInfo(studentId: string, tenantId: string) {
+    const student = await this.prisma.studentProfiles.findFirst({
+      where: { userId: studentId, tenantId, deletedAt: null },
+    });
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const mapping = await this.prisma.studentParents.findFirst({
+      where: { studentProfileId: studentId, tenantId, deletedAt: null },
+      include: {
+        parentProfileIdparent_profiles: {
+          include: {
+            userIdusers: true,
+          },
+        },
+      },
+    });
+
+    if (!mapping || !mapping.parentProfileIdparent_profiles) {
+      return { enabled: false };
+    }
+
+    const parentUser = mapping.parentProfileIdparent_profiles.userIdusers;
+
+    const otherMappings = await this.prisma.studentParents.findMany({
+      where: { parentProfileId: mapping.parentProfileId, tenantId, deletedAt: null },
+      include: {
+        studentProfileIstudent_profile: {
+          include: {
+            userIdusers: true,
+          },
+        },
+      },
+    });
+
+    const children = otherMappings.map((m) => {
+      const u = m.studentProfileIstudent_profile?.userIdusers;
+      return {
+        studentId: m.studentProfileId,
+        name: u ? `${u.firstName} ${u.lastName}`.trim() : 'Student',
+      };
+    });
+
+    return {
+      enabled: true,
+      relationship: mapping.relationshipType,
+      email: parentUser?.email ?? '',
+      status: parentUser?.status ?? 'INACTIVE',
+      lastLogin: parentUser?.lastLoginAt ?? null,
+      createdAt: parentUser?.createdAt ?? null,
+      childrenCount: children.length,
+      children,
+    };
+  }
+
+  async toggleParentStatus(
+    studentId: string,
+    status: 'ACTIVE' | 'INACTIVE',
+    tenantId: string,
+    adminId: string,
+  ) {
+    const mapping = await this.prisma.studentParents.findFirst({
+      where: { studentProfileId: studentId, tenantId, deletedAt: null },
+    });
+    if (!mapping) {
+      throw new NotFoundException('Parent portal mapping not found for student');
+    }
+
+    await this.prisma.users.update({
+      where: { id: mapping.parentProfileId },
+      data: { status, updatedBy: adminId },
+    });
+
+    return { success: true, status };
+  }
+
+  async resetParentPassword(
+    studentId: string,
+    tenantId: string,
+    adminId: string,
+  ) {
+    const mapping = await this.prisma.studentParents.findFirst({
+      where: { studentProfileId: studentId, tenantId, deletedAt: null },
+      include: {
+        parentProfileIdparent_profiles: {
+          include: { userIdusers: true },
+        },
+      },
+    });
+
+    if (!mapping || !mapping.parentProfileIdparent_profiles?.userIdusers) {
+      throw new NotFoundException('Parent portal account not found for student');
+    }
+
+    const parentUser = mapping.parentProfileIdparent_profiles.userIdusers;
+    const newRawPassword = `ISML@${Math.floor(100000 + Math.random() * 900000)}`;
+    const newHash = hashSync(newRawPassword, genSaltSync(10));
+
+    await this.prisma.users.update({
+      where: { id: parentUser.id },
+      data: {
+        passwordHash: newHash,
+        forcePasswordChange: true,
+        updatedBy: adminId,
+      },
+    });
+
+    return {
+      success: true,
+      email: parentUser.email,
+      generatedPassword: newRawPassword,
+    };
   }
 
   async findAll(

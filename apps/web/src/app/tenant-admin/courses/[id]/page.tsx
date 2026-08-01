@@ -592,7 +592,7 @@ export default function CourseDetailPage() {
 
           {/* Back Navigation Button */}
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/tenant-admin/curriculum')}
             className="relative z-10 flex items-center gap-1.5 text-white/80 hover:text-white text-xs font-semibold mb-4 transition-colors bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl backdrop-blur-xs"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -703,7 +703,7 @@ export default function CourseDetailPage() {
                 {/* Primary Level Actions */}
                 {curriculumLevel === 'subjects' && (
                   <button
-                    onClick={() => setAssignOpen(true)}
+                    onClick={() => router.push(`/tenant-admin/courses/${courseId}/map-subject`)}
                     className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#7c3aed] px-3.5 py-1.5 rounded-xl shadow-xs hover:opacity-90 transition-opacity"
                   >
                     <Plus className="h-3.5 w-3.5" /> Map Subject
@@ -728,7 +728,7 @@ export default function CourseDetailPage() {
                         Start by mapping a subject to build the syllabus
                       </p>
                       <button
-                        onClick={() => setAssignOpen(true)}
+                        onClick={() => router.push(`/tenant-admin/courses/${courseId}/map-subject`)}
                         className="text-xs font-bold text-white bg-[#7c3aed] px-4 py-2 rounded-xl"
                       >
                         + Map First Subject
@@ -855,7 +855,7 @@ export default function CourseDetailPage() {
                       {/* Map Subject Dotted Action Card */}
                       <button
                         type="button"
-                        onClick={() => setAssignOpen(true)}
+                        onClick={() => router.push(`/tenant-admin/courses/${courseId}/map-subject`)}
                         className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
                         style={{ minHeight: '220px' }}
                       >
@@ -1112,29 +1112,31 @@ export default function CourseDetailPage() {
                                 </span>
                               </div>
 
-                               {/* Action Buttons: View and Edit */}
-                               <div className="flex items-center gap-2">
-                                 <button
-                                   type="button"
-                                   onClick={() => {
-                                     setEditingTopic(tp);
-                                     setTopicOpen(true);
-                                   }}
-                                   className="text-xs font-bold text-violet-600 hover:text-violet-850 hover:underline"
-                                 >
-                                   Edit
-                                 </button>
-                                 <button
-                                   type="button"
-                                   onClick={() => {
-                                     // Redirect to course builder with specific topicId query param
-                                     router.push(`/tenant-admin/courses/${courseId}/builder?topicId=${tp.id}`);
-                                   }}
-                                   className="text-xs font-bold text-gray-500 hover:text-gray-700 hover:underline"
-                                 >
-                                   View
-                                 </button>
-                               </div>
+                              {/* Action Buttons: View and Edit */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTopic(tp);
+                                    setTopicOpen(true);
+                                  }}
+                                  className="text-xs font-bold text-violet-600 hover:text-violet-850 hover:underline"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Redirect to course builder with specific topicId query param
+                                    router.push(
+                                      `/tenant-admin/courses/${courseId}/builder?topicId=${tp.id}`,
+                                    );
+                                  }}
+                                  className="text-xs font-bold text-gray-500 hover:text-gray-700 hover:underline"
+                                >
+                                  View
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>

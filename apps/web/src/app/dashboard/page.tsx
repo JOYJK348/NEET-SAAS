@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Plus, Download } from 'lucide-react';
+import { Plus, Download, Sparkles, Building2 } from 'lucide-react';
 
 import {
   platformStats,
@@ -187,32 +187,33 @@ function TenantAdminDashboard() {
 
   return (
     <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* 1. Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-muted-foreground">Academic Year 2026-2027</span>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1 text-[#111827]">
-            Good Morning 👋
+      {/* 1. Welcome Header - Clean Student-Style Header Banner */}
+      <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+            <span className="text-xs font-semibold text-violet-200 uppercase tracking-wider">
+              Tenant Admin Dashboard
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+            Good Morning, {user?.firstName || 'Admin'}! 👋
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Welcome back, <span className="font-semibold text-[#7C3AED]">Apex NEET Academy</span>
+          <p className="text-violet-200 text-xs mt-0.5">
+            Welcome back to <span className="font-bold text-white">NEET Academy</span>
           </p>
         </div>
-        <div className="flex items-center gap-3 border-t sm:border-t-0 pt-3 sm:pt-0 border-[#E5E7EB]">
-          <div className="text-right">
-            <p className="text-sm font-semibold">
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {user?.roleCode?.toLowerCase()?.replace('_', ' ')}
-            </p>
+
+        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 shrink-0">
+          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-white" />
           </div>
-          <Avatar className="h-10 w-10 border border-[#E5E7EB]">
-            <AvatarImage src={user?.avatar || undefined} />
-            <AvatarFallback className="bg-[#7C3AED]/10 text-[#7C3AED] font-bold">
-              {user?.firstName?.charAt(0)?.toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <div className="text-right">
+            <p className="text-[10px] uppercase font-extrabold text-violet-200 tracking-wider">
+              Academic Session
+            </p>
+            <p className="font-mono font-bold text-sm text-white">2026 – 2027</p>
+          </div>
         </div>
       </div>
 
@@ -549,6 +550,12 @@ function DashboardPageContent() {
     }
   }, [isLoading, isAuthenticated, user, router]);
 
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.roleCode === 'PARENT') {
+      router.replace('/dashboard/parent/academics');
+    }
+  }, [isLoading, isAuthenticated, user, router]);
+
   if (isLoading || !isAuthenticated) {
     return (
       <DashboardLayout>
@@ -561,8 +568,8 @@ function DashboardPageContent() {
 
   if (!user) return null;
 
-  // TUTOR / STUDENT users get redirected above; show loading while redirect is in progress
-  if (user?.roleCode === 'TUTOR' || user?.roleCode === 'STUDENT') {
+  // TUTOR / STUDENT / PARENT users get redirected above; show loading while redirect is in progress
+  if (user?.roleCode === 'TUTOR' || user?.roleCode === 'STUDENT' || user?.roleCode === 'PARENT') {
     return (
       <DashboardLayout>
         <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">

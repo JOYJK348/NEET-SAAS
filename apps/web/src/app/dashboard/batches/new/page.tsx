@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save } from 'lucide-react';
 import {
   useCreateBatch,
   useCoursesForBatch,
@@ -33,6 +32,21 @@ import {
   defaultFormValues,
 } from '@/features/batches/validation/batch-schema';
 import { toast } from '@/hooks/use-toast';
+
+import {
+  ArrowLeft,
+  Save,
+  Sparkles,
+  Layers,
+  GraduationCap,
+  Calendar,
+  Clock,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
 function CreateBatchContent() {
   const router = useRouter();
@@ -91,8 +105,8 @@ function CreateBatchContent() {
 
         if (result) {
           toast({
-            title: 'Batch Created',
-            description: `Batch ${result.code} - ${result.name} has been created successfully.`,
+            title: 'Batch Created Successfully 🎉',
+            description: `Batch ${result.code} - ${result.name} is ready.`,
           });
           router.push(`/dashboard/batches/${result.id}`);
         } else {
@@ -135,71 +149,169 @@ function CreateBatchContent() {
   );
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 rounded-xl"
-          onClick={() => router.push('/dashboard/batches')}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Batch</h1>
-          <p className="text-sm text-gray-500">Create a new course batch or section</p>
+    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      {/* Header Banner - Signature Violet Gradient */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
+            onClick={() => router.push('/dashboard/batches')}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+                Batch Creation Form
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+              Create New Batch 📚
+            </h1>
+            <p className="text-violet-200 text-xs mt-0.5">
+              Set up a new student section, course mapping, capacity limit, and schedule timings.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/dashboard/batches')}
+            className="px-4 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold"
+          >
+            Cancel
+          </Button>
         </div>
       </div>
 
       <form
         onSubmit={handleSubmit(onSubmit, () => {
           toast({
-            title: 'Validation Error',
-            description: 'Please fix the highlighted fields before submitting.',
+            title: 'Validation Required',
+            description: 'Please complete all required fields before submitting.',
             variant: 'destructive',
           });
         })}
+        className="space-y-6"
       >
-        <BatchFormLayout title="Batch Details" description="Fill in the batch information below">
-          <div className="space-y-6">
-            {/* Code & Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="code">Batch Code *</Label>
-                <Input id="code" placeholder="e.g. NEET25A" {...register('code')} />
-                {errors.code && <p className="text-sm text-red-500">{errors.code.message}</p>}
+        {/* Section 1: Basic Information */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                <Layers className="h-5 w-5" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Batch Name *</Label>
-                <Input id="name" placeholder="e.g. NEET 2026 Batch A" {...register('name')} />
-                {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Basic Information
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Assign a unique code and identifier name for this batch section.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="code"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Code <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="code"
+                  placeholder="e.g. NEET26A"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('code')}
+                />
+                {errors.code ? (
+                  <p className="text-xs text-rose-500 font-medium">{errors.code.message}</p>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    Short uppercase identifier for system code
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="name"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Name <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. NEET 2026 Foundation Batch A"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('name')}
+                />
+                {errors.name && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.name.message}</p>
+                )}
               </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-xs font-bold text-slate-700">
+                Description & Notes
+              </Label>
               <Textarea
                 id="description"
-                placeholder="Optional batch description"
+                placeholder="Optional batch description, classroom location, or special instructions..."
                 rows={3}
+                className="rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 resize-none font-medium"
                 {...register('description')}
               />
               {errors.description && (
-                <p className="text-sm text-red-500">{errors.description.message}</p>
+                <p className="text-xs text-rose-500 font-medium">{errors.description.message}</p>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Academic Year & Branch Selection */}
+        {/* Section 2: Academic Alignment & Delivery */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Academic & Delivery Setup
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Link the batch to an Academic Year, Branch location, Course program, and Delivery
+                  mode.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="academicYearId">Academic Year *</Label>
+              {/* Academic Year */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="academicYearId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Academic Year <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="academicYearId"
                   control={control}
                   render={({ field }) => (
                     <Select
-                      value={field.value || ''}
+                      value={field.value || undefined}
                       onValueChange={(val) => {
                         field.onChange(val);
                         setValue('branchId', '');
@@ -208,12 +320,11 @@ function CreateBatchContent() {
                     >
                       <SelectTrigger
                         id="academicYearId"
-                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                        className="w-full h-11 rounded-xl border-slate-200 bg-white font-medium focus:ring-2 focus:ring-violet-500/20"
                       >
                         <SelectValue placeholder="Select academic year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Select academic year</SelectItem>
                         {years.map((y) => (
                           <SelectItem key={y.id} value={y.id}>
                             {y.name}
@@ -224,19 +335,28 @@ function CreateBatchContent() {
                   )}
                 />
                 {errors.academicYearId && (
-                  <p className="text-sm text-red-500">{errors.academicYearId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">
+                    {errors.academicYearId.message}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="branchId">Branch *</Label>
+              {/* Branch */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="branchId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Branch <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="branchId"
                   control={control}
                   render={({ field }) => {
                     const selectedYear = watch('academicYearId');
                     const filteredBranches = branches.filter((b) => {
-                      if (!selectedYear) return false;
+                      if (!selectedYear) return true;
+                      if (branchCourses.length === 0) return true;
                       return branchCourses.some(
                         (m) => m.academicYearId === selectedYear && m.branchId === b.id,
                       );
@@ -244,25 +364,23 @@ function CreateBatchContent() {
 
                     return (
                       <Select
-                        value={field.value || ''}
+                        value={field.value || undefined}
                         onValueChange={(val) => {
                           field.onChange(val);
                           setValue('courseId', '');
                         }}
-                        disabled={!selectedYear}
                       >
                         <SelectTrigger
                           id="branchId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                          className="w-full h-11 rounded-xl border-slate-200 bg-white font-medium focus:ring-2 focus:ring-violet-500/20"
                         >
                           <SelectValue
                             placeholder={
-                              selectedYear ? 'Select a branch' : 'Select academic year first'
+                              selectedYear ? 'Select branch' : 'Select academic year first'
                             }
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select a branch</SelectItem>
                           {filteredBranches.map((b) => (
                             <SelectItem key={b.id} value={b.id}>
                               {b.name}
@@ -274,15 +392,20 @@ function CreateBatchContent() {
                   }}
                 />
                 {errors.branchId && (
-                  <p className="text-sm text-red-500">{errors.branchId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.branchId.message}</p>
                 )}
               </div>
             </div>
 
-            {/* Course & Delivery Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="courseId">Course *</Label>
+              {/* Course */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="courseId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Course <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="courseId"
                   control={control}
@@ -290,31 +413,27 @@ function CreateBatchContent() {
                     const selectedYear = watch('academicYearId');
                     const selectedBranch = watch('branchId');
                     const filteredCourses = courses.filter((c) => {
-                      if (!selectedBranch) return false;
+                      if (!selectedBranch) return true;
+                      if (branchCourses.length === 0) return true;
                       return branchCourses.some(
                         (m) =>
                           m.branchId === selectedBranch &&
                           m.courseId === c.id &&
-                          m.academicYearId === selectedYear,
+                          (!selectedYear || m.academicYearId === selectedYear),
                       );
                     });
 
                     return (
-                      <Select
-                        value={field.value || ''}
-                        onValueChange={field.onChange}
-                        disabled={!selectedBranch}
-                      >
+                      <Select value={field.value || undefined} onValueChange={field.onChange}>
                         <SelectTrigger
                           id="courseId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                          className="w-full h-11 rounded-xl border-slate-200 bg-white font-medium focus:ring-2 focus:ring-violet-500/20"
                         >
                           <SelectValue
-                            placeholder={selectedBranch ? 'Select a course' : 'Select branch first'}
+                            placeholder={selectedBranch ? 'Select course' : 'Select branch first'}
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select a course</SelectItem>
                           {filteredCourses.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
@@ -326,132 +445,231 @@ function CreateBatchContent() {
                   }}
                 />
                 {errors.courseId && (
-                  <p className="text-sm text-red-500">{errors.courseId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.courseId.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="deliveryTypeId">Delivery Type *</Label>
+              {/* Delivery Type */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="deliveryTypeId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Delivery Mode <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="deliveryTypeId"
                   control={control}
-                  render={({ field }) => {
-                    const selectedCourse = watch('courseId');
-                    return (
-                      <Select
-                        value={field.value || ''}
-                        onValueChange={field.onChange}
-                        disabled={!selectedCourse}
+                  render={({ field }) => (
+                    <Select value={field.value || undefined} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="deliveryTypeId"
+                        className="w-full h-11 rounded-xl border-slate-200 bg-white font-medium focus:ring-2 focus:ring-violet-500/20"
                       >
-                        <SelectTrigger
-                          id="deliveryTypeId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
-                        >
-                          <SelectValue
-                            placeholder={
-                              selectedCourse ? 'Select delivery type' : 'Select course first'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Select delivery type</SelectItem>
-                          {deliveryTypes.map((dt) => (
-                            <SelectItem key={dt.id} value={dt.id}>
-                              {dt.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    );
-                  }}
+                        <SelectValue placeholder="Select delivery mode (Offline/Online/Hybrid)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deliveryTypes.map((dt) => (
+                          <SelectItem key={dt.id} value={dt.id}>
+                            {dt.name} {dt.attendanceMode ? `(${dt.attendanceMode})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
                 {errors.deliveryTypeId && (
-                  <p className="text-sm text-red-500">{errors.deliveryTypeId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">
+                    {errors.deliveryTypeId.message}
+                  </p>
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Capacity */}
-            <div className="space-y-2">
-              <Label htmlFor="maxStudents">Maximum Students *</Label>
-              <Input
-                id="maxStudents"
-                type="number"
-                min={1}
-                max={500}
-                {...register('maxStudents', { valueAsNumber: true })}
-              />
+        {/* Section 3: Schedule, Capacity & Admission Settings */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Capacity & Schedule Settings
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Define seat limits, class duration dates, daily timings, and admission flags.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            {/* Maximum Capacity */}
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="maxStudents"
+                className="text-xs font-bold text-slate-700 flex items-center justify-between"
+              >
+                <span className="flex items-center gap-1">
+                  Maximum Student Capacity <span className="text-rose-500">*</span>
+                </span>
+                <span className="text-[11px] text-violet-600 font-semibold bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
+                  Max 500 Seats
+                </span>
+              </Label>
+              <div className="relative">
+                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  id="maxStudents"
+                  type="number"
+                  min={1}
+                  max={500}
+                  placeholder="e.g. 60"
+                  className="h-11 pl-10 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-bold text-slate-900"
+                  {...register('maxStudents', { valueAsNumber: true })}
+                />
+              </div>
               {errors.maxStudents && (
-                <p className="text-sm text-red-500">{errors.maxStudents.message}</p>
+                <p className="text-xs text-rose-500 font-medium">{errors.maxStudents.message}</p>
               )}
             </div>
 
             {/* Start & End Dates */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input id="startDate" type="date" {...register('startDate')} />
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="startDate"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Start Date <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('startDate')}
+                />
                 {errors.startDate && (
-                  <p className="text-sm text-red-500">{errors.startDate.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.startDate.message}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date *</Label>
-                <Input id="endDate" type="date" {...register('endDate')} />
-                {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="endDate"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch End Date <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('endDate')}
+                />
+                {errors.endDate && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.endDate.message}</p>
+                )}
               </div>
             </div>
 
             {/* Daily Start & End Timings */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Daily Start Time (e.g. 09:00 AM)</Label>
-                <Input id="startTime" type="time" {...register('startTime')} />
+              <div className="space-y-1.5">
+                <Label htmlFor="startTime" className="text-xs font-bold text-slate-700">
+                  Daily Class Start Time
+                </Label>
+                <div className="relative">
+                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="startTime"
+                    type="time"
+                    className="h-11 pl-10 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                    {...register('startTime')}
+                  />
+                </div>
                 {errors.startTime && (
-                  <p className="text-sm text-red-500">{errors.startTime.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.startTime.message}</p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="endTime">Daily End Time (e.g. 05:00 PM)</Label>
-                <Input id="endTime" type="time" {...register('endTime')} />
-                {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
+              <div className="space-y-1.5">
+                <Label htmlFor="endTime" className="text-xs font-bold text-slate-700">
+                  Daily Class End Time
+                </Label>
+                <div className="relative">
+                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="endTime"
+                    type="time"
+                    className="h-11 pl-10 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                    {...register('endTime')}
+                  />
+                </div>
+                {errors.endTime && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.endTime.message}</p>
+                )}
               </div>
             </div>
 
-            {/* Allow New Admissions */}
-            <div className="flex items-center gap-3">
-              <input
-                id="allowNewAdmissions"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                {...register('allowNewAdmissions')}
+            {/* iOS Style Toggle for Allow New Admissions */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-4">
+              <div>
+                <Label
+                  htmlFor="allowNewAdmissions"
+                  className="text-sm font-bold text-slate-900 cursor-pointer"
+                >
+                  Allow New Student Admissions
+                </Label>
+                <p className="text-xs text-slate-500">
+                  Enables students to be enrolled directly into this batch section upon
+                  registration.
+                </p>
+              </div>
+              <Controller
+                name="allowNewAdmissions"
+                control={control}
+                render={({ field }) => (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={field.value}
+                    onClick={() => field.onChange(!field.value)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      field.value ? 'bg-violet-600' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        field.value ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                )}
               />
-              <Label htmlFor="allowNewAdmissions" className="cursor-pointer">
-                Allow new admissions
-              </Label>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl h-11 px-5"
-              onClick={() => router.push('/dashboard/batches')}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="rounded-xl h-11 px-5 bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={isCreating}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isCreating ? 'Creating...' : 'Create Batch'}
-            </Button>
-          </div>
-        </BatchFormLayout>
+        {/* Bottom Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/dashboard/batches')}
+            className="px-6 h-11 rounded-xl text-slate-600 font-bold border-slate-200 hover:bg-slate-50"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isCreating}
+            className="px-6 h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold shadow-md shadow-violet-200 gap-2"
+          >
+            <Save className="h-4 w-4" />
+            <span>{isCreating ? 'Creating Batch...' : 'Create Batch'}</span>
+          </Button>
+        </div>
       </form>
     </div>
   );

@@ -227,38 +227,62 @@ function SubjectSection({
     .flatMap((ch) => ch.topics)
     .reduce((sum, t) => sum + t.publishedItemCount, 0);
 
+  const isDeactivated = (cs as any).isActive === false || (cs.subject as any).isActive === false;
+
   return (
-    <div className={cn('rounded-2xl border border-slate-100 overflow-hidden')}>
+    <div
+      className={cn(
+        'rounded-2xl border overflow-hidden transition-all',
+        isDeactivated ? 'border-slate-200 bg-slate-100/80 opacity-75' : 'border-slate-100',
+      )}
+    >
       {/* Subject header */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => !isDeactivated && setOpen((o) => !o)}
         className={cn(
           'w-full flex items-center gap-3 px-5 py-4 transition-colors text-left',
-          theme.bg,
+          isDeactivated ? 'bg-slate-200/60 cursor-not-allowed' : theme.bg,
         )}
       >
         <span
           className={cn(
             'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-            theme.dot,
+            isDeactivated ? 'bg-slate-400' : theme.dot,
           )}
         >
           <BookOpen className="w-4 h-4 text-white" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className={cn('text-sm font-black leading-tight', theme.text)}>{cs.subject.name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p
+              className={cn(
+                'text-sm font-black leading-tight',
+                isDeactivated ? 'text-slate-700' : theme.text,
+              )}
+            >
+              {cs.subject.name}
+            </p>
+            {isDeactivated && (
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 bg-slate-300 text-slate-800 rounded-full border border-slate-400">
+                <AlertCircle className="w-3 h-3 text-slate-700" />
+                Currently this subject is inactive
+              </span>
+            )}
+          </div>
           <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{cs.subject.code}</p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <div className="text-right">
-            <p className="text-xs font-bold text-slate-700">{cs.chapters.length} chapters</p>
+            <p className="text-xs font-bold text-slate-500">{cs.chapters.length} chapters</p>
             <p className="text-[10px] text-slate-400">
               {totalTopics} topics • {totalItems} items
             </p>
           </div>
-          <span className={cn('transition-transform duration-200', open ? 'rotate-180' : '')}>
-            <ChevronDown className={cn('w-4 h-4', theme.text)} />
-          </span>
+          {!isDeactivated && (
+            <span className={cn('transition-transform duration-200', open ? 'rotate-180' : '')}>
+              <ChevronDown className={cn('w-4 h-4', theme.text)} />
+            </span>
+          )}
         </div>
       </button>
 

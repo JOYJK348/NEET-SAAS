@@ -194,6 +194,12 @@ export interface RankedStudentItem {
   obtainedMarks: number;
   rank?: number | null;
   percentile?: number | null;
+  marksBreakdown?: Array<{
+    sectionId?: string;
+    sectionName: string;
+    obtainedMarks: number;
+    maxMarks?: number;
+  }> | null;
 }
 
 export interface PublishChecklistResponse {

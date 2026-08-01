@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useStudentBatches } from '@/features/student-dashboard/hooks/use-student-batches';
 import type { StudentEnrollmentDto } from '@/features/student-dashboard/types/student-dashboard.types';
+import { Card } from '@/components/ui/card';
 import {
   AlertCircle,
   BookOpen,
@@ -15,6 +16,7 @@ import {
   Radio,
   Star,
   Video,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -92,149 +94,87 @@ function BatchCard({ enrollment }: { enrollment: StudentEnrollmentDto }) {
   const { batch, isPrimary } = enrollment;
 
   const isCourseDeactivated = batch.course?.isActive === false;
-  const isBatchInactive = batch.isActive === false;
+  const isBatchInactive = batch.isActive === false || batch.status === 'INACTIVE';
   const isDeactivated = isCourseDeactivated || isBatchInactive;
 
-  const formatDate = (d?: string | null) =>
-    d
-      ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-      : '—';
+  const enrolledCount = (batch as any).studentCount || 0;
+  const maxStudents = batch.maxStudents || 40;
+  const percent = Math.min(100, Math.round((enrolledCount / maxStudents) * 100));
 
   return (
     <div
       className={cn(
-        'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-150',
+        'w-full rounded-2xl border-[#E5E7EB] bg-white shadow-xs hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col justify-between p-4 sm:p-5 space-y-4',
         isDeactivated
-          ? 'border-red-200 opacity-60 saturate-0'
-          : 'border-slate-100 hover:-translate-y-0.5',
+          ? 'border-rose-200/80 bg-rose-50/20 opacity-70 saturate-50'
+          : 'hover:border-violet-300',
       )}
     >
-      {/* Card header */}
-      <div
-        className={cn(
-          'px-5 py-4 border-b',
-          isDeactivated
-            ? 'bg-red-50 border-red-100'
-            : 'bg-gradient-to-r from-violet-50 to-indigo-50 border-slate-100',
-        )}
-      >
+      {/* Top Header */}
+      <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-extrabold bg-violet-50 text-violet-700 border border-violet-100 font-mono">
+                {batch.code}
+              </span>
               {isPrimary && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
                   <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                  Primary
+                  PRIMARY SECTION
                 </span>
               )}
-              {isCourseDeactivated && (
-                <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full border border-red-200 flex-shrink-0">
-                  <AlertCircle className="w-3 h-3" />
-                  Course Deactivated
-                </span>
-              )}
-              {!isCourseDeactivated && isBatchInactive && (
-                <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full border border-red-200 flex-shrink-0">
-                  <AlertCircle className="w-3 h-3" />
-                  Batch Inactive
-                </span>
-              )}
-              {!isDeactivated && <StatusBadge status={batch.status} />}
-              <DeliveryBadge code={batch.deliveryType?.code} />
             </div>
             <h3
               className={cn(
-                'text-base font-black leading-tight',
-                isDeactivated ? 'text-red-800' : 'text-slate-900',
+                'font-extrabold text-slate-900 text-base leading-snug truncate',
+                isDeactivated && 'text-rose-900',
               )}
             >
               {batch.name}
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5 font-mono">{batch.code}</p>
+            {batch.course && (
+              <p className="text-xs text-slate-500 font-semibold truncate flex items-center gap-1">
+                <GraduationCap className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                {batch.course.name}
+              </p>
+            )}
           </div>
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-            <Layers className="w-5 h-5 text-violet-500" />
+
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <StatusBadge status={batch.status} />
+            <DeliveryBadge code={batch.deliveryType?.code} />
           </div>
         </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          {batch.branch && (
+            <div className="flex items-center gap-1.5 p-2 bg-slate-50/80 rounded-xl border border-slate-100">
+              <MapPin className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+              <span className="truncate font-semibold text-slate-700">{batch.branch.name}</span>
+            </div>
+          )}
+          {batch.academicYear && (
+            <div className="flex items-center gap-1.5 p-2 bg-slate-50/80 rounded-xl border border-slate-100">
+              <CalendarDays className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+              <span className="truncate font-semibold text-slate-700">
+                {batch.academicYear.name}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Deactivation Warning */}
+        {isDeactivated && (
+          <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <p className="text-xs font-bold text-rose-800 leading-tight">
+              {isCourseDeactivated ? 'Course deactivated by admin' : 'Batch is currently inactive'}
+            </p>
+          </div>
+        )}
       </div>
-
-      {/* Card body */}
-      <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {/* Course */}
-        <div className="flex items-start gap-2">
-          <BookOpen className="w-4 h-4 text-violet-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Course
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">{batch.course?.name ?? '—'}</p>
-          </div>
-        </div>
-
-        {/* Branch */}
-        <div className="flex items-start gap-2">
-          <Building2 className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Branch
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">{batch.branch?.name ?? '—'}</p>
-          </div>
-        </div>
-
-        {/* Academic Year */}
-        <div className="flex items-start gap-2">
-          <GraduationCap className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Year
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">
-              {batch.academicYear?.name ?? '—'}
-            </p>
-          </div>
-        </div>
-
-        {/* Start Date */}
-        <div className="flex items-start gap-2">
-          <CalendarDays className="w-4 h-4 text-rose-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Starts
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">{formatDate(batch.startDate)}</p>
-          </div>
-        </div>
-
-        {/* End Date */}
-        <div className="flex items-start gap-2">
-          <CalendarDays className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Ends
-            </p>
-            <p className="text-xs font-bold text-slate-800 mt-0.5">{formatDate(batch.endDate)}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Deactivation hint */}
-      {isDeactivated && (
-        <div className="mx-5 mb-3 p-2 rounded bg-red-50/50 border border-red-100 flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-          <p className="text-[10px] font-semibold text-red-700 leading-tight">
-            {isCourseDeactivated
-              ? 'This batch course is currently deactivated.'
-              : 'This batch is currently deactivated.'}
-          </p>
-        </div>
-      )}
-
-      {batch.description && (
-        <div className="px-5 pb-4">
-          <p className="text-xs text-slate-500 line-clamp-2">{batch.description}</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -243,29 +183,72 @@ function BatchCard({ enrollment }: { enrollment: StudentEnrollmentDto }) {
 function BatchesContent() {
   const { batches, isLoading, error, refetch } = useStudentBatches();
 
+  const totalBatches = batches?.batches.length || 0;
+  const activeBatches = batches?.batches.filter((b) => b.batch.status === 'ACTIVE').length || 0;
+
   return (
-    <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 pb-24 space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-          <Layers className="w-5 h-5 text-emerald-500" />
-        </div>
+    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      {/* ── Signature Violet Gradient Hero Banner ────────────────────────────── */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-base font-black text-slate-900">My Batches</h1>
-          <p className="text-xs text-slate-400">Your active enrollments</p>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+              Student Enrollments
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+            My Enrolled Batches 📚
+          </h1>
+          <p className="text-violet-200 text-xs mt-0.5">
+            View your active course sections, assigned branch details, and enrollment status.
+          </p>
         </div>
-        {batches && (
-          <span className="ml-auto text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-            {batches.batches.length} batch{batches.batches.length !== 1 ? 'es' : ''}
-          </span>
-        )}
+
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-xl text-center w-full sm:w-auto">
+            <p className="text-[10px] font-bold text-violet-200 uppercase tracking-wider">
+              Enrolled Batches
+            </p>
+            <p className="text-lg font-black text-white">{totalBatches} Sections</p>
+          </div>
+        </div>
       </div>
 
-      {/* Content */}
+      {/* ── KPI Stats Grid ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-violet-300">
+          <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+            <Layers className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              Total Enrolled Batches
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{totalBatches}</p>
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-emerald-300">
+          <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              Active Running Sections
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-0.5">
+              {activeBatches}
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Batches List Content ─────────────────────────────────────────────── */}
       {isLoading ? (
         <BatchesSkeleton />
       ) : error ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+        <Card className="rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-xs">
           <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
           <p className="text-sm font-semibold text-slate-700">Failed to load batches</p>
           <button
@@ -274,15 +257,17 @@ function BatchesContent() {
           >
             Try again
           </button>
-        </div>
+        </Card>
       ) : !batches || batches.batches.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center">
+        <Card className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-xs">
           <Layers className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-700">No active batches</p>
-          <p className="text-xs text-slate-400 mt-1">Contact your admin if this seems wrong</p>
-        </div>
+          <p className="text-sm font-bold text-slate-700">No active batch enrollments found</p>
+          <p className="text-xs text-slate-400 mt-1">
+            Please contact your administrator if your batch is missing.
+          </p>
+        </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {batches.batches.map((enrollment) => (
             <BatchCard key={enrollment.enrollmentId} enrollment={enrollment} />
           ))}

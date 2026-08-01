@@ -27,12 +27,12 @@ export const ALLOWED_MIME_TYPES: Record<FileCategoryEnum, readonly string[]> = {
 };
 
 export const DEFAULT_SIGNED_URL_EXPIRY: Record<FileModuleEnum, number> = {
-  EXAMS: 300, // 5 mins
-  SUBMISSIONS: 900, // 15 mins
-  PROFILES: 3600, // 1 hour
-  LIVE_RECORDINGS: 900, // 15 mins
-  DOCUMENTS: 900, // 15 mins
-  ASSIGNMENTS: 900, // 15 mins
-  IMPORTS: 300, // 5 mins
-  EXPORTS: 300, // 5 mins
+  EXAMS: 604800, // 7 days (Supabase Max)
+  SUBMISSIONS: 604800, // 7 days (Supabase Max)
+  PROFILES: 604800, // 7 days (Supabase Max)
+  LIVE_RECORDINGS: 604800, // 7 days (Supabase Max)
+  DOCUMENTS: 604800, // 7 days (Supabase Max)
+  ASSIGNMENTS: 604800, // 7 days (Supabase Max)
+  IMPORTS: 604800, // 7 days (Supabase Max)
+  EXPORTS: 604800, // 7 days (Supabase Max)
 };

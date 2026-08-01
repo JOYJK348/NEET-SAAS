@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, X, ChevronDown } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -36,20 +36,33 @@ export function StudentFilters({
   batches,
   className,
 }: StudentFiltersProps) {
-  const hasActiveFilters = status !== 'ALL' || course || batch;
+  const hasActiveFilters = status !== 'ALL' || !!course || !!batch;
+
+  const currentCourseValue = course || 'ALL_COURSES';
+  const currentBatchValue = batch || 'ALL_BATCHES';
 
   return (
-    <div className={cn('flex flex-col sm:flex-row gap-3', className)}>
+    <div
+      className={cn(
+        'grid grid-cols-3 sm:flex sm:flex-row items-center gap-1.5 sm:gap-2.5 w-full sm:w-auto',
+        className,
+      )}
+    >
       {/* Status Filter */}
-      <div className="relative">
-        <Select value={status} onValueChange={onStatusChange}>
+      <div className="w-full sm:w-[160px] min-w-0">
+        <Select value={status || 'ALL'} onValueChange={(val) => onStatusChange(val as any)}>
           <SelectTrigger
-            className={cn('w-full sm:w-[180px]', hasActiveFilters && 'border-purple-500')}
+            className={cn(
+              'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
+              status !== 'ALL' && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+            )}
           >
-            <Filter className="h-4 w-4 mr-2" aria-hidden="true" />
-            <SelectValue placeholder="All Status" />
+            <div className="flex items-center gap-1 min-w-0 truncate">
+              <Filter className="h-3 w-3 text-slate-400 shrink-0 hidden sm:inline" />
+              <SelectValue placeholder="Status" />
+            </div>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white">
             <SelectItem value="ALL">All Status</SelectItem>
             {Object.entries(STUDENT_STATUS_LABELS).map(([key, label]) => (
               <SelectItem key={key} value={key as StudentStatus}>
@@ -62,15 +75,21 @@ export function StudentFilters({
 
       {/* Course Filter */}
       {courses.length > 0 && (
-        <div className="relative">
-          <Select value={course} onValueChange={onCourseChange}>
+        <div className="w-full sm:w-[170px] min-w-0">
+          <Select
+            value={currentCourseValue}
+            onValueChange={(val) => onCourseChange(val === 'ALL_COURSES' ? '' : val)}
+          >
             <SelectTrigger
-              className={cn('w-full sm:w-[180px]', hasActiveFilters && 'border-purple-500')}
+              className={cn(
+                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
+                !!course && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+              )}
             >
-              <SelectValue placeholder="All Courses" />
+              <SelectValue placeholder="Course" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Courses</SelectItem>
+            <SelectContent className="bg-white max-h-60 overflow-y-auto">
+              <SelectItem value="ALL_COURSES">All Courses</SelectItem>
               {courses.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -83,15 +102,21 @@ export function StudentFilters({
 
       {/* Batch Filter */}
       {batches.length > 0 && (
-        <div className="relative">
-          <Select value={batch} onValueChange={onBatchChange}>
+        <div className="w-full sm:w-[170px] min-w-0">
+          <Select
+            value={currentBatchValue}
+            onValueChange={(val) => onBatchChange(val === 'ALL_BATCHES' ? '' : val)}
+          >
             <SelectTrigger
-              className={cn('w-full sm:w-[180px]', hasActiveFilters && 'border-purple-500')}
+              className={cn(
+                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
+                !!batch && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+              )}
             >
-              <SelectValue placeholder="All Batches" />
+              <SelectValue placeholder="Batch" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Batches</SelectItem>
+            <SelectContent className="bg-white max-h-60 overflow-y-auto">
+              <SelectItem value="ALL_BATCHES">All Batches</SelectItem>
               {batches.map((b) => (
                 <SelectItem key={b.id} value={b.id}>
                   {b.name}
@@ -102,7 +127,7 @@ export function StudentFilters({
         </div>
       )}
 
-      {/* Clear Filters */}
+      {/* Clear Filters Button */}
       {hasActiveFilters && (
         <Button
           variant="outline"
@@ -112,10 +137,10 @@ export function StudentFilters({
             onCourseChange('');
             onBatchChange('');
           }}
-          className="gap-1.5 text-purple-600 border-purple-200 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+          className="col-span-3 sm:col-span-1 h-8 sm:h-10 rounded-xl gap-1 px-2 text-[11px] sm:text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200 shrink-0 w-full sm:w-auto mt-0.5 sm:mt-0"
         >
-          <X className="h-3.5 w-3.5" />
-          Clear
+          <X className="h-3 w-3 text-violet-600" />
+          Clear Filters
         </Button>
       )}
     </div>

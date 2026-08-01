@@ -39,6 +39,11 @@ export interface IStorageService {
     download?: boolean;
   }): Promise<string>;
 
+  downloadFileStream(params: {
+    tenantId: string;
+    fileUploadId: string;
+  }): Promise<{ blob: Blob; record: FileUploads }>;
+
   createSignedUrls(params: {
     tenantId: string;
     fileUploadIds: string[];

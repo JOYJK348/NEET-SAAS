@@ -38,20 +38,27 @@ export function BatchTable({
   const columns: Column<BatchListItem>[] = [
     {
       key: 'code',
-      header: 'Code',
+      header: 'Batch Code',
       sortable: true,
       render: (_, batch) => (
-        <span className="font-medium text-gray-900 dark:text-white">{batch.code}</span>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-violet-50 text-violet-700 border border-violet-100/80 shadow-2xs">
+          {batch.code}
+        </span>
       ),
     },
     {
       key: 'name',
-      header: 'Name',
+      header: 'Batch Name & Academic Year',
       sortable: true,
       render: (_, batch) => (
         <div>
-          <p className="font-medium text-gray-900 dark:text-white">{batch.name}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{batch.academicYearName}</p>
+          <p
+            className="font-extrabold text-slate-900 text-sm hover:text-violet-600 cursor-pointer transition-colors"
+            onClick={() => onView(batch.id)}
+          >
+            {batch.name}
+          </p>
+          <p className="text-xs text-slate-500 font-medium">{batch.academicYearName}</p>
         </div>
       ),
     },
@@ -61,7 +68,9 @@ export function BatchTable({
       sortable: true,
       className: 'hidden lg:table-cell',
       render: (_, batch) => (
-        <span className="text-gray-600 dark:text-gray-300">{batch.courseName}</span>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
+          {batch.courseName}
+        </span>
       ),
     },
     {
@@ -70,7 +79,9 @@ export function BatchTable({
       sortable: true,
       className: 'hidden lg:table-cell',
       render: (_, batch) => (
-        <span className="text-gray-600 dark:text-gray-300">{batch.branchName}</span>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
+          {batch.branchName}
+        </span>
       ),
     },
     {
@@ -80,7 +91,7 @@ export function BatchTable({
       render: (_, batch) => (
         <div className="flex items-center gap-3">
           <BatchStatusBadge status={batch.status} />
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60">
             <button
               type="button"
               onClick={(e) => {
@@ -89,7 +100,7 @@ export function BatchTable({
               }}
               className={cn(
                 'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out outline-none',
-                batch.isActive ? 'bg-emerald-500' : 'bg-gray-300',
+                batch.isActive ? 'bg-emerald-500' : 'bg-slate-300',
               )}
               title="Toggle active status"
             >
@@ -102,8 +113,8 @@ export function BatchTable({
             </button>
             <span
               className={cn(
-                'text-[10px] font-bold uppercase tracking-wider',
-                batch.isActive ? 'text-emerald-600' : 'text-gray-500',
+                'text-[10px] font-extrabold uppercase tracking-wider',
+                batch.isActive ? 'text-emerald-600' : 'text-slate-500',
               )}
             >
               {batch.isActive ? 'Active' : 'Inactive'}
@@ -114,45 +125,60 @@ export function BatchTable({
     },
     {
       key: 'capacity',
-      header: 'Capacity',
+      header: 'Enrolled Capacity',
       sortable: true,
-      render: (_, batch) => (
-        <span className="text-gray-600 dark:text-gray-300">
-          {batch.enrolledCount}/{batch.maxStudents}
-        </span>
-      ),
+      render: (_, batch) => {
+        const percent = Math.min(
+          100,
+          Math.round((batch.enrolledCount / (batch.maxStudents || 1)) * 100),
+        );
+        return (
+          <div className="w-32 space-y-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+              <span>
+                {batch.enrolledCount} / {batch.maxStudents}
+              </span>
+              <span className="text-[10px] font-bold text-slate-400">{percent}%</span>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all duration-300',
+                  percent >= 90 ? 'bg-rose-500' : percent >= 70 ? 'bg-amber-500' : 'bg-violet-600',
+                )}
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'startDate',
-      header: 'Start Date',
+      header: 'Duration',
       sortable: true,
       className: 'hidden lg:table-cell',
       render: (_, batch) => (
-        <span className="text-gray-600 dark:text-gray-300">
-          {format(new Date(batch.startDate), 'MMM d, yyyy')}
-        </span>
-      ),
-    },
-    {
-      key: 'endDate',
-      header: 'End Date',
-      sortable: true,
-      className: 'hidden lg:table-cell',
-      render: (_, batch) => (
-        <span className="text-gray-600 dark:text-gray-300">
-          {format(new Date(batch.endDate), 'MMM d, yyyy')}
-        </span>
+        <div className="text-xs text-slate-600 font-medium">
+          <p className="font-semibold text-slate-800">
+            {format(new Date(batch.startDate), 'MMM d, yyyy')}
+          </p>
+          <p className="text-[11px] text-slate-400">
+            to {format(new Date(batch.endDate), 'MMM d, yyyy')}
+          </p>
+        </div>
       ),
     },
     {
       key: 'actions',
       header: 'Actions',
       render: (_, batch) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => onView(batch.id)}
-            className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+            className="p-2 text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-all"
             aria-label={`View ${batch.name}`}
+            title="View Details"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -172,8 +198,9 @@ export function BatchTable({
           {onEdit && (
             <button
               onClick={() => onEdit(batch)}
-              className="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+              className="p-2 text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-all"
               aria-label={`Edit ${batch.name}`}
+              title="Edit Batch"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -199,12 +226,12 @@ export function BatchTable({
 
   const SortIcon = ({ columnKey }: { columnKey: string }) => {
     if (sortBy !== columnKey) {
-      return <ChevronsUpDown className="h-4 w-4 text-gray-400" />;
+      return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" />;
     }
     return sortOrder === 'asc' ? (
-      <ChevronUp className="h-4 w-4 text-primary" />
+      <ChevronUp className="h-3.5 w-3.5 text-violet-600" />
     ) : (
-      <ChevronDown className="h-4 w-4 text-primary" />
+      <ChevronDown className="h-3.5 w-3.5 text-violet-600" />
     );
   };
 
@@ -214,22 +241,21 @@ export function BatchTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full" role="table">
+      <table className="w-full text-left border-collapse" role="table">
         <thead>
-          <tr className="border-b border-gray-200 dark:border-gray-700">
+          <tr className="border-b border-slate-200/80 bg-slate-50/70">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
                 className={cn(
-                  'px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider',
+                  'px-4 py-3.5 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider',
                   col.sortable &&
-                    'cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 select-none',
+                    'cursor-pointer hover:text-slate-800 select-none transition-colors',
                   col.className,
                 )}
                 onClick={() => handleSort(String(col.key))}
-                style={{ width: col.className?.includes('w-') ? undefined : undefined }}
               >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {col.header}
                   {col.sortable && <SortIcon columnKey={String(col.key)} />}
                 </div>
@@ -237,17 +263,17 @@ export function BatchTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+        <tbody className="divide-y divide-slate-100 bg-white">
           {batches.map((batch) => (
             <tr
               key={batch.id}
-              className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              className="hover:bg-slate-50/80 transition-colors"
               onMouseEnter={() => onPrefetch?.(batch.id)}
               onFocus={() => onPrefetch?.(batch.id)}
               tabIndex={0}
             >
               {columns.map((col) => (
-                <td key={String(col.key)} className={cn('px-4 py-4', col.className)}>
+                <td key={String(col.key)} className={cn('px-4 py-3.5 align-middle', col.className)}>
                   {col.render ? col.render(batch[col.key as keyof BatchListItem], batch) : null}
                 </td>
               ))}

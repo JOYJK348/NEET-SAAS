@@ -75,181 +75,117 @@ export function StudentCard({
 
   return (
     <Card
-      className={`w-full transition-all duration-200 ${selected ? 'ring-2 ring-purple-500 dark:ring-purple-400' : ''}`}
+      className={`w-full rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-xs space-y-3 transition-all hover:border-violet-300 ${
+        selected ? 'ring-2 ring-violet-500' : ''
+      }`}
       onMouseEnter={() => onPrefetch?.(student.id)}
       onFocus={() => onPrefetch?.(student.id)}
       tabIndex={0}
     >
-      <CardContent className="p-4">
-        {/* Header with avatar, name, student ID, and status */}
-        <div className="flex items-start gap-3">
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={student.profileImage} alt={fullName} />
-              <AvatarFallback className="text-lg font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                {getInitials(fullName)}
-              </AvatarFallback>
-            </Avatar>
-            {selected && (
-              <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-purple-500 border-2 border-white dark:border-gray-900 flex items-center justify-center">
-                <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            )}
-          </div>
+      <CardContent className="p-0 space-y-3">
+        {/* Header: Student ID Badge & Interactive Status Switch */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-700 font-mono font-bold text-xs border border-violet-100">
+            {student.studentId || 'STD-REG'}
+          </span>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-gray-900 dark:text-white truncate">{fullName}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                  {student.studentId}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={updatingStatus}
-                onClick={() => {
-                  setUpdatingStatus(true);
-                  const newStatus = student.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-                  onStatusChange?.(student, newStatus);
-                  setTimeout(() => setUpdatingStatus(false), 500);
-                }}
-                className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                  student.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-300'
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={updatingStatus}
+              onClick={() => {
+                setUpdatingStatus(true);
+                const newStatus = student.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+                onStatusChange?.(student, newStatus);
+                setTimeout(() => setUpdatingStatus(false), 500);
+              }}
+              title={student.status === 'ACTIVE' ? 'Click to deactivate' : 'Click to activate'}
+              className={`relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                student.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                  student.status === 'ACTIVE' ? 'translate-x-4.5' : 'translate-x-0'
                 }`}
-                title={student.status === 'ACTIVE' ? 'Deactivate student' : 'Activate student'}
-              >
-                <span
-                  className={`inline-flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
-                    student.status === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0.5'
-                  }`}
-                >
-                  {updatingStatus ? (
-                    <svg
-                      className="h-3 w-3 animate-spin text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"
-                      />
-                    </svg>
-                  ) : student.status === 'ACTIVE' ? (
-                    <ToggleRight className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <ToggleLeft className="h-3 w-3 text-gray-400" />
-                  )}
-                </span>
-              </button>
-            </div>
+              />
+            </button>
 
-            {/* Contact info */}
-            <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0" />
-                <span className="truncate">{student.email}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0" />
-                <span>{student.phone}</span>
-              </div>
-            </div>
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                student.status === 'ACTIVE'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-rose-50 text-rose-700 border-rose-200'
+              }`}
+            >
+              {student.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+        </div>
 
-            {/* Batch and Course */}
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <div className="flex items-center gap-1">
-                <GraduationCap className="h-3.5 w-3.5" />
-                <span className="truncate max-w-[150px]">{student.batchName}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
-                <span className="truncate max-w-[150px]">{student.courseName}</span>
-              </div>
-            </div>
+        {/* Student Profile Info */}
+        <div className="flex items-start gap-3">
+          <Avatar className="h-11 w-11 rounded-xl shrink-0 border border-violet-100">
+            <AvatarImage src={student.profileImage} alt={fullName} />
+            <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-700">
+              {getInitials(fullName)}
+            </AvatarFallback>
+          </Avatar>
 
-            {/* Admission date */}
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>Admitted: {formatDate(student.admissionDate)}</span>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-bold text-sm text-slate-900 leading-snug break-words">
+              {fullName}
+            </h4>
+            <div className="text-xs text-slate-500 space-y-0.5 mt-0.5">
+              {student.email && (
+                <p className="flex items-center gap-1 font-medium truncate">
+                  <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span className="truncate">{student.email}</span>
+                </p>
+              )}
+              {student.phone && (
+                <p className="flex items-center gap-1 text-slate-500">
+                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span>{student.phone}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
-              onClick={() => onView?.(student)}
-            >
-              View
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
-              onClick={() => onEdit?.(student)}
-            >
-              Edit
-            </Button>
-          </div>
+        {/* Course & Batch Badges */}
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-[11px]">
+          {student.courseName && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 font-semibold truncate max-w-[170px]">
+              <GraduationCap className="w-3 h-3 text-sky-500 shrink-0" />
+              {student.courseName}
+            </span>
+          )}
+          {student.batchName && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 font-semibold truncate max-w-[170px]">
+              <User className="w-3 h-3 text-purple-500 shrink-0" />
+              {student.batchName}
+            </span>
+          )}
+        </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => onView?.(student)}>View Details</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit?.(student)}>Edit Student</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onStatusChange?.(student, 'ACTIVE')}
-                className={student.status === 'ACTIVE' ? 'text-green-600' : ''}
-              >
-                Mark Active
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onStatusChange?.(student, 'SUSPENDED')}
-                className={student.status === 'SUSPENDED' ? 'text-gray-600' : ''}
-              >
-                Mark Inactive
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onStatusChange?.(student, 'SUSPENDED')}
-                className={student.status === 'SUSPENDED' ? 'text-red-600' : ''}
-              >
-                Suspend
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onDelete?.(student)} className="text-red-600">
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Mobile Action Buttons Bar */}
+        <div className="flex items-center justify-between pt-2 gap-2 border-t border-slate-100">
+          <button
+            onClick={() => onView?.(student)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-violet-50 text-violet-700 font-bold text-xs border border-violet-100 hover:bg-violet-100 transition"
+          >
+            <User className="w-3.5 h-3.5 text-violet-600" /> View & Edit Details
+          </button>
+
+          {onDelete && (
+            <button
+              onClick={() => onDelete?.(student)}
+              className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-bold text-xs border border-rose-100 hover:bg-rose-100 transition flex items-center gap-1 shrink-0"
+            >
+              Delete
+            </button>
+          )}
         </div>
       </CardContent>
     </Card>

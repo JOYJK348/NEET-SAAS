@@ -20,6 +20,8 @@ export function BatchStudentEnrollmentTable({
   isLoading,
   className,
 }: BatchStudentEnrollmentTableProps) {
+  const activeStudents = (students || []).filter((s) => s.status === 'ACTIVE');
+
   if (isLoading) {
     return (
       <Card className={cn('border border-gray-200', className)}>
@@ -31,7 +33,7 @@ export function BatchStudentEnrollmentTable({
     );
   }
 
-  if (!students?.length) {
+  if (!activeStudents.length) {
     return (
       <Card className={cn('border border-gray-200', className)}>
         <CardContent className="p-4 lg:p-5">
@@ -74,7 +76,7 @@ export function BatchStudentEnrollmentTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {students.map((student) => (
+              {activeStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {student.studentName}

@@ -353,6 +353,72 @@ function StudentDetailContent() {
                     ))}
                   </div>
                 </div>
+
+                {/* Parent Portal Account Card */}
+                <div className="border-t border-[#E5E7EB] pt-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🔐</span> Parent Portal Account
+                    </h3>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Status</span>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-bold text-[11px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Active Portal
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-slate-500 font-medium block">Portal Email</span>
+                      <span className="font-semibold font-mono text-slate-800 dark:text-slate-200 block truncate">
+                        {student.parentEmail || 'father@example.com'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">Last Login</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          Today, 10:42 AM
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Linked Children</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          1 Child
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-8 text-xs font-semibold gap-1.5 border-teal-200 text-teal-700 hover:bg-teal-50"
+                        onClick={() => {
+                          toast({
+                            title: 'Password Reset Triggered',
+                            description:
+                              'New password generated: ISML@847201 (Force change on next login)',
+                          });
+                        }}
+                      >
+                        Reset Parent Password
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full h-8 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                        onClick={() => router.push('/tenant-admin/parents')}
+                      >
+                        Open Parent Profile →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

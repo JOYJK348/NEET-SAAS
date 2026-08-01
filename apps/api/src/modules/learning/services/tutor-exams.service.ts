@@ -130,14 +130,12 @@ export class TutorExamsService {
       returnedAgg.map((r) => [r.examId, r._count.id]),
     );
 
-    // Trigger lazy closures (still per-exam, but this is a lightweight check)
+    // Trigger lazy closures with tutorUserId as actor
     await Promise.all(
       exams.map((exam) =>
-        this.examClosureService.checkAndTriggerLazyClosure(
-          tenantId,
-          exam.id,
-          'system',
-        ),
+        this.examClosureService
+          .checkAndTriggerLazyClosure(tenantId, exam.id, tutorUserId)
+          .catch(() => false),
       ),
     );
 
@@ -186,11 +184,9 @@ export class TutorExamsService {
     }
 
     const now = new Date();
-    await this.examClosureService.checkAndTriggerLazyClosure(
-      tenantId,
-      examId,
-      'system',
-    );
+    await this.examClosureService
+      .checkAndTriggerLazyClosure(tenantId, examId, tutorUserId)
+      .catch(() => false);
 
     const startOfToday = new Date(
       now.getFullYear(),

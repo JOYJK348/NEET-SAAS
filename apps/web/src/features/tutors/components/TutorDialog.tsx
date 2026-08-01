@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,8 @@ export function TutorDialog({
   const { courses } = useCourses();
   const { data: branchCourses = [] } = useBranchCourses();
 
+  const loadedKeyRef = useRef<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -113,61 +115,97 @@ export function TutorDialog({
   }, [register]);
 
   useEffect(() => {
-    if (tutor) {
-      const subjectIds = tutor.subjects?.map((s) => s.subjectId) || [];
-      const branchIds = tutor.branches?.map((b) => b.branchId) || [];
-      const batchIds = tutor.batchAssignments?.map((b) => b.batchId) || [];
-      setSelectedSubjectIds(subjectIds);
-      setSelectedBranchIds(branchIds);
-      setSelectedBatchIds(batchIds);
-      reset({
-        firstName: tutor.firstName,
-        lastName: tutor.lastName,
-        email: tutor.email,
-        phone: tutor.phone || '',
-        employeeCode: tutor.employeeCode || '',
-        designation: tutor.designation || '',
-        qualification: tutor.qualification || '',
-        specialization: tutor.specialization || '',
-        yearsOfExperience: tutor.yearsOfExperience || undefined,
-        previousInstitution: tutor.previousInstitution || '',
-        bio: tutor.bio || '',
-        createLogin: tutor.createdLogin || undefined,
-        subjectIds,
-        branchIds,
-        academicYearId: '',
-        branchId: '',
-        courseId: '',
-        batchId: '',
-        batchIds,
-      } as any);
-    } else {
-      setSelectedSubjectIds([]);
-      setSelectedBranchIds([]);
-      setSelectedBatchIds([]);
-      reset({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        employeeCode: '',
-        designation: '',
-        qualification: '',
-        specialization: '',
-        yearsOfExperience: undefined,
-        previousInstitution: '',
-        bio: '',
-        createLogin: undefined,
-        subjectIds: undefined,
-        branchIds: undefined,
-        academicYearId: '',
-        branchId: '',
-        courseId: '',
-        batchId: '',
-        batchIds: [],
-      } as any);
+    if (!open) {
+      loadedKeyRef.current = null;
+      return;
     }
-  }, [tutor, reset, open]);
+
+    if (tutor) {
+      const subjectIds = tutor.subjects?.map((s: any) => s.subjectId) || [];
+      const branchIds = tutor.branches?.map((b: any) => b.branchId) || [];
+      const batchIds = tutor.batchAssignments?.map((b: any) => b.batchId) || [];
+
+      const primaryBranchId = branchIds[0] || (tutor.branches?.[0] as any)?.branchId || '';
+      const primaryBatchId = batchIds[0] || (tutor.batchAssignments?.[0] as any)?.batchId || '';
+      const matchedBatch =
+        (batches ?? []).find((b: any) => b.id === primaryBatchId) ||
+        (tutor.batchAssignments?.[0] as any)?.batch ||
+        (batches ?? [])[0];
+
+      const derivedCourseId = matchedBatch?.courseId || (courses ?? [])[0]?.id || '';
+      const derivedBranchId =
+        primaryBranchId || matchedBatch?.branchId || (admissionBranches ?? [])[0]?.id || '';
+      const derivedYearId = matchedBatch?.academicYearId || (academicYears ?? [])[0]?.id || '';
+
+      const key = `${tutor.id}-${tutor.designation || ''}-${tutor.specialization || ''}-${derivedYearId}-${derivedBranchId}-${derivedCourseId}-${batchIds.join(',')}-${open}`;
+
+      if (loadedKeyRef.current !== key) {
+        loadedKeyRef.current = key;
+
+        setSelectedSubjectIds(subjectIds);
+        setSelectedBranchIds(
+          branchIds.length > 0 ? branchIds : derivedBranchId ? [derivedBranchId] : [],
+        );
+        setSelectedBatchIds(batchIds);
+
+        reset({
+          firstName: tutor.firstName || '',
+          lastName: tutor.lastName || '',
+          email: tutor.email || '',
+          phone: tutor.phone || (tutor as any).workPhone || (tutor as any).phoneNumber || '',
+          employeeCode: tutor.employeeCode || '',
+          designation: tutor.designation || '',
+          qualification: tutor.qualification || '',
+          specialization: tutor.specialization || '',
+          yearsOfExperience: tutor.yearsOfExperience ?? undefined,
+          previousInstitution: tutor.previousInstitution || '',
+          bio: tutor.bio || '',
+          createLogin: tutor.createdLogin ?? true,
+          subjectIds,
+          branchIds: branchIds.length > 0 ? branchIds : derivedBranchId ? [derivedBranchId] : [],
+          academicYearId: derivedYearId,
+          branchId: derivedBranchId,
+          courseId: derivedCourseId,
+          batchId: primaryBatchId,
+          batchIds,
+        } as any);
+      }
+    } else {
+      const defaultYear = (academicYears ?? [])[0]?.id || '';
+      const defaultBranch = (admissionBranches ?? [])[0]?.id || '';
+      const defaultCourse = (courses ?? [])[0]?.id || '';
+      const key = `new-${defaultYear}-${defaultBranch}-${defaultCourse}-${open}`;
+
+      if (loadedKeyRef.current !== key) {
+        loadedKeyRef.current = key;
+
+        setSelectedSubjectIds([]);
+        setSelectedBranchIds(defaultBranch ? [defaultBranch] : []);
+        setSelectedBatchIds([]);
+        reset({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          employeeCode: '',
+          designation: '',
+          qualification: '',
+          specialization: '',
+          yearsOfExperience: undefined,
+          previousInstitution: '',
+          bio: '',
+          createLogin: true,
+          subjectIds: undefined,
+          branchIds: defaultBranch ? [defaultBranch] : undefined,
+          academicYearId: defaultYear,
+          branchId: defaultBranch,
+          courseId: defaultCourse,
+          batchId: '',
+          batchIds: [],
+        } as any);
+      }
+    }
+  }, [tutor, open, batches, courses, academicYears, admissionBranches, reset]);
 
   const toggleSubject = (id: string) => {
     const next = selectedSubjectIds.includes(id)
@@ -195,15 +233,16 @@ export function TutorDialog({
 
   const selectedBranchId = watch('branchId');
 
-  const filteredBranches = academicYearId
+  const branchFiltered = academicYearId
     ? (admissionBranches ?? []).filter((b: any) =>
         branchCourses.some(
           (bc: any) => bc.branchId === b.id && bc.academicYearId === academicYearId,
         ),
       )
     : [];
+  const filteredBranches = branchFiltered.length > 0 ? branchFiltered : (admissionBranches ?? []);
 
-  const filteredCourses =
+  const courseFiltered =
     academicYearId && selectedBranchId
       ? (courses ?? []).filter((c: any) =>
           branchCourses.some(
@@ -214,15 +253,18 @@ export function TutorDialog({
           ),
         )
       : [];
+  const filteredCourses = courseFiltered.length > 0 ? courseFiltered : (courses ?? []);
 
   const courseSubjectIds = courseSubjects.map((cs: any) => cs.subjectId);
-  const filteredSubjects = selectedCourseId
-    ? (subjects ?? []).filter((s: any) => courseSubjectIds.includes(s.id))
-    : (subjects ?? []);
+  const filteredSubjects =
+    selectedCourseId && courseSubjectIds.length > 0
+      ? (subjects ?? []).filter((s: any) => courseSubjectIds.includes(s.id))
+      : (subjects ?? []);
 
-  const filteredBatches = selectedCourseId
+  const courseBatches = selectedCourseId
     ? (batches ?? []).filter((b: any) => b.courseId === selectedCourseId)
     : [];
+  const filteredBatches = courseBatches.length > 0 ? courseBatches : (batches ?? []);
 
   const onFormSubmit = async (data: CreateTutorInput) => {
     // Destructure and omit UI-only variables that are not expected by the backend DTO
@@ -240,37 +282,39 @@ export function TutorDialog({
   if (!open) return null;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-4 lg:px-0 pb-12 animate-in fade-in duration-200">
+    <div className="space-y-6 w-full p-4 lg:p-6 pb-12 animate-in fade-in duration-200">
       {/* Top Bar with Back Action */}
       <div className="flex items-center justify-between">
         <Button
           type="button"
           variant="outline"
           onClick={() => onOpenChange(false)}
-          className="gap-2 rounded-xl border-gray-200 bg-white hover:bg-gray-50 shadow-2xs text-xs sm:text-sm"
+          className="gap-2 rounded-xl border-[#E5E7EB] bg-white hover:bg-slate-50 shadow-xs text-xs sm:text-sm font-bold text-slate-700"
         >
-          <ArrowLeft className="h-4 w-4 text-gray-600" />
-          Back to Tutors
+          <ArrowLeft className="h-4 w-4 text-slate-600" />
+          Back to Faculty Directory
         </Button>
       </div>
 
-      {/* Banner Header Card - Primary Theme */}
-      <div className="relative overflow-hidden rounded-2xl bg-primary p-6 sm:p-8 text-primary-foreground shadow-lg">
+      {/* Signature Violet Gradient Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 p-6 sm:p-8 text-white shadow-md shadow-violet-200">
         <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0">
-            <User className="h-6 w-6 text-white" />
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 text-white shadow-xs">
+            <span className="text-xl sm:text-2xl">👨‍🏫</span>
           </div>
           <div>
-            <span className="text-2xs font-mono uppercase tracking-wider text-primary-foreground/80 bg-white/10 px-2.5 py-1 rounded-full border border-white/10">
-              {tutor ? 'Tutor Profile' : 'New Faculty Setup'}
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-violet-200 bg-white/15 px-3 py-1 rounded-full border border-white/20">
+              {tutor ? 'Faculty Profile Setup' : 'New Tutor Registration 🎓'}
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-white mt-2">
-              {tutor ? `Edit: ${tutor.firstName} ${tutor.lastName}` : 'Create New Tutor'}
-            </h1>
-            <p className="text-xs sm:text-sm text-primary-foreground/90 mt-1 max-w-xl">
+            <h1 className="text-xl sm:text-3xl font-black text-white mt-2 leading-tight">
               {tutor
-                ? 'Update personal details, professional qualifications, and teaching assignments.'
-                : 'Register a teaching faculty member with personal, professional, and academic details.'}
+                ? `Edit Faculty: ${tutor.firstName} ${tutor.lastName}`
+                : 'Register New Faculty Member'}
+            </h1>
+            <p className="text-xs sm:text-sm text-violet-100 font-medium mt-1 max-w-xl">
+              {tutor
+                ? 'Update personal details, professional qualifications, subject specializations, and batch assignments.'
+                : 'Fill in the details below to register a new teaching faculty member and assign their initial batches.'}
             </p>
           </div>
         </div>
@@ -524,7 +568,6 @@ export function TutorDialog({
                     setSelectedBranchIds([val]);
                     setValue('branchIds', [val]);
                   }}
-                  disabled={!academicYearId}
                 >
                   <SelectTrigger className="h-10 sm:h-11 rounded-xl">
                     <SelectValue placeholder="Select branch" />
@@ -551,7 +594,6 @@ export function TutorDialog({
                     setValue('batchIds' as any, []);
                     setSelectedBatchIds([]);
                   }}
-                  disabled={!selectedBranchId}
                 >
                   <SelectTrigger className="h-10 sm:h-11 rounded-xl">
                     <SelectValue placeholder="Select course" />
@@ -679,22 +721,26 @@ export function TutorDialog({
         </Card>
 
         {/* Action Controls Footer Bar */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-border">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto rounded-xl h-11 px-6"
+            className="w-full sm:w-auto rounded-xl h-11 px-6 font-bold border-[#E5E7EB] text-slate-700 hover:bg-slate-50"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto btn-primary rounded-xl h-11 px-8 shadow-md gap-2"
+            className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl h-11 px-8 shadow-xs gap-2"
           >
             <Save className="h-4 w-4" />
-            {isSubmitting ? 'Saving Tutor...' : tutor ? 'Update Tutor' : 'Save Tutor'}
+            {isSubmitting
+              ? 'Saving Faculty Member...'
+              : tutor
+                ? 'Update Faculty Details'
+                : 'Save & Register Faculty Member'}
           </Button>
         </div>
       </form>

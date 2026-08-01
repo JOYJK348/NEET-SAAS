@@ -29,13 +29,25 @@ import {
 function getStatusBadge(status: string): { label: string; className: string } {
   switch (status) {
     case 'ACTIVE':
-      return { label: 'Active', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' };
+      return {
+        label: 'Active',
+        className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      };
     case 'INACTIVE':
-      return { label: 'Inactive', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      return {
+        label: 'Inactive',
+        className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      };
     case 'COMPLETED':
-      return { label: 'Completed', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' };
+      return {
+        label: 'Completed',
+        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      };
     case 'ARCHIVED':
-      return { label: 'Archived', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' };
+      return {
+        label: 'Archived',
+        className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+      };
     default:
       return { label: status, className: 'bg-gray-100 text-gray-600' };
   }
@@ -82,7 +94,12 @@ function StudentRow({ student }: { student: BatchStudentDto }) {
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-[#111827] truncate">{fullName}</h4>
             {statusBadge && (
-              <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0', statusBadge.className)}>
+              <span
+                className={cn(
+                  'text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0',
+                  statusBadge.className,
+                )}
+              >
                 {statusBadge.label}
               </span>
             )}
@@ -157,7 +174,9 @@ function BatchDetailContent() {
       <div className="p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
         <ErrorState
           title="Failed to load batch details"
-          message={error.message || 'Could not load student data. You may not have access to this batch.'}
+          message={
+            error.message || 'Could not load student data. You may not have access to this batch.'
+          }
           onRetry={refetch}
           variant="page"
         />
@@ -183,98 +202,131 @@ function BatchDetailContent() {
 
   return (
     <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Back button + Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm">
+      {/* ── Header Banner - Signature Violet Gradient (Tenant Admin Match) ───── */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <Link
             href="/dashboard/tutor/batches"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-[#7C3AED] transition-colors mb-2"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-bold transition-all shadow-sm mb-3"
           >
-            <ArrowLeft className="h-3 w-3" aria-hidden="true" />
-            Back to My Batches
+            <ArrowLeft className="w-4 h-4 text-violet-200" />
+            <span>← Back to My Batches</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{batch.name}</h1>
-            <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', statusBadge.className)}>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="bg-white/15 px-2.5 py-0.5 rounded-lg border border-white/20 font-mono text-xs font-bold text-white">
+              {batch.code}
+            </span>
+            <span
+              className={cn(
+                'text-[10px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs',
+                statusBadge.className,
+              )}
+            >
               {statusBadge.label}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-0.5 font-mono">{batch.code}</p>
+
+          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white mt-1">
+            {batch.name}
+          </h1>
+          <p className="text-violet-200 text-xs mt-0.5 flex items-center gap-2 flex-wrap">
+            <span>
+              Course: <strong className="text-white">{batch.course?.name || 'N/A'}</strong>
+            </span>
+            <span>&bull;</span>
+            <span>
+              Branch: <strong className="text-white">{batch.branch?.name || 'N/A'}</strong>
+            </span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-xl text-center w-full sm:w-auto">
+            <p className="text-[10px] font-bold text-violet-200 uppercase tracking-wider">
+              Enrolled Students
+            </p>
+            <p className="text-lg font-black text-white">{totalEnrolled} Students</p>
+          </div>
         </div>
       </div>
 
-      {/* Batch Info Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-sm">
-          <CardHeader className="space-y-0 p-0 pb-1">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+      {/* ── KPI Highlight Cards Grid (Tenant Admin Match) ────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-violet-300">
+          <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
               Course
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-1">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-[#111827]">
-              <GraduationCap className="h-3.5 w-3.5 text-gray-400" />
+            </p>
+            <p className="text-xs sm:text-sm font-extrabold text-[#111827] mt-0.5 truncate">
               {batch.course?.name || '—'}
-            </div>
-          </CardContent>
+            </p>
+          </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-sm">
-          <CardHeader className="space-y-0 p-0 pb-1">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-blue-300">
+          <div className="p-2.5 rounded-xl border border-blue-100 bg-blue-50 text-blue-600 shrink-0">
+            <MapPin className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
               Branch
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-1">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-[#111827]">
-              <MapPin className="h-3.5 w-3.5 text-gray-400" />
+            </p>
+            <p className="text-xs sm:text-sm font-extrabold text-[#111827] mt-0.5 truncate">
               {batch.branch?.name || '—'}
-            </div>
-          </CardContent>
+            </p>
+          </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-sm">
-          <CardHeader className="space-y-0 p-0 pb-1">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-emerald-300">
+          <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+            {batch.deliveryType && <DeliveryTypeIcon code={batch.deliveryType.code} />}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
               Delivery Type
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-1">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-[#111827]">
-              {batch.deliveryType && <DeliveryTypeIcon code={batch.deliveryType.code} />}
+            </p>
+            <p className="text-xs sm:text-sm font-extrabold text-[#111827] mt-0.5 truncate">
               {batch.deliveryType?.name || '—'}
-            </div>
-          </CardContent>
+            </p>
+          </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-sm">
-          <CardHeader className="space-y-0 p-0 pb-1">
-            <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-amber-300">
+          <div className="p-2.5 rounded-xl border border-amber-100 bg-amber-50 text-amber-600 shrink-0">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
               Academic Year
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 pt-1">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-[#111827]">
-              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+            </p>
+            <p className="text-xs sm:text-sm font-extrabold text-[#111827] mt-0.5 truncate">
               {batch.academicYear?.name || '—'}
-            </div>
-          </CardContent>
+            </p>
+          </div>
         </Card>
       </div>
 
-      {/* Students Section */}
-      <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-4">
+      {/* ── Enrolled Students Roster Section ─────────────────────────────────── */}
+      <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-              Enrolled Students
-            </CardTitle>
-            <span className="text-xs text-muted-foreground">({totalEnrolled})</span>
+            <div className="p-2 rounded-xl bg-violet-50 border border-violet-100 text-violet-600">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900">Enrolled Students Roster</h3>
+              <p className="text-xs text-slate-400">
+                Total active students linked to this batch ({totalEnrolled})
+              </p>
+            </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="p-0 space-y-2">
+        <div className="p-4 space-y-2.5">
           {students.length === 0 ? (
             <EmptyState
               icon={<Users className="h-8 w-8 text-gray-400" />}
@@ -282,31 +334,10 @@ function BatchDetailContent() {
               description="This batch doesn't have any active students yet."
             />
           ) : (
-            students.map((s) => (
-              <StudentRow key={s.enrollmentId} student={s} />
-            ))
+            students.map((s) => <StudentRow key={s.enrollmentId} student={s} />)
           )}
-        </CardContent>
-      </Card>
-
-      {/* Batch Period & Info */}
-      {(batch.startDate || batch.endDate || batch.maxStudents) && (
-        <div className="flex items-center gap-4 text-xs text-muted-foreground bg-white border border-[#E5E7EB] rounded-2xl px-5 py-3 shadow-sm flex-wrap">
-          {batch.startDate && (
-            <span><strong>From:</strong> {formatDate(batch.startDate)}</span>
-          )}
-          {batch.endDate && (
-            <span><strong>To:</strong> {formatDate(batch.endDate)}</span>
-          )}
-          {batch.maxStudents && (
-            <span><strong>Capacity:</strong> {batch.maxStudents} students</span>
-          )}
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-green-500" aria-hidden="true" />
-            <strong>Enrolled:</strong> {totalEnrolled} student{totalEnrolled !== 1 ? 's' : ''}
-          </span>
         </div>
-      )}
+      </Card>
     </div>
   );
 }
@@ -322,4 +353,3 @@ export default function BatchStudentsPage() {
     </ProtectedRoute>
   );
 }
-

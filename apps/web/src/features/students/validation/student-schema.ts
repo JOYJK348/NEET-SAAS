@@ -80,6 +80,8 @@ export const parentInfoSchema = z.object({
     .max(15, 'Emergency contact must be at most 15 digits')
     .optional()
     .or(z.literal('')),
+  isParentPortalEnabled: z.boolean().optional().default(false),
+  parentRelationshipType: z.enum(['FATHER', 'MOTHER', 'GUARDIAN']).optional().default('FATHER'),
 });
 
 export const medicalInfoSchema = z.object({
@@ -91,14 +93,40 @@ export const medicalInfoSchema = z.object({
     .or(z.literal('')),
 });
 
-export const studentFormSchema = z.object({
+export const baseStudentFormSchema = z.object({
   ...personalInfoSchema.shape,
   ...academicInfoSchema.shape,
   ...parentInfoSchema.shape,
   ...medicalInfoSchema.shape,
 });
 
-export type StudentFormData = z.infer<typeof studentFormSchema>;
+export const studentFormSchema = baseStudentFormSchema.superRefine((data, ctx) => {
+  if (data.isParentPortalEnabled) {
+    if (!data.parentEmail || data.parentEmail.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['parentEmail'],
+        message: 'Parent email is required when Parent Portal is enabled',
+      });
+    }
+    if (!data.parentPhone || data.parentPhone.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['parentPhone'],
+        message: 'Parent phone is required when Parent Portal is enabled',
+      });
+    }
+    if (!data.parentName || data.parentName.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['parentName'],
+        message: 'Parent name is required when Parent Portal is enabled',
+      });
+    }
+  }
+});
+
+export type StudentFormData = z.infer<typeof baseStudentFormSchema>;
 
 export const defaultFormValues: StudentFormData = {
   firstName: '',
@@ -122,6 +150,8 @@ export const defaultFormValues: StudentFormData = {
   parentPhone: '',
   parentEmail: '',
   emergencyContact: '',
+  isParentPortalEnabled: false,
+  parentRelationshipType: 'FATHER',
   bloodGroup: '',
   aadharNumber: '',
 };

@@ -36,12 +36,11 @@ export function MapStudentsDialog({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAdmissionIds, setSelectedAdmissionIds] = useState<string[]>([]);
 
-  // Fetch admissions for this batch's course and branch
+  // Fetch admissions — only when the dialog is open
   const { admissions, isLoading } = useAdmissions({
+    autoFetch: open,
     initialFilters: {
-      courseId,
-      branchId,
-      status: 'ACTIVE',
+      status: 'ALL',
       perPage: 100,
     },
   });
@@ -153,8 +152,7 @@ export function MapStudentsDialog({
                 </div>
                 <p className="text-sm font-bold text-gray-800">No students available</p>
                 <p className="text-xs text-gray-400 max-w-xs mt-1">
-                  All active matching admissions in this branch/course are already enrolled in this
-                  batch.
+                  All active admissions are already enrolled or no active admissions exist.
                 </p>
               </div>
             ) : (

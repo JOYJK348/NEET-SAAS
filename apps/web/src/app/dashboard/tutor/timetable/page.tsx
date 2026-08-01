@@ -1,25 +1,46 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  Filter,
+  Clock,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  Grid,
+  List,
+  Sparkles,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useTutorTimetable } from '@/features/tutor-dashboard/hooks/use-tutor-timetable';
-import type { TimetableSessionDto } from '@/features/tutor-dashboard/types/timetable';
-import { ErrorState } from '@/components/ui/error-state';
+import { useWeeklyView } from '@/features/scheduling/hooks/use-schedules';
+import { ScheduleSlotCard } from '@/features/scheduling/components/ScheduleSlotCard';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Layers,
-  Calendar,
-  RefreshCw,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { LoadingSpinner } from '@/components/ui/loading';
+  SessionOverrideDrawer,
+  SessionAction,
+} from '@/features/scheduling/components/SessionOverrideDrawer';
+import { SessionHistoryDrawer } from '@/features/scheduling/components/SessionHistoryDrawer';
+import { useBatches } from '@/features/batches/hooks/use-batches';
+import { useTutors } from '@/features/tutors/hooks/use-tutors';
+import { useSubjects } from '@/features/master-data/hooks/use-subjects';
+import {
+  WEEKDAYS,
+  WEEKDAY_LABELS,
+  WEEKDAY_FULL_LABELS,
+  WeeklyViewData,
+  ScheduleDetail,
+  WeekdayType,
+} from '@/features/scheduling/types/schedule.types';
 
-const WEEKDAYS = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+// Compact label for header days
 const DAY_SHORT: Record<string, string> = {
   MONDAY: 'Mon',
   TUESDAY: 'Tue',
@@ -30,398 +51,786 @@ const DAY_SHORT: Record<string, string> = {
   SUNDAY: 'Sun',
 };
 
-function formatDisplayDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const DAY_INDEX: Record<string, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
+
+interface FilterState {
+  batchId: string;
+  staffProfileId: string;
+  subjectId: string;
 }
 
-function formatDisplayRange(start: Date, end: Date): string {
-  return `${formatDisplayDate(start)} – ${formatDisplayDate(end)}, ${end.getFullYear()}`;
-}
-
-function getWeekRange(date: Date): { start: Date; end: Date } {
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const start = new Date(date);
-  start.setDate(diff);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-  return { start, end };
-}
-
-function getStatusColors(status: string): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'border-l-blue-500 bg-blue-50/60 hover:bg-blue-50';
-    case 'COMPLETED':
-      return 'border-l-green-500 bg-green-50/60 hover:bg-green-50';
-    case 'CANCELLED':
-      return 'border-l-red-500 bg-red-50/60 hover:bg-red-50';
-    case 'DRAFT':
-      return 'border-l-amber-500 bg-amber-50/60 hover:bg-amber-50';
-    default:
-      return 'border-l-slate-400 bg-slate-50/60 hover:bg-slate-50';
-  }
-}
-
-function getBadgeColors(status: string): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'text-blue-700 bg-blue-100';
-    case 'COMPLETED':
-      return 'text-green-700 bg-green-100';
-    case 'CANCELLED':
-      return 'text-red-700 bg-red-100';
-    case 'DRAFT':
-      return 'text-amber-700 bg-amber-100';
-    default:
-      return 'text-slate-600 bg-slate-100';
-  }
-}
-
-// ─── Session Card ────────────────────────────────────────────────────────────
-
-function TimetableSessionCard({ session, date }: { session: TimetableSessionDto; date: string }) {
-  const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isRescheduled =
-    session.overrideType === 'TIME_CHANGED' || session.overrideType === 'TUTOR_CHANGED';
-  const formattedDate = date
-    ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-    : '';
-
-  return (
-    <div
-      className={cn(
-        'rounded-lg border border-slate-200 border-l-[3px] p-2.5 transition-all hover:shadow-sm cursor-default',
-        getStatusColors(session.sessionStatus),
-        isCancelled && 'opacity-70',
-      )}
-    >
-      {/* Date + Time */}
-      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-700 mb-1.5">
-        <Clock className="w-3 h-3 text-slate-400" />
-        <span>
-          {session.startsAt} – {session.endsAt}
-        </span>
-        {formattedDate && (
-          <span className="text-[10px] text-slate-400 ml-auto font-sans font-semibold">
-            {formattedDate}
-          </span>
-        )}
-      </div>
-
-      {/* Subject */}
-      <p className="text-xs font-bold text-slate-800 leading-tight mb-1">
-        {session.subject?.name || 'Unknown Subject'}
-      </p>
-
-      {/* Batch + Branch */}
-      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
-        {session.batch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
-            <Layers className="w-2.5 h-2.5" />
-            {session.batch.name}
-          </span>
-        )}
-        {session.branch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
-            <MapPin className="w-2.5 h-2.5" />
-            {session.branch.name}
-          </span>
-        )}
-      </div>
-
-      {/* Status badge */}
-      <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-        <span
-          className={cn(
-            'text-[9px] font-bold px-1.5 py-0.5 rounded',
-            getBadgeColors(session.sessionStatus),
-          )}
-        >
-          {session.sessionStatus}
-        </span>
-        {isRescheduled && !isCancelled && (
-          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-            RESCHEDULED
-          </span>
-        )}
-      </div>
-
-      {/* Mark Attendance link */}
-      {!isCancelled && (
-        <a
-          href={`/dashboard/tutor/sessions/${session.id}`}
-          className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-violet-600 hover:text-violet-800 hover:underline"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-          Mark Attendance →
-        </a>
-      )}
-
-      {/* Cancelled reason */}
-      {isCancelled && session.cancelledReason && (
-        <p className="text-[10px] text-red-500 italic mt-1 leading-tight">
-          {session.cancelledReason}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// ─── Empty Cell ──────────────────────────────────────────────────────────────
-
-function EmptyCell() {
-  return (
-    <div className="h-full min-h-[80px] rounded-lg border border-dashed border-slate-200 bg-slate-50/20" />
-  );
-}
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
-
-function TimetableContent() {
+function TutorTimetableCalendarContent() {
+  const router = useRouter();
   const { user } = useAuth();
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
 
-  const [weekStart, setWeekStart] = useState(() => getWeekRange(new Date()).start);
+  // Calendar Date Navigation State
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const weekRange = useMemo(() => {
-    const end = new Date(weekStart);
-    end.setDate(weekStart.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-    return { start: weekStart, end };
-  }, [weekStart]);
+  const [filters, setFilters] = useState<FilterState>({
+    batchId: '',
+    staffProfileId: '',
+    subjectId: '',
+  });
 
-  const dateFrom = weekRange.start.toISOString().split('T')[0];
-  const dateTo = weekRange.end.toISOString().split('T')[0];
+  // Session override state
+  const [overrideAction, setOverrideAction] = useState<SessionAction | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<ScheduleDetail | null>(null);
+  const [historySchedule, setHistorySchedule] = useState<ScheduleDetail | null>(null);
 
-  const { timetable, isLoading, error, refetch } = useTutorTimetable(dateFrom, dateTo);
+  // Fetch logged-in tutor's exact timetable sessions
+  const { timetable, isLoading, error, refetch } = useTutorTimetable();
 
-  const goBack = useCallback(() => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() - 7);
-    setWeekStart(d);
-  }, [weekStart]);
+  // Fetch batches and subjects for filtering
+  const { batches: batchesData = [] } = useBatches({ autoFetch: true });
+  const { data: subjectsData } = useSubjects({ limit: 100 });
 
-  const goForward = useCallback(() => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + 7);
-    setWeekStart(d);
-  }, [weekStart]);
+  const batches = batchesData.map((b: any) => ({
+    id: b.id,
+    name: b.name,
+    code: b.code,
+    branchId: b.branchId,
+    academicYearId: b.academicYearId,
+  }));
 
-  const goToday = useCallback(() => {
-    setWeekStart(getWeekRange(new Date()).start);
-  }, []);
+  const subjects = (subjectsData?.data ?? []).map((s: any) => ({
+    id: s.id,
+    name: s.name,
+    shortName: s.code || s.name.slice(0, 3).toUpperCase(),
+  }));
 
-  const isCurrentWeek = useMemo(() => {
-    const today = getWeekRange(new Date()).start;
-    return weekStart.getTime() === today.getTime();
-  }, [weekStart]);
+  const tutors = user
+    ? [
+        {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          employeeCode: '',
+          subjects: [],
+        },
+      ]
+    : [];
 
-  // Build weekly view: group sessions by weekday
-  const weeklyView = useMemo(() => {
-    const grouped: Record<string, TimetableSessionDto[]> = {};
-    for (const day of WEEKDAYS) {
-      grouped[day] = [];
-    }
-    if (timetable?.timetable) {
-      for (const day of timetable.timetable) {
-        const date = new Date(day.date + 'T00:00:00');
-        const dayName = WEEKDAYS[date.getDay() === 0 ? 6 : date.getDay() - 1];
-        if (grouped[dayName]) {
-          grouped[dayName] = day.sessions;
-        }
+  const isError = !!error;
+
+  const setFilter = (key: keyof FilterState, value: string) =>
+    setFilters((f) => ({ ...f, [key]: value }));
+
+  // Convert tutor's timetable response into WeeklyViewData structure
+  const weekly = useMemo(() => {
+    const emptyWeekly: WeeklyViewData = {
+      MONDAY: [],
+      TUESDAY: [],
+      WEDNESDAY: [],
+      THURSDAY: [],
+      FRIDAY: [],
+      SATURDAY: [],
+      SUNDAY: [],
+    };
+
+    if (!timetable?.timetable) return emptyWeekly;
+
+    for (const day of timetable.timetable) {
+      const date = new Date(day.date + 'T00:00:00');
+      const dayNames: WeekdayType[] = [
+        'SUNDAY',
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+      ];
+      const dayKey = dayNames[date.getDay()];
+
+      if (emptyWeekly[dayKey]) {
+        const mappedSessions: any[] = day.sessions.map((s) => ({
+          id: s.id,
+          tenantId: '',
+          batchId: s.batch?.id || '',
+          subjectId: s.subject?.id || '',
+          branchId: s.branch?.id || '',
+          staffProfileId: user?.id || '',
+          dayOfWeek: dayKey,
+          startTime: s.startsAt,
+          endTime: s.endsAt,
+          deliveryMode: (s as any).deliveryMode || 'CLASSROOM',
+          roomId: null,
+          meetingLink: null,
+          meetingProvider: null,
+          effectiveFrom: day.date,
+          effectiveTo: null,
+          isActive: true,
+          createdAt: day.date,
+          updatedAt: day.date,
+        }));
+
+        emptyWeekly[dayKey] = [...emptyWeekly[dayKey], ...mappedSessions];
       }
     }
-    return grouped;
-  }, [timetable]);
 
-  // Collect unique time slots
-  const allTimes = useMemo(() => {
-    const times = new Set<string>();
-    for (const sessions of Object.values(weeklyView)) {
-      for (const s of sessions) {
-        times.add(s.startsAt);
+    // Apply client filters if selected
+    if (filters.batchId || filters.subjectId) {
+      for (const dayKey of Object.keys(emptyWeekly) as WeekdayType[]) {
+        emptyWeekly[dayKey] = emptyWeekly[dayKey].filter((s) => {
+          if (filters.batchId && s.batchId !== filters.batchId) return false;
+          if (filters.subjectId && s.subjectId !== filters.subjectId) return false;
+          return true;
+        });
       }
     }
-    return Array.from(times).sort();
-  }, [weeklyView]);
 
-  const todayDayName = useMemo(() => {
-    const d = new Date();
-    return WEEKDAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
-  }, []);
+    return emptyWeekly;
+  }, [timetable, filters, user]);
+
+  // Calendar Helpers
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const monthName = currentDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+  // Generate Month Grid Dates
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const daysInMonth = lastDay.getDate();
+    const startingDay = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+    const days: Array<{ date: Date; isCurrentMonth: boolean }> = [];
+
+    // Previous month padding
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month, -i),
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding to complete 35/42 grid
+    const remaining = 35 - days.length;
+    for (let i = 1; i <= (remaining < 0 ? remaining + 7 : remaining); i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [year, month]);
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(now);
+  };
+
+  // Get schedules for a specific date
+  const getSchedulesForDate = (date: Date) => {
+    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayKey = dayNames[date.getDay()] as WeekdayType;
+    return weekly[dayKey] || [];
+  };
+
+  const selectedDayKey = [
+    'SUNDAY',
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+  ][selectedDate.getDay()] as WeekdayType;
+  const selectedDaySchedules = weekly[selectedDayKey] || [];
+
+  const handleSessionAction = (action: SessionAction, schedule: ScheduleDetail) => {
+    setOverrideAction(action);
+    setSelectedSchedule(schedule);
+  };
+
+  const handleSessionHistory = (schedule: ScheduleDetail) => {
+    setHistorySchedule(schedule);
+  };
+
+  const handleOverrideClose = () => {
+    setOverrideAction(null);
+    setSelectedSchedule(null);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
-              <Calendar className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">My Timetable</h1>
-              <p className="text-xs sm:text-sm text-slate-500">
-                {user?.firstName}&apos;s class schedule
-              </p>
-            </div>
+    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 space-y-6 text-[#111827]">
+      {/* ── Welcome Header Banner - Signature Violet Gradient (Tenant Admin Theme Match) ── */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1.5 text-xs font-semibold text-violet-200 hover:text-white transition-colors mb-2"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Dashboard
+          </button>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+              Faculty Schedule & Timetable
+            </span>
           </div>
+          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+            Faculty Schedule & Timetable 📅
+          </h1>
+          <p className="text-violet-200 text-xs mt-0.5">
+            Interactive calendar view for your assigned sessions, batches, and schedule.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {!isCurrentWeek && (
+        {/* View Mode Switcher */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center p-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-xs font-semibold text-white">
             <button
-              onClick={goToday}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              onClick={() => setViewMode('MONTH')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'MONTH'
+                  ? 'bg-white text-violet-700 shadow-xs font-bold'
+                  : 'text-violet-100 hover:bg-white/10'
+              }`}
             >
-              Today
+              <CalendarDays className="w-3.5 h-3.5" />
+              Month
             </button>
-          )}
+            <button
+              onClick={() => setViewMode('WEEK')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'WEEK'
+                  ? 'bg-white text-violet-700 shadow-xs font-bold'
+                  : 'text-violet-100 hover:bg-white/10'
+              }`}
+            >
+              <Grid className="w-3.5 h-3.5" />
+              Week
+            </button>
+            <button
+              onClick={() => setViewMode('LIST')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'LIST'
+                  ? 'bg-white text-violet-700 shadow-xs font-bold'
+                  : 'text-violet-100 hover:bg-white/10'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              List
+            </button>
+          </div>
           <button
             onClick={() => refetch()}
-            className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors text-slate-600"
-            title="Refresh"
+            disabled={isLoading}
+            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all disabled:opacity-50"
+            title="Refresh timetable"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Week Navigator */}
-      <div className="flex items-center justify-between mb-6 p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="text-sm font-bold text-slate-700">
-          {formatDisplayRange(weekRange.start, weekRange.end)}
-        </span>
-        <button
-          onClick={goForward}
-          className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* Calendar Month Navigator & Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between sm:justify-start gap-3 w-full lg:w-auto">
+          <button
+            onClick={handleToday}
+            className="px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition-colors"
+          >
+            Today
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-black text-slate-900 min-w-[130px] sm:min-w-[140px] text-center">
+              {monthName}
+            </span>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Filters Bar */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
+          <div className="hidden sm:flex items-center gap-1.5 text-slate-400 font-semibold mr-1">
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filter:</span>
+          </div>
+
+          <select
+            value={filters.batchId}
+            onChange={(e) => setFilter('batchId', e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+          >
+            <option value="">All Batches</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.staffProfileId}
+            onChange={(e) => setFilter('staffProfileId', e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+          >
+            <option value="">All Tutors</option>
+            {tutors.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.firstName} {t.lastName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.subjectId}
+            onChange={(e) => setFilter('subjectId', e.target.value)}
+            className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+          >
+            <option value="">All Subjects</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
+          {(filters.batchId || filters.staffProfileId || filters.subjectId) && (
+            <button
+              onClick={() => setFilters({ batchId: '', staffProfileId: '', subjectId: '' })}
+              className="text-xs text-violet-600 hover:underline font-bold px-2 py-1"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Loading */}
+      {/* MOBILE QUICK DAY SELECTOR */}
+      <div className="block md:hidden bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+            📅 {selectedDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+          </span>
+          <button
+            onClick={handleToday}
+            className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg border border-violet-100"
+          >
+            Today
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {WEEKDAYS.map((day) => {
+            const count = weekly[day]?.length ?? 0;
+            const isSelected = selectedDayKey === day;
+            return (
+              <button
+                key={day}
+                type="button"
+                onClick={() => {
+                  const nextDate = new Date();
+                  const targetDay = DAY_INDEX[day];
+                  const diff = (targetDay - nextDate.getDay() + 7) % 7;
+                  nextDate.setDate(nextDate.getDate() + diff);
+                  setSelectedDate(nextDate);
+                }}
+                className={`flex flex-col items-center min-w-[58px] py-2 px-2.5 rounded-xl border transition-all flex-shrink-0 ${
+                  isSelected
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/20'
+                    : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-[10px] font-extrabold uppercase opacity-80">
+                  {DAY_SHORT[day]}
+                </span>
+                <span className="text-xs font-black mt-0.5">{WEEKDAY_LABELS[day]}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[9px] mt-1 font-black px-1.5 py-0.2 rounded-full ${
+                      isSelected ? 'bg-white/25 text-white' : 'bg-violet-100 text-violet-800'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Loading & Error States */}
       {isLoading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <LoadingSpinner size="lg" />
-          <span className="text-slate-500 text-sm font-medium">Loading timetable...</span>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+          <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+          <span className="text-slate-500 text-sm font-medium">Loading schedule calendar...</span>
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="p-4 lg:p-6">
-          <ErrorState
-            title="Failed to load timetable"
-            message={error.message || 'Could not load your timetable. Please try again.'}
-            onRetry={refetch}
-            variant="page"
-          />
+      {isError && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+          <AlertCircle className="w-8 h-8 text-rose-500" />
+          <p className="text-slate-700 text-sm font-semibold">Failed to load timetable</p>
+          <button
+            onClick={() => refetch()}
+            className="text-xs text-violet-600 hover:underline font-bold"
+          >
+            Try again
+          </button>
         </div>
       )}
 
-      {/* Desktop Weekly Grid */}
-      {!isLoading && !error && (
+      {/* MAIN CALENDAR DISPLAY */}
+      {!isLoading && !isError && (
         <>
-          {allTimes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-16 h-16 rounded-2xl bg-primary-light flex items-center justify-center border border-primary/10">
-                <Calendar className="w-8 h-8 text-primary" />
+          {/* VIEW MODE 1: MONTH CALENDAR GRID */}
+          {viewMode === 'MONTH' && (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+              {/* Main Calendar Grid (3 columns wide) */}
+              <div className="lg:col-span-3 bg-gradient-to-br from-white via-slate-50/60 to-violet-50/30 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden backdrop-blur-md">
+                {/* Days of week header */}
+                <div className="grid grid-cols-7 border-b border-slate-200/80 bg-gradient-to-r from-slate-100/90 via-slate-50 to-violet-50/70 text-center text-[10px] sm:text-xs font-black text-slate-700 py-2.5 sm:py-3.5 uppercase tracking-wider">
+                  <div>Mon</div>
+                  <div>Tue</div>
+                  <div>Wed</div>
+                  <div>Thu</div>
+                  <div>Fri</div>
+                  <div className="text-violet-700 font-extrabold">Sat</div>
+                  <div className="text-rose-700 font-extrabold">Sun</div>
+                </div>
+
+                {/* 35/42 Real Calendar Grid */}
+                <div className="grid grid-cols-7 divide-x divide-y divide-slate-200/60 bg-slate-200/30">
+                  {calendarDays.map((item, idx) => {
+                    const dateSchedules = getSchedulesForDate(item.date);
+                    const isSelected = selectedDate.toDateString() === item.date.toDateString();
+                    const isToday = new Date().toDateString() === item.date.toDateString();
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedDate(item.date)}
+                        className={`min-h-[70px] sm:min-h-[135px] p-1.5 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between group ${
+                          item.isCurrentMonth
+                            ? isToday
+                              ? 'bg-gradient-to-b from-violet-100/60 via-violet-50/30 to-white'
+                              : isSelected
+                                ? 'bg-violet-50/80'
+                                : 'bg-white/90 hover:bg-violet-50/30'
+                            : 'bg-slate-100/50 text-slate-400'
+                        } ${isSelected ? 'ring-2 ring-violet-600 ring-inset shadow-xs' : ''}`}
+                      >
+                        {/* Day Header & Badges */}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-[10px] sm:text-xs font-black w-5 h-5 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+                              isToday
+                                ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30 scale-105 sm:scale-110'
+                                : isSelected
+                                  ? 'bg-violet-100 text-violet-900 border border-violet-300 font-black'
+                                  : item.isCurrentMonth
+                                    ? 'text-slate-800 group-hover:text-violet-700 font-extrabold'
+                                    : 'text-slate-400 font-semibold'
+                            }`}
+                          >
+                            {item.date.getDate()}
+                          </span>
+
+                          {dateSchedules.length > 0 && (
+                            <span className="text-[8px] sm:text-[10px] font-black text-white bg-violet-600 px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full shadow-2xs">
+                              {dateSchedules.length}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Class Event Cards */}
+                        <div className="space-y-1 sm:space-y-1.5 mt-1 sm:mt-2 flex-1 flex flex-col justify-start">
+                          {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
+                            const subName =
+                              subjects.find((s) => s.id === sch.subjectId)?.name || 'Class';
+                            const tutorName = tutors.find(
+                              (t) => t.id === sch.staffProfileId,
+                            )?.firstName;
+
+                            let badgeStyle = 'bg-violet-50 text-violet-900 border-violet-200/80';
+                            let timeBadge = 'bg-violet-100/80 text-violet-800';
+                            let dotBg = 'bg-violet-600';
+
+                            if (subName.toLowerCase().includes('physics')) {
+                              badgeStyle = 'bg-sky-50 text-sky-950 border-sky-200/80';
+                              timeBadge = 'bg-sky-100 text-sky-900';
+                              dotBg = 'bg-sky-600';
+                            } else if (subName.toLowerCase().includes('chemistry')) {
+                              badgeStyle = 'bg-emerald-50 text-emerald-950 border-emerald-200/80';
+                              timeBadge = 'bg-emerald-100 text-emerald-900';
+                              dotBg = 'bg-emerald-600';
+                            } else if (subName.toLowerCase().includes('biology')) {
+                              badgeStyle = 'bg-amber-50 text-amber-950 border-amber-200/80';
+                              timeBadge = 'bg-amber-100 text-amber-900';
+                              dotBg = 'bg-amber-600';
+                            } else if (subName.toLowerCase().includes('math')) {
+                              badgeStyle = 'bg-rose-50 text-rose-950 border-rose-200/80';
+                              timeBadge = 'bg-rose-100 text-rose-900';
+                              dotBg = 'bg-rose-600';
+                            }
+
+                            return (
+                              <div key={sch.id || sIdx}>
+                                {/* Mobile View Compact Chip (< sm) */}
+                                <div
+                                  className={`sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md ${badgeStyle} truncate flex items-center gap-1 border`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${dotBg} flex-shrink-0`}
+                                  />
+                                  <span className="truncate">{subName}</span>
+                                </div>
+
+                                {/* Desktop View Full Card (>= sm) */}
+                                <div
+                                  className={`hidden sm:block text-[10px] font-bold p-2 rounded-xl border ${badgeStyle} shadow-2xs space-y-1 hover:brightness-95 transition-all`}
+                                >
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-extrabold truncate text-slate-900 text-[10.5px]">
+                                      {subName}
+                                    </span>
+                                    <span className="text-[8.5px] font-extrabold uppercase text-slate-500 bg-white/70 px-1 py-0.2 rounded border border-slate-200/60">
+                                      {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
+                                    </span>
+                                  </div>
+
+                                  <div
+                                    className={`flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold ${timeBadge}`}
+                                  >
+                                    <span>{sch.startTime}</span>
+                                    <span>-</span>
+                                    <span>{sch.endTime}</span>
+                                  </div>
+
+                                  {tutorName && (
+                                    <p className="text-[9px] text-slate-600 truncate font-semibold pt-0.5 border-t border-slate-200/40">
+                                      Tutor: <strong className="text-slate-900">{tutorName}</strong>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {dateSchedules.length > 2 && (
+                            <div className="mt-auto text-right">
+                              <span className="text-[7.5px] sm:text-[9px] font-bold text-violet-700 bg-violet-50 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-md border border-violet-200 inline-block">
+                                +{dateSchedules.length - 2}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-slate-800 font-semibold mb-1">No classes this week</p>
-                <p className="text-slate-500 text-sm max-w-xs">
-                  You have no scheduled classes for this week. Enjoy your free time!
-                </p>
+
+              {/* Side Panel: Selected Date Class Roster */}
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 space-y-4 shadow-xs h-fit">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4.5 h-4.5 text-violet-600" />
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">
+                        {selectedDate.toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </h3>
+                      <p className="text-[11px] font-bold text-violet-700 uppercase">
+                        {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-violet-800 bg-violet-50 border border-violet-100 px-3 py-1 rounded-full">
+                    {selectedDaySchedules.length}{' '}
+                    {selectedDaySchedules.length === 1 ? 'Class' : 'Classes'}
+                  </span>
+                </div>
+
+                {selectedDaySchedules.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 max-h-[550px] overflow-y-auto pr-0.5">
+                    {selectedDaySchedules.map((s: ScheduleDetail) => (
+                      <ScheduleSlotCard
+                        key={s.id}
+                        schedule={s}
+                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={batches.find((b) => b.id === s.batchId)?.name}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <Clock className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">No classes for this date</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                      Tap any date on the calendar strip above to inspect classes.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-              {/* Day header row */}
-              <div className="grid grid-cols-8 border-b border-slate-200 bg-slate-50/75">
-                <div className="flex items-center justify-center py-4 px-2 border-r border-slate-200">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                </div>
+          )}
+
+          {/* VIEW MODE 2: WEEK DAY CAROUSEL */}
+          {viewMode === 'WEEK' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                 {WEEKDAYS.map((day) => {
-                  const count = weeklyView[day]?.length ?? 0;
-                  const isToday = day === todayDayName;
+                  const daySchedules = weekly[day] || [];
+                  const isSelected = selectedDayKey === day;
+
                   return (
                     <div
                       key={day}
-                      className={cn(
-                        'flex flex-col items-center py-3.5 px-2 border-r border-slate-200 last:border-r-0',
-                        isToday && 'bg-primary/5',
-                      )}
+                      onClick={() => {
+                        const nextDate = new Date();
+                        const targetDay = DAY_INDEX[day];
+                        const diff = (targetDay - nextDate.getDay() + 7) % 7;
+                        nextDate.setDate(nextDate.getDate() + diff);
+                        setSelectedDate(nextDate);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+                        isSelected
+                          ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-500/20 scale-[1.02]'
+                          : 'bg-white border-slate-200/80 hover:border-violet-200 text-slate-700 hover:bg-slate-50/50'
+                      }`}
                     >
-                      <span
-                        className={cn(
-                          'text-xs font-bold',
-                          isToday ? 'text-primary' : 'text-slate-700',
-                        )}
-                      >
-                        {DAY_SHORT[day]}
-                      </span>
-                      {count > 0 && (
-                        <span className="mt-1 text-[10px] text-primary font-semibold bg-primary-light px-2 py-0.5 rounded-full">
-                          {count} {count === 1 ? 'class' : 'classes'}
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-xs font-extrabold uppercase ${isSelected ? 'text-violet-100' : 'text-slate-400'}`}
+                        >
+                          {DAY_SHORT[day]}
                         </span>
-                      )}
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {daySchedules.length}
+                        </span>
+                      </div>
+                      <p className="text-sm font-black tracking-tight">{WEEKDAY_LABELS[day]}</p>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Grid rows */}
-              <div className="bg-white">
-                {allTimes.map((time, rowIdx) => (
-                  <div
-                    key={time}
-                    className={cn(
-                      'grid grid-cols-8 border-b border-slate-100 last:border-b-0',
-                      rowIdx % 2 === 0 ? '' : 'bg-slate-50/20',
-                    )}
-                  >
-                    <div className="flex items-start justify-center py-3 px-2 border-r border-slate-200 pt-4">
-                      <span className="text-[11px] font-mono text-slate-500 font-semibold">
-                        {time}
-                      </span>
-                    </div>
-                    {WEEKDAYS.map((day, dayIdx) => {
-                      const slots = weeklyView[day]?.filter((s) => s.startsAt === time) ?? [];
-                      const dayDate = new Date(weekStart);
-                      dayDate.setDate(weekStart.getDate() + dayIdx);
-                      const dateStr = dayDate.toISOString().split('T')[0];
-                      return (
-                        <div
-                          key={day}
-                          className="p-1.5 border-r border-slate-100 last:border-r-0 min-h-[96px]"
-                        >
-                          {slots.length > 0 ? (
-                            <div className="space-y-1.5">
-                              {slots.map((session) => (
-                                <TimetableSessionCard
-                                  key={session.id}
-                                  session={session}
-                                  date={dateStr}
-                                />
-                              ))}
-                            </div>
-                          ) : (
-                            <EmptyCell />
-                          )}
-                        </div>
-                      );
-                    })}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                    <h3 className="text-sm font-black text-slate-900">
+                      Schedules for {WEEKDAY_FULL_LABELS[selectedDayKey]}
+                    </h3>
                   </div>
-                ))}
+                  <span className="text-xs font-bold text-slate-400">
+                    {selectedDaySchedules.length} Classes Scheduled
+                  </span>
+                </div>
+
+                {selectedDaySchedules.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {selectedDaySchedules.map((s: ScheduleDetail) => (
+                      <ScheduleSlotCard
+                        key={s.id}
+                        schedule={s}
+                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={batches.find((b) => b.id === s.batchId)?.name}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    <Clock className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">No classes scheduled</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW MODE 3: AGENDA LIST VIEW */}
+          {viewMode === 'LIST' && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 space-y-6">
+              <h3 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3">
+                Full Weekly Class Agenda
+              </h3>
+              <div className="space-y-6">
+                {WEEKDAYS.map((day) => {
+                  const daySchedules = weekly[day] || [];
+                  if (daySchedules.length === 0) return null;
+
+                  return (
+                    <div key={day} className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-violet-700 bg-violet-50 border border-violet-100 px-2.5 py-1 rounded-lg uppercase">
+                          {WEEKDAY_FULL_LABELS[day]}
+                        </span>
+                        <span className="text-xs font-bold text-slate-400">
+                          {daySchedules.length} {daySchedules.length === 1 ? 'class' : 'classes'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {daySchedules.map((s: ScheduleDetail) => (
+                          <ScheduleSlotCard
+                            key={s.id}
+                            schedule={s}
+                            subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                            batchName={batches.find((b) => b.id === s.batchId)?.name}
+                            tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -437,7 +846,7 @@ export default function TutorTimetablePage() {
   return (
     <ProtectedRoute allowedRoles={['TUTOR']}>
       <DashboardLayout>
-        <TimetableContent />
+        <TutorTimetableCalendarContent />
       </DashboardLayout>
     </ProtectedRoute>
   );

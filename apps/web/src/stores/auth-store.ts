@@ -97,7 +97,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? localStorage : ({} as Storage),
+        typeof window !== 'undefined' ? tabStorage : ({} as Storage),
       ),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

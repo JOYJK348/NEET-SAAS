@@ -497,7 +497,7 @@ export class BatchService {
     if (!batch) throw new NotFoundException('Batch not found');
 
     const enrollments = await this.prisma.studentBatchEnrollments.findMany({
-      where: { tenantId, batchId, deletedAt: null },
+      where: { tenantId, batchId, deletedAt: null, status: 'ACTIVE' },
       orderBy: { joinedAt: 'desc' },
     });
 
@@ -508,7 +508,7 @@ export class BatchService {
         });
         let studentName = 'Student';
         let email = '';
-        const phone = '';
+        let phone = '';
         if (admission) {
           const user = await this.prisma.users.findFirst({
             where: { id: admission.studentProfileId, tenantId },
@@ -516,10 +516,12 @@ export class BatchService {
           if (user) {
             studentName = `${user.firstName} ${user.lastName || ''}`.trim();
             email = user.email || '';
+            phone = (user as any).phone || '';
           }
         }
         return {
           id: enr.id,
+          admissionId: enr.studentAdmissionId,
           studentId: admission?.studentProfileId || '',
           studentName,
           email,

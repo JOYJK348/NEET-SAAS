@@ -61,13 +61,13 @@ export interface UseAdmissionsReturn {
 
 export function useAdmissions(options: UseAdmissionsOptions = {}): UseAdmissionsReturn {
   const { autoFetch = true, initialFilters } = options;
-  const [filters, setFilters] = useState<AdmissionFilters>({
+  const [filters, setFilters] = useState<AdmissionFilters>(() => ({
     page: 1,
     perPage: 10,
     search: '',
     status: 'ALL',
     ...initialFilters,
-  });
+  }));
 
   const { data, isPending, error, refetch } = useQuery({
     queryKey: admissionServiceKeys.list(filters),

@@ -219,4 +219,41 @@ export class StudentsController {
       user.sub,
     );
   }
+
+  @Get(':id/parent-portal')
+  @ApiOperation({ summary: 'Get parent portal account details for a student' })
+  getParentPortalInfo(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.studentsService.getParentPortalInfo(id, user.tenantId!);
+  }
+
+  @Put(':id/parent-portal/status')
+  @ApiOperation({ summary: 'Toggle parent portal account status (ACTIVE/INACTIVE)' })
+  toggleParentStatus(
+    @Param('id') id: string,
+    @Body('status') status: 'ACTIVE' | 'INACTIVE',
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.studentsService.toggleParentStatus(
+      id,
+      status,
+      user.tenantId!,
+      user.sub,
+    );
+  }
+
+  @Post(':id/parent-portal/reset-password')
+  @ApiOperation({ summary: 'Reset parent portal account password' })
+  resetParentPassword(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.studentsService.resetParentPassword(
+      id,
+      user.tenantId!,
+      user.sub,
+    );
+  }
 }

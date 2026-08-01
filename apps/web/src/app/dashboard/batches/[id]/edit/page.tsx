@@ -17,7 +17,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  ArrowLeft,
+  Save,
+  Sparkles,
+  Layers,
+  GraduationCap,
+  Users,
+  Calendar,
+  Clock,
+  Activity,
+} from 'lucide-react';
 import {
   useBatch,
   useUpdateBatch,
@@ -27,11 +38,14 @@ import {
   useDeliveryTypes,
 } from '@/features/batches/hooks/use-batches';
 import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
-import { BatchFormLayout } from '@/features/batches/components/forms/BatchFormLayout';
 import { BatchSkeleton } from '@/features/batches/components/BatchSkeleton';
 import { BatchEmptyState } from '@/features/batches/components/BatchEmptyState';
 import { baseBatchFormSchema } from '@/features/batches/validation/batch-schema';
 import { z } from 'zod';
+import { canEditBatch } from '@/features/batches/utils/batch-utils';
+import { BATCH_STATUS_OPTIONS } from '@/features/batches/types/batch';
+import type { BatchStatus } from '@/features/batches/types/batch';
+import { toast } from '@/hooks/use-toast';
 
 const editBatchFormSchema = baseBatchFormSchema
   .extend({
@@ -45,10 +59,6 @@ const editBatchFormSchema = baseBatchFormSchema
       path: ['endDate'],
     },
   );
-import { canEditBatch } from '@/features/batches/utils/batch-utils';
-import { BATCH_STATUS_OPTIONS } from '@/features/batches/types/batch';
-import type { BatchStatus } from '@/features/batches/types/batch';
-import { toast } from '@/hooks/use-toast';
 
 function EditBatchContent() {
   const params = useParams();
@@ -128,7 +138,7 @@ function EditBatchContent() {
 
   if (isLoading) {
     return (
-      <div className="p-4">
+      <div className="p-4 sm:p-6">
         <BatchSkeleton variant="card" />
       </div>
     );
@@ -152,10 +162,12 @@ function EditBatchContent() {
 
   if (!canEditBatch(batch.status)) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
         <BatchEmptyState hasFilters={false} variant="default" />
-        <p className="text-sm text-gray-500 mt-2">
-          Batch {batch.code} is {batch.status.toLowerCase()} and cannot be edited.
+        <p className="text-sm text-slate-500 font-medium mt-3">
+          Batch <span className="font-bold text-slate-700">{batch.code}</span> is currently{' '}
+          <span className="uppercase text-amber-600 font-bold">{batch.status}</span> and cannot be
+          modified.
         </p>
         <Button
           variant="outline"
@@ -163,87 +175,217 @@ function EditBatchContent() {
           onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Batch
+          Back to Batch Details
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 rounded-xl"
-          onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Batch</h1>
-          <p className="text-sm text-gray-500">
-            {batch.code} &middot; {batch.name}
-          </p>
+    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      {/* Header Banner - Signature Violet Gradient */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
+            onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+                Batch Management &bull; {batch.code}
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+              Edit Batch Details ✏️
+            </h1>
+            <p className="text-violet-200 text-xs mt-0.5">
+              Update capacity, course mappings, schedule timings, and lifecycle status for{' '}
+              {batch.name}.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
+            className="px-4 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit(onSubmit, () => {
+              toast({
+                title: 'Validation Required',
+                description: 'Please fix all highlighted errors before saving changes.',
+                variant: 'destructive',
+              });
+            })}
+            disabled={isUpdating}
+            size="sm"
+            className="px-4 bg-white text-violet-700 hover:bg-violet-50 font-bold rounded-xl text-xs shadow-sm border-0"
+          >
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            {isUpdating ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <BatchFormLayout title="Batch Details" description="Update the batch information below">
-          <div className="space-y-6">
-            {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Controller
-                name="status"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value || ''} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="status"
-                      className="w-full h-11 rounded-xl border-gray-200 bg-white"
-                    >
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BATCH_STATUS_OPTIONS.filter((o) => o.value !== 'ALL').map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      <form
+        onSubmit={handleSubmit(onSubmit, () => {
+          toast({
+            title: 'Validation Required',
+            description: 'Please fix all highlighted errors before saving changes.',
+            variant: 'destructive',
+          });
+        })}
+        className="space-y-6"
+      >
+        {/* Section 1: Basic Information & Status */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Basic Information & Status
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Manage the identity, code, and operational status of this batch.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5 sm:col-span-1">
+                <Label
+                  htmlFor="status"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Lifecycle Status <span className="text-rose-500">*</span>
+                </Label>
+                <Controller
+                  name="status"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="status"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-semibold"
+                      >
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BATCH_STATUS_OPTIONS.filter((o) => o.value !== 'ALL').map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="font-medium">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.status && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.status.message}</p>
                 )}
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-1">
+                <Label
+                  htmlFor="code"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Code <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="code"
+                  placeholder="e.g. NEET26A"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('code')}
+                />
+                {errors.code ? (
+                  <p className="text-xs text-rose-500 font-medium">{errors.code.message}</p>
+                ) : (
+                  <p className="text-[11px] text-slate-400">Short uppercase identifier</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5 sm:col-span-1">
+                <Label
+                  htmlFor="name"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Name <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. NEET 2026 Foundation Batch A"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('name')}
+                />
+                {errors.name && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.name.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="description" className="text-xs font-bold text-slate-700">
+                Batch Description (Optional)
+              </Label>
+              <Textarea
+                id="description"
+                rows={3}
+                placeholder="Add special notes, classroom numbers, target objectives..."
+                className="rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium text-sm"
+                {...register('description')}
               />
-            </div>
-
-            {/* Code & Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="code">Batch Code *</Label>
-                <Input id="code" {...register('code')} />
-                {errors.code && <p className="text-sm text-red-500">{errors.code.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Batch Name *</Label>
-                <Input id="name" {...register('name')} />
-                {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" rows={3} {...register('description')} />
               {errors.description && (
-                <p className="text-sm text-red-500">{errors.description.message}</p>
+                <p className="text-xs text-rose-500 font-medium">{errors.description.message}</p>
               )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Academic Year & Branch Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="academicYearId">Academic Year *</Label>
+        {/* Section 2: Academic & Branch Mapping */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Academic & Branch Association
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Link batch to specific academic year, branch location, course stream, and delivery
+                  mode.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Academic Year */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="academicYearId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Academic Year <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="academicYearId"
                   control={control}
@@ -258,12 +400,11 @@ function EditBatchContent() {
                     >
                       <SelectTrigger
                         id="academicYearId"
-                        className="w-full h-11 rounded-xl border-gray-200 bg-white"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
                       >
                         <SelectValue placeholder="Select academic year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Select academic year</SelectItem>
                         {years.map((y) => (
                           <SelectItem key={y.id} value={y.id}>
                             {y.name}
@@ -274,23 +415,33 @@ function EditBatchContent() {
                   )}
                 />
                 {errors.academicYearId && (
-                  <p className="text-sm text-red-500">{errors.academicYearId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">
+                    {errors.academicYearId.message}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="branchId">Branch *</Label>
+              {/* Branch */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="branchId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Branch <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="branchId"
                   control={control}
                   render={({ field }) => {
                     const selectedYear = watch('academicYearId');
                     const filteredBranches = branches.filter((b) => {
-                      if (!selectedYear) return false;
+                      if (!selectedYear) return true;
                       return branchCourses.some(
                         (m) => m.academicYearId === selectedYear && m.branchId === b.id,
                       );
                     });
+                    const displayBranches =
+                      filteredBranches.length > 0 ? filteredBranches : branches;
 
                     return (
                       <Select
@@ -299,21 +450,15 @@ function EditBatchContent() {
                           field.onChange(val);
                           setValue('courseId', '');
                         }}
-                        disabled={!selectedYear}
                       >
                         <SelectTrigger
                           id="branchId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
                         >
-                          <SelectValue
-                            placeholder={
-                              selectedYear ? 'Select a branch' : 'Select academic year first'
-                            }
-                          />
+                          <SelectValue placeholder="Select branch" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select a branch</SelectItem>
-                          {filteredBranches.map((b) => (
+                          {displayBranches.map((b) => (
                             <SelectItem key={b.id} value={b.id}>
                               {b.name}
                             </SelectItem>
@@ -324,15 +469,18 @@ function EditBatchContent() {
                   }}
                 />
                 {errors.branchId && (
-                  <p className="text-sm text-red-500">{errors.branchId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.branchId.message}</p>
                 )}
               </div>
-            </div>
 
-            {/* Course & Delivery Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="courseId">Course *</Label>
+              {/* Course */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="courseId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Course <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="courseId"
                   control={control}
@@ -340,32 +488,26 @@ function EditBatchContent() {
                     const selectedYear = watch('academicYearId');
                     const selectedBranch = watch('branchId');
                     const filteredCourses = courses.filter((c) => {
-                      if (!selectedBranch) return false;
+                      if (!selectedBranch) return true;
                       return branchCourses.some(
                         (m) =>
                           m.branchId === selectedBranch &&
                           m.courseId === c.id &&
-                          m.academicYearId === selectedYear,
+                          (!selectedYear || m.academicYearId === selectedYear),
                       );
                     });
+                    const displayCourses = filteredCourses.length > 0 ? filteredCourses : courses;
 
                     return (
-                      <Select
-                        value={field.value || ''}
-                        onValueChange={field.onChange}
-                        disabled={!selectedBranch}
-                      >
+                      <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger
                           id="courseId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
+                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
                         >
-                          <SelectValue
-                            placeholder={selectedBranch ? 'Select a course' : 'Select branch first'}
-                          />
+                          <SelectValue placeholder="Select course" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select a course</SelectItem>
-                          {filteredCourses.map((c) => (
+                          {displayCourses.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
                             </SelectItem>
@@ -376,132 +518,233 @@ function EditBatchContent() {
                   }}
                 />
                 {errors.courseId && (
-                  <p className="text-sm text-red-500">{errors.courseId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">{errors.courseId.message}</p>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="deliveryTypeId">Delivery Type *</Label>
+              {/* Delivery Type */}
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="deliveryTypeId"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Delivery Type <span className="text-rose-500">*</span>
+                </Label>
                 <Controller
                   name="deliveryTypeId"
                   control={control}
-                  render={({ field }) => {
-                    const selectedCourse = watch('courseId');
-                    return (
-                      <Select
-                        value={field.value || ''}
-                        onValueChange={field.onChange}
-                        disabled={!selectedCourse}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger
+                        id="deliveryTypeId"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
                       >
-                        <SelectTrigger
-                          id="deliveryTypeId"
-                          className="w-full h-11 rounded-xl border-gray-200 bg-white disabled:bg-gray-50"
-                        >
-                          <SelectValue
-                            placeholder={
-                              selectedCourse ? 'Select delivery type' : 'Select course first'
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Select delivery type</SelectItem>
-                          {deliveryTypes.map((dt) => (
-                            <SelectItem key={dt.id} value={dt.id}>
-                              {dt.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    );
-                  }}
+                        <SelectValue placeholder="Select delivery mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {deliveryTypes.map((dt) => (
+                          <SelectItem key={dt.id} value={dt.id}>
+                            {dt.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
                 {errors.deliveryTypeId && (
-                  <p className="text-sm text-red-500">{errors.deliveryTypeId.message}</p>
+                  <p className="text-xs text-rose-500 font-medium">
+                    {errors.deliveryTypeId.message}
+                  </p>
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Capacity */}
-            <div className="space-y-2">
-              <Label htmlFor="maxStudents">Maximum Students *</Label>
-              <Input
-                id="maxStudents"
-                type="number"
-                min={1}
-                max={500}
-                {...register('maxStudents', { valueAsNumber: true })}
-              />
-              {errors.maxStudents && (
-                <p className="text-sm text-red-500">{errors.maxStudents.message}</p>
-              )}
-            </div>
-
-            {/* Start & End Dates */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date *</Label>
-                <Input id="startDate" type="date" {...register('startDate')} />
-                {errors.startDate && (
-                  <p className="text-sm text-red-500">{errors.startDate.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date *</Label>
-                <Input id="endDate" type="date" {...register('endDate')} />
-                {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
-              </div>
-            </div>
-
-            {/* Daily Start & End Timings */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Daily Start Time (e.g. 09:00 AM)</Label>
-                <Input id="startTime" type="time" {...register('startTime')} />
-                {errors.startTime && (
-                  <p className="text-sm text-red-500">{errors.startTime.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endTime">Daily End Time (e.g. 05:00 PM)</Label>
-                <Input id="endTime" type="time" {...register('endTime')} />
-                {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
-              </div>
-            </div>
-
-            {/* Allow New Admissions */}
+        {/* Section 3: Capacity & Admission Settings */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <input
-                id="allowNewAdmissions"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                {...register('allowNewAdmissions')}
-              />
-              <Label htmlFor="allowNewAdmissions" className="cursor-pointer">
-                Allow new admissions
-              </Label>
+              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Capacity & Admission Settings
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Configure student intake quota and new student admission availability.
+                </CardDescription>
+              </div>
             </div>
-          </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="maxStudents"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Maximum Seat Capacity <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="maxStudents"
+                  type="number"
+                  min={1}
+                  max={500}
+                  placeholder="e.g. 60"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('maxStudents', { valueAsNumber: true })}
+                />
+                {errors.maxStudents ? (
+                  <p className="text-xs text-rose-500 font-medium">{errors.maxStudents.message}</p>
+                ) : (
+                  <p className="text-[11px] text-slate-400">
+                    Maximum allowed enrolled students (1 - 500)
+                  </p>
+                )}
+              </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl h-11 px-5"
-              onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="rounded-xl h-11 px-5 bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={isUpdating}
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isUpdating ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </BatchFormLayout>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4 mt-2 sm:mt-0">
+                <div>
+                  <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5 text-violet-600" />
+                    Allow New Admissions
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Enable or pause enrollment of newly registered students into this batch
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    {...register('allowNewAdmissions')}
+                  />
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                </label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section 4: Schedule & Timings */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900">
+                  Schedule & Daily Timings
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Define start/end batch duration dates and daily lecture shift times.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="startDate"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch Start Date <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('startDate')}
+                />
+                {errors.startDate && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.startDate.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="endDate"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                >
+                  Batch End Date <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('endDate')}
+                />
+                {errors.endDate && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.endDate.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="startTime"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1.5"
+                >
+                  <Clock className="w-3.5 h-3.5 text-violet-600" />
+                  Daily Start Time (e.g. 09:00 AM)
+                </Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('startTime')}
+                />
+                {errors.startTime && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.startTime.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="endTime"
+                  className="text-xs font-bold text-slate-700 flex items-center gap-1.5"
+                >
+                  <Clock className="w-3.5 h-3.5 text-violet-600" />
+                  Daily End Time (e.g. 05:00 PM)
+                </Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  {...register('endTime')}
+                />
+                {errors.endTime && (
+                  <p className="text-xs text-rose-500 font-medium">{errors.endTime.message}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Floating / Bottom Action Bar */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
+            className="h-11 px-6 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-bold"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isUpdating}
+            className="h-11 px-8 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-md shadow-violet-200"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isUpdating ? 'Saving Changes...' : 'Save Batch Changes'}
+          </Button>
+        </div>
       </form>
     </div>
   );

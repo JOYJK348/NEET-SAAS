@@ -7,7 +7,19 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Filter, Upload, X, FileSpreadsheet, AlertTriangle, CheckCircle } from 'lucide-react';
+import {
+  Plus,
+  Download,
+  Filter,
+  Upload,
+  X,
+  FileSpreadsheet,
+  AlertTriangle,
+  CheckCircle,
+  GraduationCap,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 import { StudentStatus, StudentFilters } from '@/features/students/types/student';
@@ -62,19 +74,11 @@ function StudentsContent() {
   const { batches: batchOptions } = useBatchesForAdmission();
   const prefetchStudent = usePrefetchStudentDetail();
 
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-  const [isMobile, setIsMobile] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const [lastImportLog, setLastImportLog] = useState<{ importedCount: number; errors: string[] } | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsMobile(window.innerWidth < 768);
-      const handleResize = () => setIsMobile(window.innerWidth < 768);
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
+  const [lastImportLog, setLastImportLog] = useState<{
+    importedCount: number;
+    errors: string[];
+  } | null>(null);
 
   const courses = useMemo(() => {
     return [...courseOptions].sort((a, b) => a.name.localeCompare(b.name));
@@ -266,7 +270,7 @@ function StudentsContent() {
               </p>
             </div>
           </div>
-          <StudentSkeleton variant={isMobile ? 'card' : 'table'} count={5} />
+          <StudentSkeleton variant="table" count={5} />
         </div>
       </DashboardLayout>
     );
@@ -294,72 +298,117 @@ function StudentsContent() {
   }
 
   const statCards = [
-    { label: 'Total Students', value: counts.total, bg: 'bg-purple-100' },
-    { label: 'Active', value: counts.active, bg: 'bg-green-100' },
-    { label: 'Inactive', value: counts.inactive, bg: 'bg-gray-100' },
-    { label: 'Graduated', value: counts.graduated, bg: 'bg-blue-100' },
-    { label: 'Dropped Out', value: counts.droppedOut, bg: 'bg-red-100' },
-    { label: 'Pending', value: counts.pending, bg: 'bg-yellow-100' },
+    {
+      label: 'Total Students',
+      value: counts.total,
+      bg: 'bg-violet-50 text-violet-600 border-violet-100',
+      icon: GraduationCap,
+    },
+    {
+      label: 'Active',
+      value: counts.active,
+      bg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      icon: CheckCircle,
+    },
+    {
+      label: 'Inactive',
+      value: counts.inactive,
+      bg: 'bg-slate-100 text-slate-600 border-slate-200',
+      icon: X,
+    },
+    {
+      label: 'Graduated',
+      value: counts.graduated,
+      bg: 'bg-sky-50 text-sky-600 border-sky-100',
+      icon: GraduationCap,
+    },
+    {
+      label: 'Dropped Out',
+      value: counts.droppedOut,
+      bg: 'bg-rose-50 text-rose-600 border-rose-100',
+      icon: AlertTriangle,
+    },
+    {
+      label: 'Pending',
+      value: counts.pending,
+      bg: 'bg-amber-50 text-amber-600 border-amber-100',
+      icon: Clock,
+    },
   ];
 
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Welcome Header Banner - Signature Violet Gradient */}
+        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Students</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Manage student records and enrollments
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+                Student Directory & Enrollments
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+              Student Directory & Admissions 🎓
+            </h1>
+            <p className="text-violet-200 text-xs mt-0.5">
+              Manage student profiles, active enrollments, course assignments, and batch transfers.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+
+          <div className="grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={handleExport}
-              className="w-full sm:w-auto gap-2"
+              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-[11px] sm:text-xs font-bold"
             >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Export
+              <Download className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">Export</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsImportOpen(true)}
-              className="w-full sm:w-auto gap-2 border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={() => router.push('/dashboard/students/import')}
+              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-[11px] sm:text-xs font-bold"
             >
-              <Upload className="h-4 w-4" aria-hidden="true" />
-              Bulk Import
+              <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">Import</span>
             </Button>
-            <Button onClick={handleAddStudent} className="w-full sm:w-auto gap-2">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add Student
+            <Button
+              onClick={handleAddStudent}
+              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-[11px] sm:text-xs"
+            >
+              <Plus className="h-3.5 w-3.5 text-violet-600 shrink-0" aria-hidden="true" />
+              <span className="truncate sm:hidden">Add</span>
+              <span className="hidden sm:inline">Add Student</span>
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-          {statCards.map((stat) => (
-            <Card key={stat.label} className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
-              <CardContent className="p-0">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      {stat.label}
-                    </p>
-                    <p className="text-2xl font-bold text-[#111827] mt-1">{stat.value}</p>
-                  </div>
-                  <div
-                    className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}
-                  >
-                    <div className="w-5 h-5 rounded-full bg-purple-600/20" />
-                  </div>
+        {/* Mild KPI Cards Strip - Mobile Responsive Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {statCards.map((stat) => {
+            const IconComp = stat.icon;
+            return (
+              <Card
+                key={stat.label}
+                className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-2.5 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50"
+              >
+                <div className={`p-2 rounded-xl border shrink-0 ${stat.bg}`}>
+                  <IconComp className="h-4 w-4" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                    {stat.label}
+                  </p>
+                  <p className="text-lg sm:text-xl font-black text-[#111827] mt-0.5">
+                    {stat.value}
+                  </p>
+                </div>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Persistent Import Validation Log with Dismiss Action */}
@@ -378,15 +427,21 @@ function StudentsContent() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
-                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Status</span>
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Status
+                </span>
                 <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-1">
                   <CheckCircle className="h-4 w-4" />
                   Successfully Imported: {lastImportLog.importedCount} Student(s)
                 </p>
               </div>
               <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
-                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Validation Errors count</span>
-                <p className={`text-sm font-semibold mt-1 ${lastImportLog.errors.length > 0 ? 'text-red-700' : 'text-gray-600'}`}>
+                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                  Validation Errors count
+                </span>
+                <p
+                  className={`text-sm font-semibold mt-1 ${lastImportLog.errors.length > 0 ? 'text-red-700' : 'text-gray-600'}`}
+                >
                   {lastImportLog.errors.length} row(s) failed validation rules
                 </p>
               </div>
@@ -400,7 +455,10 @@ function StudentsContent() {
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1.5 bg-red-50/30 p-4 rounded-xl border border-red-100">
                   {lastImportLog.errors.map((err, idx) => (
-                    <div key={idx} className="text-xs text-red-700 font-medium flex gap-2 items-start">
+                    <div
+                      key={idx}
+                      className="text-xs text-red-700 font-medium flex gap-2 items-start"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
                       <span>{err}</span>
                     </div>
@@ -411,9 +469,9 @@ function StudentsContent() {
           </Card>
         )}
 
-        {/* Search & Filters */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
-          <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search & Filters Toolbar */}
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 min-w-0">
               <StudentSearch
                 value={filters.search || ''}
@@ -435,94 +493,91 @@ function StudentsContent() {
             </div>
           </div>
           {hasActiveFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <Button variant="ghost" size="sm" onClick={handleClearFilters} className="gap-1.5">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-violet-600">Active filters applied</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+              >
                 <Filter className="h-3.5 w-3.5" />
                 Clear all filters
               </Button>
             </div>
           )}
-        </Card>
+        </div>
 
-        {/* View Toggle & Results Count */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{meta?.from ?? 0}</span> to{' '}
-              <span className="font-medium">{meta?.to ?? 0}</span> of{' '}
-              <span className="font-medium">{meta?.total ?? 0}</span> students
+        {/* Results Counter Bar */}
+        <div className="flex items-center justify-between gap-4 px-1">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span>
+              Showing <span className="font-extrabold text-slate-900">{meta?.from ?? 0}</span>{' '}
+              &ndash; <span className="font-extrabold text-slate-900">{meta?.to ?? 0}</span> of{' '}
+              <span className="font-extrabold text-slate-900">{meta?.total ?? 0}</span> student
+              records
             </span>
-            {hasActiveFilters && <span className="text-sm font-medium">(filtered)</span>}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-              aria-label="Table view"
-              className="h-9 px-3"
-            >
-              Table
-            </Button>
-            <Button
-              variant={viewMode === 'card' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('card')}
-              aria-label="Card view"
-              className="h-9 px-3"
-            >
-              Cards
-            </Button>
+            {hasActiveFilters && (
+              <span className="bg-violet-50 text-violet-700 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-violet-100">
+                Filtered
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Students Table/List */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-sm overflow-hidden">
-          {viewMode === 'table' ? (
-            <>
-              <StudentTable
-                students={students}
-                sortBy={filters.sortBy ?? 'admissionDate'}
-                sortOrder={(filters.sortOrder as 'asc' | 'desc') ?? 'desc'}
-                onSort={handleSort}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onStatusChange={handleStatusUpdate}
-                onPrefetch={prefetchStudent}
-                isLoading={isLoading}
-              />
-              {students.length > 0 && meta && meta.lastPage > 1 && (
-                <StudentPagination
-                  currentPage={meta.currentPage}
-                  totalPages={meta.lastPage}
-                  totalItems={meta.total}
-                  itemsPerPage={meta.perPage}
-                  onPageChange={handlePageChange}
-                  onItemsPerPageChange={handlePageSizeChange}
-                />
-              )}
-            </>
-          ) : (
-            <StudentList
+        {/* Mobile View: Rich Cards List (block sm:hidden) */}
+        <div className="block sm:hidden">
+          <StudentList
+            students={students}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onStatusChange={handleStatusUpdate}
+            onPrefetch={prefetchStudent}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Desktop View: Rich Table Layout (hidden sm:block) */}
+        <div className="hidden sm:block">
+          <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+            <StudentTable
               students={students}
+              sortBy={filters.sortBy ?? 'admissionDate'}
+              sortOrder={(filters.sortOrder as 'asc' | 'desc') ?? 'desc'}
+              onSort={handleSort}
               onView={handleView}
               onEdit={handleEdit}
+              onDelete={handleDelete}
               onStatusChange={handleStatusUpdate}
               onPrefetch={prefetchStudent}
               isLoading={isLoading}
             />
-          )}
 
-          {students.length === 0 && !isLoading && (
+            {students.length > 0 && meta && meta.lastPage > 1 && (
+              <StudentPagination
+                currentPage={meta.currentPage}
+                totalPages={meta.lastPage}
+                totalItems={meta.total}
+                itemsPerPage={meta.perPage}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handlePageSizeChange}
+              />
+            )}
+          </Card>
+        </div>
+
+        {/* Empty State */}
+        {students.length === 0 && !isLoading && (
+          <Card className="rounded-3xl border border-dashed border-slate-200 bg-white p-8">
             <StudentEmptyState
               variant={hasActiveFilters ? 'filter' : 'default'}
               hasFilters={hasActiveFilters}
               onClearFilters={handleClearFilters}
               onAddStudent={handleAddStudent}
             />
-          )}
-        </Card>
+          </Card>
+        )}
 
         <BulkImportDialog
           isOpen={isImportOpen}

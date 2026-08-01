@@ -1,7 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, Plus, Filter, Clock, Loader2, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import {
+  Calendar as CalendarIcon,
+  Plus,
+  Filter,
+  Clock,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  Grid,
+  List,
+  Sparkles,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useWeeklyView } from '@/features/scheduling/hooks/use-schedules';
 import { CreateScheduleDrawer } from '@/features/scheduling/components/CreateScheduleDrawer';
@@ -34,14 +49,16 @@ const DAY_SHORT: Record<string, string> = {
   SUNDAY: 'Sun',
 };
 
-// ─── Empty cell ───────────────────────────────────────────────────────────────
-function EmptyCell() {
-  return (
-    <div className="h-full min-h-[48px] rounded-lg border border-dashed border-slate-200 hover:border-slate-300 transition-colors bg-slate-50/20" />
-  );
-}
+const DAY_INDEX: Record<string, number> = {
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
+};
 
-// ─── Filter state ─────────────────────────────────────────────────────────────
 interface FilterState {
   batchId: string;
   staffProfileId: string;
@@ -51,14 +68,19 @@ interface FilterState {
 export default function TimetablePage() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedMobileDay, setSelectedMobileDay] = useState<WeekdayType>('MONDAY');
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
+
+  // Calendar Date Navigation State
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
   const [filters, setFilters] = useState<FilterState>({
     batchId: '',
     staffProfileId: '',
     subjectId: '',
   });
 
-  // ── Session override state ───────────────────────────────────────────────────
+  // Session override state
   const [overrideAction, setOverrideAction] = useState<SessionAction | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleDetail | null>(null);
   const [historySchedule, setHistorySchedule] = useState<ScheduleDetail | null>(null);
@@ -75,7 +97,7 @@ export default function TimetablePage() {
     ...(filters.subjectId && { subjectId: filters.subjectId }),
   });
 
-  // Fetch batches, tutors, and subjects for selectors and drawer dropdowns
+  // Fetch batches, tutors, and subjects
   const { batches: batchesData = [] } = useBatches({ autoFetch: true });
   const { data: tutorsData } = useTutors({ limit: 100 });
   const { data: subjectsData } = useSubjects({ limit: 100 });
@@ -116,16 +138,81 @@ export default function TimetablePage() {
   };
   const weekly = weeklyData ?? emptyWeekly;
 
-  // Collect all time slots that have any schedule
-  const allTimes = new Set<string>();
-  WEEKDAYS.forEach((day) => {
-    weekly[day]?.forEach((s: ScheduleDetail) => {
-      allTimes.add(s.startTime);
-    });
-  });
-  const sortedTimes = Array.from(allTimes).sort();
+  // Calendar Helpers
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const monthName = currentDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+  // Generate Month Grid Dates
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const daysInMonth = lastDay.getDate();
+    const startingDay = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+    const days: Array<{ date: Date; isCurrentMonth: boolean }> = [];
+
+    // Previous month padding
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month, -i),
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding to complete 35/42 grid
+    const remaining = 35 - days.length;
+    for (let i = 1; i <= (remaining < 0 ? remaining + 7 : remaining); i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [year, month]);
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(now);
+  };
+
+  // Get schedules for a specific date
+  const getSchedulesForDate = (date: Date) => {
+    const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayKey = dayNames[date.getDay()] as WeekdayType;
+    return weekly[dayKey] || [];
+  };
+
+  const selectedDayKey = [
+    'SUNDAY',
+    'MONDAY',
+    'TUESDAY',
+    'WEDNESDAY',
+    'THURSDAY',
+    'FRIDAY',
+    'SATURDAY',
+  ][selectedDate.getDay()] as WeekdayType;
+  const selectedDaySchedules = weekly[selectedDayKey] || [];
 
   const handleSessionAction = (action: SessionAction, schedule: ScheduleDetail) => {
     setOverrideAction(action);
@@ -142,290 +229,582 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex flex-col gap-2">
-          {/* Back Button */}
+    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 space-y-6">
+      {/* Header & Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors w-fit"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors w-fit"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Dashboard
           </button>
-          
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
-              <Calendar className="w-5 h-5 text-white" />
+
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20 text-white">
+              <CalendarIcon className="w-5 h-5" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Timetable</h1>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Class Timetable & Schedule
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                Interactive calendar view for managing classes, tutors, and schedule overrides
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 ml-13">
-            Manage recurring class schedules with automatic conflict detection
-          </p>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <button
-            onClick={() => refetch()}
-            className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors text-slate-600"
-            title="Refresh"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-xs sm:text-sm font-semibold hover:bg-primary-hover transition-all shadow-md shadow-primary/10"
-          >
-            <Plus className="w-4 h-4" />
-            Create Schedule
-          </button>
+        {/* Action controls */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+          {/* View mode switcher */}
+          <div className="flex items-center p-1 bg-white border border-slate-200 rounded-xl shadow-2xs text-xs font-semibold">
+            <button
+              onClick={() => setViewMode('MONTH')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'MONTH'
+                  ? 'bg-violet-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              Month
+            </button>
+            <button
+              onClick={() => setViewMode('WEEK')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'WEEK'
+                  ? 'bg-violet-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Grid className="w-3.5 h-3.5" />
+              Week
+            </button>
+            <button
+              onClick={() => setViewMode('LIST')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                viewMode === 'LIST'
+                  ? 'bg-violet-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              Agenda
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              className="w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors text-slate-600 shadow-2xs"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-xs sm:text-sm font-bold hover:bg-violet-700 transition-all shadow-md shadow-violet-500/15"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Create Schedule</span>
+              <span className="sm:hidden">Create</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2.5 mb-6 p-4 rounded-xl bg-white border border-slate-200/80 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500 text-xs font-semibold mr-1">
-          <Filter className="w-3.5 h-3.5" />
-          <span>Filters:</span>
+      {/* Calendar Month Navigator & Filters */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between sm:justify-start gap-3 w-full lg:w-auto">
+          <button
+            onClick={handleToday}
+            className="px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition-colors"
+          >
+            Today
+          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-black text-slate-900 min-w-[130px] sm:min-w-[140px] text-center">
+              {monthName}
+            </span>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Batch Filter */}
-        <select
-          value={filters.batchId}
-          onChange={(e) => setFilter('batchId', e.target.value)}
-          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 outline-none focus:border-primary transition-colors cursor-pointer"
-        >
-          <option value="">All Batches</option>
-          {batches.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        {/* Filters Bar */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
+          <div className="hidden sm:flex items-center gap-1.5 text-slate-400 font-semibold mr-1">
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filter:</span>
+          </div>
 
-        {/* Tutor Filter */}
-        <select
-          value={filters.staffProfileId}
-          onChange={(e) => setFilter('staffProfileId', e.target.value)}
-          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 outline-none focus:border-primary transition-colors cursor-pointer"
-        >
-          <option value="">All Tutors</option>
-          {tutors.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.firstName} {t.lastName}
-            </option>
-          ))}
-        </select>
-
-        {/* Subject Filter */}
-        <select
-          value={filters.subjectId}
-          onChange={(e) => setFilter('subjectId', e.target.value)}
-          className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-700 outline-none focus:border-primary transition-colors cursor-pointer"
-        >
-          <option value="">All Subjects</option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-
-        {(filters.batchId || filters.staffProfileId || filters.subjectId) && (
-          <button
-            onClick={() => setFilters({ batchId: '', staffProfileId: '', subjectId: '' })}
-            className="ml-auto text-xs text-primary hover:underline transition-colors font-semibold px-2 py-1 rounded hover:bg-slate-50"
+          <select
+            value={filters.batchId}
+            onChange={(e) => setFilter('batchId', e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
           >
-            Clear
+            <option value="">All Batches</option>
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.staffProfileId}
+            onChange={(e) => setFilter('staffProfileId', e.target.value)}
+            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+          >
+            <option value="">All Tutors</option>
+            {tutors.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.firstName} {t.lastName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.subjectId}
+            onChange={(e) => setFilter('subjectId', e.target.value)}
+            className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+          >
+            <option value="">All Subjects</option>
+            {subjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+
+          {(filters.batchId || filters.staffProfileId || filters.subjectId) && (
+            <button
+              onClick={() => setFilters({ batchId: '', staffProfileId: '', subjectId: '' })}
+              className="text-xs text-violet-600 hover:underline font-bold px-2 py-1"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* MOBILE NATIVE QUICK DAY SELECTOR (Visible on Mobile Screens < md) */}
+      <div className="block md:hidden bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+            📅 {selectedDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+          </span>
+          <button
+            onClick={handleToday}
+            className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg border border-violet-100"
+          >
+            Today
           </button>
-        )}
+        </div>
+
+        {/* Mobile Horizontal Day Strip */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {WEEKDAYS.map((day) => {
+            const count = weekly[day]?.length ?? 0;
+            const isSelected = selectedDayKey === day;
+            return (
+              <button
+                key={day}
+                type="button"
+                onClick={() => {
+                  const nextDate = new Date();
+                  const targetDay = DAY_INDEX[day];
+                  const diff = (targetDay - nextDate.getDay() + 7) % 7;
+                  nextDate.setDate(nextDate.getDate() + diff);
+                  setSelectedDate(nextDate);
+                }}
+                className={`flex flex-col items-center min-w-[58px] py-2 px-2.5 rounded-xl border transition-all flex-shrink-0 ${
+                  isSelected
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/20'
+                    : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-[10px] font-extrabold uppercase opacity-80">
+                  {DAY_SHORT[day]}
+                </span>
+                <span className="text-xs font-black mt-0.5">{WEEKDAY_LABELS[day]}</span>
+                {count > 0 && (
+                  <span
+                    className={`text-[9px] mt-1 font-black px-1.5 py-0.2 rounded-full ${
+                      isSelected ? 'bg-white/25 text-white' : 'bg-violet-100 text-violet-800'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Loading & Error States */}
       {isLoading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <span className="text-slate-500 text-sm font-medium">Loading timetable...</span>
+        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+          <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+          <span className="text-slate-500 text-sm font-medium">Loading schedule calendar...</span>
         </div>
       )}
 
       {isError && (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <AlertCircle className="w-8 h-8 text-red-500" />
-          <p className="text-slate-600 text-sm font-semibold">Failed to load timetable</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+          <AlertCircle className="w-8 h-8 text-rose-500" />
+          <p className="text-slate-700 text-sm font-semibold">Failed to load timetable</p>
           <button
             onClick={() => refetch()}
-            className="text-xs text-primary hover:underline font-semibold"
+            className="text-xs text-violet-600 hover:underline font-bold"
           >
             Try again
           </button>
         </div>
       )}
 
-      {/* Main Grid Render: Split between Mobile Day-tabs and Desktop Columns */}
+      {/* MAIN CALENDAR DISPLAY */}
       {!isLoading && !isError && (
         <>
-          {/* MOBILE VIEW Day Horizontal Scroll Selectors (only visible under md screen size) */}
-          <div className="flex md:hidden items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none">
-            {WEEKDAYS.map((day) => {
-              const count = weekly[day]?.length ?? 0;
-              const isSelected = selectedMobileDay === day;
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => setSelectedMobileDay(day)}
-                  className={`flex flex-col items-center min-w-[64px] py-2 px-3 rounded-xl border transition-all flex-shrink-0
-                    ${
-                      isSelected
-                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}
-                >
-                  <span className="text-xs font-bold">{DAY_SHORT[day]}</span>
-                  <span
-                    className={`text-[9px] mt-0.5 font-bold px-1.5 py-0.5 rounded-full ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* MOBILE VIEW Timeline Slot List (only visible under md screen size) */}
-          <div className="block md:hidden space-y-3">
-            {weekly[selectedMobileDay]?.length > 0 ? (
-              [...weekly[selectedMobileDay]]
-                .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                .map((s: ScheduleDetail) => (
-                  <div
-                    key={s.id}
-                    className="relative pl-5 border-l-2 border-primary/20 last:border-l-0 pb-1"
-                  >
-                    <div className="absolute left-[-5px] top-2.5 w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-white" />
-                    <ScheduleSlotCard
-                      schedule={s}
-                      subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                      batchName={batches.find((b) => b.id === s.batchId)?.name}
-                      tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
-                      onAction={handleSessionAction}
-                      onHistory={handleSessionHistory}
-                    />
-                  </div>
-                ))
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 px-4 rounded-2xl border border-dashed border-slate-200 bg-white text-center">
-                <Clock className="w-8 h-8 text-slate-300 mb-2" />
-                <p className="text-sm font-semibold text-slate-700">No classes scheduled</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  There are no classes scheduled for {WEEKDAY_FULL_LABELS[selectedMobileDay]}.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* DESKTOP VIEW 8-column Weekly Table Grid (hidden under md screen size) */}
-          {sortedTimes.length === 0 ? (
-            <div className="hidden md:flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-16 h-16 rounded-2xl bg-primary-light flex items-center justify-center border border-primary/10">
-                <Calendar className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="text-slate-800 font-semibold mb-1">No schedules found</p>
-                <p className="text-slate-500 text-sm max-w-xs">
-                  Create a recurring weekly class schedule or adjust filters to view slots.
-                </p>
-              </div>
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                Create Schedule
-              </button>
-            </div>
-          ) : (
-            <div className="hidden md:block rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-              {/* Day header row */}
-              <div className="grid grid-cols-8 border-b border-slate-200 bg-slate-50/75">
-                {/* Time column header */}
-                <div className="flex items-center justify-center py-4 px-2 border-r border-slate-200">
-                  <Clock className="w-4 h-4 text-slate-400" />
+          {/* VIEW MODE 1: MONTH CALENDAR GRID (REAL CALENDAR FEEL - FULLY RESPONSIVE NO OVERFLOW SCROLL) */}
+          {viewMode === 'MONTH' && (
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+              {/* Main Calendar Grid (3 columns wide) */}
+              <div className="lg:col-span-3 bg-gradient-to-br from-white via-slate-50/60 to-violet-50/30 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden backdrop-blur-md">
+                {/* Days of week header */}
+                <div className="grid grid-cols-7 border-b border-slate-200/80 bg-gradient-to-r from-slate-100/90 via-slate-50 to-violet-50/70 text-center text-[10px] sm:text-xs font-black text-slate-700 py-2.5 sm:py-3.5 uppercase tracking-wider">
+                  <div>Mon</div>
+                  <div>Tue</div>
+                  <div>Wed</div>
+                  <div>Thu</div>
+                  <div>Fri</div>
+                  <div className="text-violet-700 font-extrabold">Sat</div>
+                  <div className="text-rose-700 font-extrabold">Sun</div>
                 </div>
-                {/* Day headers */}
+
+                {/* 35/42 Real Calendar Grid - Responsive Heights */}
+                <div className="grid grid-cols-7 divide-x divide-y divide-slate-200/60 bg-slate-200/30">
+                  {calendarDays.map((item, idx) => {
+                    const dateSchedules = getSchedulesForDate(item.date);
+                    const isSelected = selectedDate.toDateString() === item.date.toDateString();
+                    const isToday = new Date().toDateString() === item.date.toDateString();
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedDate(item.date)}
+                        className={`min-h-[70px] sm:min-h-[135px] p-1.5 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between group ${
+                          item.isCurrentMonth
+                            ? isToday
+                              ? 'bg-gradient-to-b from-violet-100/60 via-violet-50/30 to-white'
+                              : isSelected
+                                ? 'bg-violet-50/80'
+                                : 'bg-white/90 hover:bg-violet-50/30'
+                            : 'bg-slate-100/50 text-slate-400'
+                        } ${isSelected ? 'ring-2 ring-violet-600 ring-inset shadow-xs' : ''}`}
+                      >
+                        {/* Day Header & Badges */}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`text-[10px] sm:text-xs font-black w-5 h-5 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
+                              isToday
+                                ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30 scale-105 sm:scale-110'
+                                : isSelected
+                                  ? 'bg-violet-100 text-violet-900 border border-violet-300 font-black'
+                                  : item.isCurrentMonth
+                                    ? 'text-slate-800 group-hover:text-violet-700 font-extrabold'
+                                    : 'text-slate-400 font-semibold'
+                            }`}
+                          >
+                            {item.date.getDate()}
+                          </span>
+
+                          {dateSchedules.length > 0 && (
+                            <span className="text-[8px] sm:text-[10px] font-black text-white bg-violet-600 px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full shadow-2xs">
+                              {dateSchedules.length}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Mobile Responsive Class Event Cards */}
+                        <div className="space-y-1 sm:space-y-1.5 mt-1 sm:mt-2 flex-1 flex flex-col justify-start">
+                          {/* Desktop Full Card / Mobile Dot Pill */}
+                          {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
+                            const subName =
+                              subjects.find((s) => s.id === sch.subjectId)?.name || 'Class';
+                            const tutorName = tutors.find(
+                              (t) => t.id === sch.staffProfileId,
+                            )?.firstName;
+
+                            // Light pastel theme styling per subject
+                            let badgeStyle = 'bg-violet-50 text-violet-900 border-violet-200/80';
+                            let timeBadge = 'bg-violet-100/80 text-violet-800';
+                            let dotBg = 'bg-violet-600';
+
+                            if (subName.toLowerCase().includes('physics')) {
+                              badgeStyle = 'bg-sky-50 text-sky-950 border-sky-200/80';
+                              timeBadge = 'bg-sky-100 text-sky-900';
+                              dotBg = 'bg-sky-600';
+                            } else if (subName.toLowerCase().includes('chemistry')) {
+                              badgeStyle = 'bg-emerald-50 text-emerald-950 border-emerald-200/80';
+                              timeBadge = 'bg-emerald-100 text-emerald-900';
+                              dotBg = 'bg-emerald-600';
+                            } else if (subName.toLowerCase().includes('biology')) {
+                              badgeStyle = 'bg-amber-50 text-amber-950 border-amber-200/80';
+                              timeBadge = 'bg-amber-100 text-amber-900';
+                              dotBg = 'bg-amber-600';
+                            } else if (subName.toLowerCase().includes('math')) {
+                              badgeStyle = 'bg-rose-50 text-rose-950 border-rose-200/80';
+                              timeBadge = 'bg-rose-100 text-rose-900';
+                              dotBg = 'bg-rose-600';
+                            }
+
+                            return (
+                              <div key={sch.id || sIdx}>
+                                {/* Mobile View Compact Chip (< sm) */}
+                                <div
+                                  className={`sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md ${badgeStyle} truncate flex items-center gap-1 border`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${dotBg} flex-shrink-0`}
+                                  />
+                                  <span className="truncate">{subName}</span>
+                                </div>
+
+                                {/* Desktop View Full Card (>= sm) */}
+                                <div
+                                  className={`hidden sm:block text-[10px] font-bold p-2 rounded-xl border ${badgeStyle} shadow-2xs space-y-1 hover:brightness-95 transition-all`}
+                                >
+                                  {/* Subject + Day */}
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-extrabold truncate text-slate-900 text-[10.5px]">
+                                      {subName}
+                                    </span>
+                                    <span className="text-[8.5px] font-extrabold uppercase text-slate-500 bg-white/70 px-1 py-0.2 rounded border border-slate-200/60">
+                                      {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
+                                    </span>
+                                  </div>
+
+                                  {/* Full Start & End Time */}
+                                  <div
+                                    className={`flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold ${timeBadge}`}
+                                  >
+                                    <span>{sch.startTime}</span>
+                                    <span>-</span>
+                                    <span>{sch.endTime}</span>
+                                  </div>
+
+                                  {/* Tutor Name */}
+                                  {tutorName && (
+                                    <p className="text-[9px] text-slate-600 truncate font-semibold pt-0.5 border-t border-slate-200/40">
+                                      Tutor: <strong className="text-slate-900">{tutorName}</strong>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {dateSchedules.length > 2 && (
+                            <div className="mt-auto text-right">
+                              <span className="text-[7.5px] sm:text-[9px] font-bold text-violet-700 bg-violet-50 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-md border border-violet-200 inline-block">
+                                +{dateSchedules.length - 2}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Side Panel: Selected Date Class Roster (Native Mobile & Desktop Roster) */}
+              <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 space-y-4 shadow-xs h-fit">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4.5 h-4.5 text-violet-600" />
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">
+                        {selectedDate.toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </h3>
+                      <p className="text-[11px] font-bold text-violet-700 uppercase">
+                        {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-violet-800 bg-violet-50 border border-violet-100 px-3 py-1 rounded-full">
+                    {selectedDaySchedules.length}{' '}
+                    {selectedDaySchedules.length === 1 ? 'Class' : 'Classes'}
+                  </span>
+                </div>
+
+                {selectedDaySchedules.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3 max-h-[550px] overflow-y-auto pr-0.5">
+                    {selectedDaySchedules.map((s: ScheduleDetail) => (
+                      <ScheduleSlotCard
+                        key={s.id}
+                        schedule={s}
+                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={batches.find((b) => b.id === s.batchId)?.name}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                        onAction={handleSessionAction}
+                        onHistory={handleSessionHistory}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                    <Clock className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">No classes for this date</p>
+                    <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                      Tap any date on the calendar strip above to inspect classes or click 'Create'
+                      to add a schedule.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW MODE 2: WEEK DAY CAROUSEL & TIMELINE GRID */}
+          {viewMode === 'WEEK' && (
+            <div className="space-y-6">
+              {/* Day Card Selectors */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                 {WEEKDAYS.map((day) => {
-                  const count = weekly[day]?.length ?? 0;
+                  const daySchedules = weekly[day] || [];
+                  const isSelected = selectedDayKey === day;
+
                   return (
                     <div
                       key={day}
-                      className="flex flex-col items-center py-3.5 px-2 border-r border-slate-200 last:border-r-0"
+                      onClick={() => {
+                        const nextDate = new Date();
+                        const targetDay = DAY_INDEX[day];
+                        const diff = (targetDay - nextDate.getDay() + 7) % 7;
+                        nextDate.setDate(nextDate.getDate() + diff);
+                        setSelectedDate(nextDate);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
+                        isSelected
+                          ? 'bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-500/20 scale-[1.02]'
+                          : 'bg-white border-slate-200/80 hover:border-violet-200 text-slate-700 hover:bg-slate-50/50'
+                      }`}
                     >
-                      <span className="text-xs font-bold text-slate-700">{DAY_SHORT[day]}</span>
-                      {count > 0 && (
-                        <span className="mt-1 text-[10px] text-primary font-semibold bg-primary-light px-2 py-0.5 rounded-full">
-                          {count} {count === 1 ? 'class' : 'classes'}
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-xs font-extrabold uppercase ${isSelected ? 'text-violet-100' : 'text-slate-400'}`}
+                        >
+                          {DAY_SHORT[day]}
                         </span>
-                      )}
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {daySchedules.length}
+                        </span>
+                      </div>
+                      <p className="text-sm font-black tracking-tight">{WEEKDAY_LABELS[day]}</p>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Grid Rows */}
-              <div className="bg-white">
-                {sortedTimes.map((time, rowIdx) => (
-                  <div
-                    key={time}
-                    className={`grid grid-cols-8 border-b border-slate-100 last:border-b-0 ${
-                      rowIdx % 2 === 0 ? '' : 'bg-slate-50/20'
-                    }`}
-                  >
-                    {/* Time label */}
-                    <div className="flex items-start justify-center py-3 px-2 border-r border-slate-200 pt-4">
-                      <span className="text-[11px] font-mono text-slate-500 font-semibold">
-                        {time}
-                      </span>
-                    </div>
-
-                    {/* Day cells */}
-                    {WEEKDAYS.map((day) => {
-                      const slots =
-                        weekly[day]?.filter((s: ScheduleDetail) => s.startTime === time) ?? [];
-
-                      return (
-                        <div
-                          key={day}
-                          className="p-2 border-r border-slate-100 last:border-r-0 min-h-[72px]"
-                        >
-                          {slots.length > 0 ? (
-                            <div className="space-y-1.5">
-                              {slots.map((s: ScheduleDetail) => (
-                                <ScheduleSlotCard
-                                  key={s.id}
-                                  schedule={s}
-                                  subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                                  batchName={batches.find((b) => b.id === s.batchId)?.name}
-                                  tutorName={
-                                    tutors.find((t) => t.id === s.staffProfileId)?.firstName
-                                  }
-                                  onAction={handleSessionAction}
-                                  onHistory={handleSessionHistory}
-                                />
-                              ))}
-                            </div>
-                          ) : (
-                            <EmptyCell />
-                          )}
-                        </div>
-                      );
-                    })}
+              {/* Day Schedules Card List */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                    <h3 className="text-sm font-black text-slate-900">
+                      Schedules for {WEEKDAY_FULL_LABELS[selectedDayKey]}
+                    </h3>
                   </div>
-                ))}
+                  <span className="text-xs font-bold text-slate-400">
+                    {selectedDaySchedules.length} Classes Scheduled
+                  </span>
+                </div>
+
+                {selectedDaySchedules.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {selectedDaySchedules.map((s: ScheduleDetail) => (
+                      <ScheduleSlotCard
+                        key={s.id}
+                        schedule={s}
+                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={batches.find((b) => b.id === s.batchId)?.name}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                        onAction={handleSessionAction}
+                        onHistory={handleSessionHistory}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                    <Clock className="w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-bold text-slate-700">No classes scheduled</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      No classes found for {WEEKDAY_FULL_LABELS[selectedDayKey]}. Click 'Create
+                      Schedule' to add one.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW MODE 3: AGENDA / FULL LIST VIEW */}
+          {viewMode === 'LIST' && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 space-y-6">
+              <h3 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3">
+                Full Weekly Class Agenda
+              </h3>
+              <div className="space-y-6">
+                {WEEKDAYS.map((day) => {
+                  const daySchedules = weekly[day] || [];
+                  if (daySchedules.length === 0) return null;
+
+                  return (
+                    <div key={day} className="space-y-3">
+                      <h4 className="text-xs font-extrabold text-violet-700 bg-violet-50 px-3 py-1.5 rounded-xl w-fit border border-violet-100">
+                        {WEEKDAY_FULL_LABELS[day]} ({daySchedules.length})
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {daySchedules.map((s: ScheduleDetail) => (
+                          <ScheduleSlotCard
+                            key={s.id}
+                            schedule={s}
+                            subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
+                            batchName={batches.find((b) => b.id === s.batchId)?.name}
+                            tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                            onAction={handleSessionAction}
+                            onHistory={handleSessionHistory}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -442,7 +821,7 @@ export default function TimetablePage() {
         tutors={tutors}
       />
 
-      {/* Session Override Drawer (Change Tutor / Reschedule / Cancel) */}
+      {/* Session Override Drawer */}
       <SessionOverrideDrawer
         open={!!overrideAction}
         action={overrideAction}

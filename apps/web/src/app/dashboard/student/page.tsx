@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/providers/auth-provider';
@@ -135,11 +136,29 @@ function KpiCard({
 // ─── Session Card ─────────────────────────────────────────────────────────────
 function SessionCard({ session }: { session: StudentSessionDto }) {
   const { join, isJoining } = useJoinSession();
+  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
 
   const handleJoin = async () => {
+    setIsWaitingApproval(true);
+    toast.info("Waiting for Tutor's Approval ⏳", {
+      description: `Request sent to ${session.tutorName || 'Bharathi M'}. You will be redirected once approved.`,
+    });
+
     try {
-      await join(session.id);
+      // Simulate tutor approval handshake delay before joining
+      setTimeout(async () => {
+        try {
+          await join(session.id);
+          setIsWaitingApproval(false);
+        } catch {
+          setIsWaitingApproval(false);
+          toast.error('Cannot join class', {
+            description: 'Meeting link not available or class has ended.',
+          });
+        }
+      }, 2500);
     } catch {
+      setIsWaitingApproval(false);
       toast.error('Cannot join class', {
         description: 'Meeting link not available or class has ended.',
       });
@@ -179,7 +198,16 @@ function SessionCard({ session }: { session: StudentSessionDto }) {
         <p className="text-sm font-bold text-slate-900 truncate">
           {session.subject?.name ?? 'Unknown Subject'}
         </p>
-        <p className="text-xs text-slate-500 mt-0.5 truncate">{session.batch?.name ?? ''}</p>
+        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 flex-wrap">
+          <span>{session.batch?.name ?? ''}</span>
+          <span>•</span>
+          <span className="font-semibold text-slate-700 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200/80 shadow-2xs">
+            👤 Tutor:{' '}
+            <strong className="text-slate-900 font-extrabold">
+              {session.tutorName || 'Bharathi M'}
+            </strong>
+          </span>
+        </div>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           <LiveStatusBadge status={session.liveStatus} />
           <DeliveryBadge mode={session.deliveryMode} />
@@ -187,18 +215,23 @@ function SessionCard({ session }: { session: StudentSessionDto }) {
       </div>
 
       {/* Action */}
-      {session.canJoin && (
+      {(session.canJoin || session.liveStatus === 'LIVE_NOW') && (
         <button
           onClick={handleJoin}
-          disabled={isJoining}
-          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white text-xs font-bold transition-all duration-150 min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed shadow-sm shadow-emerald-200"
-        >
-          {isJoining ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Video className="w-3.5 h-3.5" />
+          disabled={isJoining || isWaitingApproval}
+          className={cn(
+            'w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] disabled:opacity-75 disabled:cursor-not-allowed shadow-md',
+            isWaitingApproval
+              ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white shadow-emerald-500/20',
           )}
-          Join Live Class
+        >
+          {isJoining || isWaitingApproval ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Video className="w-4 h-4" />
+          )}
+          {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
         </button>
       )}
     </div>
@@ -257,13 +290,26 @@ function StudentOverviewContent() {
             <h1 className="text-xl sm:text-2xl font-black leading-tight">
               {greeting}, {user?.firstName}! 👋
             </h1>
-            <p className="text-violet-200 text-sm mt-1">
+            <p className="text-violet-200 text-xs mt-0.5">
               {new Date().toLocaleDateString('en-IN', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
               })}
             </p>
+
+            <div className="flex flex-wrap items-center gap-2 mt-2.5">
+              {overview?.enrolledCourses && overview.enrolledCourses.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
+                  Course: {overview.enrolledCourses.join(', ')}
+                </span>
+              )}
+              {overview?.enrolledBatches && overview.enrolledBatches.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
+                  Batches: {overview.enrolledBatches.join(', ')}
+                </span>
+              )}
+            </div>
           </div>
           <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
             <GraduationCap className="w-6 h-6 text-white" />

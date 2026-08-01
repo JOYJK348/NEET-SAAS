@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, BookOpen, TrendingUp, Menu } from 'lucide-react';
 
+import { ChildSwitcherProvider } from '@/features/parent-portal/context/child-switcher-context';
+
 interface DashboardLayoutProps {
   children: ReactNode;
 }
@@ -26,22 +28,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Students', href: '/dashboard/students', icon: Users },
-    { name: 'Academics', href: '/dashboard/academics', icon: BookOpen },
-    { name: 'Reports', href: '/dashboard/reports', icon: TrendingUp },
-  ];
-
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar isMobile={isMobile} isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-      <div className={cn('transition-all duration-300', isMobile ? '' : 'lg:pl-64')}>
-        <Header isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />
-        <main className={cn('p-4 lg:p-6 pb-6', 'transition-all duration-300')}>
-          {children}
-        </main>
+    <ChildSwitcherProvider>
+      <div className="min-h-screen bg-background">
+        <Sidebar
+          isMobile={isMobile}
+          isMobileOpen={isMobileOpen}
+          setIsMobileOpen={setIsMobileOpen}
+        />
+        <div className={cn('transition-all duration-300', isMobile ? '' : 'lg:pl-64')}>
+          <Header isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />
+          <main className={cn('p-4 lg:p-6 pb-6', 'transition-all duration-300')}>{children}</main>
+        </div>
       </div>
-    </div>
+    </ChildSwitcherProvider>
   );
 }

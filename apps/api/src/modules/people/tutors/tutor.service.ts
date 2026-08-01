@@ -112,7 +112,7 @@ export class TutorService {
             institution: dto.previousInstitution || '',
             yearCompleted: new Date().getFullYear(),
             experienceMonths: (dto.yearsOfExperience || 0) * 12,
-            certificatesMetadata: {},
+            certificatesMetadata: { specialization: dto.specialization || '' },
             createdBy: userId,
             updatedBy: userId,
           },
@@ -314,7 +314,7 @@ export class TutorService {
       },
       query,
       tenantId,
-      (user) => this.formatTutor(user),
+      async (user) => await this.formatTutor(user),
     );
   }
 
@@ -326,7 +326,7 @@ export class TutorService {
 
     if (!user) throw new NotFoundException('Tutor not found');
 
-    return this.formatTutor(user);
+    return await this.formatTutor(user);
   }
 
   private async findOneInTx(tx: any, id: string, tenantId: string) {
@@ -337,7 +337,7 @@ export class TutorService {
 
     if (!user) throw new NotFoundException('Tutor not found');
 
-    return this.formatTutor(user);
+    return await this.formatTutor(user);
   }
 
   private findOneInclude() {
@@ -381,9 +381,10 @@ export class TutorService {
       }
 
       // Update StaffProfile
-      if (dto.employeeCode || dto.designation) {
+      if (dto.employeeCode || dto.designation || dto.phone !== undefined) {
         const profileUpdate: Record<string, unknown> = { updatedBy: userId };
         if (dto.employeeCode) profileUpdate.employeeCode = dto.employeeCode;
+        if (dto.phone !== undefined) profileUpdate.workPhone = dto.phone;
         if (dto.designation) {
           profileUpdate.designationId = await this.resolveDesignation(
             dto.designation,
@@ -401,14 +402,19 @@ export class TutorService {
       // Update StaffQualifications
       if (
         dto.qualification ||
-        dto.specialization ||
-        dto.yearsOfExperience !== undefined
+        dto.specialization !== undefined ||
+        dto.yearsOfExperience !== undefined ||
+        dto.previousInstitution
       ) {
         const existingQual = await tx.staffQualifications.findFirst({
           where: { staffProfileId: id, deletedAt: null },
         });
         const qualData: Record<string, unknown> = { updatedBy: userId };
         if (dto.qualification) qualData.degree = dto.qualification;
+        if (dto.specialization !== undefined) {
+          const existingMeta = (existingQual?.certificatesMetadata as Record<string, any>) || {};
+          qualData.certificatesMetadata = { ...existingMeta, specialization: dto.specialization };
+        }
         if (dto.previousInstitution)
           qualData.institution = dto.previousInstitution;
         if (dto.yearsOfExperience !== undefined)
@@ -418,6 +424,20 @@ export class TutorService {
           await tx.staffQualifications.update({
             where: { id: existingQual.id },
             data: qualData as any,
+          });
+        } else {
+          await tx.staffQualifications.create({
+            data: {
+              staffProfileId: id,
+              tenantId,
+              degree: dto.qualification || '',
+              institution: dto.previousInstitution || '',
+              yearCompleted: new Date().getFullYear(),
+              experienceMonths: (dto.yearsOfExperience || 0) * 12,
+              certificatesMetadata: { specialization: dto.specialization || '' },
+              createdBy: userId,
+              updatedBy: userId,
+            },
           });
         }
       }
@@ -594,32 +614,42 @@ export class TutorService {
     designationName: string,
     tenantId: string,
   ): Promise<string> {
-    const result = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
-      `SELECT id FROM public.designations WHERE tenant_id = $1::uuid AND (name = $2 OR code = $2) AND deleted_at IS NULL LIMIT 1`,
-      tenantId,
-      designationName.toUpperCase().substring(0, 10),
-    );
+    const existing = await this.prisma.designations.findFirst({
+      where: {
+        tenantId,
+        deletedAt: null,
+        OR: [
+          { name: designationName },
+          { code: designationName.toUpperCase().substring(0, 10) },
+        ],
+      },
+      select: { id: true },
+    });
 
-    if (result && result.length > 0) {
-      return result[0].id;
-    }
+    if (existing) return existing.id;
 
-    // Create default designation
-    const newId = randomUUID();
     const code = designationName
       .toUpperCase()
       .substring(0, 10)
       .replace(/\s+/g, '_');
-    await this.prisma.$executeRaw`
-      INSERT INTO public.designations (id, tenant_id, code, name, is_active, is_system)
-      VALUES (${newId}::uuid, ${tenantId}::uuid, ${code}, ${designationName}, true, false)
-      ON CONFLICT (tenant_id, id) DO NOTHING
-    `;
 
-    return newId;
+    const created = await this.prisma.designations.create({
+      data: {
+        tenantId,
+        code,
+        name: designationName,
+        description: '',
+        isActive: true,
+        isSystem: false,
+        createdBy: SYSTEM_USER_ID,
+        updatedBy: SYSTEM_USER_ID,
+      },
+    });
+
+    return created.id;
   }
 
-  private formatTutor(user: any) {
+  private async formatTutor(user: any) {
     const profile = user.staff_profiless?.[0] || user.staff_profiless || {};
     const subjects = profile.staff_subjectss || [];
     const branches = profile.staff_departmentss || [];
@@ -627,17 +657,46 @@ export class TutorService {
     const batchAssignments = profile.staff_batch_assignmentss || [];
     const qual = qualifications[0] || {};
 
+    let designationName: string | null =
+      profile.designations?.name || profile.designation?.name || (typeof profile.designation === 'string' ? profile.designation : null);
+
+    if (!designationName && profile.designationId) {
+      try {
+        const des = await this.prisma.designations.findFirst({
+          where: { id: profile.designationId },
+          select: { name: true },
+        });
+        if (des) designationName = des.name;
+      } catch {
+        // Fallback silently if query fails
+      }
+    }
+
+    let meta: any = qual.certificatesMetadata;
+    if (typeof meta === 'string') {
+      try {
+        meta = JSON.parse(meta);
+      } catch {
+        meta = {};
+      }
+    }
+
+    const specialization =
+      qual.specialization ||
+      meta?.specialization ||
+      null;
+
     return {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      phone: user.phone || null,
+      phone: profile.workPhone || user.phone || null,
       status: user.status,
       employeeCode: profile.employeeCode || null,
-      designation: null,
+      designation: designationName,
       qualification: qual.degree || null,
-      specialization: qual.specialization || null,
+      specialization,
       yearsOfExperience: qual.experienceMonths
         ? Math.floor(qual.experienceMonths / 12)
         : 0,
@@ -661,6 +720,7 @@ export class TutorService {
         isActive: ba.isActive,
         effectiveFrom: ba.effectiveFrom,
         effectiveTo: ba.effectiveTo,
+        batch: ba.batches || ba.batch || null,
       })),
       createdAt: user.createdAt,
     };

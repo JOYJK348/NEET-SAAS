@@ -14,6 +14,20 @@ interface StudentPaginationProps {
   className?: string;
 }
 
+function getPageNumbers(currentPage: number, totalPages: number) {
+  const delta = 1;
+  const range: (number | string)[] = [];
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+      range.push(i);
+    } else if (range[range.length - 1] !== '...') {
+      range.push('...');
+    }
+  }
+  return range;
+}
+
 export function StudentPagination({
   currentPage,
   totalPages,
@@ -23,35 +37,31 @@ export function StudentPagination({
   onItemsPerPageChange,
   className,
 }: StudentPaginationProps) {
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const startItem = Math.min((currentPage - 1) * itemsPerPage + 1, totalItems);
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  const visiblePages = pages.filter(
-    (page) =>
-      page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1),
-  );
+  const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-700',
+        'flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-white border-t border-[#E5E7EB]',
         className,
       )}
     >
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing <span className="font-medium">{startItem}</span> to{' '}
-        <span className="font-medium">{endItem}</span> of{' '}
-        <span className="font-medium">{totalItems}</span> results
+      <div className="text-xs font-semibold text-slate-500">
+        Showing <span className="font-extrabold text-slate-900">{startItem}</span> &ndash;{' '}
+        <span className="font-extrabold text-slate-900">{endItem}</span> of{' '}
+        <span className="font-extrabold text-slate-900">{totalItems}</span> students
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
+      <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+          <span className="hidden sm:inline">Per page:</span>
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-2 py-1 text-xs border border-[#E5E7EB] rounded-lg bg-slate-50 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             aria-label="Items per page"
           >
             {[10, 25, 50, 100].map((size) => (
@@ -68,6 +78,7 @@ export function StudentPagination({
             size="icon"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
+            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
             aria-label="First page"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -77,30 +88,47 @@ export function StudentPagination({
             size="icon"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
+            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
             aria-label="Previous page"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
 
-          {visiblePages.map((page, index) => (
-            <Button
-              key={page}
-              variant={page === currentPage ? 'default' : 'outline'}
-              size="icon"
-              onClick={() => onPageChange(page)}
-              className={cn('h-8 w-8', page === currentPage && 'bg-purple-600 hover:bg-purple-700')}
-              aria-label={`Page ${page}`}
-              aria-current={page === currentPage ? 'page' : undefined}
-            >
-              {page}
-            </Button>
-          ))}
+          {pageNumbers.map((page, index) => {
+            if (page === '...') {
+              return (
+                <span key={`ellipsis-${index}`} className="px-1 text-xs font-bold text-slate-400">
+                  ...
+                </span>
+              );
+            }
+            const pageNum = page as number;
+            const isCurrent = pageNum === currentPage;
+
+            return (
+              <button
+                key={pageNum}
+                onClick={() => onPageChange(pageNum)}
+                className={cn(
+                  'h-8 min-w-[32px] px-2 rounded-lg text-xs font-extrabold transition-all',
+                  isCurrent
+                    ? 'bg-violet-600 text-white shadow-xs'
+                    : 'bg-white border border-[#E5E7EB] text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+                )}
+                aria-label={`Page ${pageNum}`}
+                aria-current={isCurrent ? 'page' : undefined}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
 
           <Button
             variant="outline"
             size="icon"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
+            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
             aria-label="Next page"
           >
             <ChevronRight className="h-4 w-4" />
@@ -110,6 +138,7 @@ export function StudentPagination({
             size="icon"
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
+            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
             aria-label="Last page"
           >
             <ChevronsRight className="h-4 w-4" />

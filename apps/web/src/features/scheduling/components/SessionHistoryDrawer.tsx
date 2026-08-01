@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Clock, User, MapPin, Ban, Plus, RefreshCw } from 'lucide-react';
 import { getSessionHistory } from '../services/schedule-service';
@@ -90,6 +91,8 @@ function DataRow({ label, value }: { label: string; value?: string }) {
 }
 
 export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistoryDrawerProps) {
+  const [activeTab, setActiveTab] = useState<'ALL' | 'COMPLETED' | 'UPCOMING' | 'AUDIT'>('ALL');
+
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['session-history', schedule?.id],
     queryFn: () => getSessionHistory(schedule!.id),
@@ -97,6 +100,29 @@ export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistory
   });
 
   if (!open || !schedule) return null;
+
+  const filteredLogs = logs.filter((log: any) => {
+    if (activeTab === 'ALL') return true;
+    if (activeTab === 'AUDIT') {
+      return (
+        log.action === 'CREATED' || log.action === 'RESCHEDULED' || log.action === 'TUTOR_CHANGED'
+      );
+    }
+
+    const logDate = new Date(log.changedAt).getTime();
+    const isPast =
+      log.scope === 'PAST_SESSION' || (log.scope !== 'UPCOMING_SESSION' && logDate < Date.now());
+
+    if (activeTab === 'COMPLETED') {
+      return isPast && log.scope !== 'SCHEDULE_CREATED';
+    }
+
+    if (activeTab === 'UPCOMING') {
+      return log.scope === 'UPCOMING_SESSION' || (!isPast && log.scope !== 'SCHEDULE_CREATED');
+    }
+
+    return true;
+  });
 
   return (
     <>
@@ -106,26 +132,50 @@ export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistory
       {/* Panel */}
       <div className="fixed right-0 top-0 bottom-0 z-40 w-full max-w-md bg-white shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b border-slate-100">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Change History</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {schedule.dayOfWeek} · {schedule.startTime}–{schedule.endTime}
-            </p>
+        <div className="px-6 py-5 border-b border-slate-100 space-y-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Session History & Timeline</h2>
+              <p className="text-xs text-slate-400 mt-0.5 font-mono">
+                {schedule.dayOfWeek} · {schedule.startTime}–{schedule.endTime}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+
+          {/* Filter Tab Buttons */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-xl text-[11px] font-bold text-center">
+            {[
+              { key: 'ALL', label: 'All' },
+              { key: 'COMPLETED', label: 'Completed' },
+              { key: 'UPCOMING', label: 'Upcoming' },
+              { key: 'AUDIT', label: 'Changes' },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`py-1.5 rounded-lg transition-all ${
+                  activeTab === tab.key
+                    ? 'bg-white text-violet-700 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Timeline */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {isLoading && (
             <div className="flex items-center justify-center py-16">
-              <svg className="w-6 h-6 animate-spin text-primary" viewBox="0 0 24 24" fill="none">
+              <svg className="w-6 h-6 animate-spin text-violet-600" viewBox="0 0 24 24" fill="none">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -139,23 +189,23 @@ export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistory
             </div>
           )}
 
-          {!isLoading && logs.length === 0 && (
+          {!isLoading && filteredLogs.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Clock className="w-8 h-8 text-slate-200 mb-2" />
-              <p className="text-sm font-semibold text-slate-600">No history yet</p>
+              <p className="text-sm font-semibold text-slate-600">No records found</p>
               <p className="text-xs text-slate-400 mt-1">
-                Changes to this session will appear here.
+                No session records found for the selected filter tab.
               </p>
             </div>
           )}
 
-          {!isLoading && logs.length > 0 && (
+          {!isLoading && filteredLogs.length > 0 && (
             <div className="relative">
               {/* Vertical connector line */}
               <div className="absolute left-[15px] top-6 bottom-6 w-px bg-slate-100" />
 
               <div className="space-y-6">
-                {logs.map((log: any, idx: number) => {
+                {filteredLogs.map((log: any, idx: number) => {
                   const cfg = ACTION_CONFIG[log.action] ?? ACTION_CONFIG['CREATED'];
                   const Icon = cfg.icon;
 
@@ -163,7 +213,7 @@ export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistory
                     <div key={log.id ?? idx} className="flex gap-4 relative">
                       {/* Dot */}
                       <div
-                        className={`relative z-10 w-8 h-8 rounded-full ${cfg.bg} flex items-center justify-center flex-shrink-0 ring-4 ring-white`}
+                        className={`relative z-10 w-8 h-8 rounded-full ${cfg.bg} flex items-center justify-center flex-shrink-0 ring-4 ring-white shadow-xs`}
                       >
                         <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
                       </div>
@@ -173,39 +223,44 @@ export function SessionHistoryDrawer({ open, schedule, onClose }: SessionHistory
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-xs font-bold ${cfg.color}`}>{cfg.label}</span>
                           {log.scope && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold uppercase">
                               {log.scope.replace(/_/g, ' ')}
                             </span>
                           )}
                         </div>
 
-                        <p className="text-[11px] text-slate-400 mt-0.5">
+                        <p className="text-[11px] text-slate-400 mt-0.5 font-medium">
                           {formatDateTime(log.changedAt)}
                         </p>
 
                         {log.reason && (
-                          <p className="text-xs text-slate-600 mt-1.5 italic">"{log.reason}"</p>
+                          <p className="text-xs text-slate-600 mt-1.5 italic bg-slate-50 p-2 rounded-md border border-slate-100">
+                            "{log.reason}"
+                          </p>
                         )}
 
                         {/* Data diff */}
                         {(log.originalData || log.newData) && (
-                          <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                          <div className="mt-2 p-2.5 rounded-xl bg-slate-50/80 border border-slate-100 space-y-1">
+                            {log.newData?.subjectName && (
+                              <DataRow label="Subject" value={log.newData.subjectName} />
+                            )}
+                            {log.newData?.staffProfileId && (
+                              <DataRow label="Tutor / Staff" value={log.newData.staffProfileId} />
+                            )}
                             {log.originalData?.staffProfileId &&
                               log.newData?.staffProfileId &&
                               log.originalData.staffProfileId !== log.newData.staffProfileId && (
-                                <>
-                                  <DataRow label="Was" value={log.originalData.staffProfileId} />
-                                  <DataRow label="Now" value={log.newData.staffProfileId} />
-                                </>
-                              )}
-                            {log.originalData?.startsAt && log.newData?.startsAt && (
-                              <>
                                 <DataRow
-                                  label="Was"
-                                  value={formatDateTime(log.originalData.startsAt)}
+                                  label="Previous Tutor"
+                                  value={log.originalData.staffProfileId}
                                 />
-                                <DataRow label="Now" value={formatDateTime(log.newData.startsAt)} />
-                              </>
+                              )}
+                            {log.newData?.startsAt && (
+                              <DataRow
+                                label="Session Date"
+                                value={formatDateTime(log.newData.startsAt)}
+                              />
                             )}
                           </div>
                         )}

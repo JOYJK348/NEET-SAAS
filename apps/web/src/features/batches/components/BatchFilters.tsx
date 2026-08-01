@@ -52,11 +52,13 @@ export function BatchFilters({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Status</SelectItem>
-            {Object.entries(BATCH_STATUS_LABELS).map(([key, label]) => (
-              <SelectItem key={key} value={key as BatchStatus}>
-                {label}
-              </SelectItem>
-            ))}
+            {Object.entries(BATCH_STATUS_LABELS)
+              .filter(([key]) => key === 'PLANNED' || key === 'ACTIVE')
+              .map(([key, label]) => (
+                <SelectItem key={key} value={key as BatchStatus}>
+                  {label}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>

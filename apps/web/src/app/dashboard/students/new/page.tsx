@@ -9,7 +9,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { LoginCredentialsDialog } from '@/features/tutors/components/LoginCredentialsDialog';
+import { StudentLoginCredentialsDialog } from '@/features/students/components/StudentLoginCredentialsDialog';
 import { useCreateStudent, useBatches, useCourses } from '@/features/students/hooks/use-students';
 import {
   useBranchesForAdmission,
@@ -41,9 +41,10 @@ function AddStudentContent() {
   const [currentStep, setCurrentStep] = useState(0);
   const { createStudent, isCreating } = useCreateStudent();
   const [credentials, setCredentials] = useState<{
-    email: string;
-    password: string;
     name: string;
+    email: string;
+    password?: string;
+    parentPortalInfo?: any;
   } | null>(null);
   const { batches } = useBatches();
   const { courses } = useCourses();
@@ -62,7 +63,7 @@ function AddStudentContent() {
     setError,
     clearErrors,
   } = useForm<StudentFormData>({
-    resolver: zodResolver(studentFormSchema),
+    resolver: zodResolver(studentFormSchema) as any,
     defaultValues: defaultFormValues,
     mode: 'onSubmit',
     reValidateMode: 'onSubmit',
@@ -135,11 +136,12 @@ function AddStudentContent() {
         const student = (await createStudent(data)) as any;
         if (student) {
           toast({ title: 'Student created successfully' });
-          if (student.generatedPassword) {
+          if (student.generatedPassword || student.parentPortalInfo) {
             setCredentials({
+              name: `${student.firstName} ${student.lastName}`,
               email: student.email,
               password: student.generatedPassword,
-              name: `${student.firstName} ${student.lastName}`,
+              parentPortalInfo: student.parentPortalInfo,
             });
           } else {
             router.push(`/dashboard/students/${student.id}`);
@@ -275,17 +277,35 @@ function AddStudentContent() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Add Student</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              Create a new student record
-            </p>
+        {/* Top Back Action Bar */}
+        <div className="flex flex-row items-center justify-between gap-2 w-full">
+          <button
+            onClick={() => router.push('/dashboard/students')}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
+            <span className="hidden sm:inline">Back to Student Directory</span>
+            <span className="sm:hidden">Back</span>
+          </button>
+        </div>
+
+        {/* Dedicated Screen Header Banner */}
+        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                <span className="text-xl sm:text-2xl font-black">🎓</span>
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
+                  Student Registration & Admission Setup 🎓
+                </h1>
+                <p className="text-xs text-violet-200 font-medium mt-0.5">
+                  Register new candidate profiles, assign default course track, and configure parent
+                  credentials.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -326,12 +346,13 @@ function AddStudentContent() {
       </div>
 
       {credentials && (
-        <LoginCredentialsDialog
+        <StudentLoginCredentialsDialog
           open={true}
           onOpenChange={handleCredentialsClose}
-          email={credentials.email}
-          password={credentials.password}
-          name={credentials.name}
+          studentName={credentials.name}
+          studentEmail={credentials.email}
+          studentPassword={credentials.password}
+          parentPortalInfo={credentials.parentPortalInfo}
         />
       )}
     </DashboardLayout>

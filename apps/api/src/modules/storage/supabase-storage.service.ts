@@ -484,8 +484,12 @@ export class SupabaseStorageService implements IStorageService {
       record.createdAt,
     );
 
-    const expiry =
-      expiresInSeconds ?? DEFAULT_SIGNED_URL_EXPIRY[record.moduleCode] ?? 900;
+    // Supabase max signed URL expiry is 604,800 seconds (7 days)
+    const rawExpiry =
+      expiresInSeconds ??
+      DEFAULT_SIGNED_URL_EXPIRY[record.moduleCode] ??
+      604800;
+    const expiry = Math.min(rawExpiry, 604800);
 
     const options: { download?: string | boolean } = {};
     if (download) {
@@ -667,5 +671,50 @@ export class SupabaseStorageService implements IStorageService {
     }
 
     return record;
+  }
+
+  /**
+   * Downloads raw file blob directly from Supabase Storage using service role key,
+   * bypassing token expiration checks completely for secure backend proxying.
+   */
+  async downloadFileStream(params: {
+    tenantId: string;
+    fileUploadId: string;
+  }): Promise<{ blob: Blob; record: FileUploads }> {
+    const { tenantId, fileUploadId } = params;
+
+    const record = await this.prisma.fileUploads.findFirst({
+      where: {
+        id: fileUploadId,
+        tenantId,
+        deletedAt: null,
+      },
+    });
+
+    if (!record) {
+      throw new NotFoundException(
+        `FileUpload record '${fileUploadId}' not found for tenant '${tenantId}'`,
+      );
+    }
+
+    const bucketName = this.resolveBucketName(record.bucket);
+    const storagePath = this.generateStoragePath(
+      tenantId,
+      record.moduleCode,
+      record.storedFileName,
+      record.createdAt,
+    );
+
+    const { data, error } = await this.supabaseClient.storage
+      .from(bucketName)
+      .download(storagePath);
+
+    if (error || !data) {
+      throw new InternalServerErrorException(
+        `Failed to download object from storage: ${error?.message || 'Unknown error'}`,
+      );
+    }
+
+    return { blob: data, record };
   }
 }

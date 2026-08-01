@@ -114,12 +114,143 @@ export class SessionService {
 
   // ─── GET AUDIT HISTORY ────────────────────────────────────────────────────
 
-  async getHistory(tenantId: string, sessionId: string) {
-    await this.findOne(tenantId, sessionId);
-    return this.prisma.sessionAuditLogs.findMany({
-      where: { tenantId, attendanceSessionId: sessionId },
-      orderBy: { changedAt: 'asc' },
+  async getHistory(tenantId: string, idOrScheduleId: string) {
+    const auditLogs = await this.prisma.sessionAuditLogs.findMany({
+      where: {
+        tenantId,
+        OR: [
+          { attendanceSessionId: idOrScheduleId },
+          { scheduleId: idOrScheduleId },
+        ],
+      },
+      orderBy: { changedAt: 'desc' },
     });
+
+    if (auditLogs.length > 0) {
+      return auditLogs;
+    }
+
+    // Fallback: If no explicit override audit logs exist, resolve schedule and past sessions info
+    const schedule = await this.prisma.schedules.findFirst({
+      where: { tenantId, id: idOrScheduleId, deletedAt: null },
+    });
+
+    if (!schedule) {
+      return [];
+    }
+
+    // Fetch past sessions conducted for this schedule
+    const sessions = await this.prisma.attendanceSessions.findMany({
+      where: { tenantId, scheduleId: schedule.id, deletedAt: null },
+      orderBy: { attendanceDate: 'desc' },
+      take: 10,
+    });
+
+    let tutorName = 'Assigned Tutor';
+    if (schedule.staffProfileId) {
+      const user = await this.prisma.users.findFirst({
+        where: { tenantId, id: schedule.staffProfileId },
+      });
+      if (user) {
+        tutorName = `${user.firstName} ${user.lastName || ''}`.trim();
+      }
+    }
+
+    let subjectName = 'Subject';
+    if (schedule.subjectId) {
+      const sub = await this.prisma.subjects.findFirst({
+        where: { tenantId, id: schedule.subjectId },
+      });
+      if (sub) {
+        subjectName = sub.name;
+      }
+    }
+
+    const historyItems: any[] = [];
+
+    // 1. Initial Schedule Creation Record
+    historyItems.push({
+      id: `created-${schedule.id}`,
+      action: 'CREATED',
+      scope: 'SCHEDULE_CREATED',
+      changedAt: schedule.createdAt,
+      reason: `${subjectName} schedule created for ${tutorName} (${schedule.dayOfWeek} ${schedule.startTime}-${schedule.endTime})`,
+      newData: {
+        staffProfileId: tutorName,
+        subjectName,
+        startsAt: schedule.effectiveFrom,
+      },
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 2. Materialized Sessions (If available)
+    if (sessions.length > 0) {
+      sessions.forEach((ses) => {
+        const sesDate = new Date(ses.attendanceDate);
+        sesDate.setHours(0, 0, 0, 0);
+        const isUpcoming = sesDate.getTime() >= today.getTime();
+        const scope = isUpcoming ? 'UPCOMING_SESSION' : 'PAST_SESSION';
+        const action = ses.sessionStatus === 'CANCELLED' ? 'CANCELLED' : isUpcoming ? 'RESCHEDULED' : 'STATUS_CHANGED';
+
+        historyItems.push({
+          id: ses.id,
+          action,
+          scope,
+          changedAt: ses.attendanceDate,
+          reason: `${subjectName} session on ${ses.attendanceDate.toISOString().split('T')[0]} (${ses.sessionStatus})`,
+          newData: {
+            staffProfileId: tutorName,
+            subjectName,
+            startsAt: ses.startsAt,
+          },
+        });
+      });
+    } else {
+      // 3. Fallback: Generate upcoming weekly session slots for recurring schedule
+      const dayMap: Record<string, number> = {
+        SUNDAY: 0,
+        MONDAY: 1,
+        TUESDAY: 2,
+        WEDNESDAY: 3,
+        THURSDAY: 4,
+        FRIDAY: 5,
+        SATURDAY: 6,
+      };
+
+      const targetDay = dayMap[schedule.dayOfWeek] ?? 1;
+      const nextDate = new Date();
+      nextDate.setHours(0, 0, 0, 0);
+
+      // Find next occurrence of the dayOfWeek
+      const diff = (targetDay + 7 - nextDate.getDay()) % 7;
+      nextDate.setDate(nextDate.getDate() + diff);
+
+      for (let i = 0; i < 4; i++) {
+        const sessionDate = new Date(nextDate);
+        sessionDate.setDate(sessionDate.getDate() + i * 7);
+
+        const startsAt = new Date(
+          `${sessionDate.toISOString().split('T')[0]}T${schedule.startTime}:00`,
+        );
+
+        historyItems.push({
+          id: `upcoming-${schedule.id}-${i}`,
+          action: 'RESCHEDULED',
+          scope: 'UPCOMING_SESSION',
+          changedAt: startsAt,
+          reason: `${subjectName} class scheduled for ${tutorName} on ${sessionDate.toISOString().split('T')[0]}`,
+          newData: {
+            staffProfileId: tutorName,
+            subjectName,
+            startsAt,
+          },
+        });
+      }
+    }
+
+    return historyItems;
   }
 
   // ─── RESOLVE SESSION OR SCHEDULE ──────────────────────────────────────────

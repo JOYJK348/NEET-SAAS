@@ -48,11 +48,10 @@ export function PdfDocumentForm({
       formData.append('moduleCode', 'DOCUMENTS');
       formData.append('fileType', 'DOCUMENT');
 
-      const res: any = await api.post('/storage/upload', formData, {
+      const res: any = await api.post('/storage/upload?expiresIn=604800', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const uploadedUrl =
-        res.signedUrl || res.fileUrl || res.url || res.storagePath || res.key;
+      const uploadedUrl = res.signedUrl || res.fileUrl || res.url || res.storagePath || res.key;
 
       toast.success('PDF document uploaded to storage bucket successfully!');
       onChange?.({

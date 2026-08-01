@@ -23,8 +23,17 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     if (isAuthenticated && allowedRoles && allowedRoles.length > 0 && user) {
-      if (!allowedRoles.includes(user.roleCode)) {
-        router.replace('/dashboard');
+      const role = user.roleCode || (user as any).role;
+      if (!allowedRoles.includes(role)) {
+        if (role === 'STUDENT') {
+          router.replace('/dashboard/student');
+        } else if (role === 'PARENT') {
+          router.replace('/dashboard/parent/academics');
+        } else if (role === 'TUTOR' || role === 'FACULTY') {
+          router.replace('/dashboard/tutor');
+        } else {
+          router.replace('/dashboard');
+        }
       }
     }
   }, [isAuthenticated, user, allowedRoles, router]);
@@ -39,6 +48,13 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if (!isAuthenticated) {
     return null;
+  }
+
+  if (user && allowedRoles && allowedRoles.length > 0) {
+    const role = user.roleCode || (user as any).role;
+    if (!allowedRoles.includes(role)) {
+      return null;
+    }
   }
 
   return <>{children}</>;

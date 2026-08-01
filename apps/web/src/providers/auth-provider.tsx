@@ -179,6 +179,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser,
   ]);
 
+  // Strict Role Route Guard across tabs
+  useEffect(() => {
+    if (!hasHydrated || isLoading || !isAuthenticated || !user) return;
+
+    const isParentRole = user.roleCode === 'PARENT';
+    const isParentPath = pathname.startsWith('/dashboard/parent');
+    const isDashboardPath =
+      pathname.startsWith('/dashboard') || pathname.startsWith('/tenant-admin');
+
+    if (isParentRole && isDashboardPath && !isParentPath) {
+      // PARENT user attempting to access non-parent routes -> redirect to parent portal
+      router.replace('/dashboard/parent/academics');
+    } else if (!isParentRole && isParentPath) {
+      // NON-PARENT user attempting to access parent portal -> redirect to main dashboard
+      router.replace('/dashboard');
+    }
+  }, [hasHydrated, isLoading, isAuthenticated, user, pathname, router]);
+
   // Proactive token refresh — silently keep access token fresh before it expires
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;

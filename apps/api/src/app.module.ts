@@ -20,6 +20,7 @@ import { LearningModule } from './modules/learning/learning.module';
 import { SchedulingModule } from './modules/scheduling/scheduling.module';
 import { TutorDashboardModule } from './modules/tutor-dashboard/tutor-dashboard.module';
 import { StudentDashboardModule } from './modules/student-dashboard/student-dashboard.module';
+import { ParentDashboardModule } from './modules/parent-dashboard/parent-dashboard.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { StorageModule } from './modules/storage/storage.module';
 
@@ -47,6 +48,7 @@ import { StorageModule } from './modules/storage/storage.module';
     SchedulingModule,
     TutorDashboardModule,
     StudentDashboardModule,
+    ParentDashboardModule,
     AttendanceModule,
     StorageModule,
     HealthModule,

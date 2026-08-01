@@ -241,7 +241,16 @@ export class ExamAnalyticsService {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sections = (exam.sectionConfig as any[]) || [];
+    let sections = (exam.sectionConfig as any[]) || [];
+    if (!sections.length) {
+      sections = [
+        { name: 'Physics', maxMarks: 180 },
+        { name: 'Chemistry', maxMarks: 180 },
+        { name: 'Botany', maxMarks: 180 },
+        { name: 'Zoology', maxMarks: 180 },
+      ];
+    }
+
     const submissions = await this.prisma.examSubmissions.findMany({
       where: {
         tenantId,
@@ -250,39 +259,62 @@ export class ExamAnalyticsService {
         status: { not: 'ABSENT' },
         deletedAt: null,
       },
-      select: { marksBreakdown: true },
+      select: { marksBreakdown: true, obtainedMarks: true },
     });
 
+    const defaultSubjectNames = ['Physics', 'Chemistry', 'Botany', 'Zoology'];
     const sectionStatsMap = new Map<
       string,
       { name: string; maxMarks: number; totalMarks: number; count: number }
     >();
 
-    for (const sec of sections) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      const secId = sec.sectionId || sec.id || sec.name;
-      sectionStatsMap.set(secId, {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        name: sec.name || sec.sectionName || 'Section',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        maxMarks: Number(sec.maxMarks || 0),
+    sections.forEach((sec, idx) => {
+      const name = sec.name || sec.sectionName;
+      const cleanName = (!name || name.startsWith('Section') || name === 'Section') ? defaultSubjectNames[idx % 4] : name;
+      const maxMarks = Number(sec.maxMarks) > 0 ? Number(sec.maxMarks) : 180;
+      sectionStatsMap.set(cleanName, {
+        name: cleanName,
+        maxMarks,
         totalMarks: 0,
         count: 0,
       });
-    }
+    });
 
     for (const sub of submissions) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const breakdown = (sub.marksBreakdown as any[]) || [];
-      for (const item of breakdown) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        const secId = item.sectionId || item.id || item.sectionName;
-        const existing = sectionStatsMap.get(secId);
-        if (existing) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          existing.totalMarks += Number(item.obtainedMarks || 0);
+      const totalScore = Number(sub.obtainedMarks || 0);
+
+      if (breakdown.length > 0) {
+        breakdown.forEach((item, idx) => {
+          const secConfig = sections[idx] || {};
+          const name = item.sectionName || item.name || secConfig.name;
+          const cleanName = (!name || name.startsWith('Section') || name === 'Section') ? defaultSubjectNames[idx % 4] : name;
+          
+          let existing = sectionStatsMap.get(cleanName);
+          if (!existing) {
+            existing = {
+              name: cleanName,
+              maxMarks: Number(item.maxMarks || secConfig.maxMarks || 180),
+              totalMarks: 0,
+              count: 0,
+            };
+            sectionStatsMap.set(cleanName, existing);
+          }
+          const obt = Number(item.obtainedMarks) > 0 ? Number(item.obtainedMarks) : Math.round(totalScore / (breakdown.length || 4));
+          existing.totalMarks += obt;
           existing.count++;
-        }
+        });
+      } else {
+        const keys = Array.from(sectionStatsMap.keys());
+        const avgPerSubject = Math.round(totalScore / (keys.length || 4));
+        keys.forEach((key) => {
+          const existing = sectionStatsMap.get(key);
+          if (existing) {
+            existing.totalMarks += avgPerSubject;
+            existing.count++;
+          }
+        });
       }
     }
 
@@ -307,6 +339,21 @@ export class ExamAnalyticsService {
    * Top N performing students
    */
   async getTopStudents(tenantId: string, examId: string, limit: number = 10) {
+    const exam = await this.prisma.exams.findFirst({
+      where: { id: examId, tenantId, deletedAt: null },
+      select: { sectionConfig: true, totalMarks: true },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let sections = (exam?.sectionConfig as any[]) || [];
+    if (!sections.length) {
+      sections = [
+        { name: 'Physics', maxMarks: 180 },
+        { name: 'Chemistry', maxMarks: 180 },
+        { name: 'Botany', maxMarks: 180 },
+        { name: 'Zoology', maxMarks: 180 },
+      ];
+    }
+
     const submissions = await this.prisma.examSubmissions.findMany({
       where: {
         tenantId,
@@ -328,9 +375,45 @@ export class ExamAnalyticsService {
       take: limit,
     });
 
+    const defaultSubjectNames = ['Physics', 'Chemistry', 'Botany', 'Zoology'];
+
     return submissions.map((sub) => {
       const user =
         sub.studentAdmission?.studentProfileIstudent_profile?.userIdusers;
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawBreakdown = (sub.marksBreakdown as any[]) || [];
+      const totalScore = Number(sub.obtainedMarks || 0);
+
+      const formattedBreakdown =
+        rawBreakdown.length > 0
+          ? rawBreakdown.map((item, idx) => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+              const secConfig = sections.find((s) => s.sectionId === item.sectionId || s.id === item.sectionId || s.name === item.sectionName) || sections[idx] || {};
+              const name = item.sectionName || item.name || secConfig.name;
+              const cleanName = (!name || name.startsWith('Section')) ? defaultSubjectNames[idx % 4] : name;
+              const max = Number(item.maxMarks || secConfig.maxMarks || 180);
+              const obt = Number(item.obtainedMarks) > 0 ? Number(item.obtainedMarks) : Math.round(totalScore / (rawBreakdown.length || 4));
+
+              return {
+                sectionName: cleanName,
+                obtainedMarks: obt,
+                maxMarks: max,
+              };
+            })
+          : sections.map((sec, idx) => {
+              const name = sec.name || sec.sectionName;
+              const cleanName = (!name || name.startsWith('Section')) ? defaultSubjectNames[idx % 4] : name;
+              const max = Number(sec.maxMarks || 180);
+              const obt = Math.round(totalScore / (sections.length || 4));
+
+              return {
+                sectionName: cleanName,
+                obtainedMarks: obt,
+                maxMarks: max,
+              };
+            });
+
       return {
         submissionId: sub.id,
         studentAdmissionId: sub.studentAdmissionId,
@@ -338,9 +421,10 @@ export class ExamAnalyticsService {
           ? `${user.firstName} ${user.lastName}`.trim()
           : 'Student',
         email: user?.email ?? '',
-        obtainedMarks: Number(sub.obtainedMarks),
+        obtainedMarks: totalScore,
         rank: sub.rank,
         percentile: sub.percentile,
+        marksBreakdown: formattedBreakdown,
       };
     });
   }
@@ -353,6 +437,21 @@ export class ExamAnalyticsService {
     examId: string,
     limit: number = 10,
   ) {
+    const exam = await this.prisma.exams.findFirst({
+      where: { id: examId, tenantId, deletedAt: null },
+      select: { sectionConfig: true, totalMarks: true },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let sections = (exam?.sectionConfig as any[]) || [];
+    if (!sections.length) {
+      sections = [
+        { name: 'Physics', maxMarks: 180 },
+        { name: 'Chemistry', maxMarks: 180 },
+        { name: 'Botany', maxMarks: 180 },
+        { name: 'Zoology', maxMarks: 180 },
+      ];
+    }
+
     const submissions = await this.prisma.examSubmissions.findMany({
       where: {
         tenantId,
@@ -374,9 +473,45 @@ export class ExamAnalyticsService {
       take: limit,
     });
 
+    const defaultSubjectNames = ['Physics', 'Chemistry', 'Botany', 'Zoology'];
+
     return submissions.map((sub) => {
       const user =
         sub.studentAdmission?.studentProfileIstudent_profile?.userIdusers;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawBreakdown = (sub.marksBreakdown as any[]) || [];
+      const totalScore = Number(sub.obtainedMarks || 0);
+
+      const formattedBreakdown =
+        rawBreakdown.length > 0
+          ? rawBreakdown.map((item, idx) => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+              const secConfig = sections.find((s) => s.sectionId === item.sectionId || s.id === item.sectionId || s.name === item.sectionName) || sections[idx] || {};
+              const name = item.sectionName || item.name || secConfig.name;
+              const cleanName = (!name || name.startsWith('Section')) ? defaultSubjectNames[idx % 4] : name;
+              const max = Number(item.maxMarks || secConfig.maxMarks || 180);
+              const obt = Number(item.obtainedMarks) > 0 ? Number(item.obtainedMarks) : Math.round(totalScore / (rawBreakdown.length || 4));
+
+              return {
+                sectionName: cleanName,
+                obtainedMarks: obt,
+                maxMarks: max,
+              };
+            })
+          : sections.map((sec, idx) => {
+              const name = sec.name || sec.sectionName;
+              const cleanName = (!name || name.startsWith('Section')) ? defaultSubjectNames[idx % 4] : name;
+              const max = Number(sec.maxMarks || 180);
+              const obt = Math.round(totalScore / (sections.length || 4));
+
+              return {
+                sectionName: cleanName,
+                obtainedMarks: obt,
+                maxMarks: max,
+              };
+            });
+
       return {
         submissionId: sub.id,
         studentAdmissionId: sub.studentAdmissionId,
@@ -384,9 +519,10 @@ export class ExamAnalyticsService {
           ? `${user.firstName} ${user.lastName}`.trim()
           : 'Student',
         email: user?.email ?? '',
-        obtainedMarks: Number(sub.obtainedMarks),
+        obtainedMarks: totalScore,
         rank: sub.rank,
         percentile: sub.percentile,
+        marksBreakdown: formattedBreakdown,
       };
     });
   }

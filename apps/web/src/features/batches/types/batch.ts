@@ -111,6 +111,7 @@ export interface UpdateBatchInput extends Partial<CreateBatchInput> {
 
 export interface BatchStudentEnrollment {
   id: string;
+  admissionId?: string;
   studentId: string;
   studentName: string;
   email: string;

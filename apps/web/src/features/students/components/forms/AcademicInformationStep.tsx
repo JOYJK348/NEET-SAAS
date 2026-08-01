@@ -42,18 +42,19 @@ export function AcademicInformationStep({
   courses,
   branchCourses = [],
 }: AcademicInformationStepProps) {
-  // 1. Filter branches based on selected academic year mapping config in db
+  // 1. Filter branches based on selected academic year mapping config in db (fallback to all branches)
   const filteredBranches = branches.filter((branch) => {
-    if (!values.academicYearId) return true; // Show all if no year selected
+    if (!values.academicYearId) return true;
     return branchCourses.some(
       (mapping) =>
         mapping.academicYearId === values.academicYearId && mapping.branchId === branch.id,
     );
   });
+  const availableBranches = filteredBranches.length > 0 ? filteredBranches : branches;
 
-  // 2. Filter courses based on selected branch, academic year, and branchCourses mappings
+  // 2. Filter courses based on selected branch, academic year (fallback to all courses)
   const filteredCourses = courses.filter((course) => {
-    if (!values.branchId) return true; // Show all if no branch selected
+    if (!values.branchId) return true;
     return branchCourses.some(
       (mapping) =>
         mapping.branchId === values.branchId &&
@@ -61,32 +62,32 @@ export function AcademicInformationStep({
         (!values.academicYearId || mapping.academicYearId === values.academicYearId),
     );
   });
+  const availableCourses = filteredCourses.length > 0 ? filteredCourses : courses;
 
-  // 3. Filter batches based on selected branch, course and academic year
+  // 3. Filter batches based on selected branch, course and academic year (fallback to all batches)
   const filteredBatches = batches.filter((batch) => {
-    if (values.academicYearId && batch.academicYearId !== values.academicYearId) return false;
-    if (values.branchId && batch.branchId !== values.branchId) return false;
-    if (values.courseId && batch.courseId !== values.courseId) return false;
+    if (
+      values.academicYearId &&
+      batch.academicYearId &&
+      batch.academicYearId !== values.academicYearId
+    )
+      return false;
+    if (values.branchId && batch.branchId && batch.branchId !== values.branchId) return false;
+    if (values.courseId && batch.courseId && batch.courseId !== values.courseId) return false;
     return true;
   });
+  const availableBatches = filteredBatches.length > 0 ? filteredBatches : batches;
 
   const handleAcademicYearChange = (value: string) => {
     onFieldChange('academicYearId', value);
-    // Reset subordinate selections
-    onFieldChange('branchId', '');
-    onFieldChange('courseId', '');
-    onFieldChange('batchId', '');
   };
 
   const handleBranchChange = (value: string) => {
     onFieldChange('branchId', value);
-    onFieldChange('courseId', '');
-    onFieldChange('batchId', '');
   };
 
   const handleCourseChange = (value: string) => {
     onFieldChange('courseId', value);
-    onFieldChange('batchId', '');
   };
 
   return (
@@ -98,11 +99,11 @@ export function AcademicInformationStep({
         {/* Academic Year */}
         <div className="space-y-2">
           <Label htmlFor="academicYearId">Academic Year</Label>
-          <Select value={values.academicYearId} onValueChange={handleAcademicYearChange}>
+          <Select value={values.academicYearId || ''} onValueChange={handleAcademicYearChange}>
             <SelectTrigger error={!!errors.academicYearId}>
               <SelectValue placeholder="Select academic year" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               {academicYears.map((year) => (
                 <SelectItem key={year.id} value={year.id}>
                   {year.name}
@@ -118,18 +119,12 @@ export function AcademicInformationStep({
         {/* Branch */}
         <div className="space-y-2">
           <Label htmlFor="branchId">Branch</Label>
-          <Select
-            value={values.branchId}
-            onValueChange={handleBranchChange}
-            disabled={!values.academicYearId}
-          >
+          <Select value={values.branchId || ''} onValueChange={handleBranchChange}>
             <SelectTrigger error={!!errors.branchId}>
-              <SelectValue
-                placeholder={values.academicYearId ? 'Select branch' : 'Select academic year first'}
-              />
+              <SelectValue placeholder="Select branch" />
             </SelectTrigger>
-            <SelectContent>
-              {filteredBranches.map((branch) => (
+            <SelectContent className="bg-white">
+              {availableBranches.map((branch) => (
                 <SelectItem key={branch.id} value={branch.id}>
                   {branch.name}
                 </SelectItem>
@@ -142,18 +137,12 @@ export function AcademicInformationStep({
         {/* Course */}
         <div className="space-y-2">
           <Label htmlFor="courseId">Course</Label>
-          <Select
-            value={values.courseId}
-            onValueChange={handleCourseChange}
-            disabled={!values.branchId}
-          >
+          <Select value={values.courseId || ''} onValueChange={handleCourseChange}>
             <SelectTrigger error={!!errors.courseId}>
-              <SelectValue
-                placeholder={values.branchId ? 'Select course' : 'Select branch first'}
-              />
+              <SelectValue placeholder="Select course" />
             </SelectTrigger>
-            <SelectContent>
-              {filteredCourses.map((course) => (
+            <SelectContent className="bg-white">
+              {availableCourses.map((course) => (
                 <SelectItem key={course.id} value={course.id}>
                   {course.name}
                 </SelectItem>
@@ -167,15 +156,14 @@ export function AcademicInformationStep({
         <div className="space-y-2">
           <Label htmlFor="batchId">Batch</Label>
           <Select
-            value={values.batchId}
+            value={values.batchId || ''}
             onValueChange={(value) => onFieldChange('batchId', value)}
-            disabled={!values.courseId}
           >
             <SelectTrigger error={!!errors.batchId}>
-              <SelectValue placeholder={values.courseId ? 'Select batch' : 'Select course first'} />
+              <SelectValue placeholder="Select batch" />
             </SelectTrigger>
-            <SelectContent>
-              {filteredBatches.map((batch) => (
+            <SelectContent className="bg-white">
+              {availableBatches.map((batch) => (
                 <SelectItem key={batch.id} value={batch.id}>
                   {batch.name}
                 </SelectItem>

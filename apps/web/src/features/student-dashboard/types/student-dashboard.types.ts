@@ -50,6 +50,7 @@ export interface StudentSessionDto {
   dayOfWeek: string;
   subject: SubjectDto | null;
   batch: BatchDto | null;
+  tutorName?: string | null;
   sessionStatus: string;
   sessionSource?: string | null;
   deliveryMode: DeliveryMode | null;
@@ -67,6 +68,8 @@ export interface StudentOverviewStats {
 }
 
 export interface StudentOverviewResponseDto {
+  enrolledCourses?: string[];
+  enrolledBatches?: string[];
   stats: StudentOverviewStats;
   todaysSchedule: StudentSessionDto[];
   liveNow: StudentSessionDto[];

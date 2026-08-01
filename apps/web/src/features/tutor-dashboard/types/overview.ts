@@ -22,8 +22,8 @@ export interface BranchDto {
 export interface TutorialSessionDto {
   id: string;
   date: string; // ISO date string from backend
-  startsAt: string;  // HH:mm format
-  endsAt: string;    // HH:mm format
+  startsAt: string; // HH:mm format
+  endsAt: string; // HH:mm format
   subject?: SubjectDto | null;
   batch?: BatchDto | null;
   branch?: BranchDto | null;
@@ -32,6 +32,10 @@ export interface TutorialSessionDto {
   overrideType?: string | null;
   cancelledReason?: string | null;
   dayOfWeek: string | null;
+  liveStatus?: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED';
+  deliveryMode?: string | null;
+  meetingLink?: string | null;
+  canJoin?: boolean;
 }
 
 export interface TutorOverviewStatsDto {
@@ -45,5 +49,5 @@ export interface TutorOverviewResponseDto {
   stats: TutorOverviewStatsDto;
   todaysSchedule: TutorialSessionDto[];
   upcomingSchedule: TutorialSessionDto[];
+  liveNow?: TutorialSessionDto[];
 }
-

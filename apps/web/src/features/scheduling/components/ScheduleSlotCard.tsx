@@ -1,44 +1,74 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Clock, MapPin, Wifi, User, RefreshCw, Ban, History, MoreVertical } from 'lucide-react';
+import {
+  Clock,
+  MapPin,
+  Wifi,
+  User,
+  RefreshCw,
+  Ban,
+  History,
+  MoreVertical,
+  Sparkles,
+} from 'lucide-react';
 import { ScheduleDetail } from '../types/schedule.types';
 import type { SessionAction } from './SessionOverrideDrawer';
 
-// Subject-to-color mapping for light theme
-const SUBJECT_COLORS: Record<string, { bg: string; border: string; text: string; dot: string }> = {
+// Rich subject color palettes
+const SUBJECT_COLORS: Record<
+  string,
+  { bg: string; border: string; text: string; badgeBg: string; badgeText: string; accent: string }
+> = {
   Physics: {
-    bg: 'bg-indigo-50',
-    border: 'border-indigo-100',
-    text: 'text-indigo-700',
-    dot: 'bg-indigo-500',
+    bg: 'bg-gradient-to-br from-indigo-50/90 to-blue-50/40',
+    border: 'border-indigo-100/90 hover:border-indigo-300',
+    text: 'text-indigo-950',
+    badgeBg: 'bg-indigo-100/80',
+    badgeText: 'text-indigo-800',
+    accent: 'bg-indigo-600',
   },
   Chemistry: {
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-100',
-    text: 'text-emerald-700',
-    dot: 'bg-emerald-500',
+    bg: 'bg-gradient-to-br from-emerald-50/90 to-teal-50/40',
+    border: 'border-emerald-100/90 hover:border-emerald-300',
+    text: 'text-emerald-950',
+    badgeBg: 'bg-emerald-100/80',
+    badgeText: 'text-emerald-800',
+    accent: 'bg-emerald-600',
   },
   Biology: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-100',
-    text: 'text-amber-700',
-    dot: 'bg-amber-500',
+    bg: 'bg-gradient-to-br from-amber-50/90 to-orange-50/40',
+    border: 'border-amber-100/90 hover:border-amber-300',
+    text: 'text-amber-950',
+    badgeBg: 'bg-amber-100/80',
+    badgeText: 'text-amber-800',
+    accent: 'bg-amber-600',
   },
-  Maths: { bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', dot: 'bg-rose-500' },
+  Maths: {
+    bg: 'bg-gradient-to-br from-rose-50/90 to-pink-50/40',
+    border: 'border-rose-100/90 hover:border-rose-300',
+    text: 'text-rose-950',
+    badgeBg: 'bg-rose-100/80',
+    badgeText: 'text-rose-800',
+    accent: 'bg-rose-600',
+  },
   English: {
-    bg: 'bg-violet-50',
-    border: 'border-violet-100',
-    text: 'text-violet-700',
-    dot: 'bg-violet-500',
+    bg: 'bg-gradient-to-br from-violet-50/90 to-purple-50/40',
+    border: 'border-violet-100/90 hover:border-violet-300',
+    text: 'text-violet-950',
+    badgeBg: 'bg-violet-100/80',
+    badgeText: 'text-violet-800',
+    accent: 'bg-violet-600',
   },
 };
 
 const DEFAULT_COLOR = {
-  bg: 'bg-slate-50',
-  border: 'border-slate-100',
-  text: 'text-slate-700',
-  dot: 'bg-slate-500',
+  bg: 'bg-gradient-to-br from-slate-50 to-slate-100/50',
+  border: 'border-slate-200/80 hover:border-slate-300',
+  text: 'text-slate-900',
+  badgeBg: 'bg-slate-200/70',
+  badgeText: 'text-slate-700',
+  accent: 'bg-slate-600',
 };
 
 function getSubjectColor(subjectName?: string) {
@@ -49,10 +79,14 @@ function getSubjectColor(subjectName?: string) {
   return key ? SUBJECT_COLORS[key] : DEFAULT_COLOR;
 }
 
-// ── Compute the upcoming calendar date for a dayOfWeek ──
 const DAY_INDEX: Record<string, number> = {
-  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3,
-  THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
+  SUNDAY: 0,
+  MONDAY: 1,
+  TUESDAY: 2,
+  WEDNESDAY: 3,
+  THURSDAY: 4,
+  FRIDAY: 5,
+  SATURDAY: 6,
 };
 
 function getNextOccurrenceDate(dayOfWeek: string): Date {
@@ -60,7 +94,7 @@ function getNextOccurrenceDate(dayOfWeek: string): Date {
   today.setHours(0, 0, 0, 0);
   const targetDay = DAY_INDEX[dayOfWeek] ?? today.getDay();
   const todayDay = today.getDay();
-  const diff = (targetDay - todayDay + 7) % 7; // 0 = today, 1..6 = future days
+  const diff = (targetDay - todayDay + 7) % 7;
   const result = new Date(today);
   result.setDate(today.getDate() + diff);
   return result;
@@ -101,7 +135,6 @@ export function ScheduleSlotCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -138,100 +171,108 @@ export function ScheduleSlotCard({
     <div
       onClick={onClick}
       className={`
-        group relative rounded-lg border p-3 cursor-pointer select-none
-        transition-all duration-200 hover:scale-[1.02] hover:shadow-md
-        ${colors.bg} ${colors.border}
+        group relative rounded-2xl border p-4 cursor-pointer select-none
+        transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 backdrop-blur-xs
+        ${colors.bg} ${colors.border} space-y-3
       `}
     >
-      {/* Color dot */}
-      <div className={`absolute top-3 right-7 w-1.5 h-1.5 rounded-full ${colors.dot}`} />
+      {/* Top Bar: Subject Badge + Actions dropdown */}
+      <div className="flex items-center justify-between">
+        <span
+          className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${colors.accent}`} />
+          {subjectName ?? 'Subject'}
+        </span>
 
-      {/* Context menu trigger — revealed on hover */}
-      {(onAction || onHistory) && (
-        <div ref={menuRef} className="absolute top-1.5 right-1.5">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen((v) => !v);
-            }}
-            className="w-6 h-6 flex items-center justify-center rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/10 text-slate-500"
-            title="Session options"
-          >
-            <MoreVertical className="w-3.5 h-3.5" />
-          </button>
+        {/* Options Trigger */}
+        {Boolean(onAction || onHistory) && (
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((v) => !v);
+              }}
+              className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs hover:bg-white text-slate-600 transition-all"
+              title="Class Options"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
 
-          {/* Dropdown */}
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden py-1">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.action}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMenuAction(item.action);
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-left transition-colors ${
-                      item.danger
-                        ? 'text-red-600 hover:bg-red-50'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Icon
-                      className={`w-3.5 h-3.5 flex-shrink-0 ${item.danger ? 'text-red-500' : 'text-slate-400'}`}
-                    />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Subject name */}
-      <p className={`text-xs font-bold ${colors.text} truncate pr-3`}>{subjectName ?? 'Subject'}</p>
-
-      {/* Batch and Tutor info */}
-      <div className="mt-1 space-y-0.5">
-        {batchName && (
-          <p className="text-[11px] font-semibold text-slate-700 truncate">{batchName}</p>
+            {/* Dropdown Menu */}
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden p-1 space-y-0.5">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.action}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMenuAction(item.action);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-left transition-colors ${
+                        item.danger
+                          ? 'text-rose-600 hover:bg-rose-50'
+                          : 'text-slate-700 hover:bg-slate-100/80'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-3.5 h-3.5 flex-shrink-0 ${item.danger ? 'text-rose-500' : 'text-slate-500'}`}
+                      />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
-        {tutorName && <p className="text-[10px] text-slate-500 truncate">Tutor: {tutorName}</p>}
       </div>
 
-      {/* Time & Delivery Mode */}
-      <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-slate-100/50">
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-3 h-3 text-slate-400" />
-          <span className="text-[10px] font-semibold text-slate-500">
+      {/* Batch & Tutor Info */}
+      <div className="space-y-1">
+        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug">
+          {batchName ?? 'Batch Schedule'}
+        </h4>
+        <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+          <User className="w-3.5 h-3.5 text-slate-400" />
+          <span>
+            Tutor: <strong className="text-slate-900 font-bold">{tutorName ?? 'Unassigned'}</strong>
+          </span>
+        </p>
+      </div>
+
+      {/* Time & Delivery Mode Chips */}
+      <div className="pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5 bg-white/90 px-2.5 py-1 rounded-xl border border-slate-200/70 text-slate-800 font-bold shadow-2xs">
+          <Clock className="w-3.5 h-3.5 text-violet-600" />
+          <span>
             {schedule.startTime}–{schedule.endTime}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+
+        <div className="flex items-center gap-1 bg-white/90 px-2 py-1 rounded-xl border border-slate-200/70 text-slate-600 font-semibold shadow-2xs">
           {isOnline ? (
-            <Wifi className="w-3 h-3 text-slate-400" />
+            <Wifi className="w-3 h-3 text-emerald-600" />
           ) : (
-            <MapPin className="w-3 h-3 text-slate-400" />
+            <MapPin className="w-3 h-3 text-violet-600" />
           )}
-          <span className="text-[10px] font-medium text-slate-500 capitalize">
-            {schedule.deliveryMode.toLowerCase()}
-          </span>
+          <span className="capitalize text-[11px]">{schedule.deliveryMode.toLowerCase()}</span>
         </div>
       </div>
 
-      {/* Upcoming date for this schedule's day */}
-      <div className="flex items-center gap-1 mt-1.5">
-        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">
+      {/* Upcoming Date Footer */}
+      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 pt-0.5">
+        <span className="flex items-center gap-1">
           📅 {formatOccurrenceDate(schedule.dayOfWeek)}
         </span>
+        <span className="text-[10px] uppercase tracking-wider bg-white/60 px-2 py-0.5 rounded-md border border-slate-200/50">
+          {schedule.dayOfWeek}
+        </span>
       </div>
-
-      {/* Hover highlight overlay */}
-      <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity bg-black/[0.015] pointer-events-none" />
     </div>
   );
 }

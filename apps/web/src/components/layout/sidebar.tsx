@@ -37,6 +37,7 @@ import {
 import { useAuth } from '@/providers/auth-provider';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ChildSwitcher } from '@/features/parent-portal/components/ChildSwitcher';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,6 @@ interface NavItem {
 }
 
 export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     Organization: true,
     Academics: true,
@@ -169,6 +169,45 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     },
   ];
 
+  const parentNavigation = [
+    {
+      name: 'Academics',
+      href: '/dashboard/parent/academics',
+      icon: BookOpen,
+      iconColor: 'text-violet-500',
+    },
+    {
+      name: 'Exams',
+      href: '/dashboard/parent/exams',
+      icon: FileText,
+      iconColor: 'text-indigo-500',
+    },
+    {
+      name: 'Attendance',
+      href: '/dashboard/parent/attendance',
+      icon: Calendar,
+      iconColor: 'text-amber-500',
+    },
+    {
+      name: 'Fees',
+      href: '/dashboard/parent/fees',
+      icon: DollarSign,
+      iconColor: 'text-emerald-500',
+    },
+    {
+      name: 'Notifications',
+      href: '/dashboard/parent/notifications',
+      icon: Bell,
+      iconColor: 'text-yellow-500',
+    },
+    {
+      name: 'Profile',
+      href: '/dashboard/parent/profile',
+      icon: Contact,
+      iconColor: 'text-slate-500',
+    },
+  ];
+
   const platformNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' },
     {
@@ -226,7 +265,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           iconColor: 'text-violet-500',
           children: [
             { name: 'Students', href: '/dashboard/students', icon: GraduationCap },
-            { name: 'Parents', href: '#', icon: Contact },
+            { name: 'Parents', href: '/tenant-admin/parents', icon: Contact },
             { name: 'Staff / Tutors', href: '/dashboard/tutors', icon: BookMarked },
           ],
         },
@@ -253,7 +292,6 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         { name: 'Examinations', href: '/dashboard/exams', icon: Target, iconColor: 'text-red-500' },
       ],
     },
-
     {
       category: 'Schedule',
       items: [
@@ -316,9 +354,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                   isActive
                     ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
-                  isCollapsed && 'justify-center',
                 )}
-                title={isCollapsed ? item.name : undefined}
               >
                 <Icon
                   className={cn(
@@ -328,30 +364,28 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                   )}
                   aria-hidden="true"
                 />
-                {!isCollapsed && <span className="font-semibold">{item.name}</span>}
+                <span className="font-semibold">{item.name}</span>
               </Link>
 
-              {!isCollapsed && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleSubMenu(item.name);
-                  }}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                >
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 transition-transform duration-200',
-                      isSubOpen && 'rotate-180',
-                    )}
-                  />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleSubMenu(item.name);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-200',
+                    isSubOpen && 'rotate-180',
+                  )}
+                />
+              </button>
             </div>
 
-            {isSubOpen && !isCollapsed && (
+            {isSubOpen && (
               <div
                 className={cn(
                   'space-y-1 border-l-2 border-violet-100 dark:border-gray-800/80 ml-5 pl-4 transition-all duration-200',
@@ -377,10 +411,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               (depth > 0
                 ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-semibold'
                 : 'bg-primary text-primary-foreground shadow-sm'),
-            isCollapsed && 'justify-center',
           )}
           aria-current={isActive ? 'page' : undefined}
-          title={isCollapsed ? item.name : undefined}
         >
           {depth > 0 ? (
             <div className="flex items-center gap-2">
@@ -392,7 +424,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                     : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-violet-400',
                 )}
               />
-              {!isCollapsed && <span>{item.name}</span>}
+              <span>{item.name}</span>
             </div>
           ) : (
             <>
@@ -403,7 +435,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 )}
                 aria-hidden="true"
               />
-              {!isCollapsed && <span>{item.name}</span>}
+              <span>{item.name}</span>
             </>
           )}
         </Link>
@@ -422,168 +454,203 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Always Fixed Fit Size w-64 */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 h-screen flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out',
-          isCollapsed ? 'w-16' : 'w-64',
+          'fixed left-0 top-0 z-50 h-screen w-64 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
         aria-label="Main navigation"
       >
-        {/* Logo */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
-          {!isCollapsed && (
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 font-bold text-xl text-primary"
-            >
-              <span className="hidden sm:inline">NEET Platform</span>
-              <span className="sm:hidden">NP</span>
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8"
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!isCollapsed}
+        {/* Logo Header */}
+        <div className="flex h-16 items-center px-5 border-b border-gray-200 dark:border-gray-700">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 font-bold text-xl text-primary"
           >
-            {isCollapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
+            <span>NEET Platform</span>
+          </Link>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto" aria-label="Main navigation">
-          {user?.roleCode === 'PLATFORM_ADMIN' ? (
-            <div className="space-y-1">
-              {platformNavigation.map((item) => {
-                const isActive =
-                  item.href === '/dashboard'
-                    ? pathname === '/dashboard'
-                    : pathname === item.href || pathname.startsWith(item.href + '/');
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
-                      isCollapsed && 'justify-center',
-                    )}
-                    aria-current={isActive ? 'page' : undefined}
-                    title={isCollapsed ? item.name : undefined}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : user?.roleCode === 'TUTOR' ? (
-            <div className="space-y-1">
-              {tutorNavigation.map((item) => {
-                const isActive =
-                  item.href === '/dashboard/tutor'
-                    ? pathname === '/dashboard/tutor'
-                    : pathname === item.href || pathname.startsWith(item.href + '/');
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
-                      isCollapsed && 'justify-center',
-                    )}
-                    aria-current={isActive ? 'page' : undefined}
-                    title={isCollapsed ? item.name : undefined}
-                  >
-                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : user?.roleCode === 'STUDENT' ? (
-            <div className="space-y-1">
-              {studentNavigation.map((item) => {
-                const isActive =
-                  item.href === '/dashboard/student'
-                    ? pathname === '/dashboard/student'
-                    : pathname === item.href || pathname.startsWith(item.href + '/');
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
-                      isActive
-                        ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
-                        : 'text-gray-600 hover:bg-violet-50 hover:text-violet-700',
-                      isCollapsed && 'justify-center',
-                    )}
-                    aria-current={isActive ? 'page' : undefined}
-                    title={isCollapsed ? item.name : undefined}
-                  >
-                    <Icon
-                      className={cn(
-                        'h-5 w-5 flex-shrink-0 transition-colors',
-                        isActive ? 'text-white' : item.iconColor,
-                      )}
-                      aria-hidden="true"
-                    />
-                    {!isCollapsed && <span>{item.name}</span>}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {tenantNavigation.map((group, groupIdx) => {
-                const isGroupOpen = group.category
-                  ? (openCategories[group.category] ?? true)
-                  : true;
-                return (
-                  <div key={groupIdx} className="space-y-1">
-                    {group.category && !isCollapsed ? (
-                      <button
-                        onClick={() => toggleCategory(group.category)}
-                        className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-900 dark:hover:text-white transition-colors"
+          {(() => {
+            const currentRole = user?.roleCode || (user as any)?.role || '';
+            if (currentRole === 'PLATFORM_ADMIN') {
+              return (
+                <div className="space-y-1">
+                  {platformNavigation.map((item) => {
+                    const isActive =
+                      item.href === '/dashboard'
+                        ? pathname === '/dashboard'
+                        : pathname === item.href || pathname.startsWith(item.href + '/');
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                        )}
+                        aria-current={isActive ? 'page' : undefined}
                       >
-                        <span>{group.category}</span>
-                        <ChevronDown
+                        <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            }
+            if (currentRole === 'TUTOR' || currentRole === 'FACULTY') {
+              return (
+                <div className="space-y-1">
+                  {tutorNavigation.map((item) => {
+                    const isActive =
+                      item.href === '/dashboard/tutor'
+                        ? pathname === '/dashboard/tutor'
+                        : pathname === item.href || pathname.startsWith(item.href + '/');
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                          isActive
+                            ? 'bg-purple-600 text-white shadow-sm shadow-purple-200 dark:shadow-none'
+                            : 'text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-700 dark:hover:text-purple-400',
+                        )}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <Icon
                           className={cn(
-                            'h-3.5 w-3.5 transition-transform duration-200',
-                            !isGroupOpen && '-rotate-90',
+                            'h-5 w-5 flex-shrink-0 transition-colors',
+                            isActive ? 'text-white' : item.iconColor,
                           )}
+                          aria-hidden="true"
                         />
-                      </button>
-                    ) : null}
-
-                    {isGroupOpen && <div className="space-y-1">{renderNavItems(group.items)}</div>}
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            }
+            if (currentRole === 'STUDENT') {
+              return (
+                <div className="space-y-1">
+                  {studentNavigation.map((item) => {
+                    const isActive =
+                      item.href === '/dashboard/student'
+                        ? pathname === '/dashboard/student'
+                        : pathname === item.href || pathname.startsWith(item.href + '/');
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                          isActive
+                            ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
+                            : 'text-gray-600 hover:bg-violet-50 hover:text-violet-700',
+                        )}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <Icon
+                          className={cn(
+                            'h-5 w-5 flex-shrink-0 transition-colors',
+                            isActive ? 'text-white' : item.iconColor,
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            }
+            if (currentRole === 'PARENT') {
+              return (
+                <div className="space-y-4">
+                  <ChildSwitcher isCollapsed={false} />
+                  <div className="space-y-1 border-t border-slate-100 dark:border-slate-800/80 pt-3">
+                    {parentNavigation.map((item) => {
+                      const isActive =
+                        item.href === '/dashboard/parent/overview'
+                          ? pathname === '/dashboard/parent/overview' ||
+                            pathname === '/dashboard/parent'
+                          : pathname === item.href || pathname.startsWith(item.href + '/');
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.name}
+                          href={item.href}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                            isActive
+                              ? 'bg-violet-600 text-white shadow-sm shadow-violet-200 dark:shadow-none'
+                              : 'text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-700 dark:hover:text-violet-400',
+                          )}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          <Icon
+                            className={cn(
+                              'h-5 w-5 flex-shrink-0 transition-colors',
+                              isActive ? 'text-white' : item.iconColor,
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span>{item.name}</span>
+                        </Link>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-6">
+                {tenantNavigation.map((group, groupIdx) => {
+                  const isGroupOpen = group.category
+                    ? (openCategories[group.category] ?? true)
+                    : true;
+                  return (
+                    <div key={groupIdx} className="space-y-1">
+                      {group.category ? (
+                        <button
+                          onClick={() => toggleCategory(group.category)}
+                          className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          <span>{group.category}</span>
+                          <ChevronDown
+                            className={cn(
+                              'h-3.5 w-3.5 transition-transform duration-200',
+                              !isGroupOpen && '-rotate-90',
+                            )}
+                          />
+                        </button>
+                      ) : null}
+
+                      {isGroupOpen && (
+                        <div className="space-y-1">{renderNavItems(group.items)}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </nav>
 
         {/* User section */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          {!isCollapsed && user && (
+          {user && (
             <div className="flex items-center gap-3 px-3 py-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage
@@ -603,43 +670,29 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             </div>
           )}
 
-          {!isCollapsed ? (
-            <div className="space-y-1 mt-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-3 px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    <LogOut className="h-4 w-4" aria-hidden="true" />
-                    <span>Sign out</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Are you sure?</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => logout()}
-                    className="text-red-600 focus:text-red-600"
-                  >
-                    Yes, sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ) : (
-            <div className="space-y-1 mt-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-full justify-center text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                onClick={() => logout()}
-                title="Sign out"
-              >
-                <LogOut className="h-5 w-5" aria-hidden="true" />
-              </Button>
-            </div>
-          )}
+          <div className="space-y-1 mt-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                  <span>Sign out</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Are you sure?</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => logout()}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  Yes, sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </aside>
 

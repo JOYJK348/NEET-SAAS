@@ -15,12 +15,16 @@ export function calculateAge(dateOfBirth: string): number {
 
 import { formatDateOnly, formatDateTime as centralFormatDateTime } from '@/lib/date-utils';
 
-export function formatDate(dateString: string): string {
-  return formatDateOnly(dateString, 'MMM d, yyyy');
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return 'N/A';
+  const str = typeof date === 'string' ? date : date.toISOString();
+  return formatDateOnly(str, 'MMM d, yyyy');
 }
 
-export function formatDateTime(dateString: string): string {
-  return centralFormatDateTime(dateString, 'MMM d, yyyy h:mm a');
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return 'N/A';
+  const str = typeof date === 'string' ? date : date.toISOString();
+  return centralFormatDateTime(str, 'MMM d, yyyy h:mm a');
 }
 
 export function formatPhone(phone: string): string {

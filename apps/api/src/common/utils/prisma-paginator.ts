@@ -66,7 +66,7 @@ export async function paginateAndMap<TInput, TOutput>(
   },
   query: QueryParamsDto,
   tenantId: string,
-  mapper: (item: TInput) => TOutput,
+  mapper: (item: TInput) => TOutput | Promise<TOutput>,
 ): Promise<PaginatedResult<TOutput>> {
   const page = query.page || 1;
   const limit = query.limit || 20;
@@ -84,9 +84,10 @@ export async function paginateAndMap<TInput, TOutput>(
   ]);
 
   const totalPages = Math.ceil(total / limit);
+  const mappedData = await Promise.all(data.map((item) => mapper(item)));
 
   return {
-    data: data.map(mapper),
+    data: mappedData,
     meta: {
       total,
       page,

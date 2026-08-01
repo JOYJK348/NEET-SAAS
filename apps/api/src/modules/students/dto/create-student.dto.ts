@@ -131,6 +131,17 @@ export class CreateStudentDto {
   @IsString()
   parentEmail?: string;
 
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  isParentPortalEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: 'FATHER' })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsString()
+  parentRelationshipType?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) => (value === '' ? undefined : value))

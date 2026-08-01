@@ -17,6 +17,7 @@ import {
   useCourses,
 } from '@/features/students/hooks/use-students';
 import {
+  useAdmissions,
   useBranchesForAdmission,
   useAcademicYearsForAdmission,
 } from '@/features/admissions/hooks/use-admissions';
@@ -49,6 +50,10 @@ function EditStudentContent() {
   const id = (params?.id as string) || null;
 
   const { student, isLoading: studentLoading, error: studentError } = useStudent(id);
+  const { admissions = [] } = useAdmissions({
+    initialFilters: { studentProfileId: id || undefined, perPage: 10 },
+    autoFetch: !!id,
+  });
   const { updateStudent, isUpdating } = useUpdateStudent();
   const { batches } = useBatches();
   const { courses } = useCourses();
@@ -71,7 +76,7 @@ function EditStudentContent() {
     setError,
     clearErrors,
   } = useForm<StudentFormData>({
-    resolver: zodResolver(studentFormSchema),
+    resolver: zodResolver(studentFormSchema) as any,
     defaultValues: defaultFormValues,
     mode: 'onChange',
   });
@@ -88,40 +93,82 @@ function EditStudentContent() {
     register('classType');
   }, [register]);
 
-  // Initialize form with student data
+  // Initialize form with student data & admission/batch fallback IDs
   useEffect(() => {
-    if (student && !initialized) {
+    if (student) {
       const backendStatus =
         student.status === 'INACTIVE' || student.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE';
       setStudentStatus(backendStatus);
-      reset({
-        firstName: student.firstName,
-        lastName: student.lastName,
-        email: student.email,
-        phone: student.phone,
-        dateOfBirth: student.dateOfBirth,
-        gender: student.gender,
-        address: student.address,
-        city: student.city,
-        state: student.state,
-        pincode: student.pincode,
-        profileImage: student.profileImage,
-        courseId: student.courseId,
-        batchId: student.batchId,
-        branchId: student.branchId || '',
-        academicYearId: student.academicYearId || '',
-        admissionDate: student.admissionDate,
-        parentName: student.parentName,
-        parentPhone: student.parentPhone,
-        parentEmail: student.parentEmail,
-        emergencyContact: student.emergencyContact || '',
-        bloodGroup: student.bloodGroup || '',
-        aadharNumber: student.aadharNumber || '',
-        classType: (student as any)?.classType || 'CLASSROOM',
-      });
-      setInitialized(true);
+
+      // Resolve admission / enrollment values as fallbacks
+      const latestAdmission = (student as any)?.admissions?.[0] || admissions?.[0];
+      const targetBatchId = student.batchId || latestAdmission?.batchId || '';
+      const matchedBatch = batches.find((b) => b.id === targetBatchId);
+
+      const resolvedBatchId =
+        targetBatchId || matchedBatch?.id || (batches.length > 0 ? batches[0].id : '');
+      const resolvedCourseId =
+        student.courseId ||
+        latestAdmission?.courseId ||
+        matchedBatch?.courseId ||
+        (courses.length > 0 ? courses[0].id : '');
+      const resolvedBranchId =
+        student.branchId ||
+        latestAdmission?.branchId ||
+        matchedBatch?.branchId ||
+        (branches.length > 0 ? branches[0].id : '');
+      const resolvedAcademicYearId =
+        student.academicYearId ||
+        latestAdmission?.academicYearId ||
+        matchedBatch?.academicYearId ||
+        (academicYears.length > 0 ? academicYears[0].id : '');
+
+      // Safe date formatter for HTML date inputs (YYYY-MM-DD)
+      const formatDateForInput = (dVal?: any) => {
+        if (!dVal) return '';
+        try {
+          const dt = new Date(dVal);
+          if (isNaN(dt.getTime())) return '';
+          return dt.toISOString().split('T')[0];
+        } catch {
+          return '';
+        }
+      };
+
+      if (!initialized) {
+        reset({
+          firstName: student.firstName || '',
+          lastName: student.lastName || '',
+          email: student.email || '',
+          phone: student.phone || '',
+          dateOfBirth: formatDateForInput(student.dateOfBirth),
+          gender: student.gender || 'MALE',
+          address: student.address || '',
+          city: student.city || '',
+          state: student.state || '',
+          pincode: student.pincode || '',
+          profileImage: student.profileImage || '',
+          courseId: resolvedCourseId,
+          batchId: resolvedBatchId,
+          branchId: resolvedBranchId,
+          academicYearId: resolvedAcademicYearId,
+          admissionDate: formatDateForInput(
+            student.admissionDate || latestAdmission?.admissionDate,
+          ),
+          parentName: student.parentName || '',
+          parentPhone: student.parentPhone || '',
+          parentEmail: student.parentEmail || '',
+          emergencyContact: student.emergencyContact || '',
+          bloodGroup: student.bloodGroup || '',
+          aadharNumber: student.aadharNumber || '',
+          classType: (student as any)?.classType || 'CLASSROOM',
+        });
+        if (resolvedAcademicYearId && resolvedBranchId) {
+          setInitialized(true);
+        }
+      }
     }
-  }, [student, initialized, reset]);
+  }, [student, admissions, batches, branches, academicYears, courses, initialized, reset]);
 
   const handleFieldChange = useCallback(
     (field: keyof StudentFormData, value: string) => {
@@ -177,7 +224,7 @@ function EditStudentContent() {
       try {
         const result = await updateStudent({ id, ...data, status: studentStatus });
         if (result) {
-          toast({ title: 'Student updated successfully' });
+          toast({ title: 'Student details updated successfully' });
           router.push(`/dashboard/students/${id}`);
         }
       } catch (err: any) {
@@ -292,67 +339,68 @@ function EditStudentContent() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Edit Student</h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {student.firstName} {student.lastName} &mdash; {student.studentId}
-            </p>
-          </div>
+        {/* Top Back Action Bar */}
+        <div className="flex flex-row items-center justify-between gap-2 w-full">
+          <button
+            onClick={() => router.push(`/dashboard/students/${id}`)}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
+            <span className="hidden sm:inline">Back to Student Profile</span>
+            <span className="sm:hidden">Back</span>
+          </button>
         </div>
 
-        {/* Status Toggle Card */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-sm">
-          <CardContent className="p-5 sm:p-6">
-            <div className="flex items-center justify-between">
+        {/* Dedicated Screen Header Banner */}
+        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                <span className="text-xl sm:text-2xl font-black">✏️</span>
+              </div>
               <div>
-                <h3 className="text-sm font-bold text-[#111827]">Student Status</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {studentStatus === 'ACTIVE'
-                    ? 'Active students can access courses and batches'
-                    : 'Inactive students are hidden from course/batch listings'}
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] sm:text-xs font-mono font-bold text-white border border-white/20">
+                    {student.studentId || 'STD-REG'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-400/20 text-emerald-100 border border-emerald-300/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight truncate">
+                  Edit Student &mdash; {student.firstName} {student.lastName}
+                </h1>
+                <p className="text-xs text-violet-200 font-medium mt-0.5">
+                  Update student personal info, course track, batch allocation, and parent contacts.
                 </p>
               </div>
+            </div>
+
+            {/* Status Toggle in Header */}
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2.5 rounded-2xl border border-white/20 shrink-0">
+              <span className="text-xs font-bold text-white">Status:</span>
               <button
                 type="button"
                 onClick={() =>
                   setStudentStatus(studentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')
                 }
-                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                  studentStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-300'
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  studentStatus === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
                 }`}
               >
                 <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm transition-transform ${
-                    studentStatus === 'ACTIVE' ? 'translate-x-7' : 'translate-x-1'
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                    studentStatus === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0'
                   }`}
-                >
-                  {studentStatus === 'ACTIVE' ? (
-                    <ToggleRight className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <ToggleLeft className="h-4 w-4 text-gray-400" />
-                  )}
-                </span>
+                />
               </button>
-            </div>
-            <div className="mt-2">
-              <span
-                className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  studentStatus === 'ACTIVE'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
-              >
+              <span className="text-xs font-extrabold text-white">
                 {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
               </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>

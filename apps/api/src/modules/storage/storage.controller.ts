@@ -11,6 +11,7 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -187,6 +188,34 @@ export class StorageController {
       download: String(download) === 'true' || download === true,
     });
     return { signedUrl: url };
+  }
+
+  @Get(':fileUploadId/view')
+  @ApiOperation({ summary: 'Securely proxy & stream file directly to browser (Zero Token Expiry)' })
+  async proxyViewFile(
+    @Param('fileUploadId') fileUploadId: string,
+    @Query('download') download: boolean,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Res() res: any,
+  ) {
+    const { blob, record } = await this.storageService.downloadFileStream({
+      tenantId: user.tenantId!,
+      fileUploadId,
+    });
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    const isDownload = String(download) === 'true' || download === true;
+
+    res.setHeader('Content-Type', record.mimeType || 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      isDownload
+        ? `attachment; filename="${encodeURIComponent(record.originalFileName || 'document.pdf')}"`
+        : `inline; filename="${encodeURIComponent(record.originalFileName || 'document.pdf')}"`,
+    );
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    return res.send(buffer);
   }
 
   @Post('batch-urls')

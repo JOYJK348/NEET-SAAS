@@ -126,7 +126,7 @@ export class TutorDashboardService {
         : 0;
 
     // Today's schedule
-    const todaysSessions = await this.prisma.attendanceSessions.findMany({
+    let todaysSessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
         staffProfileId,
@@ -137,8 +137,66 @@ export class TutorDashboardService {
       orderBy: { startsAt: 'asc' },
     });
 
+    // Fallback: If no materialized attendance sessions exist for today, check recurring schedules for today's weekday
+    if (todaysSessions.length === 0) {
+      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+      const todayDayOfWeek = weekdays[today.getDay()];
+
+      const todaySchedules = await this.prisma.schedules.findMany({
+        where: {
+          tenantId,
+          staffProfileId,
+          dayOfWeek: todayDayOfWeek,
+          effectiveFrom: { lte: today },
+        },
+        select: {
+          id: true,
+          batchId: true,
+          subjectId: true,
+          branchId: true,
+          startTime: true,
+          endTime: true,
+          deliveryMode: true,
+          meetingLink: true,
+        },
+      });
+
+      if (todaySchedules.length > 0) {
+        todaysSessions = todaySchedules.map((sch) => {
+          const [startH, startM] = sch.startTime.split(':').map(Number);
+          const [endH, endM] = sch.endTime.split(':').map(Number);
+
+          const sTime = new Date(today);
+          sTime.setHours(startH, startM, 0, 0);
+
+          const eTime = new Date(today);
+          eTime.setHours(endH, endM, 0, 0);
+
+          return {
+            id: sch.id,
+            tenantId,
+            batchId: sch.batchId,
+            subjectId: sch.subjectId,
+            branchId: sch.branchId,
+            staffProfileId,
+            scheduleId: sch.id,
+            attendanceDate: today,
+            startsAt: sTime,
+            endsAt: eTime,
+            sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: today,
+            updatedAt: today,
+            deletedAt: null,
+          } as unknown as AttendanceSessions;
+        });
+      }
+    }
+
     // Upcoming classes
-    const upcomingSessions = await this.prisma.attendanceSessions.findMany({
+    let upcomingSessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
         staffProfileId,
@@ -150,16 +208,89 @@ export class TutorDashboardService {
       take: 10,
     });
 
+    // Fallback: If no materialized attendance sessions exist for upcoming days, generate virtual slots for next 7 days (starting tomorrow)
+    if (upcomingSessions.length === 0) {
+      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+
+      const futureSchedules = await this.prisma.schedules.findMany({
+        where: {
+          tenantId,
+          staffProfileId,
+          effectiveFrom: { lte: nextWeek },
+        },
+        select: {
+          id: true,
+          batchId: true,
+          subjectId: true,
+          branchId: true,
+          dayOfWeek: true,
+          startTime: true,
+          endTime: true,
+        },
+      });
+
+      if (futureSchedules.length > 0) {
+        const virtualUpcoming: AttendanceSessions[] = [];
+
+        // Loop through days 1 to 7 (starting tomorrow)
+        for (let i = 1; i <= 7; i++) {
+          const futureDate = new Date(today);
+          futureDate.setDate(today.getDate() + i);
+          futureDate.setHours(0, 0, 0, 0);
+
+          const futureWeekday = weekdays[futureDate.getDay()];
+          const matchingSchedules = futureSchedules.filter((sch) => sch.dayOfWeek === futureWeekday);
+
+          for (const sch of matchingSchedules) {
+            const [startH, startM] = sch.startTime.split(':').map(Number);
+            const [endH, endM] = sch.endTime.split(':').map(Number);
+
+            const sTime = new Date(futureDate);
+            sTime.setHours(startH, startM, 0, 0);
+
+            const eTime = new Date(futureDate);
+            eTime.setHours(endH, endM, 0, 0);
+
+            virtualUpcoming.push({
+              id: `${sch.id}-${futureDate.toISOString().slice(0, 10)}`,
+              tenantId,
+              batchId: sch.batchId,
+              subjectId: sch.subjectId,
+              branchId: sch.branchId,
+              staffProfileId,
+              scheduleId: sch.id,
+              attendanceDate: futureDate,
+              startsAt: sTime,
+              endsAt: eTime,
+              sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
+              sessionSource: 'SCHEDULED',
+              overrideType: null,
+              cancelledReason: null,
+              createdAt: futureDate,
+              updatedAt: futureDate,
+              deletedAt: null,
+            } as unknown as AttendanceSessions);
+          }
+        }
+
+        upcomingSessions = virtualUpcoming;
+      }
+    }
+
     // Enrich sessions with related data
     const [todaysEnriched, upcomingEnriched] = await Promise.all([
       this.enrichSessions(tenantId, todaysSessions),
       this.enrichSessions(tenantId, upcomingSessions),
     ]);
 
+    // Live-now detection
+    const liveNow = todaysEnriched.filter((s) => s.liveStatus === 'LIVE_NOW' || s.canJoin);
+
     return {
       stats: { todaysClasses, upcomingClasses, myBatches, totalStudents },
       todaysSchedule: todaysEnriched,
       upcomingSchedule: upcomingEnriched,
+      liveNow,
     };
   }
 
@@ -190,27 +321,73 @@ export class TutorDashboardService {
       }),
     ]);
 
+    const scheduleIds = sessions
+      .map((s) => s.scheduleId)
+      .filter((id): id is string => id !== null);
+
+    const schedules =
+      scheduleIds.length > 0
+        ? await this.prisma.schedules.findMany({
+            where: { tenantId, id: { in: scheduleIds } },
+            select: { id: true, deliveryMode: true, meetingLink: true },
+          })
+        : [];
+
     const batchMap = new Map(batches.map((b) => [b.id, b]));
     const subjectMap = new Map(subjects.map((s) => [s.id, s]));
     const branchMap = new Map(branches.map((b) => [b.id, b]));
+    const scheduleMap = new Map(schedules.map((s) => [s.id, s]));
 
-    return sessions.map((s) => ({
-      id: s.id,
-      date: this.toLocalDateKey(s.attendanceDate),
-      startsAt: this.formatTime(s.startsAt),
-      endsAt: this.formatTime(s.endsAt),
-      subject: subjectMap.get(s.subjectId) ?? null,
-      batch: batchMap.get(s.batchId) ?? null,
-      branch: branchMap.get(s.branchId) ?? null,
-      sessionStatus:
-        s.sessionStatus === 'DRAFT' && s.scheduleId
-          ? 'SCHEDULED'
-          : s.sessionStatus,
-      sessionSource: s.sessionSource,
-      overrideType: s.overrideType,
-      cancelledReason: s.cancelledReason,
-      dayOfWeek: this.weekdayFromDateKey(this.toLocalDateKey(s.attendanceDate)),
-    }));
+    return sessions.map((s) => {
+      const sched = s.scheduleId ? scheduleMap.get(s.scheduleId) : null;
+      const now = new Date();
+      const todayKey = this.toLocalDateKey(now);
+      const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
+
+      const currentHHMM = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const startHHMM = this.formatTime(s.startsAt);
+      const endHHMM = this.formatTime(s.endsAt);
+
+      const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
+      let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
+
+      if (sessionDateKey < todayKey) {
+        liveStatus = 'COMPLETED';
+      } else if (sessionDateKey > todayKey) {
+        liveStatus = 'UPCOMING';
+      } else {
+        // Same day (Today)
+        if (isFinished || endHHMM < currentHHMM) {
+          liveStatus = 'COMPLETED';
+        } else if (startHHMM <= currentHHMM && endHHMM >= currentHHMM) {
+          liveStatus = 'LIVE_NOW';
+        } else {
+          liveStatus = 'UPCOMING';
+        }
+      }
+
+      return {
+        id: s.id,
+        date: sessionDateKey,
+        startsAt: startHHMM,
+        endsAt: endHHMM,
+        subject: subjectMap.get(s.subjectId) ?? null,
+        batch: batchMap.get(s.batchId) ?? null,
+        branch: branchMap.get(s.branchId) ?? null,
+        sessionStatus:
+          s.sessionStatus === 'DRAFT' && s.scheduleId
+            ? 'SCHEDULED'
+            : s.sessionStatus,
+        sessionSource: s.sessionSource,
+        overrideType: s.overrideType,
+        cancelledReason: s.cancelledReason,
+        dayOfWeek: this.weekdayFromDateKey(sessionDateKey),
+        liveStatus,
+        deliveryMode: sched?.deliveryMode ?? null,
+        meetingLink: sched?.meetingLink ?? null,
+        canJoin: sessionDateKey === todayKey && s.sessionStatus !== 'CANCELLED' && liveStatus !== 'COMPLETED',
+      };
+    });
   }
 
   // ─── MY TIMETABLE ────────────────────────────────────────────────────────
