@@ -113,28 +113,28 @@ function KpiCard({
   iconColor: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-start gap-3 hover:-translate-y-0.5 transition-transform duration-150">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200">
       <div
         className={cn(
-          'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
+          'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100 shadow-2xs',
           iconBg,
         )}
       >
         <span className={iconColor}>{icon}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-none">
+        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider leading-none">
           {label}
         </p>
-        <p className="text-xl font-black text-slate-900 mt-1 leading-none">{value}</p>
-        {sub && <p className="text-[11px] text-slate-400 mt-1">{sub}</p>}
+        <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 leading-none">{value}</p>
+        {sub && <p className="text-[11px] font-semibold text-slate-400 mt-1.5">{sub}</p>}
       </div>
     </div>
   );
 }
 
 // ─── Session Card ─────────────────────────────────────────────────────────────
-function SessionCard({ session }: { session: StudentSessionDto }) {
+function SessionCard({ session, showDate }: { session: StudentSessionDto; showDate?: boolean }) {
   const { join, isJoining } = useJoinSession();
   const [isWaitingApproval, setIsWaitingApproval] = useState(false);
 
@@ -145,7 +145,6 @@ function SessionCard({ session }: { session: StudentSessionDto }) {
     });
 
     try {
-      // Simulate tutor approval handshake delay before joining
       setTimeout(async () => {
         try {
           await join(session.id);
@@ -165,88 +164,99 @@ function SessionCard({ session }: { session: StudentSessionDto }) {
     }
   };
 
-  const subjectColors: Record<string, string> = {
-    Physics: 'border-l-blue-400 bg-blue-50',
-    Chemistry: 'border-l-emerald-400 bg-emerald-50',
-    Biology: 'border-l-rose-400 bg-rose-50',
-    Botany: 'border-l-green-400 bg-green-50',
-    Zoology: 'border-l-pink-400 bg-pink-50',
-  };
-
-  const subjectName = session.subject?.name ?? '';
-  const colorClass =
-    Object.entries(subjectColors).find(([k]) =>
-      subjectName.toLowerCase().includes(k.toLowerCase()),
-    )?.[1] ?? 'border-l-slate-300 bg-slate-50';
+  const subjectName = session.subject?.name ?? 'Subject Session';
+  const initial = subjectName.charAt(0).toUpperCase();
+  const isLive = session.liveStatus === 'LIVE_NOW';
 
   return (
     <div
       className={cn(
-        'rounded-xl border-l-4 p-4 flex flex-col sm:flex-row sm:items-center gap-3',
-        colorClass,
-        'border border-slate-100',
+        'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3.5 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
+        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
       )}
     >
-      {/* Time */}
-      <div className="flex-shrink-0 text-center sm:text-left sm:w-20">
-        <p className="text-xs font-black text-slate-900">{session.startsAt}</p>
-        <p className="text-[10px] text-slate-400">– {session.endsAt}</p>
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-900 truncate">
-          {session.subject?.name ?? 'Unknown Subject'}
-        </p>
-        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5 flex-wrap">
-          <span>{session.batch?.name ?? ''}</span>
-          <span>•</span>
-          <span className="font-semibold text-slate-700 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200/80 shadow-2xs">
-            👤 Tutor:{' '}
-            <strong className="text-slate-900 font-extrabold">
-              {session.tutorName || 'Bharathi M'}
-            </strong>
-          </span>
+      {/* Card Header: Subject Icon Avatar, Title & Live Status Badge */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <h4 className="font-black text-slate-900 text-sm sm:text-base leading-snug truncate">
+              {subjectName}
+            </h4>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-bold font-mono">
+              <span>{session.startsAt} – {session.endsAt}</span>
+              {showDate && session.date && (
+                <span className="text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md font-extrabold ml-1">
+                  {new Date(session.date).toLocaleDateString('en-IN', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+
+        <div className="shrink-0">
           <LiveStatusBadge status={session.liveStatus} />
-          <DeliveryBadge mode={session.deliveryMode} />
         </div>
       </div>
 
-      {/* Action */}
-      {(session.canJoin || session.liveStatus === 'LIVE_NOW') && (
-        <button
-          onClick={handleJoin}
-          disabled={isJoining || isWaitingApproval}
-          className={cn(
-            'w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] disabled:opacity-75 disabled:cursor-not-allowed shadow-md',
-            isWaitingApproval
-              ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
-              : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white shadow-emerald-500/20',
-          )}
-        >
-          {isJoining || isWaitingApproval ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Video className="w-4 h-4" />
-          )}
-          {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
-        </button>
+      {/* Meta Details Row: Batch, Tutor Name & Delivery Mode */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {session.batch?.name && (
+          <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
+            <Layers className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span className="truncate max-w-[150px] sm:max-w-none">{session.batch.name}</span>
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
+          <span className="text-slate-400">👤 Tutor:</span>
+          <strong className="text-slate-900 font-black">
+            {session.tutorName || 'Bharathi M'}
+          </strong>
+        </span>
+        <DeliveryBadge mode={session.deliveryMode} />
+      </div>
+
+      {/* Action Button: Full-width on Mobile */}
+      {(session.canJoin || isLive) && (
+        <div className="pt-1 border-t border-slate-100">
+          <button
+            onClick={handleJoin}
+            disabled={isJoining || isWaitingApproval}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs active:scale-98 text-center',
+              isWaitingApproval
+                ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20',
+            )}
+          >
+            {isJoining || isWaitingApproval ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Video className="w-4 h-4" />
+            )}
+            {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptySchedule() {
+function EmptySchedule({ title = 'No classes today', sub = 'Enjoy your free day! 🎉' }: { title?: string; sub?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-3">
-        <CalendarCheck2 className="w-6 h-6 text-slate-400" />
+    <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-2.5">
+        <CalendarCheck2 className="w-5 h-5 text-slate-400" />
       </div>
-      <p className="text-sm font-semibold text-slate-700">No classes today</p>
-      <p className="text-xs text-slate-400 mt-1">Enjoy your free day! 🎉</p>
+      <p className="text-sm font-bold text-slate-700">{title}</p>
+      <p className="text-xs text-slate-400 mt-1 max-w-xs">{sub}</p>
     </div>
   );
 }
@@ -347,7 +357,7 @@ function StudentOverviewContent() {
         <KpiCard
           icon={<ClipboardList className="w-5 h-5" />}
           label="Attendance"
-          value={stats?.attendanceRate != null ? `${stats.attendanceRate}%` : 'N/A'}
+          value={stats?.attendanceRate != null ? `${stats.attendanceRate}%` : 'Nil'}
           sub={
             stats?.attendanceRate != null
               ? stats.attendanceRate >= 75
@@ -376,29 +386,53 @@ function StudentOverviewContent() {
         />
       </div>
 
-      {/* ── Today's Schedule ───────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-black text-slate-700 uppercase tracking-wider">
-            Today&apos;s Classes
-          </h2>
-          {overview?.todaysSchedule && overview.todaysSchedule.length > 0 && (
-            <span className="text-xs font-bold text-violet-600">
-              {overview.todaysSchedule.length} session
-              {overview.todaysSchedule.length > 1 ? 's' : ''}
+      {/* ── Today's Schedule & Upcoming Schedule 2-Column Responsive Grid ──── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Today's Classes */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-violet-600" />
+              Today&apos;s Class Schedule
+            </h2>
+            <span className="text-xs font-black text-violet-700 bg-violet-50 px-2.5 py-1 rounded-full border border-violet-100">
+              {overview?.todaysSchedule?.length || 0} Sessions
             </span>
+          </div>
+
+          {!overview || overview.todaysSchedule.length === 0 ? (
+            <EmptySchedule title="No classes scheduled for today" sub="Enjoy your free day! 🎉" />
+          ) : (
+            <div className="space-y-3">
+              {overview.todaysSchedule.map((session) => (
+                <SessionCard key={session.id} session={session} />
+              ))}
+            </div>
           )}
         </div>
 
-        {!overview || overview.todaysSchedule.length === 0 ? (
-          <EmptySchedule />
-        ) : (
-          <div className="space-y-3">
-            {overview.todaysSchedule.map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))}
+        {/* Upcoming Sessions (Next 7 Days) */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <CalendarCheck2 className="w-4 h-4 text-sky-600" />
+              Upcoming Sessions (Next 7 Days)
+            </h2>
+            <span className="text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100">
+              {overview?.upcomingSchedule?.length || 0} Sessions
+            </span>
           </div>
-        )}
+
+          {!overview || !overview.upcomingSchedule || overview.upcomingSchedule.length === 0 ? (
+            <EmptySchedule title="No upcoming classes scheduled" sub="Upcoming sessions for the next 7 days will appear here." />
+          ) : (
+            <div className="space-y-3">
+              {overview.upcomingSchedule.map((session) => (
+                <SessionCard key={session.id} session={session} showDate />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

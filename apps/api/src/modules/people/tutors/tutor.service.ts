@@ -46,8 +46,18 @@ export class TutorService {
       );
     }
 
-    const employeeCode =
-      dto.employeeCode || `TUT-${Date.now().toString(36).toUpperCase()}`;
+    let employeeCode = dto.employeeCode;
+    if (!employeeCode || !employeeCode.trim()) {
+      const count = await this.prisma.staffProfiles.count({ where: { tenantId } });
+      employeeCode = `FAC-${String(count + 1001).padStart(4, '0')}`;
+    }
+
+    const existingCode = await this.prisma.staffProfiles.findFirst({
+      where: { tenantId, employeeCode, deletedAt: null },
+    });
+    if (existingCode) {
+      employeeCode = `FAC-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
 
     let rawPassword: string | null = null;
 
@@ -59,183 +69,188 @@ export class TutorService {
       ? hashSync(rawPassword, 10)
       : hashSync(randomUUID(), 8);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const designationId = await this.resolveDesignationInTx(
-        tx,
-        dto.designation || 'Faculty',
-        tenantId,
-      );
-      const user = await tx.users.create({
-        data: {
-          email: dto.email,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          userType: 'TUTOR',
-          status: 'ACTIVE',
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const designationId = await this.resolveDesignationInTx(
+          tx,
+          dto.designation || 'Faculty',
           tenantId,
-          branchId: '',
-          passwordHash,
-          forcePasswordChange: false,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-
-      await tx.staffProfiles.create({
-        data: {
-          userId: user.id,
-          tenantId,
-          employeeCode,
-          designationId,
-          employmentType: 'FULL_TIME',
-          employmentStatus: 'ACTIVE',
-          joinedAt: new Date(),
-          resignedAt: new Date('2099-12-31'),
-          officialEmail: dto.email,
-          workPhone: dto.phone || '',
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
-
-      if (
-        dto.qualification ||
-        dto.specialization ||
-        dto.yearsOfExperience ||
-        dto.previousInstitution
-      ) {
-        await tx.staffQualifications.create({
+        );
+        const user = await tx.users.create({
           data: {
-            staffProfileId: user.id,
+            email: dto.email,
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            userType: 'TUTOR',
+            status: 'ACTIVE',
             tenantId,
-            degree: dto.qualification || '',
-            institution: dto.previousInstitution || '',
-            yearCompleted: new Date().getFullYear(),
-            experienceMonths: (dto.yearsOfExperience || 0) * 12,
-            certificatesMetadata: { specialization: dto.specialization || '' },
+            branchId: '',
+            passwordHash,
+            forcePasswordChange: false,
             createdBy: userId,
             updatedBy: userId,
           },
         });
-      }
 
-      if (dto.subjectIds && dto.subjectIds.length > 0) {
-        for (const subjectId of dto.subjectIds) {
-          await tx.staffSubjects
+        await tx.staffProfiles.create({
+          data: {
+            userId: user.id,
+            tenantId,
+            employeeCode,
+            designationId,
+            employmentType: 'FULL_TIME',
+            employmentStatus: 'ACTIVE',
+            joinedAt: new Date(),
+            resignedAt: new Date('2099-12-31'),
+            officialEmail: dto.email,
+            workPhone: dto.phone || '',
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+
+        if (
+          dto.qualification ||
+          dto.specialization ||
+          dto.yearsOfExperience ||
+          dto.previousInstitution
+        ) {
+          await tx.staffQualifications.create({
+            data: {
+              staffProfileId: user.id,
+              tenantId,
+              degree: dto.qualification || '',
+              institution: dto.previousInstitution || '',
+              yearCompleted: new Date().getFullYear(),
+              experienceMonths: (dto.yearsOfExperience || 0) * 12,
+              certificatesMetadata: { specialization: dto.specialization || '' },
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        }
+
+        if (dto.subjectIds && dto.subjectIds.length > 0) {
+          await Promise.all(
+            dto.subjectIds.map((subjectId) =>
+              tx.staffSubjects
+                .create({
+                  data: {
+                    staffProfileId: user.id,
+                    subjectId,
+                    tenantId,
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                })
+                .catch(() => {}),
+            ),
+          );
+        }
+
+        if (dto.branchIds && dto.branchIds.length > 0) {
+          await Promise.all(
+            dto.branchIds.map((branchId) => {
+              const deptId = randomUUID();
+              return tx.$executeRaw`
+                INSERT INTO public."StaffDepartments" ("staffProfileId", "branchId", "departmentId", "tenantId", "createdBy", "updatedBy")
+                VALUES (${user.id}::uuid, ${branchId}::uuid, ${deptId}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
+                ON CONFLICT ("staffProfileId", "branchId", "departmentId") DO UPDATE SET "deletedAt" = NULL, "updatedAt" = now(), "updatedBy" = ${userId}::uuid
+              `;
+            }),
+          );
+        }
+
+        if (dto.batchIds && dto.batchIds.length > 0) {
+          for (const batchId of dto.batchIds) {
+            const batch = await tx.batches.findFirst({
+              where: { id: batchId, tenantId },
+              select: { courseId: true },
+            });
+
+            let assignedSubjectId: string | null = null;
+
+            if (batch?.courseId) {
+              const tutorCourseSubject = await tx.courseSubjects.findFirst({
+                where: {
+                  tenantId,
+                  courseId: batch.courseId,
+                  subjectId: { in: dto.subjectIds || [] },
+                },
+                select: { subjectId: true },
+              });
+              if (tutorCourseSubject) {
+                assignedSubjectId = tutorCourseSubject.subjectId;
+              } else {
+                const fallbackCourseSubject = await tx.courseSubjects.findFirst({
+                  where: { tenantId, courseId: batch.courseId },
+                  select: { subjectId: true },
+                });
+                if (fallbackCourseSubject) {
+                  assignedSubjectId = fallbackCourseSubject.subjectId;
+                }
+              }
+            }
+
+            if (
+              !assignedSubjectId &&
+              dto.subjectIds &&
+              dto.subjectIds.length > 0
+            ) {
+              assignedSubjectId = dto.subjectIds[0];
+            }
+
+            if (assignedSubjectId) {
+              await tx.staffBatchAssignments
+                .create({
+                  data: {
+                    staffProfileId: user.id,
+                    batchId,
+                    subjectId: assignedSubjectId,
+                    tenantId,
+                    effectiveFrom: new Date(),
+                    effectiveTo: new Date('2099-12-31'),
+                    isActive: true,
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                })
+                .catch(() => {
+                  // Ignore conflict
+                });
+            }
+          }
+        }
+
+        // Assign TUTOR role for login access
+        const tutorRole = await tx.roles.findFirst({
+          where: { tenantId, code: 'TUTOR' },
+        });
+        if (tutorRole) {
+          await tx.userRoles
             .create({
               data: {
-                staffProfileId: user.id,
-                subjectId,
                 tenantId,
+                userId: user.id,
+                roleId: tutorRole.id,
+                effectiveFrom: new Date(),
+                effectiveTo: new Date('2099-12-31'),
+                assignedBy: userId,
+                assignmentReason: 'Tutor account creation',
+                revokedBy: '',
+                revokedReason: '',
+                metadata: {},
                 createdBy: userId,
                 updatedBy: userId,
               },
             })
-            .catch(() => {
-              // ON CONFLICT DO NOTHING equivalent
-            });
+            .catch(() => {});
         }
-      }
 
-      if (dto.branchIds && dto.branchIds.length > 0) {
-        for (const branchId of dto.branchIds) {
-          const deptId = randomUUID();
-          await tx.$executeRaw`
-            INSERT INTO public."StaffDepartments" ("staffProfileId", "branchId", "departmentId", "tenantId", "createdBy", "updatedBy")
-            VALUES (${user.id}::uuid, ${branchId}::uuid, ${deptId}, ${tenantId}::uuid, ${userId}::uuid, ${userId}::uuid)
-            ON CONFLICT ("staffProfileId", "branchId", "departmentId") DO UPDATE SET "deletedAt" = NULL, "updatedAt" = now(), "updatedBy" = ${userId}::uuid
-          `;
-        }
-      }
-
-      if (dto.batchIds && dto.batchIds.length > 0) {
-        for (const batchId of dto.batchIds) {
-          const batch = await tx.batches.findFirst({
-            where: { id: batchId, tenantId },
-            select: { courseId: true },
-          });
-
-          let assignedSubjectId: string | null = null;
-
-          if (batch?.courseId) {
-            const tutorCourseSubject = await tx.courseSubjects.findFirst({
-              where: {
-                tenantId,
-                courseId: batch.courseId,
-                subjectId: { in: dto.subjectIds || [] },
-              },
-              select: { subjectId: true },
-            });
-            if (tutorCourseSubject) {
-              assignedSubjectId = tutorCourseSubject.subjectId;
-            } else {
-              const fallbackCourseSubject = await tx.courseSubjects.findFirst({
-                where: { tenantId, courseId: batch.courseId },
-                select: { subjectId: true },
-              });
-              if (fallbackCourseSubject) {
-                assignedSubjectId = fallbackCourseSubject.subjectId;
-              }
-            }
-          }
-
-          if (
-            !assignedSubjectId &&
-            dto.subjectIds &&
-            dto.subjectIds.length > 0
-          ) {
-            assignedSubjectId = dto.subjectIds[0];
-          }
-
-          if (assignedSubjectId) {
-            await tx.staffBatchAssignments
-              .create({
-                data: {
-                  staffProfileId: user.id,
-                  batchId,
-                  subjectId: assignedSubjectId,
-                  tenantId,
-                  effectiveFrom: new Date(),
-                  effectiveTo: new Date('2099-12-31'),
-                  isActive: true,
-                  createdBy: userId,
-                  updatedBy: userId,
-                },
-              })
-              .catch(() => {
-                // Ignore conflict
-              });
-          }
-        }
-      }
-
-      // Assign TUTOR role for login access
-      const tutorRole = await tx.roles.findFirst({
-        where: { tenantId, code: 'TUTOR' },
-      });
-      if (tutorRole) {
-        await tx.userRoles
-          .create({
-            data: {
-              tenantId,
-              userId: user.id,
-              roleId: tutorRole.id,
-              effectiveFrom: new Date(),
-              effectiveTo: new Date('2099-12-31'),
-              assignedBy: userId,
-              assignmentReason: 'Tutor account creation',
-              revokedBy: '',
-              revokedReason: '',
-              metadata: {},
-              createdBy: userId,
-              updatedBy: userId,
-            },
-          })
-          .catch(() => {});
-      }
-
-      return this.findOneInTx(tx, user.id, tenantId);
-    });
+        return this.findOneInTx(tx, user.id, tenantId);
+      },
+      { maxWait: 15000, timeout: 30000 },
+    );
 
     if (rawPassword) {
       return {
@@ -550,7 +565,7 @@ export class TutorService {
           }
         }
       }
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     return this.findOne(id, tenantId);
   }
@@ -575,39 +590,41 @@ export class TutorService {
     designationName: string,
     tenantId: string,
   ): Promise<string> {
-    const designation = await tx.designations.findFirst({
+    // First: try to find existing designation
+    const existing = await tx.designations.findFirst({
       where: {
         tenantId,
         deletedAt: null,
         OR: [
           { name: designationName },
-          { code: designationName.toUpperCase().substring(0, 10) },
+          { code: designationName.toUpperCase().substring(0, 10).replace(/\s+/g, '_') },
         ],
       },
+      select: { id: true },
     });
-    if (designation) return designation.id;
+    if (existing) return existing.id;
 
     const newId = randomUUID();
     const code = designationName
       .toUpperCase()
       .substring(0, 10)
       .replace(/\s+/g, '_');
-    await tx.designations
-      .create({
-        data: {
-          id: newId,
-          tenantId,
-          code,
-          name: designationName,
-          description: '',
-          isActive: true,
-          isSystem: false,
-          createdBy: SYSTEM_USER_ID,
-          updatedBy: SYSTEM_USER_ID,
-        },
-      })
-      .catch(() => {});
-    return newId;
+
+    // Use INSERT ... ON CONFLICT DO NOTHING to avoid aborting the transaction
+    // on a race condition where another concurrent request created the same designation
+    await tx.$executeRaw`
+      INSERT INTO public."Designations" (id, "tenantId", code, name, description, "isActive", "isSystem", "createdBy", "updatedBy")
+      VALUES (${newId}::uuid, ${tenantId}::uuid, ${code}, ${designationName}, '', true, false, ${SYSTEM_USER_ID}::uuid, ${SYSTEM_USER_ID}::uuid)
+      ON CONFLICT (code) DO NOTHING
+    `;
+
+    // After safe insert, fetch the actual id (could be the newId or an existing one)
+    const resolved = await tx.designations.findFirst({
+      where: { tenantId, code, deletedAt: null },
+      select: { id: true },
+    });
+
+    return resolved?.id ?? newId;
   }
 
   private async resolveDesignation(
@@ -797,6 +814,7 @@ export class TutorService {
     courseId?: string,
     batchIds?: string[],
     createLogin?: boolean,
+    subjectIds?: string[],
   ): Promise<{
     importedCount: number;
     errors: string[];
@@ -813,10 +831,31 @@ export class TutorService {
 
     const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
 
-    // Get TUTOR/FACULTY role
-    const tutorRole = await this.prisma.roles.findFirst({
-      where: { tenantId, code: 'FACULTY' },
+    // Get TUTOR/FACULTY role with auto-creation fallback
+    let tutorRole = await this.prisma.roles.findFirst({
+      where: {
+        code: { in: ['FACULTY', 'TUTOR'] },
+        deletedAt: null,
+      },
     });
+
+    if (!tutorRole) {
+      tutorRole = await this.prisma.roles.create({
+        data: {
+          tenantId,
+          code: 'TUTOR',
+          name: 'Tutor',
+          roleType: 'SYSTEM',
+          isDefault: true,
+          isEditable: false,
+          isDeletable: false,
+          priority: 1,
+          metadata: {},
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    }
 
     // Run each import cleanly
     for (let i = 0; i < rows.length; i++) {
@@ -938,13 +977,9 @@ export class TutorService {
             tenantId,
           );
 
-          // Generate password if createLogin is enabled
-          const rowRawPassword = createLogin
-            ? generatePasswordFromPhone(phone)
-            : null;
-          const rowPasswordHash = rowRawPassword
-            ? hashSync(rowRawPassword, 10)
-            : hashSync(randomUUID(), 8);
+          // Generate password for login access
+          const rowRawPassword = generatePasswordFromPhone(phone);
+          const rowPasswordHash = hashSync(rowRawPassword, 10);
 
           // 1. Create User
           const user = await tx.users.create({
@@ -986,13 +1021,14 @@ export class TutorService {
             },
           });
 
-          // 3. Assign FACULTY role
+          // 3. Assign FACULTY/TUTOR role
           if (tutorRole) {
             await tx.userRoles.create({
               data: {
                 tenantId,
                 userId: user.id,
                 roleId: tutorRole.id,
+                effectiveFrom: new Date(),
                 effectiveTo: defaultDeletedAt,
                 revokedBy: '',
                 revokedReason: '',
@@ -1036,34 +1072,44 @@ export class TutorService {
             `;
           }
 
-          // 6. Map Selected Batches
-          if (batchIds && batchIds.length > 0) {
-            let subjectId = mappedSubject?.id || null;
+          // 6. Map Selected Batches & Subjects
+          // Priority: UI-selected subjectIds > sheet subject code > course first subject
+          const effectiveSubjectIds: string[] = [];
 
-            if (!subjectId) {
-              const assignedSubject = await tx.courseSubjects.findFirst({
-                where: { tenantId, courseId: courseId },
-                select: { subjectId: true },
-              });
-              subjectId = assignedSubject?.subjectId || null;
+          // If UI-selected subjects are passed, use them
+          if (subjectIds && subjectIds.length > 0) {
+            effectiveSubjectIds.push(...subjectIds);
+          } else if (mappedSubject?.id) {
+            // Fall back to sheet-parsed subject code
+            effectiveSubjectIds.push(mappedSubject.id);
+          } else if (courseId) {
+            // Fall back to first subject of the course
+            const firstCourseSubject = await tx.courseSubjects.findFirst({
+              where: { tenantId, courseId },
+              select: { subjectId: true },
+            });
+            if (firstCourseSubject?.subjectId) {
+              effectiveSubjectIds.push(firstCourseSubject.subjectId);
             }
+          }
 
-            if (subjectId) {
-              // Save StaffSubjects link
-              await tx.staffSubjects
-                .create({
-                  data: {
-                    staffProfileId: user.id,
-                    subjectId,
-                    tenantId,
-                    createdBy: userId,
-                    updatedBy: userId,
-                  },
-                })
-                .catch(() => {});
+          // Assign each subject
+          for (const subjectId of effectiveSubjectIds) {
+            await tx.staffSubjects
+              .create({
+                data: {
+                  staffProfileId: user.id,
+                  subjectId,
+                  tenantId,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              })
+              .catch(() => {});
 
+            // Assign all batches for this subject
+            if (batchIds && batchIds.length > 0) {
               for (const batchId of batchIds) {
-                // Save StaffBatchAssignments link
                 await tx.$executeRaw`
                   INSERT INTO public."StaffBatchAssignments" (id, "staffProfileId", "batchId", "subjectId", "tenantId", "isActive", "effectiveFrom", "effectiveTo", "createdBy", "updatedBy")
                   VALUES (${randomUUID()}::uuid, ${user.id}::uuid, ${batchId}::uuid, ${subjectId}::uuid, ${tenantId}::uuid, true, now(), ${defaultDeletedAt}, ${userId}::uuid, ${userId}::uuid)

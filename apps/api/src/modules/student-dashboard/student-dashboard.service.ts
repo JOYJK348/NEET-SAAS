@@ -344,9 +344,6 @@ export class StudentDashboardService {
       attendanceRate = Math.round((presentCount / totalRecorded) * 100);
     } else if (totalCompletedSessions > 0) {
       attendanceRate = Math.round((presentCount / totalCompletedSessions) * 100);
-    } else if (batchIds.length > 0) {
-      // Default initial 100% perfect attendance for enrolled active students before first attendance lock
-      attendanceRate = 100;
     }
 
     // Enrich sessions
@@ -399,6 +396,7 @@ export class StudentDashboardService {
         attendanceRate,
       },
       todaysSchedule: enriched,
+      upcomingSchedule: enrichedUpcoming,
       liveNow,
     };
   }
@@ -512,9 +510,13 @@ export class StudentDashboardService {
           batch: batchMap.get(s.batchId) ?? null,
           tutorName,
           sessionStatus:
-            s.sessionStatus === 'DRAFT' && s.scheduleId
-              ? 'SCHEDULED'
-              : s.sessionStatus,
+            s.sessionStatus === 'CANCELLED'
+              ? 'CANCELLED'
+              : liveStatus === 'COMPLETED'
+                ? 'COMPLETED'
+                : s.sessionStatus === 'DRAFT' && s.scheduleId
+                  ? 'SCHEDULED'
+                  : s.sessionStatus,
           sessionSource: s.sessionSource,
           deliveryMode: sched?.deliveryMode ?? null,
           liveStatus,

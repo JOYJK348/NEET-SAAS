@@ -88,13 +88,78 @@ export class BatchDeliveryTypeService {
     query: QueryParamsDto,
   ): Promise<PaginatedResult<any>> {
     const where: any = this.tenantScoped.buildWhere(tenantId);
-    return paginate({
+    let result = await paginate({
       model: this.prisma.batchDeliveryTypes,
       where,
-      orderBy: buildPrismaOrderBy(query.sortBy, query.sortOrder),
+      orderBy: buildPrismaOrderBy(
+        query.sortBy || 'displayOrder',
+        query.sortOrder || 'asc',
+      ),
       query,
       tenantId,
     });
+
+    if (result.data.length === 0) {
+      const defaults = [
+        {
+          code: 'OFFLINE',
+          name: 'Offline Classroom Mode',
+          attendanceMode: 'CLASSROOM',
+          displayOrder: 1,
+        },
+        {
+          code: 'ONLINE',
+          name: 'Online Live Class Mode',
+          attendanceMode: 'ONLINE',
+          displayOrder: 2,
+        },
+        {
+          code: 'HYBRID',
+          name: 'Hybrid (Offline + Online)',
+          attendanceMode: 'HYBRID',
+          displayOrder: 3,
+        },
+      ];
+
+      const now = new Date();
+      const startTime = new Date(now.setHours(9, 0, 0, 0));
+      const endTime = new Date(now.setHours(17, 0, 0, 0));
+
+      for (const d of defaults) {
+        await this.prisma.batchDeliveryTypes.create({
+          data: {
+            tenantId,
+            code: d.code,
+            name: d.name,
+            description: `${d.name} for batches`,
+            attendanceMode: d.attendanceMode as any,
+            defaultMaxStudents: 60,
+            defaultStartTime: startTime,
+            defaultEndTime: endTime,
+            colorCode: '#7c3aed',
+            iconName: 'Layers',
+            displayOrder: d.displayOrder,
+            isDefault: d.code === 'OFFLINE',
+            isActive: true,
+            createdBy: 'system',
+            updatedBy: 'system',
+          },
+        });
+      }
+
+      result = await paginate({
+        model: this.prisma.batchDeliveryTypes,
+        where,
+        orderBy: buildPrismaOrderBy(
+          query.sortBy || 'displayOrder',
+          query.sortOrder || 'asc',
+        ),
+        query,
+        tenantId,
+      });
+    }
+
+    return result;
   }
 
   async findOne(id: string, tenantId: string) {

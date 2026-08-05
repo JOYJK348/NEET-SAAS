@@ -47,18 +47,23 @@ export class TopicService {
       throw new NotFoundException('Chapter not found');
     }
 
-    // Check code uniqueness within parent chapter scope
+    const cleanName = dto.name.trim();
+
+    // Check code or name uniqueness within parent chapter scope
     const existing = await this.prisma.topics.findFirst({
       where: {
         tenantId,
         chapterId: dto.chapterId,
-        code: normalizedCode,
         deletedAt: null,
+        OR: [
+          { name: { equals: cleanName, mode: 'insensitive' } },
+          ...(normalizedCode ? [{ code: normalizedCode }] : []),
+        ],
       },
     });
     if (existing) {
       throw new ConflictException(
-        `Topic with code "${dto.code}" already exists for this chapter`,
+        `Topic "${cleanName}" already exists for this chapter`,
       );
     }
 
@@ -94,7 +99,10 @@ export class TopicService {
     return paginate({
       model: this.prisma.topics,
       where,
-      orderBy: buildPrismaOrderBy(query.sortBy, query.sortOrder),
+      orderBy: buildPrismaOrderBy(
+        query.sortBy || 'displayOrder',
+        query.sortOrder || 'asc',
+      ),
       query,
       tenantId,
     });
@@ -138,6 +146,24 @@ export class TopicService {
       if (existing) {
         throw new ConflictException(
           `Topic with code "${dto.code}" already exists for this chapter`,
+        );
+      }
+    }
+
+    if (dto.name) {
+      const cleanName = dto.name.trim();
+      const existingName = await this.prisma.topics.findFirst({
+        where: {
+          tenantId,
+          chapterId: existingTopic.chapterId,
+          name: { equals: cleanName, mode: 'insensitive' },
+          deletedAt: null,
+          id: { not: id },
+        },
+      });
+      if (existingName) {
+        throw new ConflictException(
+          `Topic "${cleanName}" already exists for this chapter`,
         );
       }
     }

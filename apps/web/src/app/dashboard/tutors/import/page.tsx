@@ -38,6 +38,9 @@ import {
   useAcademicYearsForAdmission,
   useBatchesForAdmission,
 } from '@/features/admissions/hooks/use-admissions';
+import { useSubjects } from '@/features/tutors/hooks/use-tutors';
+import { useCourseSubjects } from '@/features/master-data/hooks/use-course-subjects';
+import { BookOpen } from 'lucide-react';
 
 interface BulkImportResult {
   importedCount: number;
@@ -59,6 +62,7 @@ function TutorBulkImportContent() {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [createLogin, setCreateLogin] = useState('true');
 
   const [file, setFile] = useState<File | null>(null);
@@ -67,6 +71,17 @@ function TutorBulkImportContent() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch all subjects + filter by course
+  const { data: allSubjects = [] } = useSubjects();
+  const { data: courseSubjectsData = [] } = useCourseSubjects(selectedCourse, {
+    enabled: !!selectedCourse,
+  });
+  const courseSubjectIds = courseSubjectsData.map((cs: any) => cs.subjectId);
+  const filteredSubjectsList =
+    selectedCourse && courseSubjectIds.length > 0
+      ? (allSubjects as any[]).filter((s: any) => courseSubjectIds.includes(s.id))
+      : (allSubjects as any[]);
+
   // Filtered lists based on selections
   const filteredCourses = selectedBranch ? courses : [];
   const filteredBatches = batches.filter(
@@ -74,6 +89,12 @@ function TutorBulkImportContent() {
       (!selectedCourse || b.courseId === selectedCourse) &&
       (!selectedBranch || b.branchId === selectedBranch),
   );
+
+  const toggleSubjectSelection = (subjectId: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId]
+    );
+  };
 
   const handleDownloadTemplate = async () => {
     try {
@@ -126,6 +147,7 @@ function TutorBulkImportContent() {
     if (selectedYear) queryParams.append('academicYearId', selectedYear);
     if (selectedBranch) queryParams.append('branchId', selectedBranch);
     if (selectedBatches.length > 0) queryParams.append('batchIds', selectedBatches.join(','));
+    if (selectedSubjects.length > 0) queryParams.append('subjectIds', selectedSubjects.join(','));
     queryParams.append('createLogin', createLogin);
 
     try {
@@ -164,6 +186,7 @@ function TutorBulkImportContent() {
     setSelectedBranch('');
     setSelectedCourse('');
     setSelectedBatches([]);
+    setSelectedSubjects([]);
     setCreateLogin('true');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -307,6 +330,7 @@ function TutorBulkImportContent() {
                     onValueChange={(val) => {
                       setSelectedCourse(val);
                       setSelectedBatches([]);
+                      setSelectedSubjects([]);
                     }}
                     disabled={!selectedBranch}
                   >
@@ -385,6 +409,54 @@ function TutorBulkImportContent() {
                         );
                       })}
                     </div>
+                  )}
+                </div>
+
+                {/* Multi-Select Subjects Container */}
+                <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-violet-500" />
+                    Subjects (Select Multiple)
+                  </Label>
+                  {!selectedCourse ? (
+                    <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                      Select a course above to view and assign subjects.
+                    </p>
+                  ) : filteredSubjectsList.length === 0 ? (
+                    <p className="text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                      No subjects found for the selected course.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-50 border border-[#E5E7EB] rounded-2xl p-3 max-h-36 overflow-y-auto">
+                      {filteredSubjectsList.map((s: any) => {
+                        const isSelected = selectedSubjects.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => toggleSubjectSelection(s.id)}
+                            className={`flex items-center justify-between text-left text-xs px-3 py-2.5 rounded-xl border transition-all ${
+                              isSelected
+                                ? 'border-violet-500 bg-violet-50 text-violet-900 font-bold shadow-2xs'
+                                : 'border-white bg-white hover:border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <span className="block truncate">{s.name}</span>
+                              {s.code && <span className="text-[10px] text-slate-400 font-mono">{s.code}</span>}
+                            </div>
+                            {isSelected && (
+                              <Check className="h-3.5 w-3.5 text-violet-600 shrink-0 ml-1" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {selectedSubjects.length > 0 && (
+                    <p className="text-[10px] text-violet-600 font-semibold">
+                      {selectedSubjects.length} subject{selectedSubjects.length > 1 ? 's' : ''} selected
+                    </p>
                   )}
                 </div>
               </div>

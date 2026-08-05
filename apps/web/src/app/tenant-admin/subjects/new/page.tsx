@@ -15,6 +15,11 @@ import {
   X,
   AlertCircle,
   FileText,
+  Plus,
+  Trash2,
+  ListPlus,
+  BookOpen,
+  Layers,
 } from 'lucide-react';
 import { useCreateSubject } from '@/features/master-data/hooks/use-subjects';
 import { toast } from 'sonner';
@@ -85,6 +90,51 @@ function CreateSubjectContent() {
     }));
   };
 
+  const [chapters, setChapters] = useState<
+    Array<{ name: string; plannedHours: number; estimatedSessions: number }>
+  >([]);
+  const [newChapterName, setNewChapterName] = useState('');
+  const [newChapterHours, setNewChapterHours] = useState(10);
+  const [newChapterSessions, setNewChapterSessions] = useState(8);
+  const [bulkText, setBulkText] = useState('');
+  const [showBulkPaste, setShowBulkPaste] = useState(false);
+
+  const handleAddChapter = () => {
+    if (!newChapterName.trim()) return;
+    setChapters((prev) => [
+      ...prev,
+      {
+        name: newChapterName.trim(),
+        plannedHours: newChapterHours || 10,
+        estimatedSessions: newChapterSessions || 8,
+      },
+    ]);
+    setNewChapterName('');
+  };
+
+  const handleRemoveChapter = (index: number) => {
+    setChapters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleProcessBulkPaste = () => {
+    if (!bulkText.trim()) return;
+    const lines = bulkText
+      .split('\n')
+      .map((l) => l.trim().replace(/^[0-9]+\.\s*/, ''))
+      .filter(Boolean);
+
+    const newItems = lines.map((name) => ({
+      name,
+      plannedHours: 10,
+      estimatedSessions: 8,
+    }));
+
+    setChapters((prev) => [...prev, ...newItems]);
+    setBulkText('');
+    setShowBulkPaste(false);
+    toast.success(`Added ${newItems.length} chapters from bulk text!`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
@@ -93,8 +143,15 @@ function CreateSubjectContent() {
     }
 
     try {
-      await createMutation.mutateAsync(formData);
-      toast.success('Master Subject created successfully!');
+      await createMutation.mutateAsync({
+        ...formData,
+        chapters,
+      });
+      toast.success(
+        chapters.length > 0
+          ? `Master Subject created with ${chapters.length} chapters!`
+          : 'Master Subject created successfully!',
+      );
       router.push('/tenant-admin/curriculum');
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || 'Failed to create subject';
@@ -236,17 +293,7 @@ function CreateSubjectContent() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Short Name / Tag
-              </label>
-              <Input
-                value={formData.shortName || ''}
-                onChange={(e) => setFormData({ ...formData, shortName: e.target.value })}
-                placeholder="e.g. PHY / CHEM"
-                className="rounded-xl border-slate-200 text-xs font-medium uppercase"
-              />
-            </div>
+
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -287,10 +334,149 @@ function CreateSubjectContent() {
               <textarea
                 value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
+                rows={2}
                 placeholder="Add optional notes or description about this master subject..."
                 className="w-full p-3 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
+            </div>
+
+            {/* Master Chapters & Syllabus Setup */}
+            <div className="space-y-4 sm:col-span-2 pt-4 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-violet-600" /> Subject Chapters & Syllabus (Optional)
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Add chapters for {formData.name || 'this subject'} directly. When mapped to any course, these chapters auto-populate!
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowBulkPaste(!showBulkPaste)}
+                  className="rounded-xl text-xs font-bold text-violet-700 border-violet-200 bg-violet-50 hover:bg-violet-100 gap-1.5 self-start sm:self-auto"
+                >
+                  <ListPlus className="w-4 h-4 text-violet-600" />
+                  {showBulkPaste ? 'Hide Bulk Paste' : 'Quick Bulk Paste Chapters'}
+                </Button>
+              </div>
+
+              {showBulkPaste && (
+                <div className="p-4 rounded-2xl bg-violet-50/70 border border-violet-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-violet-900">
+                      Paste List of Chapters (Line by Line):
+                    </label>
+                    <span className="text-[10px] text-violet-600 font-medium">e.g. 1. Physical World & Measurement</span>
+                  </div>
+                  <textarea
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    rows={5}
+                    placeholder={`1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion\n4. Work, Energy & Power\n5. Rotational Motion`}
+                    className="w-full p-3 rounded-xl border border-violet-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBulkPaste(false)}
+                      className="text-xs font-semibold text-slate-500"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleProcessBulkPaste}
+                      className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl"
+                    >
+                      Process & Add Chapters
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Single Chapter Input Strip */}
+              <div className="flex flex-col sm:flex-row items-center gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                <Input
+                  value={newChapterName}
+                  onChange={(e) => setNewChapterName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddChapter();
+                    }
+                  }}
+                  placeholder="Type chapter name (e.g. Thermodynamics) and press Enter or Add..."
+                  className="rounded-xl text-xs font-medium bg-white border-slate-200 flex-1"
+                />
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-xl border border-slate-200 text-xs shrink-0">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Hours:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={newChapterHours}
+                      onChange={(e) => setNewChapterHours(parseInt(e.target.value, 10) || 10)}
+                      className="w-10 text-xs font-bold border-0 bg-transparent text-center focus:outline-none"
+                    />
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={handleAddChapter}
+                    className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs px-3 py-2 shrink-0"
+                  >
+                    <Plus className="w-4 h-4" /> Add Chapter
+                  </Button>
+                </div>
+              </div>
+
+              {/* Added Chapters List */}
+              {chapters.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-bold px-1">
+                    <span>Configured Chapters ({chapters.length}):</span>
+                    <span>Action</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                    {chapters.map((ch, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-white hover:border-violet-300 transition-colors text-xs font-bold"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-5 h-5 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                            {idx + 1}
+                          </span>
+                          <span className="text-slate-900 truncate">{ch.name}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-semibold">
+                            {ch.plannedHours} Hrs • {ch.estimatedSessions} Sess
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveChapter(idx)}
+                            className="text-slate-400 hover:text-rose-600 p-1 transition-colors"
+                            title="Remove chapter"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

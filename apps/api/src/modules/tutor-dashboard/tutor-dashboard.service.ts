@@ -477,6 +477,20 @@ export class TutorDashboardService {
         : [];
     const roomMap = new Map(rooms.map((r) => [r.id, r]));
 
+    // Get attendance records for these sessions to verify completion status
+    const sessionIds = sessions.map((s) => s.id);
+    const markedRecordsGroup =
+      sessionIds.length > 0
+        ? await this.prisma.attendanceRecords.groupBy({
+            by: ['attendanceSessionId'],
+            where: { tenantId, attendanceSessionId: { in: sessionIds } },
+            _count: { id: true },
+          })
+        : [];
+    const markedSessionsSet = new Set(
+      markedRecordsGroup.map((g) => g.attendanceSessionId),
+    );
+
     const timetableMap = new Map<string, Record<string, unknown>[]>();
     for (const session of sessions) {
       const dateKey = this.toLocalDateKey(session.attendanceDate);
@@ -486,6 +500,12 @@ export class TutorDashboardService {
       if (!timetableMap.has(dateKey)) {
         timetableMap.set(dateKey, []);
       }
+      const hasRecords = markedSessionsSet.has(session.id);
+      const effectiveStatus =
+        session.sessionStatus === 'DRAFT' && session.scheduleId
+          ? 'SCHEDULED'
+          : session.sessionStatus;
+
       timetableMap.get(dateKey)!.push({
         id: session.id,
         startsAt: this.formatTime(session.startsAt),
@@ -494,10 +514,8 @@ export class TutorDashboardService {
         batch: batchMap.get(session.batchId) ?? null,
         branch: branchMap.get(session.branchId) ?? null,
         room: sched?.roomId ? (roomMap.get(sched.roomId) ?? null) : null,
-        sessionStatus:
-          session.sessionStatus === 'DRAFT' && session.scheduleId
-            ? 'SCHEDULED'
-            : session.sessionStatus,
+        sessionStatus: hasRecords && effectiveStatus === 'SCHEDULED' ? 'PUBLISHED' : effectiveStatus,
+        hasAttendanceRecords: hasRecords,
         sessionSource: session.sessionSource,
         overrideType: session.overrideType,
         cancelledReason: session.cancelledReason,
@@ -646,43 +664,60 @@ export class TutorDashboardService {
       select: { batchId: true, subjectId: true },
     });
 
-    if (assignments.length === 0) return { courses: [] };
-
-    const assignedBatchIds = [...new Set(assignments.map((a) => a.batchId))];
-
-    // Build the set of subjectIds the tutor is registered with (e.g. from registration)
+    // Build the set of subjectIds the tutor is registered with
     const staffSubjects = await this.prisma.staffSubjects.findMany({
       where: { tenantId, staffProfileId, isActive: true, deletedAt: null },
       select: { subjectId: true },
     });
 
     const tutorAssignedSubjectIds = new Set(
-      staffSubjects
-        .map((s) => s.subjectId)
-        .filter((id): id is string => id !== null),
+      [
+        ...assignments.map((a) => a.subjectId),
+        ...staffSubjects.map((s) => s.subjectId),
+      ].filter((id): id is string => id !== null),
     );
 
-    // Get unique courses from those batches
-    const batches = await this.prisma.batches.findMany({
-      where: { tenantId, id: { in: assignedBatchIds } },
-      select: { id: true, name: true, courseId: true, status: true },
-    });
-
-    const courseIds = [...new Set(batches.map((b) => b.courseId))];
-
-    // Group batch names by course
+    let courseIds: string[] = [];
     const batchesByCourse = new Map<
       string,
       { id: string; name: string; status: string }[]
     >();
-    for (const b of batches) {
-      if (!batchesByCourse.has(b.courseId)) {
-        batchesByCourse.set(b.courseId, []);
+
+    if (assignments.length > 0) {
+      const assignedBatchIds = [...new Set(assignments.map((a) => a.batchId))];
+
+      // Get unique courses from batch assignments
+      const batches = await this.prisma.batches.findMany({
+        where: { tenantId, id: { in: assignedBatchIds } },
+        select: { id: true, name: true, courseId: true, status: true },
+      });
+
+      courseIds = [...new Set(batches.map((b) => b.courseId))];
+
+      for (const b of batches) {
+        if (!batchesByCourse.has(b.courseId)) {
+          batchesByCourse.set(b.courseId, []);
+        }
+        batchesByCourse
+          .get(b.courseId)!
+          .push({ id: b.id, name: b.name, status: b.status });
       }
-      batchesByCourse
-        .get(b.courseId)!
-        .push({ id: b.id, name: b.name, status: b.status });
     }
+
+    // Fallback: if no batch assignments, derive courses from staffSubjects via courseSubjects
+    if (courseIds.length === 0 && tutorAssignedSubjectIds.size > 0) {
+      const courseSubjectLinks = await this.prisma.courseSubjects.findMany({
+        where: {
+          tenantId,
+          subjectId: { in: [...tutorAssignedSubjectIds] },
+          deletedAt: null,
+        },
+        select: { courseId: true },
+      });
+      courseIds = [...new Set(courseSubjectLinks.map((cs) => cs.courseId))];
+    }
+
+    if (courseIds.length === 0) return { courses: [] };
 
     // Fetch courses
     const courses = await this.prisma.courses.findMany({
@@ -698,7 +733,9 @@ export class TutorDashboardService {
       where: {
         tenantId,
         courseId: { in: courseIds },
-        subjectId: { in: [...tutorAssignedSubjectIds] },
+        ...(tutorAssignedSubjectIds.size > 0
+          ? { subjectId: { in: [...tutorAssignedSubjectIds] } }
+          : {}),
         deletedAt: null,
       },
       orderBy: { displayOrder: 'asc' },
@@ -720,6 +757,7 @@ export class TutorDashboardService {
         })),
       };
     }
+
 
     const csIds = courseSubjects.map((cs) => cs.id);
     const subjectIds = [...new Set(courseSubjects.map((cs) => cs.subjectId))];
@@ -1110,6 +1148,18 @@ export class TutorDashboardService {
           const msg = `Failed to mark ${record.studentAdmissionId}: ${err instanceof Error ? err.message : 'Unknown error'}`;
           errors.push(msg);
         }
+      }
+
+      // Automatically transition sessionStatus to PUBLISHED when attendance is marked
+      if (successCount > 0) {
+        await tx.attendanceSessions.update({
+          where: { id: sessionId },
+          data: {
+            sessionStatus: 'PUBLISHED',
+            updatedAt: new Date(),
+            updatedBy: userId,
+          },
+        });
       }
     });
 

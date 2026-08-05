@@ -35,6 +35,15 @@ export class SubjectController {
     return this.subjectService.create(dto, user.tenantId!, user.sub);
   }
 
+  @Post('bulk')
+  @ApiOperation({ summary: 'Bulk create subjects with chapters' })
+  bulkCreate(
+    @Body() dtos: CreateSubjectDto[],
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.subjectService.bulkCreate(dtos, user.tenantId!, user.sub);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List subjects with pagination' })
   findAll(
@@ -51,6 +60,21 @@ export class SubjectController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.subjectService.findOne(id, user.tenantId!);
+  }
+
+  @Get(':id/course-subject')
+  @ApiOperation({
+    summary: 'Get or create master course subject mapping for syllabus management',
+  })
+  getCourseSubject(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.subjectService.getOrCreateMasterCourseSubject(
+      id,
+      user.tenantId!,
+      user.sub,
+    );
   }
 
   @Patch(':id')

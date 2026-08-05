@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, Suspense } from 'react';
+import { useCallback, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,6 +45,7 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 
@@ -70,6 +71,45 @@ function CreateBatchContent() {
     resolver: zodResolver(batchFormSchema),
     defaultValues: defaultFormValues,
   });
+
+  const generateUniqueBatchCode = useCallback(() => {
+    const selectedCourseId = watch('courseId');
+    const selectedCourse = courses.find((c) => c.id === selectedCourseId);
+    let codePrefix = 'BTC';
+
+    const courseObj = selectedCourse as any;
+    if (courseObj?.code) {
+      codePrefix = courseObj.code.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+    } else if (courseObj?.name) {
+      codePrefix = courseObj.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+    }
+
+    if (!/^[A-Z]/.test(codePrefix)) {
+      codePrefix = 'BTC';
+    }
+
+    const yearSuffix = new Date().getFullYear().toString().slice(-2);
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const generatedCode = `${codePrefix}${yearSuffix}_${randomSuffix}`;
+
+    setValue('code', generatedCode, { shouldValidate: true });
+  }, [watch, courses, setValue]);
+
+  // Auto-generate code on mount if empty
+  useEffect(() => {
+    const currentCode = watch('code');
+    if (!currentCode) {
+      generateUniqueBatchCode();
+    }
+  }, [generateUniqueBatchCode, watch]);
+
+  // Auto-select first Delivery Mode if not selected
+  useEffect(() => {
+    const currentDelivery = watch('deliveryTypeId');
+    if (!currentDelivery && deliveryTypes && deliveryTypes.length > 0) {
+      setValue('deliveryTypeId', deliveryTypes[0].id, { shouldValidate: true });
+    }
+  }, [deliveryTypes, setValue, watch]);
 
   const onSubmit = useCallback(
     async (data: BatchFormData) => {
@@ -220,23 +260,33 @@ function CreateBatchContent() {
           <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label
-                  htmlFor="code"
-                  className="text-xs font-bold text-slate-700 flex items-center gap-1"
-                >
-                  Batch Code <span className="text-rose-500">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="code"
+                    className="text-xs font-bold text-slate-700 flex items-center gap-1"
+                  >
+                    Batch Code <span className="text-rose-500">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={generateUniqueBatchCode}
+                    className="text-[11px] font-bold text-violet-600 hover:text-violet-800 flex items-center gap-1 bg-violet-50 hover:bg-violet-100 px-2 py-0.5 rounded-lg border border-violet-200 transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Auto Generate ⚡
+                  </button>
+                </div>
                 <Input
                   id="code"
-                  placeholder="e.g. NEET26A"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  readOnly
+                  placeholder="e.g. NEET26_4912"
+                  className="h-11 rounded-xl border-slate-200 bg-slate-100/80 font-bold uppercase tracking-wider text-slate-700 cursor-not-allowed select-none"
                   {...register('code')}
                 />
                 {errors.code ? (
                   <p className="text-xs text-rose-500 font-medium">{errors.code.message}</p>
                 ) : (
                   <p className="text-[11px] text-slate-400">
-                    Short uppercase identifier for system code
+                    Auto-generated unique code identifier
                   </p>
                 )}
               </div>

@@ -38,7 +38,15 @@ type MulterFile = Express.Multer.File;
 @ApiTags('Admin Exams')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
-@Roles('TENANT_ADMIN', 'SUPER_ADMIN')
+@Roles(
+  'TENANT_ADMIN',
+  'SUPER_ADMIN',
+  'ADMIN',
+  'ADMINISTRATOR',
+  'ACADEMIC_ADMIN',
+  'BRANCH_ADMIN',
+  'OWNER',
+)
 @Controller({ path: 'admin/exams', version: '1' })
 export class AdminExamsController {
   constructor(

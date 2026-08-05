@@ -72,6 +72,7 @@ export interface StudentOverviewResponseDto {
   enrolledBatches?: string[];
   stats: StudentOverviewStats;
   todaysSchedule: StudentSessionDto[];
+  upcomingSchedule?: StudentSessionDto[];
   liveNow: StudentSessionDto[];
 }
 

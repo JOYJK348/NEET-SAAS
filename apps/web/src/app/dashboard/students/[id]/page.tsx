@@ -399,10 +399,13 @@ function StudentDetailContent() {
                         size="sm"
                         className="w-full h-8 text-xs font-semibold gap-1.5 border-teal-200 text-teal-700 hover:bg-teal-50"
                         onClick={() => {
+                          const pPhone = student.parentPhone || '';
+                          const last4 = pPhone.replace(/\D/g, '').slice(-4);
+                          const genPass = last4.length === 4 ? `Par@${last4}` : 'Par@4912';
                           toast({
                             title: 'Password Reset Triggered',
                             description:
-                              'New password generated: ISML@847201 (Force change on next login)',
+                              `New password generated: ${genPass} (Force change on next login)`,
                           });
                         }}
                       >
@@ -550,7 +553,8 @@ function StudentDetailContent() {
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                         Average Test Score
                       </span>
-                      <p className="text-xl font-extrabold text-[#7C3AED] mt-1">720/720 (Max)</p>
+                      <p className="text-xl font-extrabold text-[#7C3AED] mt-1">Nil</p>
+                      <span className="text-[10px] text-slate-400 font-medium">No tests taken yet</span>
                     </div>
                     <a
                       href="/dashboard/attendance"
@@ -563,8 +567,9 @@ function StudentDetailContent() {
                         </span>
                       </span>
                       <p className="text-xl font-extrabold text-teal-600 mt-1 group-hover:text-teal-700">
-                        Click to view
+                        Nil
                       </p>
+                      <span className="text-[10px] text-slate-400 font-medium group-hover:text-teal-600">No records yet</span>
                     </a>
                   </div>
                 </Card>

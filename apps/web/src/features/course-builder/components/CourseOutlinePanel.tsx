@@ -23,6 +23,11 @@ import {
   Minus,
   ExternalLink,
   Video as VideoIcon,
+  Upload,
+  ListPlus,
+  Copy,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -150,9 +155,17 @@ function ChapterSortable({
         >
           <GripVertical className="h-3 w-3" />
         </div>
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => onToggleChapter(chapter.id)}
-          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-xl text-left transition-all text-gray-600 hover:bg-violet-50/60 min-w-0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onToggleChapter(chapter.id);
+            }
+          }}
+          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-xl text-left transition-all text-gray-600 hover:bg-violet-50/60 min-w-0 cursor-pointer"
         >
           <div className="flex items-center justify-center w-4 h-4 shrink-0">
             {isChapterOpen ? (
@@ -221,7 +234,7 @@ function ChapterSortable({
               </div>
             )}
           </div>
-        </button>
+        </div>
       </div>
       {isChapterOpen && (
         <div className="ml-7 space-y-0.5">
@@ -484,6 +497,30 @@ export function CourseOutlinePanel({
   const [savingChapter, setSavingChapter] = useState(false);
   const [savingTopic, setSavingTopic] = useState(false);
 
+  // Bulk Chapters Upload state
+  const [bulkChaptersModalOpen, setBulkChaptersModalOpen] = useState(false);
+  const [bulkChaptersSubjectId, setBulkChaptersSubjectId] = useState<string | null>(null);
+  const [bulkChaptersText, setBulkChaptersText] = useState('');
+  const [bulkDefaultHours, setBulkDefaultHours] = useState(10);
+  const [bulkDefaultSessions, setBulkDefaultSessions] = useState(8);
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+  const [copiedTemplate, setCopiedTemplate] = useState(false);
+
+  const sampleTemplateText = `1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion\n4. Work, Energy and Power\n5. Rotational Motion\n6. Gravitation\n7. Thermodynamics`;
+
+  const handleOpenBulkChapters = (subjectId: string) => {
+    setBulkChaptersSubjectId(subjectId);
+    setBulkChaptersText('');
+    setBulkChaptersModalOpen(true);
+  };
+
+  const handleCopySampleTemplate = () => {
+    navigator.clipboard.writeText(sampleTemplateText);
+    setCopiedTemplate(true);
+    toast.success('Sample template copied to clipboard!');
+    setTimeout(() => setCopiedTemplate(false), 2000);
+  };
+
   // Fetch topic items for the selected topic to show ToC
   const { data: selectedTopicItems } = useTopicItems(selectedTopicId);
 
@@ -671,6 +708,56 @@ export function CourseOutlinePanel({
     }
   };
 
+  const handleProcessBulkChapters = async () => {
+    if (!bulkChaptersText.trim() || !bulkChaptersSubjectId) {
+      toast.error('Please paste or enter chapter names');
+      return;
+    }
+
+    const lines = bulkChaptersText
+      .split('\n')
+      .map((line) => line.trim().replace(/^[0-9]+\.\s*/, '').replace(/^[-*]\s*/, ''))
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      toast.error('No valid chapter names found');
+      return;
+    }
+
+    setIsBulkSubmitting(true);
+    try {
+      const subject = subjects.find((s) => s.id === bulkChaptersSubjectId);
+      const existingChapters = subject?.chapters ?? [];
+      let nextOrder =
+        existingChapters.length > 0
+          ? Math.max(...existingChapters.map((ch) => ch.displayOrder)) + 1
+          : 1;
+
+      for (const name of lines) {
+        const cleanName = name.trim();
+        const codePrefix =
+          cleanName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'CH';
+        await createChapter.mutateAsync({
+          courseSubjectId: bulkChaptersSubjectId,
+          name: cleanName,
+          code: `CH-${codePrefix}-${nextOrder}`,
+          plannedHours: bulkDefaultHours,
+          estimatedSessions: bulkDefaultSessions,
+          displayOrder: nextOrder++,
+        });
+      }
+
+      toast.success(`Successfully uploaded ${lines.length} chapters!`);
+      setBulkChaptersModalOpen(false);
+      setBulkChaptersText('');
+      if (_onRefresh) _onRefresh();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to bulk upload chapters');
+    } finally {
+      setIsBulkSubmitting(false);
+    }
+  };
+
   const submitTopic = async () => {
     const name = topicName.trim();
     if (!name) return;
@@ -834,13 +921,22 @@ export function CourseOutlinePanel({
                         ))}
                       </SortableContext>
                     </DndContext>
-                    <button
-                      onClick={() => handleAddChapter(subject.id)}
-                      className="flex items-center gap-1 w-full px-3 py-1.5 text-[10px] font-semibold text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
-                    >
-                      <Plus className="h-3 w-3" />
-                      Add Chapter
-                    </button>
+                    <div className="flex items-center gap-1 py-1">
+                      <button
+                        onClick={() => handleAddChapter(subject.id)}
+                        className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Chapter
+                      </button>
+                      <button
+                        onClick={() => handleOpenBulkChapters(subject.id)}
+                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all"
+                      >
+                        <Upload className="h-3 w-3 text-indigo-500" />
+                        Bulk Upload 📋
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -848,6 +944,117 @@ export function CourseOutlinePanel({
           })
         )}
       </nav>
+
+      {/* Bulk Upload Chapters Modal with Example Template */}
+      {bulkChaptersModalOpen && (
+        <Dialog open={bulkChaptersModalOpen} onOpenChange={setBulkChaptersModalOpen}>
+          <DialogContent className="max-w-xl rounded-3xl p-6 bg-white border border-gray-200 shadow-2xl">
+            <DialogHeader className="pb-3 border-b border-gray-100">
+              <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Upload className="h-5 w-5 text-violet-600" />
+                Bulk Upload Chapters
+              </DialogTitle>
+              <DialogDescription className="text-xs text-gray-500">
+                Paste chapter names line-by-line to add multiple chapters at once.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Example Template Banner */}
+              <div className="p-3.5 rounded-2xl bg-violet-50/80 border border-violet-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-violet-900 flex items-center gap-1.5">
+                    <ListPlus className="w-4 h-4 text-violet-600" />
+                    Example Template Format
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopySampleTemplate}
+                    className="text-[11px] font-bold text-violet-700 hover:text-violet-900 bg-white px-2.5 py-1 rounded-lg border border-violet-200 shadow-xs flex items-center gap-1 transition-all"
+                  >
+                    {copiedTemplate ? (
+                      <Check className="w-3 h-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-violet-600" />
+                    )}
+                    {copiedTemplate ? 'Copied!' : 'Copy Example'}
+                  </button>
+                </div>
+                <pre className="text-[11px] font-mono text-violet-800/90 bg-white/70 p-2.5 rounded-xl border border-violet-100/50 overflow-x-auto">
+{sampleTemplateText}
+                </pre>
+              </div>
+
+              {/* Input Textarea */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Paste Chapter List (Line by Line):
+                </label>
+                <textarea
+                  value={bulkChaptersText}
+                  onChange={(e) => setBulkChaptersText(e.target.value)}
+                  rows={6}
+                  placeholder={`1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion\n4. Work, Energy and Power`}
+                  className="w-full p-3 rounded-2xl border border-gray-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+
+              {/* Parameters Strip */}
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">
+                    Default Hours / Chapter:
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={bulkDefaultHours}
+                    onChange={(e) => setBulkDefaultHours(parseInt(e.target.value, 10) || 10)}
+                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">
+                    Default Sessions / Chapter:
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={bulkDefaultSessions}
+                    onChange={(e) => setBulkDefaultSessions(parseInt(e.target.value, 10) || 8)}
+                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setBulkChaptersModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isBulkSubmitting}
+                onClick={handleProcessBulkChapters}
+                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
+              >
+                {isBulkSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Upload All Chapters
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="p-3 border-t border-gray-200">
         <button

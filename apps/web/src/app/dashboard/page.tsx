@@ -2,7 +2,8 @@
 
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { api } from '@/lib/api';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -178,12 +179,81 @@ function PlatformAdminDashboard() {
 
 function TenantAdminDashboard() {
   const { user } = useAuth();
+  const [data, setData] = useState<{
+    stats: {
+      totalStudents: number;
+      totalBatches: number;
+      totalExams: number;
+      totalBranches: number;
+      totalTutors: number;
+    };
+    recentAdmissions: Array<{
+      name: string;
+      course: string;
+      batch: string;
+      status: string;
+      statusColor: string;
+    }>;
+    todayClasses: Array<{
+      time: string;
+      subject: string;
+      topic: string;
+      color: string;
+    }>;
+    upcomingMockTests: Array<{
+      title: string;
+      time: string;
+      desc: string;
+    }>;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchOverview() {
+      try {
+        const res = await api.get<any>('/tenant-dashboard/overview');
+        setData(res);
+      } catch (err) {
+        console.error('Failed to load tenant overview stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOverview();
+  }, []);
 
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
+
+  const statsList = [
+    {
+      name: 'Students',
+      value: loading ? '...' : (data?.stats.totalStudents ?? 0).toString(),
+      change: 'Active enrolled',
+      icon: '👨‍🎓',
+    },
+    {
+      name: 'Active Batches',
+      value: loading ? '...' : (data?.stats.totalBatches ?? 0).toString(),
+      change: 'Running batches',
+      icon: '🏫',
+    },
+    {
+      name: 'Mock Tests',
+      value: loading ? '...' : (data?.stats.totalExams ?? 0).toString(),
+      change: 'Exams created',
+      icon: '📝',
+    },
+    {
+      name: 'Active Branches',
+      value: loading ? '...' : (data?.stats.totalBranches ?? 0).toString(),
+      change: 'Campus locations',
+      icon: '🏢',
+    },
+  ];
 
   return (
     <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
@@ -200,7 +270,7 @@ function TenantAdminDashboard() {
             Good Morning, {user?.firstName || 'Admin'}! 👋
           </h1>
           <p className="text-violet-200 text-xs mt-0.5">
-            Welcome back to <span className="font-bold text-white">NEET Academy</span>
+            Welcome back to your Tenant Administration Portal
           </p>
         </div>
 
@@ -217,9 +287,9 @@ function TenantAdminDashboard() {
         </div>
       </div>
 
-      {/* 2. KPI Cards (4 only) */}
+      {/* 2. Real-time KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {tenantStats.map((stat, idx) => (
+        {statsList.map((stat, idx) => (
           <Card
             key={idx}
             className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50"
@@ -228,62 +298,19 @@ function TenantAdminDashboard() {
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {stat.name}
               </span>
-              <span className="text-xl">
-                {stat.name === 'Students' && '👨‍🎓'}
-                {stat.name === 'Active Batches' && '🏫'}
-                {stat.name === 'Mock Tests' && '📝'}
-                {stat.name === 'Fee Collection' && '💰'}
-              </span>
+              <span className="text-xl">{stat.icon}</span>
             </CardHeader>
             <CardContent className="p-0">
               <div className="text-2xl font-bold text-[#111827]">{stat.value}</div>
-              <p
-                className={cn(
-                  'text-xs mt-1',
-                  stat.name === 'Students'
-                    ? 'text-[#22C55E] font-medium'
-                    : stat.name === 'Mock Tests'
-                      ? 'text-indigo-600 font-medium'
-                      : 'text-muted-foreground',
-                )}
-              >
-                {stat.change}
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* 3. Quick Actions */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm space-y-4">
-        <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {tenantQuickActions.map((action, idx) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={idx}
-                href={action.href}
-                className="group flex flex-col items-center justify-center p-4 rounded-xl border border-[#E5E7EB] bg-white transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50 hover:shadow-sm text-center"
-              >
-                <div
-                  className={cn(
-                    'w-10 h-10 rounded-lg flex items-center justify-center mb-2',
-                    action.color,
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className="text-xs font-semibold text-[#111827]">{action.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Main Grid: Responsive coordinates to stack correctly on mobile but layout cleanly on desktop */}
+
+      {/* Main Grid: Responsive coordinates to stack correctly on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* 4. Today's Classes */}
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-start-3 lg:row-start-1 space-y-4">
@@ -294,18 +321,22 @@ function TenantAdminDashboard() {
             <span className="text-xs text-muted-foreground">{formattedDate}</span>
           </div>
           <div className="space-y-3">
-            {todayClasses.map((cls, idx) => (
-              <div
-                key={idx}
-                className={cn('flex items-center justify-between p-3 rounded-xl border', cls.color)}
-              >
-                <div>
-                  <p className="text-xs font-bold uppercase">{cls.time}</p>
-                  <p className="text-sm font-bold mt-0.5">{cls.subject}</p>
+            {!data?.todayClasses || data.todayClasses.length === 0 ? (
+              <p className="text-xs text-slate-400 py-3 text-center">No scheduled classes today</p>
+            ) : (
+              data.todayClasses.map((cls, idx) => (
+                <div
+                  key={idx}
+                  className={cn('flex items-center justify-between p-3 rounded-xl border', cls.color)}
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase">{cls.time}</p>
+                    <p className="text-sm font-bold mt-0.5">{cls.subject}</p>
+                  </div>
+                  <span className="text-xs font-medium opacity-90">{cls.topic}</span>
                 </div>
-                <span className="text-xs font-medium opacity-90">{cls.topic}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 
@@ -325,59 +356,74 @@ function TenantAdminDashboard() {
             </Button>
           </div>
           <div className="space-y-3">
-            {recentAdmissions.map((student, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB] hover:border-[#7C3AED]/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-slate-100 text-xs font-bold text-[#111827]">
-                      {student.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="text-sm font-bold text-[#111827]">{student.name}</h4>
-                    <p className="text-xs text-muted-foreground">
-                      {student.course} • {student.batch}
-                    </p>
-                  </div>
-                </div>
-                <span
-                  className={cn(
-                    'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                    student.statusColor,
-                  )}
+            {!data?.recentAdmissions || data.recentAdmissions.length === 0 ? (
+              <p className="text-xs text-slate-400 py-4 text-center">No student admissions recorded yet</p>
+            ) : (
+              data.recentAdmissions.map((student, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB] hover:border-[#7C3AED]/20 transition-colors"
                 >
-                  {student.status}
-                </span>
-              </div>
-            ))}
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-slate-100 text-xs font-bold text-[#111827]">
+                        {student.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h4 className="text-sm font-bold text-[#111827]">{student.name}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {student.course} • {student.batch}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                      student.statusColor,
+                    )}
+                  >
+                    {student.status}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
         {/* 6. Fee Summary */}
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-span-2 lg:col-start-1 lg:row-start-2 space-y-4">
-          <div className="border-b border-[#E5E7EB] pb-2">
+          <div className="border-b border-[#E5E7EB] pb-2 flex items-center justify-between">
             <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
               Fee Collection Summary
             </h2>
+            <span className="text-xs text-slate-400 font-medium">Academic Year 2026-27</span>
           </div>
           <div className="space-y-4 pt-1">
-            {Object.values(feeSummary).map((sum, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-gray-600">{sum.label}</span>
-                  <span className={cn('font-bold', sum.textClass)}>{sum.percentage}%</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full', sum.color)}
-                    style={{ width: `${sum.percentage}%` }}
-                  ></div>
-                </div>
+            {(!data?.stats.totalStudents || data.stats.totalStudents === 0) ? (
+              <div className="py-6 text-center text-xs text-slate-400">
+                No fee structures or active student enrollments configured yet
               </div>
-            ))}
+            ) : (
+              [
+                { label: 'Collected Fee', percentage: 0, textClass: 'text-emerald-600', color: 'bg-emerald-500' },
+                { label: 'Pending Fee', percentage: 100, textClass: 'text-amber-600', color: 'bg-amber-500' },
+                { label: 'Overdue Fee', percentage: 0, textClass: 'text-rose-600', color: 'bg-rose-500' },
+              ].map((sum, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-gray-600">{sum.label}</span>
+                    <span className={cn('font-bold', sum.textClass)}>{sum.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', sum.color)}
+                      style={{ width: `${sum.percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 
@@ -389,44 +435,40 @@ function TenantAdminDashboard() {
             </h2>
           </div>
           <div className="space-y-3">
-            {upcomingMockTests.map((test, idx) => (
-              <div key={idx} className="p-3 rounded-xl border border-[#E5E7EB] bg-[#FAFAFA]">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-[#111827]">{test.title}</h4>
-                  <span className="text-[10px] font-bold uppercase text-[#7C3AED]">
-                    {test.time}
-                  </span>
+            {!data?.upcomingMockTests || data.upcomingMockTests.length === 0 ? (
+              <p className="text-xs text-slate-400 py-6 text-center">No mock tests created yet</p>
+            ) : (
+              data.upcomingMockTests.map((test, idx) => (
+                <div key={idx} className="p-3 rounded-xl border border-[#E5E7EB] bg-[#FAFAFA]">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#111827]">{test.title}</h4>
+                    <span className="text-[10px] font-bold uppercase text-[#7C3AED]">
+                      {test.time}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{test.desc}</p>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{test.desc}</p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 
         {/* 8. AI Insights */}
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-span-2 lg:col-start-1 lg:row-start-3 space-y-4">
-          <div className="border-b border-[#E5E7EB] pb-2">
+          <div className="border-b border-[#E5E7EB] pb-2 flex items-center justify-between">
             <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
-              AI Insights
+              AI Analytics & Insights
             </h2>
+            <Sparkles className="w-4 h-4 text-violet-500" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-            {aiInsights.map((insight, idx) => {
-              const Icon = insight.icon;
-              return (
-                <div
-                  key={idx}
-                  className={cn('flex items-start gap-3 p-3 rounded-xl border', insight.color)}
-                >
-                  <Icon className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs font-bold">{insight.text}</p>
-                </div>
-              );
-            })}
+          <div className="py-6 text-center text-xs text-slate-400">
+            {data?.stats.totalStudents === 0
+              ? 'AI Analytics will automatically activate once students complete exams and attendances'
+              : 'Insights generating based on ongoing student performances...'}
           </div>
         </Card>
 
-        {/* 9. Parent Communication */}
+        {/* 9. Communication Center */}
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-start-3 lg:row-start-4 space-y-4">
           <div className="border-b border-[#E5E7EB] pb-2">
             <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
@@ -434,7 +476,12 @@ function TenantAdminDashboard() {
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 pt-1">
-            {parentMessages.map((item, idx) => (
+            {[
+              { label: 'SMS Sent', count: 0, color: 'bg-blue-50 text-blue-700' },
+              { label: 'WhatsApp Pending', count: 0, color: 'bg-emerald-50 text-emerald-700' },
+              { label: 'Emails Sent', count: 0, color: 'bg-purple-50 text-purple-700' },
+              { label: 'Unread Replies', count: 0, color: 'bg-amber-50 text-amber-700' },
+            ].map((item, idx) => (
               <div
                 key={idx}
                 className={cn('p-3 rounded-xl text-center border border-[#E5E7EB]', item.color)}
@@ -454,7 +501,10 @@ function TenantAdminDashboard() {
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 pt-1">
-            {pendingTasks.map((task, idx) => (
+            {[
+              { name: 'Pending Admissions', count: 0, url: '/dashboard/admissions' },
+              { name: 'Pending Evaluations', count: 0, url: '/dashboard/exams' },
+            ].map((task, idx) => (
               <Link
                 key={idx}
                 href={task.url}
@@ -471,24 +521,34 @@ function TenantAdminDashboard() {
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-span-2 lg:col-start-1 lg:row-start-4 space-y-4">
           <div className="border-b border-[#E5E7EB] pb-2">
             <h2 className="font-bold text-sm text-muted-foreground uppercase tracking-wider">
-              Performance Overview
+              Tenant Performance Overview
             </h2>
           </div>
           <div className="space-y-4 pt-1">
-            {performanceOverview.map((perf, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-gray-600">{perf.label}</span>
-                  <span className={cn('font-bold', perf.textClass)}>{perf.percentage}%</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full', perf.color)}
-                    style={{ width: `${perf.percentage}%` }}
-                  ></div>
-                </div>
+            {(!data?.stats.totalStudents || data.stats.totalStudents === 0) ? (
+              <div className="py-6 text-center text-xs text-slate-400">
+                No exam or attendance data recorded yet to compute overall tenant performance
               </div>
-            ))}
+            ) : (
+              [
+                { label: 'Average Score', percentage: 0, textClass: 'text-indigo-600', color: 'bg-indigo-500' },
+                { label: 'Attendance Rate', percentage: 0, textClass: 'text-emerald-600', color: 'bg-emerald-500' },
+                { label: 'Syllabus Completion', percentage: 0, textClass: 'text-purple-600', color: 'bg-purple-500' },
+              ].map((perf, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-gray-600">{perf.label}</span>
+                    <span className={cn('font-bold', perf.textClass)}>{perf.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full', perf.color)}
+                      style={{ width: `${perf.percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
       </div>

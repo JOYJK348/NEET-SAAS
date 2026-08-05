@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTutorAssignedExams } from '../../hooks/use-tutor-exams';
 import type { TutorExamItem } from '../../types/tutor-exams';
 import { Card } from '@/components/ui/card';
+import { useBatches } from '@/features/students/hooks/use-students';
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,58 +16,78 @@ import {
   RotateCcw,
   Sparkles,
   Award,
+  Layers,
 } from 'lucide-react';
 
 export function TutorExamsDashboard() {
   const router = useRouter();
   const { data: response, isLoading, refetch } = useTutorAssignedExams();
+  const { batches } = useBatches();
+  const batchMap = new Map(batches.map((b) => [b.id, b.name]));
 
-  const exams: TutorExamItem[] = Array.isArray(response)
+  const rawExams: TutorExamItem[] = Array.isArray(response)
     ? response
     : Array.isArray((response as any)?.data)
       ? (response as any).data
       : [];
+
+  const groupedMap = new Map<
+    string,
+    TutorExamItem & { batchNames: string[]; allExamIds: string[] }
+  >();
+
+  rawExams.forEach((exam) => {
+    const key = `${exam.title.trim().toLowerCase()}-${exam.totalMarks}`;
+    const batchName = batchMap.get(exam.batchId) || exam.batchId;
+
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, {
+        ...exam,
+        batchNames: [batchName].filter(Boolean),
+        allExamIds: [exam.id],
+      });
+    } else {
+      const existing = groupedMap.get(key)!;
+      if (batchName && !existing.batchNames.includes(batchName)) {
+        existing.batchNames.push(batchName);
+      }
+      if (!existing.allExamIds.includes(exam.id)) {
+        existing.allExamIds.push(exam.id);
+      }
+      existing.pendingEvaluations += exam.pendingEvaluations;
+      existing.completedEvaluations += exam.completedEvaluations;
+      existing.returnedEvaluations += exam.returnedEvaluations;
+    }
+  });
+
+  const exams = Array.from(groupedMap.values());
 
   const totalPending = exams.reduce((acc, e) => acc + e.pendingEvaluations, 0);
   const totalCompleted = exams.reduce((acc, e) => acc + e.completedEvaluations, 0);
   const totalReturned = exams.reduce((acc, e) => acc + e.returnedEvaluations, 0);
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* ── Signature Violet Gradient Hero Banner (Tenant Admin Theme) ──────── */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <button
-            onClick={() => router.push('/dashboard/tutor')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-bold transition-all shadow-sm mb-3"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-200" />
-            <span>← Back to Tutor Dashboard</span>
-          </button>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Evaluation & Marking Portal
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            Tutor Evaluation Workload 📝
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] w-full">
+      {/* ── Top Header with Back Button ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <Link
+          href="/dashboard/tutor"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-2xs transition shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 text-violet-600" />
+          <span>Back to Dashboard</span>
+        </Link>
+
+        <div className="text-left sm:text-center flex-1 space-y-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+            MY EXAMS EVALUATION
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
-            Evaluate assigned OMR answer sheets, record section marks, and submit for admin
-            verification.
+          <p className="text-xs font-bold text-slate-500">
+            Assigned exam answer sheets & student grading workload
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold transition-all shadow-2xs"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Refresh Queue</span>
-          </button>
-        </div>
+        <div className="hidden sm:block w-36 shrink-0" />
       </div>
 
       {/* ── KPI Cards (Tenant Admin Theme Match) ─────────────────────────────── */}
@@ -126,7 +147,77 @@ export function TutorExamsDashboard() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: Premium Cards (hidden on md and larger) */}
+        <div className="block md:hidden p-4 space-y-4">
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 font-semibold text-xs">
+              Loading assigned exams...
+            </div>
+          ) : (exams || []).length === 0 ? (
+            <div className="py-12 text-center text-slate-400 font-semibold text-xs">
+              No assigned exams found in your workload queue.
+            </div>
+          ) : (
+            (exams || []).map((exam) => (
+              <div
+                key={exam.id}
+                className="bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs"
+              >
+                {/* Title & Total Marks */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <h4 className="text-sm font-black text-slate-900 leading-snug">{exam.title}</h4>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {exam.batchNames.map((bName, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200"
+                        >
+                          <Layers className="w-3 h-3 text-violet-500" />
+                          {bName}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl text-xs font-black shrink-0">
+                    <Award className="w-3.5 h-3.5 text-violet-600" />
+                    {exam.totalMarks} pts
+                  </span>
+                </div>
+
+                {/* Submissions Status Counters */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-center">
+                  <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
+                    <p className="text-[9px] font-extrabold text-amber-700 uppercase">Pending</p>
+                    <p className="text-sm font-black text-amber-800 mt-0.5">{exam.pendingEvaluations}</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-rose-50/70 border border-rose-100">
+                    <p className="text-[9px] font-extrabold text-rose-700 uppercase">Returned</p>
+                    <p className="text-sm font-black text-rose-800 mt-0.5">{exam.returnedEvaluations}</p>
+                  </div>
+                  <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                    <p className="text-[9px] font-extrabold text-emerald-700 uppercase">Done</p>
+                    <p className="text-sm font-black text-emerald-800 mt-0.5">{exam.completedEvaluations}</p>
+                  </div>
+                </div>
+
+                {/* Open Submissions Action Button */}
+                <div className="pt-1">
+                  <Link
+                    href={`/dashboard/tutor/exams/${exam.id}`}
+                    className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs shadow-violet-600/20 text-center"
+                  >
+                    <span>Open Submissions</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Full Table (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50/80 text-slate-500 uppercase font-extrabold text-[10px] border-b border-slate-100 tracking-wider">
               <tr>
@@ -156,6 +247,17 @@ export function TutorExamsDashboard() {
                   <tr key={exam.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-4 px-5">
                       <div className="font-extrabold text-slate-900 text-sm">{exam.title}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {exam.batchNames.map((bName, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200"
+                          >
+                            <Layers className="w-3 h-3 text-violet-500" />
+                            {bName}
+                          </span>
+                        ))}
+                      </div>
                     </td>
 
                     <td className="py-4 px-5 font-extrabold text-slate-800">

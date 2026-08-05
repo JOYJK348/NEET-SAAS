@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useStudentCourses } from '@/features/student-dashboard/hooks/use-student-courses';
@@ -17,193 +18,130 @@ import {
   Eye,
   FileText,
   Layers,
-  Lock,
-  PlayCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
 import { StudentPreview } from '@/features/course-builder/components/StudentPreview';
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-function CoursesSkeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-16 bg-slate-100 rounded-2xl" />
-      <div className="space-y-3">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-14 bg-slate-100 rounded-xl" />
-        ))}
-      </div>
-    </div>
-  );
-}
+// ─── Topic Row with Connected Tree Line ──────────────────────────────────────
 
-// ─── Subject color mapping ────────────────────────────────────────────────────
-const SUBJECT_THEMES: Record<string, { bg: string; text: string; dot: string; ring: string }> = {
-  physics: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', ring: 'ring-blue-200' },
-  chemistry: {
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    dot: 'bg-emerald-500',
-    ring: 'ring-emerald-200',
-  },
-  biology: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', ring: 'ring-rose-200' },
-  botany: {
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    dot: 'bg-green-500',
-    ring: 'ring-green-200',
-  },
-  zoology: { bg: 'bg-pink-50', text: 'text-pink-700', dot: 'bg-pink-500', ring: 'ring-pink-200' },
-};
-
-function getSubjectTheme(name: string) {
-  const lower = name.toLowerCase();
-  return (
-    Object.entries(SUBJECT_THEMES).find(([k]) => lower.includes(k))?.[1] ?? {
-      bg: 'bg-violet-50',
-      text: 'text-violet-700',
-      dot: 'bg-violet-500',
-      ring: 'ring-violet-200',
-    }
-  );
-}
-
-// ─── Topic Row ────────────────────────────────────────────────────────────────
 function TopicRow({
   topic,
-  subjectTheme,
   onView,
 }: {
   topic: TopicItemCountDto;
-  subjectTheme: ReturnType<typeof getSubjectTheme>;
   onView?: () => void;
 }) {
-  const hasContent = topic.publishedItemCount > 0;
   return (
-    <div
-      className={cn(
-        'flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors',
-        hasContent ? 'hover:bg-slate-50 cursor-pointer' : 'opacity-50',
-      )}
-    >
-      <div className="flex-shrink-0">
-        {hasContent ? (
-          <PlayCircle className="w-3.5 h-3.5 text-slate-400" />
-        ) : (
-          <Lock className="w-3 h-3 text-slate-300" />
-        )}
+    <div className="relative flex items-start gap-3.5 pl-6 py-2.5 group">
+      {/* Connected Tree Line */}
+      <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-slate-200 group-last:bottom-1/2" />
+      <div className="absolute left-2 top-3.5 w-1.5 h-1.5 rounded-full bg-violet-400" />
+
+      {/* Circular Check Icon */}
+      <div className="p-1 rounded-full bg-violet-50 text-violet-600 border border-violet-200/60 shrink-0 mt-0.5">
+        <CheckCircle2 className="w-3.5 h-3.5" />
       </div>
+
+      {/* Content */}
       <div className="flex-1 min-w-0">
-        <span className="text-xs text-slate-700 font-medium leading-tight">{topic.name}</span>
-        {topic.difficultyLevel && (
-          <span
-            className={cn(
-              'ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full',
-              topic.difficultyLevel === 'EASY' && 'bg-emerald-100 text-emerald-600',
-              topic.difficultyLevel === 'MEDIUM' && 'bg-amber-100 text-amber-600',
-              topic.difficultyLevel === 'HARD' && 'bg-rose-100 text-rose-600',
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <h5 className="text-xs font-black text-slate-900 leading-tight truncate">
+              {topic.name}
+            </h5>
+            {topic.difficultyLevel && (
+              <span
+                className={cn(
+                  'text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border',
+                  topic.difficultyLevel === 'EASY' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                  topic.difficultyLevel === 'MEDIUM' && 'bg-amber-50 text-amber-700 border-amber-200',
+                  topic.difficultyLevel === 'HARD' && 'bg-rose-50 text-rose-700 border-rose-200',
+                )}
+              >
+                {topic.difficultyLevel}
+              </span>
             )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onView}
+            className="px-2.5 py-1 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-extrabold text-[10px] border border-violet-200/60 transition-all shrink-0 flex items-center gap-1 cursor-pointer"
           >
-            {topic.difficultyLevel}
-          </span>
+            <Eye className="w-3 h-3" />
+            <span>View</span>
+          </button>
+        </div>
+        {topic.description && (
+          <p className="text-[11px] font-medium text-slate-500 leading-normal mt-0.5">
+            {topic.description}
+          </p>
         )}
       </div>
-      {hasContent ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onView?.();
-          }}
-          className="flex items-center gap-1 text-[10px] font-bold text-violet-600 bg-violet-50 border border-violet-100 px-2 py-1 rounded-full hover:bg-violet-100 transition-colors flex-shrink-0"
-        >
-          <Eye className="w-3 h-3" /> View
-        </button>
-      ) : (
-        <span
-          className={cn(
-            'text-[10px] font-bold px-2 py-0.5 rounded-full',
-            subjectTheme.bg,
-            subjectTheme.text,
-          )}
-        >
-          {topic.publishedItemCount} items
-        </span>
-      )}
     </div>
   );
 }
 
-// ─── Chapter Row ──────────────────────────────────────────────────────────────
+// ─── Chapter Accordion Row ───────────────────────────────────────────────────
+
 function ChapterRow({
   chapter,
-  subjectTheme,
-  defaultOpen = false,
+  defaultOpen = true,
   onViewTopic,
 }: {
   chapter: ChapterDto;
-  subjectTheme: ReturnType<typeof getSubjectTheme>;
   defaultOpen?: boolean;
   onViewTopic?: (topic: TopicItemCountDto) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
-  const totalItems = chapter.topics.reduce((sum, t) => sum + t.publishedItemCount, 0);
 
   return (
-    <div className="border border-slate-100 rounded-xl overflow-hidden">
-      {/* Chapter header */}
+    <div className="rounded-2xl border border-slate-200/80 bg-white overflow-hidden shadow-2xs">
+      {/* Chapter Header */}
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between p-3.5 bg-white hover:bg-slate-50 transition-colors text-left"
       >
-        <span
-          className={cn(
-            'w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-slate-500',
-            'bg-slate-100',
-          )}
-        >
-          {open ? (
-            <ChevronDown className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5" />
-          )}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-slate-800 leading-tight">{chapter.name}</p>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{chapter.code}</p>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-black text-slate-900 truncate leading-snug">
+              {chapter.name}
+            </h4>
+            <span className="text-[10px] font-mono font-bold text-slate-400">{chapter.code}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[10px] text-slate-400 font-semibold">
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-bold text-slate-500">
             {chapter.topics.length} topics
           </span>
-          {totalItems > 0 && (
-            <span
-              className={cn(
-                'text-[10px] font-bold px-2 py-0.5 rounded-full',
-                subjectTheme.bg,
-                subjectTheme.text,
-              )}
-            >
-              {totalItems} items
-            </span>
-          )}
+          <ChevronDown
+            className={cn('w-4 h-4 text-slate-400 transition-transform', open && 'rotate-180')}
+          />
         </div>
       </button>
 
-      {/* Topics list */}
+      {/* Topics connected tree list */}
       {open && (
-        <div className="border-t border-slate-50 bg-slate-50/50 py-1">
+        <div className="px-4 pb-4 pt-3 border-t border-slate-100 bg-slate-50/40 space-y-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-2">
+            <Layers className="w-3 h-3 text-slate-400" />
+            <span>Topics</span>
+          </div>
+
           {chapter.topics.length === 0 ? (
-            <p className="text-[11px] text-slate-300 italic px-5 py-3">No topics yet</p>
+            <p className="text-[11px] text-slate-400 italic px-4 py-2">No topics available yet</p>
           ) : (
-            chapter.topics.map((topic) => (
-              <TopicRow
-                key={topic.id}
-                topic={topic}
-                subjectTheme={subjectTheme}
-                onView={() => onViewTopic?.(topic)}
-              />
-            ))
+            <div className="relative pl-1">
+              {chapter.topics.map((topic) => (
+                <TopicRow key={topic.id} topic={topic} onView={() => onViewTopic?.(topic)} />
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -211,7 +149,8 @@ function ChapterRow({
   );
 }
 
-// ─── Subject Section ──────────────────────────────────────────────────────────
+// ─── Subject Collapsible Section ─────────────────────────────────────────────
+
 function SubjectSection({
   cs,
   onViewTopic,
@@ -220,87 +159,59 @@ function SubjectSection({
   onViewTopic?: (topic: TopicItemCountDto) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const theme = getSubjectTheme(cs.subject.name);
-
   const totalTopics = cs.chapters.reduce((sum, ch) => sum + ch.topics.length, 0);
-  const totalItems = cs.chapters
-    .flatMap((ch) => ch.topics)
-    .reduce((sum, t) => sum + t.publishedItemCount, 0);
-
-  const isDeactivated = (cs as any).isActive === false || (cs.subject as any).isActive === false;
 
   return (
-    <div
-      className={cn(
-        'rounded-2xl border overflow-hidden transition-all',
-        isDeactivated ? 'border-slate-200 bg-slate-100/80 opacity-75' : 'border-slate-100',
-      )}
-    >
-      {/* Subject header */}
+    <div className="rounded-3xl border border-emerald-200/70 bg-white overflow-hidden shadow-2xs">
+      {/* Subject Header (Light Emerald pill matching tutor courses) */}
       <button
-        onClick={() => !isDeactivated && setOpen((o) => !o)}
-        className={cn(
-          'w-full flex items-center gap-3 px-5 py-4 transition-colors text-left',
-          isDeactivated ? 'bg-slate-200/60 cursor-not-allowed' : theme.bg,
-        )}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between p-4 bg-emerald-50/80 hover:bg-emerald-100/60 transition-colors text-left border-b border-emerald-100"
       >
-        <span
-          className={cn(
-            'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-            isDeactivated ? 'bg-slate-400' : theme.dot,
-          )}
-        >
-          <BookOpen className="w-4 h-4 text-white" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p
-              className={cn(
-                'text-sm font-black leading-tight',
-                isDeactivated ? 'text-slate-700' : theme.text,
-              )}
-            >
-              {cs.subject.name}
-            </p>
-            {isDeactivated && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 bg-slate-300 text-slate-800 rounded-full border border-slate-400">
-                <AlertCircle className="w-3 h-3 text-slate-700" />
-                Currently this subject is inactive
-              </span>
-            )}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/20">
+            <BookOpen className="w-5 h-5" />
           </div>
-          <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{cs.subject.code}</p>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="text-right">
-            <p className="text-xs font-bold text-slate-500">{cs.chapters.length} chapters</p>
-            <p className="text-[10px] text-slate-400">
-              {totalTopics} topics • {totalItems} items
-            </p>
-          </div>
-          {!isDeactivated && (
-            <span className={cn('transition-transform duration-200', open ? 'rotate-180' : '')}>
-              <ChevronDown className={cn('w-4 h-4', theme.text)} />
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-emerald-950 truncate">{cs.subject.name}</h3>
+            <span className="text-[10px] font-mono font-bold text-emerald-700">
+              {cs.subject.code}
             </span>
-          )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <p className="text-xs font-extrabold text-emerald-900">
+              {cs.chapters.length} chapters
+            </p>
+            <p className="text-[10px] font-bold text-emerald-700">{totalTopics} topics</p>
+          </div>
+          <ChevronDown
+            className={cn('w-4 h-4 text-emerald-700 transition-transform', open && 'rotate-180')}
+          />
         </div>
       </button>
 
-      {/* Chapter list */}
+      {/* Chapters list */}
       {open && (
-        <div className="p-3 space-y-2 bg-white">
+        <div className="p-4 space-y-3 bg-white">
+          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+            <span>Chapters</span>
+          </div>
+
           {cs.chapters.length === 0 ? (
-            <div className="text-center py-6">
-              <FileText className="w-7 h-7 text-slate-200 mx-auto mb-2" />
-              <p className="text-xs text-slate-400">No chapters available yet</p>
+            <div className="text-center py-6 text-xs text-slate-400 font-medium">
+              No chapters assigned yet.
             </div>
           ) : (
-            cs.chapters.map((chapter, i) => (
+            cs.chapters.map((ch, idx) => (
               <ChapterRow
-                key={chapter.id}
-                chapter={chapter}
-                subjectTheme={theme}
-                defaultOpen={i === 0}
+                key={ch.id}
+                chapter={ch}
+                defaultOpen={idx === 0}
                 onViewTopic={onViewTopic}
               />
             ))
@@ -312,6 +223,7 @@ function SubjectSection({
 }
 
 // ─── Course Card ──────────────────────────────────────────────────────────────
+
 function CourseCard({
   course,
   onViewTopic,
@@ -325,76 +237,38 @@ function CourseCard({
     .flatMap((cs) => cs.chapters)
     .reduce((sum, ch) => sum + ch.topics.length, 0);
 
-  const isDeactivated = course.isActive === false;
-
   return (
-    <div
-      className={cn(
-        'bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-200',
-        isDeactivated ? 'border-red-200 opacity-55 saturate-0' : 'border-slate-100',
-      )}
-    >
-      {/* Course header */}
-      <div
-        className={cn(
-          'px-5 py-4 border-b',
-          isDeactivated
-            ? 'bg-red-50 border-red-100'
-            : 'bg-gradient-to-r from-indigo-50 to-violet-50 border-slate-100',
-        )}
-      >
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-            <Layers className="w-5 h-5 text-violet-500" />
+    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-4 p-5">
+      {/* Course Meta Info */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black shrink-0 shadow-2xs">
+            <Layers className="w-6 h-6 text-violet-600" />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-slate-900">{course.name}</h3>
-              {isDeactivated && (
-                <span className="flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full border border-red-200 flex-shrink-0">
-                  <AlertCircle className="w-3 h-3" />
-                  Deactivated
-                </span>
-              )}
-            </div>
-            <p className="text-xs font-mono text-slate-400 mt-0.5">{course.code}</p>
-            {course.description && (
-              <p className="text-xs text-slate-500 mt-1.5 line-clamp-2">{course.description}</p>
-            )}
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <span className="text-[10px] font-bold text-slate-500">
-                📚 {totalSubjects} subjects
-              </span>
-              <span className="text-[10px] font-bold text-slate-500">
-                📖 {totalChapters} chapters
-              </span>
-              <span className="text-[10px] font-bold text-slate-500">📝 {totalTopics} topics</span>
-              {course.durationMonths && (
-                <span className="text-[10px] font-bold text-slate-500">
-                  🗓 {course.durationMonths}m duration
-                </span>
-              )}
-            </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-black text-slate-900">{course.name}</h2>
+            <p className="text-xs font-mono font-bold text-slate-400 mt-0.5">{course.code}</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-black">
+            📚 {totalSubjects} Subjects
+          </span>
+          <span className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-black">
+            📖 {totalChapters} Chapters
+          </span>
+          <span className="px-3 py-1 bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-black">
+            📝 {totalTopics} Topics
+          </span>
         </div>
       </div>
 
-      {/* Deactivation hint */}
-      {isDeactivated && (
-        <div className="mx-4 mt-2 p-2 rounded bg-red-50/50 border border-red-100 flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
-          <p className="text-[10px] font-semibold text-red-700 leading-tight">
-            This course is currently deactivated by admin.
-          </p>
-        </div>
-      )}
-
-      {/* Subjects tree */}
-      <div className="p-4 space-y-3">
+      {/* Subjects Accordion Tree */}
+      <div className="space-y-4 pt-1">
         {course.subjects.length === 0 ? (
-          <div className="text-center py-8">
-            <BookOpen className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-            <p className="text-sm text-slate-400">No subjects assigned yet</p>
+          <div className="text-center py-10 text-xs text-slate-400 font-medium">
+            No subjects found for this course.
           </div>
         ) : (
           course.subjects.map((cs) => (
@@ -407,68 +281,79 @@ function CourseCard({
 }
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
-function CoursesContent() {
+
+function StudentCoursesContent() {
   const { courses, isLoading, error, refetch } = useStudentCourses();
   const [selectedTopic, setSelectedTopic] = useState<{
     courseName: string;
     topic: TopicItemCountDto;
   } | null>(null);
 
-  return (
-    <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 pb-24 space-y-5">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-          <BookOpen className="w-5 h-5 text-violet-500" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-base font-black text-slate-900">My Courses</h1>
-          <p className="text-xs text-slate-400">Syllabus & study material</p>
-        </div>
-        {courses && courses.courses.length > 0 && (
-          <span className="text-xs font-bold text-violet-600 bg-violet-50 px-3 py-1 rounded-full">
-            {courses.courses.length} course{courses.courses.length > 1 ? 's' : ''}
-          </span>
-        )}
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen">
+        <div className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
+        <div className="h-64 bg-slate-100 rounded-3xl animate-pulse" />
       </div>
+    );
+  }
 
-      {/* Content */}
-      {isLoading ? (
-        <CoursesSkeleton />
-      ) : error ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen">
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
           <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
-          <p className="text-sm font-semibold text-slate-700">Failed to load courses</p>
+          <p className="text-sm font-bold text-slate-700">Failed to load courses</p>
           <button
             onClick={refetch}
-            className="mt-3 text-xs font-bold text-violet-600 hover:underline"
+            className="mt-3 text-xs font-black text-violet-600 hover:underline"
           >
             Try again
           </button>
         </div>
-      ) : !courses || courses.courses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-10 text-center">
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] w-full">
+      {/* ── Top Centered Header (Matches Tutor Portal Style) ──────────────── */}
+      <div className="text-center max-w-xl mx-auto space-y-1 my-2">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+          MY COURSES
+        </h1>
+        <p className="text-xs font-bold text-slate-500">
+          Enrolled courses, subject syllabus tree & study material
+        </p>
+      </div>
+
+      {/* Course List */}
+      {!courses || courses.courses.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-2xs">
           <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-semibold text-slate-700">No courses found</p>
+          <p className="text-sm font-bold text-slate-700">No courses assigned yet</p>
           <p className="text-xs text-slate-400 mt-1">
-            Courses appear once your batch has an assigned course
+            Courses will appear here once assigned to your enrolled batch.
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {courses.courses.map((course) => (
             <CourseCard
               key={course.id}
               course={course}
               onViewTopic={(topic) =>
-                setSelectedTopic({ courseName: course.displayName || course.name, topic })
+                setSelectedTopic({
+                  courseName: course.displayName || course.name,
+                  topic,
+                })
               }
             />
           ))}
         </div>
       )}
 
-      {/* Topic Content Preview Overlay */}
+      {/* Topic Content Preview Modal */}
       {selectedTopic && (
         <StudentPreview
           courseName={selectedTopic.courseName}
@@ -484,11 +369,12 @@ function CoursesContent() {
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
+
 export default function StudentCoursesPage() {
   return (
     <ProtectedRoute allowedRoles={['STUDENT']}>
       <DashboardLayout>
-        <CoursesContent />
+        <StudentCoursesContent />
       </DashboardLayout>
     </ProtectedRoute>
   );

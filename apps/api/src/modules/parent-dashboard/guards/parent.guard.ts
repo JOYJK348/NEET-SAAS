@@ -48,9 +48,22 @@ export class ParentGuard implements CanActivate {
       });
 
       if (!mapping) {
-        throw new ForbiddenException(
-          'Access denied: You are not linked as a parent to this student',
-        );
+        const contact = parentUser.email
+          ? await this.prisma.emergencyContacts.findFirst({
+              where: {
+                studentProfileId: studentId,
+                email: parentUser.email.toLowerCase(),
+                relationship: 'Parent',
+                deletedAt: null,
+              },
+            })
+          : null;
+
+        if (!contact) {
+          throw new ForbiddenException(
+            'Access denied: You are not linked as a parent to this student',
+          );
+        }
       }
     }
 

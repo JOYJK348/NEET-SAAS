@@ -38,12 +38,20 @@ export class TenantGuard implements CanActivate {
     }
 
     try {
+      const dbUser = await this.prismaService.users.findUnique({
+        where: { id: user.sub },
+        select: { tenantId: true },
+      });
+
+      if (dbUser && dbUser.tenantId === user.tenantId) {
+        return true;
+      }
+
       const activeMembership = await this.prismaService.userRoles.findFirst({
         where: {
           userId: user.sub,
           tenantId: user.tenantId,
-          effectiveFrom: { lte: new Date() },
-          effectiveTo: { gte: new Date() },
+          deletedAt: null,
         },
         select: { id: true },
       });
@@ -57,7 +65,6 @@ export class TenantGuard implements CanActivate {
       if (error instanceof ForbiddenException) {
         throw error;
       }
-      // Fallback for temporary Supabase DB connection glitches when user has valid tenantId in verified JWT
       if (user.tenantId) {
         return true;
       }

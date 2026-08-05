@@ -53,62 +53,57 @@ export class AdminExamsService {
       );
     }
 
-    const targetBatchIds =
-      dto.batchIds && dto.batchIds.length > 0
-        ? dto.batchIds
-        : [dto.batchId || 'batch-default'];
+    const primaryBatchId =
+      (dto.batchIds && dto.batchIds.length > 0 ? dto.batchIds[0] : dto.batchId) ||
+      'ALL';
 
-    const createdExams = await Promise.all(
-      targetBatchIds.map((bId) =>
-        this.prisma.exams.create({
-          data: {
-            tenantId,
-            courseId: dto.courseId,
-            batchId: bId,
-            subjectId: dto.subjectId,
-            academicYearId: dto.academicYearId,
-            title: dto.title,
-            description: dto.description || '',
-            examType: dto.examType,
-            mode: dto.mode,
-            totalMarks: dto.totalMarks,
-            passingMarks: dto.passingMarks,
-            negativeMarkingEnabled: dto.negativeMarkingEnabled ?? false,
-            negativeMarkingValue: dto.negativeMarkingValue ?? 0,
-            durationMinutes: dto.durationMinutes,
-            graceMinutes: dto.graceMinutes ?? 15,
-            scheduledStartAt: start,
-            scheduledEndAt: end,
-            examWindowStart: windowStart,
-            examWindowEnd: windowEnd,
-            requireFullDurationWindow: dto.requireFullDurationWindow ?? false,
-            allowLateUpload: dto.allowLateUpload ?? true,
-            allowReplaceUpload: dto.allowReplaceUpload ?? true,
-            sectionConfig: (dto.sectionConfig ??
-              []) as unknown as Prisma.InputJsonValue,
-            instructions: dto.instructions || '',
-            publishStatus: 'DRAFT',
-            status: ExamStatusEnum.ACTIVE,
-            questionPaperId: '',
-            omrTemplateId: '',
-            omrSheetCount: 0,
-            publishedBy: userId,
-            publishedAt: new Date(0),
-            publishedFromIp: '',
-            publishedDevice: '',
-            resultsPublishedAt: new Date(0),
-            resultsPublishedBy: userId,
-            lockedAt: new Date(0),
-            lockedBy: '',
-            publishedVersion: 1,
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        }),
-      ),
-    );
+    const createdExam = await this.prisma.exams.create({
+      data: {
+        tenantId,
+        courseId: dto.courseId,
+        batchId: primaryBatchId,
+        subjectId: dto.subjectId,
+        academicYearId: dto.academicYearId,
+        title: dto.title,
+        description: dto.description || '',
+        examType: dto.examType,
+        mode: dto.mode,
+        totalMarks: dto.totalMarks,
+        passingMarks: dto.passingMarks,
+        negativeMarkingEnabled: dto.negativeMarkingEnabled ?? false,
+        negativeMarkingValue: dto.negativeMarkingValue ?? 0,
+        durationMinutes: dto.durationMinutes,
+        graceMinutes: dto.graceMinutes ?? 15,
+        scheduledStartAt: start,
+        scheduledEndAt: end,
+        examWindowStart: windowStart,
+        examWindowEnd: windowEnd,
+        requireFullDurationWindow: dto.requireFullDurationWindow ?? false,
+        allowLateUpload: dto.allowLateUpload ?? true,
+        allowReplaceUpload: dto.allowReplaceUpload ?? true,
+        sectionConfig: (dto.sectionConfig ??
+          []) as unknown as Prisma.InputJsonValue,
+        instructions: dto.instructions || '',
+        publishStatus: 'DRAFT',
+        status: ExamStatusEnum.ACTIVE,
+        questionPaperId: '',
+        omrTemplateId: '',
+        omrSheetCount: 0,
+        publishedBy: userId,
+        publishedAt: new Date(0),
+        publishedFromIp: '',
+        publishedDevice: '',
+        resultsPublishedAt: new Date(0),
+        resultsPublishedBy: userId,
+        lockedAt: new Date(0),
+        lockedBy: '',
+        publishedVersion: 1,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+    });
 
-    return createdExams[0];
+    return createdExam;
   }
 
   async updateExam(

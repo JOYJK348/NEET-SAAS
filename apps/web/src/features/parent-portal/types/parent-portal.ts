@@ -141,7 +141,15 @@ export interface ParentAttendanceData {
   totalClasses: number;
   presentClasses: number;
   absentClasses: number;
+  batchBreakdown?: Array<{
+    batchId: string;
+    batchName: string;
+    totalClasses: number;
+    presentClasses: number;
+    percentage: number;
+  }>;
   subjectBreakdown?: Array<{
+    subjectId?: string;
     subject: string;
     totalClasses: number;
     presentClasses: number;
@@ -157,6 +165,8 @@ export interface ParentAttendanceData {
     date: string | Date;
     status: string;
     subject?: string;
+    batchId?: string;
+    batchName?: string;
     remarks?: string;
   }>;
 }

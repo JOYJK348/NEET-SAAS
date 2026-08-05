@@ -17,8 +17,8 @@ export async function paginate<T>(
   args: PrismaPaginateArgs,
 ): Promise<PaginatedResult<T>> {
   const { model, where = {}, orderBy, include, select, query, tenantId } = args;
-  const page = query.page || 1;
-  const limit = query.limit || 20;
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 20;
   const skip = (page - 1) * limit;
 
   const defaultOrderBy = {
@@ -68,8 +68,8 @@ export async function paginateAndMap<TInput, TOutput>(
   tenantId: string,
   mapper: (item: TInput) => TOutput | Promise<TOutput>,
 ): Promise<PaginatedResult<TOutput>> {
-  const page = query.page || 1;
-  const limit = query.limit || 20;
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 20;
   const skip = (page - 1) * limit;
 
   const [total, data] = await Promise.all([

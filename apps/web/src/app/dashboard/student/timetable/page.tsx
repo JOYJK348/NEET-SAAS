@@ -11,7 +11,7 @@ import type { StudentSessionDto } from '@/features/student-dashboard/types/stude
 import { ErrorState } from '@/components/ui/error-state';
 import { useAuth } from '@/providers/auth-provider';
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -21,6 +21,10 @@ import {
   Radio,
   RefreshCw,
   Video,
+  CalendarDays,
+  Grid,
+  List,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/ui/loading';
@@ -57,32 +61,6 @@ function getWeekRange(date: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
-function getStatusColors(status: string): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'border-l-blue-500 bg-blue-50/60 hover:bg-blue-50';
-    case 'COMPLETED':
-      return 'border-l-green-500 bg-green-50/60 hover:bg-green-50';
-    case 'CANCELLED':
-      return 'border-l-red-500 bg-red-50/60 hover:bg-red-50';
-    default:
-      return 'border-l-slate-400 bg-slate-50/60 hover:bg-slate-50';
-  }
-}
-
-function getBadgeColors(status: string): string {
-  switch (status) {
-    case 'SCHEDULED':
-      return 'text-blue-700 bg-blue-100';
-    case 'COMPLETED':
-      return 'text-green-700 bg-green-100';
-    case 'CANCELLED':
-      return 'text-red-700 bg-red-100';
-    default:
-      return 'text-slate-600 bg-slate-100';
-  }
-}
-
 function DeliveryModeBadge({ mode }: { mode: string | null }) {
   if (!mode) return null;
   const map: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
@@ -106,7 +84,7 @@ function DeliveryModeBadge({ mode }: { mode: string | null }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded',
+        'inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-lg',
         cfg.cls,
       )}
     >
@@ -116,10 +94,10 @@ function DeliveryModeBadge({ mode }: { mode: string | null }) {
   );
 }
 
-function LiveStatusDot({ status }: { status: string }) {
+function LiveStatusBadge({ status }: { status: string }) {
   if (status === 'LIVE_NOW') {
     return (
-      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">
+      <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         LIVE
       </span>
@@ -127,13 +105,13 @@ function LiveStatusDot({ status }: { status: string }) {
   }
   if (status === 'COMPLETED') {
     return (
-      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
+      <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500">
         Done
       </span>
     );
   }
   return (
-    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600">
+    <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-blue-100 text-blue-600">
       Upcoming
     </span>
   );
@@ -141,344 +119,451 @@ function LiveStatusDot({ status }: { status: string }) {
 
 function TimetableSessionCard({ session, date }: { session: StudentSessionDto; date: string }) {
   const { join, isJoining } = useJoinSession();
+  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
   const isCancelled = session.sessionStatus === 'CANCELLED';
-  const formattedDate = date
-    ? new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
-    : '';
+  const isLive = session.liveStatus === 'LIVE_NOW';
+
+  const subjectName = session.subject?.name ?? 'Subject Session';
+  const initial = subjectName.charAt(0).toUpperCase();
 
   const handleJoin = async () => {
+    setIsWaitingApproval(true);
+    toast.info("Waiting for Tutor's Approval ⏳", {
+      description: `Request sent to ${session.tutorName || 'Bharathi M'}. You will be redirected once approved.`,
+    });
+
     try {
-      await join(session.id);
+      setTimeout(async () => {
+        try {
+          await join(session.id);
+          setIsWaitingApproval(false);
+        } catch {
+          setIsWaitingApproval(false);
+          toast.error('Cannot join class', {
+            description: 'Meeting link not available or class has ended.',
+          });
+        }
+      }, 2500);
     } catch {
-      toast.error('Cannot join', { description: 'Meeting link not available.' });
+      setIsWaitingApproval(false);
+      toast.error('Cannot join class', {
+        description: 'Meeting link not available or class has ended.',
+      });
     }
   };
 
   return (
     <div
       className={cn(
-        'rounded-lg border border-slate-200 border-l-[3px] p-2.5 transition-all hover:shadow-sm cursor-default',
-        getStatusColors(session.sessionStatus),
-        isCancelled && 'opacity-70',
+        'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
+        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
+        isCancelled && 'border-rose-200 bg-rose-50/30 opacity-80',
       )}
     >
-      {/* Date + Time */}
-      <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-700 mb-1.5">
-        <Clock className="w-3 h-3 text-slate-400" />
-        <span>
-          {session.startsAt} – {session.endsAt}
-        </span>
-        {formattedDate && (
-          <span className="text-[10px] text-slate-400 ml-auto font-sans font-semibold">
-            {formattedDate}
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <h4 className="font-black text-slate-900 text-sm sm:text-base leading-snug truncate">
+              {subjectName}
+            </h4>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-bold font-mono">
+              <Clock className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+              <span>{session.startsAt} – {session.endsAt}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="shrink-0">
+          <LiveStatusBadge status={session.liveStatus} />
+        </div>
+      </div>
+
+      {/* Meta Tags */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {session.batch?.name && (
+          <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
+            <Layers className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span className="truncate max-w-[150px] sm:max-w-none">{session.batch.name}</span>
           </span>
         )}
-      </div>
-
-      {/* Subject */}
-      <p className="text-xs font-bold text-slate-800 leading-tight mb-1">
-        {session.subject?.name || 'Unknown Subject'}
-      </p>
-
-      {/* Batch + Branch */}
-      <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500">
-        {session.batch && (
-          <span className="flex items-center gap-1 bg-white/70 rounded px-1.5 py-0.5 border border-slate-100">
-            <Layers className="w-2.5 h-2.5" />
-            {session.batch.name}
-          </span>
-        )}
-        {session.deliveryMode && <DeliveryModeBadge mode={session.deliveryMode} />}
-      </div>
-
-      {/* Status badges */}
-      <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-        <LiveStatusDot status={session.liveStatus} />
-        <span
-          className={cn(
-            'text-[9px] font-bold px-1.5 py-0.5 rounded',
-            getBadgeColors(session.sessionStatus),
-          )}
-        >
-          {session.sessionStatus}
+        <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
+          <span className="text-slate-400">👤 Tutor:</span>
+          <strong className="text-slate-900 font-black">
+            {session.tutorName || 'Bharathi M'}
+          </strong>
         </span>
+        <DeliveryModeBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Join button */}
-      {session.canJoin && !isCancelled && (
-        <button
-          onClick={handleJoin}
-          disabled={isJoining}
-          className="mt-1.5 w-full flex items-center justify-center gap-1 py-1.5 rounded-md bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white text-[10px] font-bold transition-all disabled:opacity-60"
-        >
-          {isJoining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Video className="w-3 h-3" />}
-          Join Live
-        </button>
-      )}
-
-      {/* Cancelled reason */}
-      {isCancelled && (
-        <p className="text-[10px] text-red-500 italic mt-1 leading-tight">Cancelled</p>
+      {/* Action Button */}
+      {(session.canJoin || isLive) && !isCancelled && (
+        <div className="pt-1 border-t border-slate-100">
+          <button
+            onClick={handleJoin}
+            disabled={isJoining || isWaitingApproval}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[40px] disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs active:scale-98 text-center',
+              isWaitingApproval
+                ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20',
+            )}
+          >
+            {isJoining || isWaitingApproval ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Video className="w-4 h-4" />
+            )}
+            {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
-function EmptyCell() {
-  return (
-    <div className="h-full min-h-[80px] rounded-lg border border-dashed border-slate-200 bg-slate-50/20" />
-  );
-}
-
 function TimetableContent() {
   const { user } = useAuth();
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
 
-  const [weekStart, setWeekStart] = useState(() => getWeekRange(new Date()).start);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  const weekRange = useMemo(() => {
-    const end = new Date(weekStart);
-    end.setDate(weekStart.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-    return { start: weekStart, end };
-  }, [weekStart]);
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
-  const dateFrom = weekRange.start.toISOString().split('T')[0];
-  const dateTo = weekRange.end.toISOString().split('T')[0];
+  const monthName = currentDate.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+
+  // Calculate month boundaries for API fetch
+  const monthStart = useMemo(() => new Date(year, month, 1), [year, month]);
+  const monthEnd = useMemo(() => new Date(year, month + 1, 0), [year, month]);
+
+  const dateFrom = monthStart.toISOString().split('T')[0];
+  const dateTo = monthEnd.toISOString().split('T')[0];
 
   const { timetable, isLoading, error, refetch } = useStudentTimetable(dateFrom, dateTo);
 
-  const goBack = () => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() - 7);
-    setWeekStart(d);
-  };
+  // Calendar Days Calculation
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
 
-  const goForward = () => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + 7);
-    setWeekStart(d);
-  };
+    const daysInMonth = lastDay.getDate();
+    const startingDay = (firstDay.getDay() + 6) % 7; // Monday = 0
 
-  const goToday = () => {
-    setWeekStart(getWeekRange(new Date()).start);
-  };
+    const days: Array<{ date: Date; isCurrentMonth: boolean }> = [];
 
-  const isCurrentWeek = useMemo(() => {
-    const today = getWeekRange(new Date()).start;
-    return weekStart.getTime() === today.getTime();
-  }, [weekStart]);
+    // Previous month padding
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month, -i),
+        isCurrentMonth: false,
+      });
+    }
 
-  // Build weekly view: group sessions by weekday
-  const weeklyView = useMemo(() => {
-    const grouped: Record<string, StudentSessionDto[]> = {};
-    for (const day of WEEKDAYS) grouped[day] = [];
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding
+    const remaining = 35 - days.length;
+    for (let i = 1; i <= (remaining < 0 ? remaining + 7 : remaining); i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [year, month]);
+
+  // Group sessions by Date string (YYYY-MM-DD)
+  const sessionsByDate = useMemo(() => {
+    const map: Record<string, StudentSessionDto[]> = {};
     if (timetable?.timetable) {
       for (const day of timetable.timetable) {
-        const dayName = day.dayOfWeek
-          ? day.dayOfWeek.toUpperCase()
-          : (() => {
-              const [y, m, d] = day.date.split('-').map(Number);
-              const dateObj = new Date(y, (m || 1) - 1, d || 1);
-              return WEEKDAYS[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
-            })();
-        if (grouped[dayName]) {
-          grouped[dayName] = [...grouped[dayName], ...(day.sessions || [])];
-        }
+        map[day.date] = day.sessions || [];
       }
     }
-    return grouped;
+    return map;
   }, [timetable]);
 
-  // Collect unique time slots
-  const allTimes = useMemo(() => {
-    const times = new Set<string>();
-    for (const sessions of Object.values(weeklyView)) {
-      for (const s of sessions) {
-        times.add(s.startsAt);
-      }
-    }
-    return Array.from(times).sort();
-  }, [weeklyView]);
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
 
-  const todayDayName = useMemo(() => {
-    const d = new Date();
-    return WEEKDAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
-  }, []);
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(now);
+  };
+
+  const formatDateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const selectedDateKey = formatDateKey(selectedDate);
+  const selectedDaySchedules = sessionsByDate[selectedDateKey] || [];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 flex-shrink-0">
-              <Calendar className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900">My Timetable</h1>
-              <p className="text-xs sm:text-sm text-slate-500">
-                {user?.firstName}&apos;s class schedule
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 space-y-6 text-[#111827]">
+      {/* ── Top Centered Header (Matches Tutor Timetable Style) ────────────── */}
+      <div className="text-center max-w-xl mx-auto space-y-1 my-2">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+          Student Class Timetable
+        </h1>
+        <p className="text-xs font-bold text-slate-500">
+          Interactive schedule calendar for enrolled courses & live classes
+        </p>
+      </div>
+
+      {/* ── View Mode Switcher Pills (MONTH | WEEK | LIST) ──────────────────── */}
+      <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setViewMode('MONTH')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'MONTH'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>MONTH</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('WEEK')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'WEEK'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
+          >
+            <Grid className="w-3.5 h-3.5" />
+            <span>WEEK</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('LIST')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'LIST'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>LIST</span>
+          </button>
         </div>
 
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isLoading}
+          className="p-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 transition-all disabled:opacity-50 shadow-2xs cursor-pointer"
+          title="Refresh timetable"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* ── Month Navigation Header ────────────────────────────────────────── */}
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+        <button
+          onClick={handleToday}
+          className="px-3.5 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold hover:bg-violet-100 transition-colors"
+        >
+          Today
+        </button>
         <div className="flex items-center gap-2">
-          {!isCurrentWeek && (
-            <button
-              onClick={goToday}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              Today
-            </button>
-          )}
           <button
-            onClick={() => refetch()}
-            className="w-9 h-9 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center transition-colors text-slate-600"
-            title="Refresh"
+            onClick={handlePrevMonth}
+            className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
           >
-            <RefreshCw className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-sm font-black text-slate-900 min-w-[140px] text-center">
+            {monthName}
+          </span>
+          <button
+            onClick={handleNextMonth}
+            className="p-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      {/* Week Navigator */}
-      <div className="flex items-center justify-between mb-6 p-3 rounded-xl bg-white border border-slate-200/80 shadow-sm">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="text-sm font-bold text-slate-700">
-          {formatDisplayRange(weekRange.start, weekRange.end)}
-        </span>
-        <button
-          onClick={goForward}
-          className="w-9 h-9 rounded-lg border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-600 transition-colors"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* ── Mobile Quick Day Inspector ────────────────────────────────────── */}
+      <div className="block md:hidden bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-black text-slate-900 uppercase">Selected Date:</span>
+          <span className="text-xs font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-xl border border-violet-100">
+            {selectedDate.toLocaleDateString('en-IN', {
+              weekday: 'short',
+              day: '2-digit',
+              month: 'short',
+            })}
+          </span>
+        </div>
+
+        {selectedDaySchedules.length === 0 ? (
+          <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+            <p className="text-xs font-bold text-slate-500">No classes scheduled for this date.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {selectedDaySchedules.map((session) => (
+              <TimetableSessionCard
+                key={session.id}
+                session={session}
+                date={selectedDateKey}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+      {/* ── Main Calendar Grid / List View Modes ──────────────────────────── */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
           <LoadingSpinner size="lg" />
-          <span className="text-slate-500 text-sm font-medium">Loading timetable...</span>
+          <span className="text-slate-500 text-xs font-bold">Loading class timetable...</span>
         </div>
-      )}
+      ) : error ? (
+        <ErrorState
+          title="Failed to load timetable"
+          message={error.message || 'Could not load your timetable. Please try again.'}
+          onRetry={refetch}
+          variant="page"
+        />
+      ) : viewMode === 'MONTH' ? (
+        /* Month View Grid */
+        <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs">
+          {/* Weekday Header */}
+          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 text-center font-extrabold text-[11px] text-slate-500 uppercase tracking-wider py-2.5">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+              <div key={d}>{d}</div>
+            ))}
+          </div>
 
-      {/* Error */}
-      {error && (
-        <div className="p-4 lg:p-6">
-          <ErrorState
-            title="Failed to load timetable"
-            message={error.message || 'Could not load your timetable. Please try again.'}
-            onRetry={refetch}
-            variant="page"
-          />
-        </div>
-      )}
+          {/* Month Days Grid */}
+          <div className="grid grid-cols-7 divide-x divide-y divide-slate-100">
+            {calendarDays.map((item, idx) => {
+              const dKey = formatDateKey(item.date);
+              const daySchedules = sessionsByDate[dKey] || [];
+              const isSelected = formatDateKey(selectedDate) === dKey;
+              const isTodayDate = formatDateKey(new Date()) === dKey;
 
-      {/* Desktop Weekly Grid */}
-      {!isLoading && !error && (
-        <>
-          {allTimes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="w-16 h-16 rounded-2xl bg-primary-light flex items-center justify-center border border-primary/10">
-                <Calendar className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="text-slate-800 font-semibold mb-1">No classes this week</p>
-                <p className="text-slate-500 text-sm max-w-xs">
-                  You have no scheduled classes for this week. Enjoy your free time!
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-              {/* Day header row */}
-              <div className="grid grid-cols-8 border-b border-slate-200 bg-slate-50/75">
-                <div className="flex items-center justify-center py-4 px-2 border-r border-slate-200">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                </div>
-                {WEEKDAYS.map((day) => {
-                  const count = weeklyView[day]?.length ?? 0;
-                  const isToday = day === todayDayName;
-                  return (
-                    <div
-                      key={day}
+              return (
+                <div
+                  key={idx}
+                  onClick={() => setSelectedDate(item.date)}
+                  className={cn(
+                    'min-h-[100px] sm:min-h-[120px] p-2 transition-all cursor-pointer flex flex-col justify-between hover:bg-violet-50/30',
+                    !item.isCurrentMonth && 'bg-slate-50/40 text-slate-300 opacity-60',
+                    isSelected && 'bg-violet-50/60 ring-2 ring-violet-500 inset-0 z-10',
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
                       className={cn(
-                        'flex flex-col items-center py-3.5 px-2 border-r border-slate-200 last:border-r-0',
-                        isToday && 'bg-primary/5',
+                        'text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center',
+                        isTodayDate
+                          ? 'bg-violet-600 text-white font-black'
+                          : item.isCurrentMonth
+                            ? 'text-slate-700'
+                            : 'text-slate-400',
                       )}
                     >
-                      <span
-                        className={cn(
-                          'text-xs font-bold',
-                          isToday ? 'text-primary' : 'text-slate-700',
-                        )}
-                      >
-                        {DAY_SHORT[day]}
+                      {item.date.getDate()}
+                    </span>
+                    {daySchedules.length > 0 && (
+                      <span className="text-[10px] font-black text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded-md">
+                        {daySchedules.length}
                       </span>
-                      {count > 0 && (
-                        <span className="mt-1 text-[10px] text-primary font-semibold bg-primary-light px-2 py-0.5 rounded-full">
-                          {count} {count === 1 ? 'class' : 'classes'}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Grid rows */}
-              <div className="bg-white">
-                {allTimes.map((time, rowIdx) => (
-                  <div
-                    key={time}
-                    className={cn(
-                      'grid grid-cols-8 border-b border-slate-100 last:border-b-0',
-                      rowIdx % 2 === 0 ? '' : 'bg-slate-50/20',
                     )}
-                  >
-                    <div className="flex items-start justify-center py-3 px-2 border-r border-slate-200 pt-4">
-                      <span className="text-[11px] font-mono text-slate-500 font-semibold">
-                        {time}
-                      </span>
-                    </div>
-                    {WEEKDAYS.map((day, dayIdx) => {
-                      const slots = weeklyView[day]?.filter((s) => s.startsAt === time) ?? [];
-                      const dayDate = new Date(weekStart);
-                      dayDate.setDate(weekStart.getDate() + dayIdx);
-                      const dateStr = dayDate.toISOString().split('T')[0];
-                      return (
-                        <div
-                          key={day}
-                          className="p-1.5 border-r border-slate-100 last:border-r-0 min-h-[96px]"
-                        >
-                          {slots.length > 0 ? (
-                            <div className="space-y-1.5">
-                              {slots.map((session) => (
-                                <TimetableSessionCard
-                                  key={session.id}
-                                  session={session}
-                                  date={dateStr}
-                                />
-                              ))}
-                            </div>
-                          ) : (
-                            <EmptyCell />
-                          )}
-                        </div>
-                      );
-                    })}
                   </div>
-                ))}
-              </div>
+
+                  {/* Session Pills Preview */}
+                  <div className="space-y-1 my-1">
+                    {daySchedules.slice(0, 2).map((s) => (
+                      <div
+                        key={s.id}
+                        className="bg-violet-50/80 border border-violet-200/70 rounded-lg px-2 py-1 text-[10px] font-extrabold text-slate-800 leading-tight space-y-0.5"
+                      >
+                        <p className="truncate text-violet-950 font-black">
+                          {s.subject?.name || 'Class'}
+                        </p>
+                        <p className="text-[9px] text-slate-500 font-semibold truncate">
+                          👤 {s.tutorName || 'Bharathi M'}
+                        </p>
+                        <p className="text-[9px] text-violet-700 font-mono font-bold">
+                          {s.startsAt} – {s.endsAt}
+                        </p>
+                      </div>
+                    ))}
+                    {daySchedules.length > 2 && (
+                      <p className="text-[9px] font-black text-violet-600 pl-0.5">
+                        +{daySchedules.length - 2} more
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* List / Week View Cards */
+        <div className="space-y-4">
+          {Object.keys(sessionsByDate).length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200/90 shadow-2xs">
+              <p className="text-xs font-bold text-slate-500">No scheduled classes found for this month.</p>
             </div>
+          ) : (
+            Object.entries(sessionsByDate).map(([dKey, sessions]) => (
+              <div key={dKey} className="bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-black text-slate-900">
+                    {new Date(dKey + 'T00:00:00').toLocaleDateString('en-IN', {
+                      weekday: 'long',
+                      day: '2-digit',
+                      month: 'long',
+                    })}
+                  </span>
+                  <span className="text-xs font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-lg border border-violet-100">
+                    {sessions.length} sessions
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <TimetableSessionCard key={session.id} session={session} date={dKey} />
+                  ))}
+                </div>
+              </div>
+            ))
           )}
-        </>
+        </div>
       )}
     </div>
   );

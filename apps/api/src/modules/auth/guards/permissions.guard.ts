@@ -16,6 +16,11 @@ const ADMIN_ROLES = new Set([
   'ADMIN',
   'ADMINISTRATOR',
   'OWNER',
+  'ACADEMIC_ADMIN',
+  'BRANCH_ADMIN',
+  'INSTITUTE_ADMIN',
+  'SYSTEM_ADMIN',
+  'TENANT_ADMINISTRATOR',
 ]);
 
 @Injectable()
@@ -44,7 +49,13 @@ export class PermissionsGuard implements CanActivate {
     }
 
     const tokenRole = (user.roleCode || '').toUpperCase();
-    if (ADMIN_ROLES.has(tokenRole)) {
+    if (
+      ADMIN_ROLES.has(tokenRole) ||
+      tokenRole.startsWith('TENANT_ADMIN') ||
+      tokenRole.startsWith('SUPER_ADMIN') ||
+      tokenRole.includes('ADMIN') ||
+      tokenRole.includes('OWNER')
+    ) {
       return true;
     }
 
@@ -53,7 +64,12 @@ export class PermissionsGuard implements CanActivate {
       select: { userType: true },
     });
 
-    if (dbUser?.userType && ADMIN_ROLES.has(dbUser.userType.toUpperCase())) {
+    if (
+      dbUser?.userType &&
+      (ADMIN_ROLES.has(dbUser.userType.toUpperCase()) ||
+        dbUser.userType.toUpperCase().startsWith('TENANT_ADMIN') ||
+        dbUser.userType.toUpperCase().includes('ADMIN'))
+    ) {
       return true;
     }
 

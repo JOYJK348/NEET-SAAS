@@ -108,6 +108,17 @@ export class TopicItemService {
     });
   }
 
+  async removeAllByTopic(topicId: string, tenantId: string, userId: string) {
+    return this.prisma.topicItems.updateMany({
+      where: { tenantId, topicId, deletedAt: null },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: userId,
+        updatedBy: userId,
+      },
+    });
+  }
+
   async reorder(dto: ReorderTopicItemsDto, tenantId: string, userId: string) {
     const topic = await this.prisma.topics.findFirst({
       where: this.tenantScoped.buildWhere(tenantId, { id: dto.topicId }),

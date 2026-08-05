@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { api } from '@/lib/api';
 import {
   ArrowLeft,
   BookOpen,
@@ -52,8 +53,6 @@ function MapCourseSubjectContent() {
     (s) => !mappedSubjects.some((ms) => ms.subjectId === s.id),
   );
 
-  const [errors, setErrors] = useState<FormErrors>({});
-
   const [formData, setFormData] = useState({
     subjectId: '',
     plannedHours: 100,
@@ -63,6 +62,98 @@ function MapCourseSubjectContent() {
     passingMarks: 40,
     credits: 0,
   });
+
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const [selectedSubjectMasterDetails, setSelectedSubjectMasterDetails] = useState<any | null>(null);
+  const [loadingMasterDetails, setLoadingMasterDetails] = useState(false);
+  const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
+  const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!formData.subjectId) {
+      setSelectedSubjectMasterDetails(null);
+      setSelectedChapterIds(new Set());
+      setSelectedTopicIds(new Set());
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingMasterDetails(true);
+    api.get<any>(`/master/subjects/${formData.subjectId}/course-subject`)
+      .then((res) => {
+        if (!isMounted) return;
+        setSelectedSubjectMasterDetails(res);
+        const chIds = new Set<string>();
+        const tpIds = new Set<string>();
+        (res?.chapters || []).forEach((ch: any) => {
+          chIds.add(ch.id);
+          (ch.topics || []).forEach((tp: any) => tpIds.add(tp.id));
+        });
+        setSelectedChapterIds(chIds);
+        setSelectedTopicIds(tpIds);
+      })
+      .catch(() => {
+        toast.error('Failed to load master chapters for selected subject');
+      })
+      .finally(() => {
+        if (isMounted) setLoadingMasterDetails(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.subjectId]);
+
+  const handleToggleChapterCheckbox = (ch: any) => {
+    const nextCh = new Set(selectedChapterIds);
+    const nextTp = new Set(selectedTopicIds);
+
+    if (nextCh.has(ch.id)) {
+      nextCh.delete(ch.id);
+      (ch.topics || []).forEach((tp: any) => nextTp.delete(tp.id));
+    } else {
+      nextCh.add(ch.id);
+      (ch.topics || []).forEach((tp: any) => nextTp.add(tp.id));
+    }
+
+    setSelectedChapterIds(nextCh);
+    setSelectedTopicIds(nextTp);
+  };
+
+  const handleToggleTopicCheckbox = (chId: string, topicId: string) => {
+    const nextTp = new Set(selectedTopicIds);
+    const nextCh = new Set(selectedChapterIds);
+
+    if (nextTp.has(topicId)) {
+      nextTp.delete(topicId);
+    } else {
+      nextTp.add(topicId);
+      nextCh.add(chId);
+    }
+
+    setSelectedTopicIds(nextTp);
+    setSelectedChapterIds(nextCh);
+  };
+
+  const handleSelectAllToggle = () => {
+    const allChapters: any[] = selectedSubjectMasterDetails?.chapters || [];
+    const totalChapters = allChapters.length;
+
+    if (selectedChapterIds.size === totalChapters && totalChapters > 0) {
+      setSelectedChapterIds(new Set());
+      setSelectedTopicIds(new Set());
+    } else {
+      const chIds = new Set<string>();
+      const tpIds = new Set<string>();
+      allChapters.forEach((ch: any) => {
+        chIds.add(ch.id);
+        (ch.topics || []).forEach((tp: any) => tpIds.add(tp.id));
+      });
+      setSelectedChapterIds(chIds);
+      setSelectedTopicIds(tpIds);
+    }
+  };
 
   const validateForm = (): boolean => {
     const errs: FormErrors = {};
@@ -104,6 +195,8 @@ function MapCourseSubjectContent() {
         passingMarks: Number(formData.passingMarks),
         credits: Number(formData.credits),
         plannedHours: Number(formData.plannedHours),
+        selectedChapterIds: Array.from(selectedChapterIds),
+        selectedTopicIds: Array.from(selectedTopicIds),
       });
 
       toast.success('Subject mapped to course syllabus successfully!');
@@ -217,26 +310,49 @@ function MapCourseSubjectContent() {
                   All master subjects have already been mapped to this course syllabus!
                 </div>
               ) : (
-                <select
-                  value={formData.subjectId}
-                  onChange={(e) => {
-                    setFormData({ ...formData, subjectId: e.target.value });
-                    if (errors.subjectId) setErrors((prev) => ({ ...prev, subjectId: undefined }));
-                  }}
-                  className={cn(
-                    'w-full h-11 px-3 rounded-xl border text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500',
-                    errors.subjectId ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200',
-                  )}
-                >
-                  <option value="">
-                    Choose a master subject (e.g. Physics, Chemistry, Biology)...
-                  </option>
-                  {availableSubjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code}) - {s.subjectType}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {availableSubjects.map((s) => {
+                  const isSelected = formData.subjectId === s.id;
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={() => {
+                        setFormData({ ...formData, subjectId: isSelected ? '' : s.id });
+                        if (errors.subjectId) setErrors((prev) => ({ ...prev, subjectId: undefined }));
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
+                        isSelected
+                          ? 'border-[#7c3aed] bg-violet-50/60 ring-2 ring-[#7c3aed]/20 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-slate-50/50',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        className="w-4 h-4 rounded text-[#7c3aed] focus:ring-[#7c3aed] cursor-pointer"
+                      />
+                      <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-100/70 text-[#7c3aed] shrink-0 font-bold text-sm">
+                        📚
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-extrabold text-slate-900 truncate">
+                            {s.name}
+                          </span>
+                          <span className="text-[9px] font-black bg-violet-100 text-[#7c3aed] px-1.5 py-0.2 rounded shrink-0">
+                            {s.code}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium block">
+                          Type: {s.subjectType}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               )}
               {errors.subjectId && (
                 <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-1">
@@ -244,6 +360,112 @@ function MapCourseSubjectContent() {
                 </p>
               )}
             </div>
+
+            {/* Chapters & Topics Checkbox Tree */}
+            {formData.subjectId && (
+              <div className="space-y-3 sm:col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-violet-600" />
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Select Chapters & Topics to Map to Course Syllabus 📚
+                    </h4>
+                  </div>
+
+                  {selectedSubjectMasterDetails?.chapters && selectedSubjectMasterDetails.chapters.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllToggle}
+                      className="text-xs font-bold text-violet-700 hover:underline flex items-center gap-1.5"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedChapterIds.size === selectedSubjectMasterDetails.chapters.length &&
+                          selectedChapterIds.size > 0
+                        }
+                        onChange={handleSelectAllToggle}
+                        className="w-3.5 h-3.5 rounded text-violet-600 focus:ring-violet-500"
+                      />
+                      Select All Chapters & Topics
+                    </button>
+                  )}
+                </div>
+
+                {loadingMasterDetails ? (
+                  <div className="py-6 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-violet-600" />
+                    Loading chapters for selected subject...
+                  </div>
+                ) : !selectedSubjectMasterDetails?.chapters || selectedSubjectMasterDetails.chapters.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic text-center py-4 bg-white rounded-xl border border-slate-200">
+                    No chapters configured for this master subject yet. (All future chapters added will clone automatically).
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {selectedSubjectMasterDetails.chapters.map((ch: any) => {
+                      const isChChecked = selectedChapterIds.has(ch.id);
+                      const topics: any[] = ch.topics || [];
+                      return (
+                        <div
+                          key={ch.id}
+                          className="p-3 rounded-xl border border-slate-200 bg-white space-y-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id={`ch-${ch.id}`}
+                              checked={isChChecked}
+                              onChange={() => handleToggleChapterCheckbox(ch)}
+                              className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
+                            />
+                            <label
+                              htmlFor={`ch-${ch.id}`}
+                              className="text-xs font-bold text-slate-900 cursor-pointer flex items-center gap-2 flex-1"
+                            >
+                              <span>{ch.name}</span>
+                              <span className="text-[10px] font-mono text-slate-400">({ch.code})</span>
+                            </label>
+                            <span className="text-[10px] text-violet-600 font-semibold">
+                              {topics.length} topics
+                            </span>
+                          </div>
+
+                          {/* Sub Topics List */}
+                          {topics.length > 0 && (
+                            <div className="pl-6 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-1.5 border-t border-slate-100 mt-1">
+                              {topics.map((tp: any) => {
+                                const isTpChecked = selectedTopicIds.has(tp.id);
+                                return (
+                                  <div
+                                    key={tp.id}
+                                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      id={`tp-${tp.id}`}
+                                      checked={isTpChecked}
+                                      onChange={() => handleToggleTopicCheckbox(ch.id, tp.id)}
+                                      className="w-3.5 h-3.5 rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
+                                    />
+                                    <label
+                                      htmlFor={`tp-${tp.id}`}
+                                      className="text-[11px] font-semibold text-slate-700 cursor-pointer truncate"
+                                    >
+                                      {tp.name}
+                                    </label>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">

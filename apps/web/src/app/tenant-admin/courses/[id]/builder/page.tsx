@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useMemo, useCallback } from 'react';
+import { Suspense, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useCourse } from '@/features/master-data/hooks/use-courses';
 import { useCourseSubjects } from '@/features/master-data/hooks/use-course-subjects';
@@ -23,6 +23,36 @@ function BuilderPageInner() {
   } = useCourseSubjects(courseId);
   const { selectedTopicId, selection, selectTopic, clearSelection, selectEntity } =
     useBuilderState(courseId);
+
+  const hasAutoSelectedRef = useRef<string | null>(null);
+
+  // Auto-select topic when topicId / topicCode / topicName search param is present
+  useEffect(() => {
+    const topicIdFromUrl = searchParams?.get('topicId');
+    const topicCodeFromUrl = searchParams?.get('topicCode');
+    const topicNameFromUrl = searchParams?.get('topicName');
+
+    const paramKey = `${topicIdFromUrl}-${topicCodeFromUrl}-${topicNameFromUrl}`;
+    if (!topicIdFromUrl && !topicCodeFromUrl && !topicNameFromUrl) return;
+    if (hasAutoSelectedRef.current === paramKey) return;
+    if (!subjects || subjects.length === 0) return;
+
+    for (const s of subjects) {
+      for (const ch of (s as any).chapters || []) {
+        for (const t of ch.topics || []) {
+          if (
+            (topicIdFromUrl && t.id === topicIdFromUrl) ||
+            (topicCodeFromUrl && t.code?.toLowerCase() === topicCodeFromUrl.toLowerCase()) ||
+            (topicNameFromUrl && t.name?.toLowerCase() === topicNameFromUrl.toLowerCase())
+          ) {
+            hasAutoSelectedRef.current = paramKey;
+            selectTopic(t.id);
+            return;
+          }
+        }
+      }
+    }
+  }, [searchParams, subjects, selectTopic]);
 
   const treeNodes = useMemo(() => {
     return (
@@ -87,6 +117,17 @@ function BuilderPageInner() {
     ? { type: 'topic-item' as const, id: selectedTopicItemId }
     : null;
 
+  const [rightTab, setRightTab] = useState<'add-blocks' | 'block-settings' | 'topic-settings'>('add-blocks');
+  const [addBlockTrigger, setAddBlockTrigger] = useState<{ type: string; timestamp: number } | null>(null);
+
+  const handleOpenAddBlocksTab = useCallback(() => {
+    setRightTab('add-blocks');
+  }, []);
+
+  const handleAddBlockFromRightPanel = useCallback((blockType: string) => {
+    setAddBlockTrigger({ type: blockType, timestamp: Date.now() });
+  }, []);
+
   if (courseLoading) {
     return (
       <BuilderLayout
@@ -134,7 +175,14 @@ function BuilderPageInner() {
           loading={subjectsLoading}
         />
       }
-      centerPanel={<ContentWorkspace topicId={selectedTopicId} topicData={selectedTopicData} />}
+      centerPanel={
+        <ContentWorkspace
+          topicId={selectedTopicId}
+          topicData={selectedTopicData}
+          onOpenAddBlocksTab={handleOpenAddBlocksTab}
+          addBlockTrigger={addBlockTrigger}
+        />
+      }
       rightPanel={
         <PropertiesPanel
           selection={
@@ -145,6 +193,9 @@ function BuilderPageInner() {
           }
           topicData={selectedTopicData ?? chapterData}
           chapterData={chapterData}
+          activeTab={rightTab}
+          onTabChange={setRightTab}
+          onAddBlock={handleAddBlockFromRightPanel}
         />
       }
     />

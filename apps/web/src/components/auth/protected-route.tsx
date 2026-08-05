@@ -23,8 +23,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     if (isAuthenticated && allowedRoles && allowedRoles.length > 0 && user) {
-      const role = user.roleCode || (user as any).role;
-      if (!allowedRoles.includes(role)) {
+      const role = user.roleCode || (user as any).role || '';
+      const isAllowed =
+        allowedRoles.includes(role) ||
+        (allowedRoles.includes('TENANT_ADMIN') && role.startsWith('TENANT_ADMIN'));
+
+      if (!isAllowed) {
         if (role === 'STUDENT') {
           router.replace('/dashboard/student');
         } else if (role === 'PARENT') {
@@ -51,8 +55,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (user && allowedRoles && allowedRoles.length > 0) {
-    const role = user.roleCode || (user as any).role;
-    if (!allowedRoles.includes(role)) {
+    const role = user.roleCode || (user as any).role || '';
+    const isAllowed =
+      allowedRoles.includes(role) ||
+      (allowedRoles.includes('TENANT_ADMIN') && role.startsWith('TENANT_ADMIN'));
+
+    if (!isAllowed) {
       return null;
     }
   }

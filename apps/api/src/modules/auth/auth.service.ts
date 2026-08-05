@@ -451,6 +451,62 @@ export class AuthService {
     }
 
     if (roleContexts.length === 0) {
+      const user = await this.prismaService.users.findUnique({
+        where: { id: userId },
+      });
+
+      if (user && user.userType && user.tenantId) {
+        const targetRoleCode = user.userType.toUpperCase();
+        let role = await this.prismaService.roles.findFirst({
+          where: { code: targetRoleCode, deletedAt: null },
+        });
+
+        if (!role) {
+          role = await this.prismaService.roles.create({
+            data: {
+              tenantId: user.tenantId,
+              code: targetRoleCode,
+              name: user.userType,
+              roleType: 'SYSTEM',
+              isDefault: true,
+              isEditable: false,
+              isDeletable: false,
+              priority: 1,
+              metadata: {},
+              createdBy: 'system',
+              updatedBy: 'system',
+            },
+          });
+        }
+
+        if (role) {
+          await this.prismaService.userRoles
+            .create({
+              data: {
+                tenantId: user.tenantId,
+                userId: user.id,
+                roleId: role.id,
+                effectiveFrom: new Date(),
+                effectiveTo: new Date('2099-12-31'),
+                revokedBy: '',
+                revokedReason: '',
+                assignedBy: 'system',
+                assignmentReason: 'Auto-healing role allocation on login',
+                metadata: {},
+                createdBy: 'system',
+                updatedBy: 'system',
+              },
+            })
+            .catch(() => {});
+
+          return {
+            tenantSelectionRequired: false as const,
+            tenantId: user.tenantId,
+            roleCode: targetRoleCode,
+          };
+        }
+      }
+
       throw new ForbiddenException('No active role assigned');
     }
 

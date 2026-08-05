@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
@@ -21,7 +21,9 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 function CreateExamContent() {
   const router = useRouter();
@@ -64,6 +66,33 @@ function CreateExamContent() {
 
   const createExamMutation = useCreateExam();
 
+  const availableBatches = courseId
+    ? batches.filter((b) => !b.courseId || b.courseId === courseId)
+    : [];
+
+  const isStep1Valid = Boolean(
+    title.trim() !== '' && courseId !== '' && selectedBatchIds.length > 0,
+  );
+
+  const isStep2Valid = Boolean(
+    examWindowStart !== '' && examWindowEnd !== '' && durationMinutes > 0,
+  );
+
+  const isStep3Valid = Boolean(
+    totalMarks > 0 &&
+      passingMarks >= 0 &&
+      sections.length > 0 &&
+      sections.every((s) => s.name.trim() !== ''),
+  );
+
+  const canGoToStep = (targetStep: number): boolean => {
+    if (targetStep === 1) return true;
+    if (targetStep === 2) return isStep1Valid;
+    if (targetStep === 3) return isStep1Valid && isStep2Valid;
+    if (targetStep === 4) return isStep1Valid && isStep2Valid && isStep3Valid;
+    return false;
+  };
+
   const handleAddSection = () => {
     setSections([...sections, { name: `Section ${sections.length + 1}`, maxMarks: 100 }]);
   };
@@ -87,7 +116,12 @@ function CreateExamContent() {
     return new Date(str).toISOString();
   };
 
+  const isSubmittingRef = useRef(false);
+
   const handleSubmit = () => {
+    if (isSubmittingRef.current || createExamMutation.isPending) return;
+    isSubmittingRef.current = true;
+
     const startIso = parseLocalDateTime(scheduledStartAt);
     const futureDate = new Date(Date.now() + durationMinutes * 60 * 1000);
     const futureIso = futureDate.toISOString();
@@ -128,6 +162,9 @@ function CreateExamContent() {
       {
         onSuccess: () => {
           router.push('/dashboard/exams');
+        },
+        onError: () => {
+          isSubmittingRef.current = false;
         },
       },
     );
@@ -183,21 +220,39 @@ function CreateExamContent() {
               { num: 2, label: 'Timing Window' },
               { num: 3, label: 'Marks & Sections' },
               { num: 4, label: 'Rules & Finish' },
-            ].map((s) => (
-              <button
-                key={s.num}
-                onClick={() => setStep(s.num as any)}
-                className={`py-2.5 px-3 rounded-xl transition-all ${
-                  step === s.num
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : step > s.num
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                      : 'text-slate-500 hover:bg-slate-50'
-                }`}
-              >
-                {s.num}. {s.label}
-              </button>
-            ))}
+            ].map((s) => {
+              const allowed = canGoToStep(s.num);
+              return (
+                <button
+                  key={s.num}
+                  type="button"
+                  onClick={() => {
+                    if (allowed) {
+                      setStep(s.num as any);
+                    } else {
+                      if (!isStep1Valid) {
+                        toast.error('Please complete Step 1 (Title, Course & Batches) first!');
+                      } else if (!isStep2Valid) {
+                        toast.error('Please complete Step 2 (Start & End Windows) first!');
+                      } else if (!isStep3Valid) {
+                        toast.error('Please complete Step 3 (Marks & Sections) first!');
+                      }
+                    }
+                  }}
+                  className={`py-2.5 px-3 rounded-xl transition-all font-bold ${
+                    step === s.num
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : step > s.num
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        : allowed
+                          ? 'text-slate-700 hover:bg-slate-100'
+                          : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  {s.num}. {s.label}
+                </button>
+              );
+            })}
           </div>
         </Card>
 
@@ -211,23 +266,56 @@ function CreateExamContent() {
               </h3>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-700 uppercase">Exam Title *</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-700 uppercase">Exam Title *</Label>
+                  {!title.trim() && (
+                    <span className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 text-amber-500" /> Required to proceed
+                    </span>
+                  )}
+                </div>
                 <Input
                   type="text"
                   placeholder="e.g. NEET Grand Test 05 — Full Syllabus"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                  className={`rounded-xl h-11 text-xs font-medium ${
+                    !title.trim()
+                      ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
+                      : 'border-slate-200 focus:border-violet-500'
+                  }`}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 uppercase">Course *</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-700 uppercase">Course *</Label>
+                    {!courseId && (
+                      <span className="text-[11px] font-bold text-amber-600 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 text-amber-500" /> Select a course
+                      </span>
+                    )}
+                  </div>
                   <select
                     value={courseId}
-                    onChange={(e) => setCourseId(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-violet-500"
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setCourseId(selectedId);
+                      if (!selectedId) {
+                        setSelectedBatchIds([]);
+                      } else {
+                        const filtered = batches.filter(
+                          (b) => !b.courseId || b.courseId === selectedId,
+                        );
+                        setSelectedBatchIds(filtered.map((b) => b.id));
+                      }
+                    }}
+                    className={`w-full bg-white border rounded-xl h-11 px-3 text-xs font-medium focus:outline-none ${
+                      !courseId
+                        ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
+                        : 'border-slate-200 focus:border-violet-500'
+                    }`}
                   >
                     <option value="">Select Course...</option>
                     {courses.map((c) => (
@@ -243,26 +331,43 @@ function CreateExamContent() {
                     <Label className="text-xs font-bold text-slate-700 uppercase">
                       Target Batches ({selectedBatchIds.length} Selected)
                     </Label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (selectedBatchIds.length === batches.length) {
-                          setSelectedBatchIds([]);
-                        } else {
-                          setSelectedBatchIds(batches.map((b) => b.id));
-                        }
-                      }}
-                      className="text-[11px] text-violet-600 font-bold hover:underline"
-                    >
-                      {selectedBatchIds.length === batches.length ? 'Deselect All' : 'Select All'}
-                    </button>
+                    {courseId && availableBatches.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedBatchIds.length === availableBatches.length) {
+                            setSelectedBatchIds([]);
+                          } else {
+                            setSelectedBatchIds(availableBatches.map((b) => b.id));
+                          }
+                        }}
+                        className="text-[11px] text-violet-600 font-bold hover:underline"
+                      >
+                        {selectedBatchIds.length === availableBatches.length
+                          ? 'Deselect All'
+                          : 'Select All'}
+                      </button>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                    {batches.length === 0 ? (
-                      <p className="text-xs text-slate-400 text-center py-2">No batches found</p>
-                    ) : (
-                      batches.map((b) => (
+                  {!courseId ? (
+                    <div className="flex flex-col items-center justify-center p-5 bg-amber-50/40 border border-dashed border-amber-200 rounded-xl text-center min-h-[110px]">
+                      <Layers className="w-6 h-6 text-amber-500/80 mb-1" />
+                      <p className="text-xs font-bold text-slate-700">Select a Course First</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Batches linked to the chosen course will appear here.
+                      </p>
+                    </div>
+                  ) : availableBatches.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-5 bg-slate-50 border border-slate-200 rounded-xl text-center min-h-[110px]">
+                      <p className="text-xs font-bold text-slate-600">No Batches Mapped</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        No active batches found for the selected course.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                      {availableBatches.map((b) => (
                         <label
                           key={b.id}
                           className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-medium cursor-pointer transition ${
@@ -285,9 +390,9 @@ function CreateExamContent() {
                           />
                           <span>{b.name}</span>
                         </label>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -611,16 +716,35 @@ function CreateExamContent() {
 
             {step < 4 ? (
               <Button
-                onClick={() => setStep((step + 1) as any)}
-                className="rounded-xl h-11 px-6 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs"
+                onClick={() => {
+                  if (step === 1 && !isStep1Valid) {
+                    toast.error('Please enter the Exam Title and select Course & Batches before proceeding.');
+                    return;
+                  }
+                  if (step === 2 && !isStep2Valid) {
+                    toast.error('Please select both Exam Window Start and End dates before proceeding.');
+                    return;
+                  }
+                  if (step === 3 && !isStep3Valid) {
+                    toast.error('Please enter valid Total Marks and Section names before proceeding.');
+                    return;
+                  }
+                  setStep((step + 1) as any);
+                }}
+                disabled={
+                  (step === 1 && !isStep1Valid) ||
+                  (step === 2 && !isStep2Valid) ||
+                  (step === 3 && !isStep3Valid)
+                }
+                className="rounded-xl h-11 px-6 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next Step
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={createExamMutation.isPending || !title}
-                className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-2 shadow-md shadow-emerald-600/20"
+                disabled={createExamMutation.isPending || !isStep1Valid || !isStep2Valid || !isStep3Valid}
+                className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-2 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createExamMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Confirm & Save Exam (Draft)

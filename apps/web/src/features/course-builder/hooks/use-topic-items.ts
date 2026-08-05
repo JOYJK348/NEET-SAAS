@@ -6,6 +6,7 @@ import {
   createTopicItem,
   updateTopicItem,
   deleteTopicItem,
+  deleteAllTopicItems,
   reorderTopicItems,
 } from '../api/topic-items.api';
 import type { CreateTopicItemPayload, UpdateTopicItemPayload, ReorderPayload } from '../types';
@@ -46,6 +47,17 @@ export function useDeleteTopicItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteTopicItem(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['topic-items'] });
+      queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
+    },
+  });
+}
+
+export function useDeleteAllTopicItems() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (topicId: string) => deleteAllTopicItems(topicId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['topic-items'] });
       queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });

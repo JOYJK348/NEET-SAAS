@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsBoolean,
   IsInt,
+  IsArray,
   MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -48,4 +49,15 @@ export class CreateSubjectDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean = true;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  chapters?: Array<{
+    name: string;
+    code?: string;
+    description?: string;
+    plannedHours?: number;
+    estimatedSessions?: number;
+  }>;
 }

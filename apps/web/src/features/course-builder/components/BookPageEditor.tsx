@@ -13,6 +13,8 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  Plus,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -31,6 +33,7 @@ import {
   useCreateTopicItem,
   useUpdateTopicItem,
   useDeleteTopicItem,
+  useDeleteAllTopicItems,
   useReorderTopicItems,
 } from '../hooks/use-topic-items';
 import { BlockRenderer } from './blocks/BlockRenderer';
@@ -41,6 +44,9 @@ import { getInitialBlockContent, getBlockType, getMediaTypeLabel } from '../type
 interface BookPageEditorProps {
   topicId: string | null;
   topicData?: any;
+  onOpenAddBlocksTab?: () => void;
+  onAddBlock?: (blockType: any) => void;
+  addBlockTrigger?: { type: string; timestamp: number } | null;
 }
 
 // Helpers to generate title from block type
@@ -62,6 +68,17 @@ const blockTitleMap: Record<string, string> = {
 function getBlockLabelFromType(bType: string): string {
   return blockTitleMap[bType] ?? 'Block';
 }
+
+const QUICK_BLOCK_CHIPS = [
+  { type: 'KEY_CONCEPT', label: 'Key Concept', icon: '💡', color: 'bg-amber-500/10 text-amber-800 border-amber-300/80 hover:bg-amber-500/20' },
+  { type: 'FORMULA', label: 'Formula', icon: '📐', color: 'bg-cyan-500/10 text-cyan-800 border-cyan-300/80 hover:bg-cyan-500/20' },
+  { type: 'WORKED_EXAMPLE', label: 'Worked Example', icon: '🎓', color: 'bg-indigo-500/10 text-indigo-800 border-indigo-300/80 hover:bg-indigo-500/20' },
+  { type: 'PRACTICE_QUESTION', label: 'Question', icon: '❓', color: 'bg-emerald-500/10 text-emerald-800 border-emerald-300/80 hover:bg-emerald-500/20' },
+  { type: 'TEXT', label: 'Text Note', icon: '📝', color: 'bg-violet-500/10 text-violet-800 border-violet-300/80 hover:bg-violet-500/20' },
+  { type: 'VIDEO', label: 'Video', icon: '🎬', color: 'bg-rose-500/10 text-rose-800 border-rose-300/80 hover:bg-rose-500/20' },
+  { type: 'PDF', label: 'PDF Doc', icon: '📄', color: 'bg-blue-500/10 text-blue-800 border-blue-300/80 hover:bg-blue-500/20' },
+  { type: 'LINK', label: 'Link', icon: '🔗', color: 'bg-teal-500/10 text-teal-800 border-teal-300/80 hover:bg-teal-500/20' },
+];
 
 function SortableBlock({
   item,
@@ -136,81 +153,79 @@ function SortableBlock({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn('group relative', isDragging && 'opacity-50')}
+      className={cn(
+        'group relative bg-white rounded-2xl border transition-all duration-200 shadow-2xs hover:shadow-md p-1.5 sm:p-2.5',
+        isEditing ? 'border-[#7c3aed] ring-2 ring-violet-500/20' : 'border-slate-200/90 hover:border-violet-300',
+        isDragging && 'opacity-50 shadow-xl'
+      )}
     >
-      <div className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex flex-col items-center gap-0.5">
-        <div
-          {...attributes}
-          {...listeners}
-          className="flex items-center justify-center w-6 h-8 rounded-lg cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-all"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-      </div>
-      <div className="absolute -right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-0.5">
-        <div className="relative" ref={menuRef}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setMenuOpen(!menuOpen);
-            }}
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+      {/* Block Header Toolbar */}
+      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 mb-2 border-b border-slate-100/90 bg-slate-50/70 rounded-xl">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex items-center justify-center w-5 h-6 rounded cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 transition-colors"
+            title="Drag to reorder"
           >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-0.5 z-50 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onStartEdit(item);
-                }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                Edit
-              </button>
-              {onDuplicate && (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDuplicate(item);
-                  }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Duplicate
-                </button>
-              )}
-              <div className="border-t border-gray-100 my-1" />
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete(item);
-                }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </button>
-            </div>
+            <GripVertical className="h-4 w-4" />
+          </div>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 truncate">
+            {blockLabel}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={() => onStartEdit(item)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/60 transition-colors cursor-pointer"
+            >
+              <Edit3 className="h-3 w-3" />
+              <span>Edit</span>
+            </button>
+          ) : (
+            <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+              Editing...
+            </span>
           )}
+
+          {onDuplicate && (
+            <button
+              type="button"
+              onClick={() => onDuplicate(item)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Duplicate block"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onDelete(item)}
+            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            title="Delete block"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
-      <div className="text-[9px] text-gray-300 font-semibold uppercase tracking-wider mb-1 pl-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {blockLabel}
+
+      <div onClick={() => !isEditing && onStartEdit(item)} className={cn(!isEditing && 'cursor-pointer')}>
+        <BlockRenderer
+          item={item}
+          isEditing={isEditing}
+          onStartEdit={onStartEdit}
+          onSave={onSaveEdit}
+          onSaveMedia={onSaveMedia}
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
+          onCancelEdit={onCancelEdit}
+          isSaving={isSaving}
+        />
       </div>
-      <BlockRenderer
-        item={item}
-        isEditing={isEditing}
-        onStartEdit={onStartEdit}
-        onSave={onSaveEdit}
-        onSaveMedia={onSaveMedia}
-        onDelete={onDelete}
-        onDuplicate={onDuplicate}
-        onCancelEdit={onCancelEdit}
-        isSaving={isSaving}
-      />
     </div>
   );
 }
@@ -270,12 +285,29 @@ function SaveIndicator({ status }: { status: 'idle' | 'saving' | 'saved' | 'erro
   );
 }
 
-export function BookPageEditor({ topicId, topicData }: BookPageEditorProps) {
+export function BookPageEditor({
+  topicId,
+  topicData,
+  onOpenAddBlocksTab,
+  onAddBlock,
+  addBlockTrigger,
+}: BookPageEditorProps) {
   const { data: items, isLoading } = useTopicItems(topicId);
   const createMutation = useCreateTopicItem();
   const updateMutation = useUpdateTopicItem();
   const deleteMutation = useDeleteTopicItem();
+  const deleteAllMutation = useDeleteAllTopicItems();
   const reorderMutation = useReorderTopicItems();
+
+  const handleClearAllBlocks = useCallback(() => {
+    if (!topicId) return;
+    if (window.confirm('Are you sure you want to delete all blocks for this topic?')) {
+      deleteAllMutation.mutate(topicId, {
+        onSuccess: () => toast.success('All blocks deleted successfully'),
+        onError: () => toast.error('Failed to delete blocks'),
+      });
+    }
+  }, [topicId, deleteAllMutation]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -407,6 +439,19 @@ export function BookPageEditor({ topicId, topicData }: BookPageEditorProps) {
     [topicId, createMutation, startEditing],
   );
 
+  const lastProcessedTimestampRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (
+      addBlockTrigger?.type &&
+      addBlockTrigger.timestamp &&
+      addBlockTrigger.timestamp !== lastProcessedTimestampRef.current
+    ) {
+      lastProcessedTimestampRef.current = addBlockTrigger.timestamp;
+      handleAddBlock(addBlockTrigger.type as AddableBlockType);
+    }
+  }, [addBlockTrigger, handleAddBlock]);
+
   const getBlockDeleteLabel = useCallback((item: TopicItem) => {
     const bt = getBlockType(item);
     if (bt) return getBlockLabelFromType(bt);
@@ -476,50 +521,100 @@ export function BookPageEditor({ topicId, topicData }: BookPageEditorProps) {
   if (!topicId) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="relative h-full flex flex-col">
+    <div ref={containerRef} className="relative h-full flex flex-col overflow-hidden bg-slate-50/50">
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 sm:px-8 py-6 sm:py-8 pb-20 md:pb-8 space-y-6">
-            {/* Topic Header */}
-            <div className="space-y-2">
-              <h1 className="text-xl font-black text-gray-900">{topicData?.name ?? 'Topic'}</h1>
-              <div className="flex items-center gap-2">
-                {topicData?.difficultyLevel && (
-                  <span
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8 pb-24 space-y-6">
+            {/* Topic Header Hero Card */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] text-white shadow-xl shadow-violet-900/15 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+              <div className="relative z-10 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-xs">
+                    Topic Builder Workspace 📚
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {topicData?.difficultyLevel && (
+                      <span
+                        className={cn(
+                          'text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-sm',
+                          topicData.difficultyLevel === 'EASY'
+                            ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
+                            : topicData.difficultyLevel === 'MEDIUM'
+                              ? 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
+                              : 'bg-rose-500/20 text-rose-200 border border-rose-400/30',
+                        )}
+                      >
+                        {topicData.difficultyLevel}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-extrabold text-white/90 bg-white/15 px-2.5 py-0.5 rounded-md border border-white/15">
+                      {sortedItems.length} Content Blocks
+                    </span>
+                    {sortedItems.length > 0 && (
+                      <button
+                        type="button"
+                        disabled={deleteAllMutation.isPending}
+                        onClick={handleClearAllBlocks}
+                        className="text-[10px] font-extrabold text-rose-200 hover:text-white bg-rose-500/20 hover:bg-rose-500/40 px-2.5 py-0.5 rounded-md border border-rose-400/30 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Clear all blocks in this topic"
+                      >
+                        <Trash2 className="w-3 h-3" /> Clear All
+                      </button>
+                    )}
+                    <SaveIndicator status={saveStatus} />
+                  </div>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
+                  {topicData?.name ?? 'Topic Workspace'}
+                </h1>
+                {topicData?.description && (
+                  <p className="text-xs text-white/80 leading-relaxed max-w-2xl pt-0.5 font-medium">
+                    {topicData.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Add Content Block Toolbar */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-[#7c3aed]" /> Quick Add Content Block ⚡
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">Click any chip to add instantly</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {QUICK_BLOCK_CHIPS.map((chip) => (
+                  <button
+                    key={chip.type}
+                    type="button"
+                    disabled={createMutation.isPending}
+                    onClick={() => handleAddBlock(chip.type as AddableBlockType)}
                     className={cn(
-                      'text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider',
-                      topicData.difficultyLevel === 'EASY'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : topicData.difficultyLevel === 'MEDIUM'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-rose-50 text-rose-700',
+                      'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-150 shadow-2xs hover:scale-[1.02] cursor-pointer',
+                      chip.color
                     )}
                   >
-                    {topicData.difficultyLevel}
-                  </span>
-                )}
-                <SaveIndicator status={saveStatus} />
+                    <span>{chip.icon}</span>
+                    <span>{chip.label}</span>
+                  </button>
+                ))}
               </div>
-              {topicData?.description && (
-                <p className="text-sm text-gray-500 leading-relaxed">{topicData.description}</p>
-              )}
             </div>
 
             {/* Content Blocks */}
             {sortedItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mb-3">
-                  <BookOpen className="h-7 w-7 text-gray-300" />
+              <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-violet-200/80 rounded-3xl bg-white shadow-sm p-6">
+                <div className="w-14 h-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3 border border-violet-100 shadow-inner">
+                  <BookOpen className="h-7 w-7" />
                 </div>
-                <p className="text-sm font-bold text-gray-500 mb-1">This topic is empty</p>
-                <p className="text-xs text-gray-400 mb-6 max-w-xs">
-                  Start building your e-book chapter by adding content blocks
+                <h3 className="text-sm font-extrabold text-slate-900 mb-1">This topic is empty</h3>
+                <p className="text-xs text-slate-400 max-w-sm">
+                  Click any of the colorful chips above to add your first content block!
                 </p>
-                <div className="max-w-xs w-full">
-                  <AddBlockDropdown onSelect={handleAddBlock} />
-                </div>
               </div>
             ) : (
               <DndContext
@@ -546,10 +641,6 @@ export function BookPageEditor({ topicId, topicData }: BookPageEditorProps) {
                           onDuplicate={handleDuplicate}
                           isSaving={updateMutation.isPending}
                         />
-                        {/* Insertion affordance between blocks */}
-                        <div className="py-1">
-                          <AddBlockDropdown onSelect={handleAddBlock} />
-                        </div>
                       </div>
                     ))}
                   </div>

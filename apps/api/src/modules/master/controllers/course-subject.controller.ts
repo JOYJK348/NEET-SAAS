@@ -61,4 +61,13 @@ export class CourseSubjectController {
   ) {
     return this.courseSubjectService.update(id, dto, user.tenantId!, user.sub);
   }
+
+  @Post(':id/sync-master')
+  @ApiOperation({ summary: 'Sync master chapters & topics to course subject' })
+  async syncMaster(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.courseSubjectService.syncMasterChapters(id, user.tenantId!, user.sub);
+  }
 }

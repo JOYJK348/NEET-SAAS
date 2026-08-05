@@ -147,8 +147,6 @@ function EmptyState() {
 function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) {
   const [name, setName] = useState(data?.name ?? '');
   const [code, setCode] = useState(data?.code ?? '');
-  const [plannedHours, setPlannedHours] = useState(data?.plannedHours ?? 10);
-  const [estimatedSessions, setEstimatedSessions] = useState(data?.estimatedSessions ?? 8);
   const [isActive, setIsActive] = useState(data?.isActive ?? true);
 
   return (
@@ -168,22 +166,6 @@ function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }
         <FormField label="Code">
           <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="CH-001" />
         </FormField>
-        <FormField label="Planned Hours">
-          <Input
-            type="number"
-            value={plannedHours}
-            onChange={(e) => setPlannedHours(Number(e.target.value))}
-            min={0}
-          />
-        </FormField>
-        <FormField label="Estimated Sessions">
-          <Input
-            type="number"
-            value={estimatedSessions}
-            onChange={(e) => setEstimatedSessions(Number(e.target.value))}
-            min={0}
-          />
-        </FormField>
         <FormField label="Status">
           <div className="flex items-center gap-2">
             <ToggleField value={isActive} onChange={setIsActive} />
@@ -200,7 +182,7 @@ function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }
       </div>
       <div className="px-4 pb-4">
         <button
-          onClick={() => onSave?.({ name, code, plannedHours, estimatedSessions, isActive })}
+          onClick={() => onSave?.({ name, code, isActive })}
           className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-lg shadow-violet-600/20"
         >
           <Save className="h-3.5 w-3.5" />
@@ -215,8 +197,6 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
   const [name, setName] = useState(data?.name ?? '');
   const [code, setCode] = useState(data?.code ?? '');
   const [difficulty, setDifficulty] = useState(data?.difficultyLevel ?? 'MEDIUM');
-  const [plannedHours, setPlannedHours] = useState(data?.plannedHours ?? 4);
-  const [sessions, setSessions] = useState(data?.plannedSessions ?? 3);
   const [objectives, setObjectives] = useState(data?.learningObjectives ?? '');
   const [isActive, setIsActive] = useState(data?.isActive ?? true);
 
@@ -242,22 +222,6 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
               { value: 'MEDIUM', label: 'Medium' },
               { value: 'HARD', label: 'Hard' },
             ]}
-          />
-        </FormField>
-        <FormField label="Planned Hours">
-          <Input
-            type="number"
-            value={plannedHours}
-            onChange={(e) => setPlannedHours(Number(e.target.value))}
-            min={0}
-          />
-        </FormField>
-        <FormField label="Sessions">
-          <Input
-            type="number"
-            value={sessions}
-            onChange={(e) => setSessions(Number(e.target.value))}
-            min={0}
           />
         </FormField>
         <FormField label="Learning Objectives">
@@ -289,8 +253,6 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
               name,
               code,
               difficultyLevel: difficulty,
-              plannedHours,
-              plannedSessions: sessions,
               learningObjectives: objectives,
               isActive,
             })
@@ -531,15 +493,34 @@ function TopicSettingsTab({ topicData, onSave }: { topicData?: any; onSave?: (d:
   return <TopicForm data={topicData} onSave={onSave} />;
 }
 
-type TabId = 'add-blocks' | 'block-settings' | 'topic-settings';
+export type TabId = 'add-blocks' | 'block-settings' | 'topic-settings';
+
+interface PropertiesPanelProps {
+  selection: { type: string | null; id: string | null };
+  topicData?: any;
+  chapterData?: any;
+  onSave?: (data: any) => void;
+  onAddBlock?: (blockType: any) => void;
+  activeTab?: TabId;
+  onTabChange?: (tab: TabId) => void;
+}
 
 export function PropertiesPanel({
   selection,
   topicData,
   chapterData,
   onSave,
+  onAddBlock,
+  activeTab: externalTab,
+  onTabChange,
 }: PropertiesPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('add-blocks');
+  const [internalTab, setInternalTab] = useState<TabId>('add-blocks');
+  const activeTab = externalTab ?? internalTab;
+
+  const handleTabClick = (tab: TabId) => {
+    if (onTabChange) onTabChange(tab);
+    setInternalTab(tab);
+  };
 
   // If chapter selected, show chapter form directly (no tabs)
   if (selection.type === 'chapter') {
@@ -578,11 +559,11 @@ export function PropertiesPanel({
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabClick(tab.id)}
             className={cn(
               'flex items-center gap-1.5 flex-1 px-3 py-2.5 text-[10px] font-bold transition-all',
               activeTab === tab.id
-                ? 'text-violet-600 border-b-2 border-violet-600 bg-violet-50/30'
+                ? 'text-[#7c3aed] border-b-2 border-[#7c3aed] bg-violet-50/50'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
             )}
           >
@@ -592,7 +573,7 @@ export function PropertiesPanel({
         ))}
       </div>
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'add-blocks' && <AddBlocksTab />}
+        {activeTab === 'add-blocks' && <AddBlocksTab onSelectBlock={onAddBlock} />}
         {activeTab === 'block-settings' && <BlockSettingsTab topicData={topicData} />}
         {activeTab === 'topic-settings' && (
           <TopicSettingsTab topicData={topicData} onSave={onSave} />

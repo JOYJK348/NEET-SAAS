@@ -593,6 +593,7 @@ export default function TutorsPage() {
         branches={branchOptions}
         courses={courseOptions}
         batches={batchOptions}
+        subjects={subjects as any}
       />
     </DashboardLayout>
   );

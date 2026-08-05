@@ -78,6 +78,15 @@ export class TopicItemController {
     return this.topicItemService.remove(id, user.tenantId!, user.sub);
   }
 
+  @Delete('by-topic/:topicId')
+  @ApiOperation({ summary: 'Delete all topic items for a topic' })
+  removeAllByTopic(
+    @Param('topicId') topicId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.topicItemService.removeAllByTopic(topicId, user.tenantId!, user.sub);
+  }
+
   @Post('reorder')
   @ApiOperation({ summary: 'Reorder topic items within a topic' })
   reorder(

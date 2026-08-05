@@ -144,48 +144,56 @@ export function BuilderLayout({
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 h-[52px] shrink-0 bg-violet-700 flex items-center justify-between px-4 border-b border-white/10">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+      {/* Top Header Bar */}
+      <header className="sticky top-0 z-50 h-[56px] shrink-0 bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] flex items-center justify-between px-4 border-b border-white/10 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href={`/tenant-admin/courses/${courseId}`}
-            className="flex items-center justify-center w-8 h-8 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all shrink-0 border border-white/10"
+            title="Back to Course Overview"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-white font-bold text-sm truncate">{courseName}</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 text-white border border-white/20">
+                Course Builder
+              </span>
+              <h1 className="text-white font-bold text-sm truncate">{courseName}</h1>
+            </div>
             {selectedTopicName && (
-              <p className="text-[10px] text-white/40 truncate">
-                Selected Topic: {selectedTopicName}
+              <p className="text-[10px] text-white/80 truncate flex items-center gap-1">
+                <span>Selected Topic:</span>
+                <span className="font-semibold text-white">{selectedTopicName}</span>
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <div className="relative">
             <button
               onClick={() => setStatusOpen(!statusOpen)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white text-xs font-semibold transition-all border border-white/10"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-all border border-white/20 shadow-xs"
             >
               <span className="text-xs leading-none">{status.icon}</span>
               <span className="hidden sm:inline">{status.label}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-white/40" />
+              <ChevronDown className="h-3.5 w-3.5 text-white/70" />
             </button>
             {statusOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setStatusOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 z-50 w-36 bg-white rounded-xl shadow-2xl border border-gray-200 py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1.5 z-50 w-40 bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                   {Object.entries(statusConfig).map(([key, s]) => (
                     <button
                       key={key}
                       onClick={() => handleStatusChange(key)}
                       className={cn(
-                        'flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-left transition-colors',
+                        'flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-left transition-colors',
                         key === courseStatus
-                          ? 'bg-violet-50 text-violet-700'
-                          : 'text-gray-600 hover:bg-gray-50',
+                          ? 'bg-violet-50 text-[#7c3aed] font-bold'
+                          : 'text-slate-600 hover:bg-slate-50',
                       )}
                     >
                       <span className="text-xs leading-none">{s.icon}</span>
@@ -201,12 +209,12 @@ export function BuilderLayout({
             onClick={() => setPreviewOpen(!previewOpen)}
             disabled={!selectedTopicId}
             className={cn(
-              'flex items-center gap-1.5 h-8 px-3 rounded-xl border text-xs font-semibold transition-all',
+              'flex items-center gap-1.5 h-8 px-3.5 rounded-xl border text-xs font-bold transition-all',
               previewOpen
-                ? 'bg-violet-600 text-white border-violet-600'
+                ? 'bg-white text-[#7c3aed] border-white shadow-md'
                 : selectedTopicId
-                  ? 'text-white/60 hover:text-white hover:bg-white/10 border-white/20'
-                  : 'text-white/20 border-white/5 cursor-not-allowed',
+                  ? 'bg-white/15 text-white hover:bg-white/25 border-white/25'
+                  : 'text-white/40 border-white/10 cursor-not-allowed opacity-50',
             )}
             title={!selectedTopicId ? 'Select a topic to preview' : 'Preview current topic'}
           >
@@ -218,7 +226,7 @@ export function BuilderLayout({
 
           <button
             onClick={() => setPublishOpen(true)}
-            className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20"
+            className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-extrabold transition-all shadow-lg shadow-emerald-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
           >
             <Send className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Publish</span>
@@ -228,7 +236,7 @@ export function BuilderLayout({
 
       <div
         className={cn(
-          'flex flex-1 overflow-hidden relative',
+          'flex flex-1 h-[calc(100vh-56px)] overflow-hidden relative',
           previewOpen && 'opacity-50 pointer-events-none',
         )}
       >

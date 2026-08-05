@@ -20,12 +20,17 @@ import {
 } from 'lucide-react';
 
 export default function ParentAcademicsPage() {
-  const { selectedChildId, selectedChild } = useChildSwitcher();
+  const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
   const [data, setData] = useState<ParentAcademicsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!selectedChildId) return;
+    if (!selectedChildId) {
+      if (!isSwitcherLoading) {
+        setIsLoading(false);
+      }
+      return;
+    }
     let isMounted = true;
     setIsLoading(true);
     parentPortalService
@@ -42,9 +47,9 @@ export default function ParentAcademicsPage() {
     return () => {
       isMounted = false;
     };
-  }, [selectedChildId]);
+  }, [selectedChildId, isSwitcherLoading]);
 
-  if (isLoading) {
+  if (isLoading || isSwitcherLoading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#FAFAFA]">
         <LoadingSpinner size="lg" />
@@ -59,40 +64,34 @@ export default function ParentAcademicsPage() {
 
   const studentName = selectedChild?.name || 'Student';
   const courseDisplay =
-    selectedChild?.courseName || enrolledCourses[0]?.name || 'NEET Medical Regular';
+    selectedChild?.courseName || (enrolledCourses[0]?.name) || 'Not Enrolled';
   const batchDisplay =
-    selectedChild?.batchName || enrolledBatches[0]?.name || 'NEET Classroom Batch';
-  const admissionNoDisplay = selectedChild?.admissionNumber || '2026-000001';
+    selectedChild?.batchName || (enrolledBatches[0]?.name) || 'Unassigned';
+  const admissionNoDisplay =
+    selectedChild?.admissionNumber && selectedChild.admissionNumber !== 'N/A'
+      ? selectedChild.admissionNumber
+      : 'N/A';
 
   return (
     <div className="space-y-6 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Welcome Progress Banner - Exact Student Dashboard Header Gradient */}
-      <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Parent Dashboard
-            </span>
+      {/* Welcome Progress Hero Banner - Clean Theme */}
+      <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-md shadow-violet-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md border border-white/20 text-white">
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            <span>Academic Performance & Enrollment Profile</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            {studentName}&apos;s Progress Dashboard 👋
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2.5">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
-              Course: {courseDisplay}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
-              Batch: {batchDisplay}
-            </span>
-          </div>
-        </div>
 
-        <div className="bg-white/10 backdrop-blur-sm px-4 py-3 rounded-xl border border-white/20 text-right shrink-0">
-          <p className="text-[10px] uppercase font-bold text-violet-200 tracking-wider">
-            Admission No
-          </p>
-          <p className="font-mono font-bold text-lg text-white">{admissionNoDisplay}</p>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-xl shadow-inner border border-white/30 shrink-0 text-white">
+              {studentName.charAt(0)}
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                {studentName}&apos;s Academic Overview
+              </h1>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -107,7 +106,7 @@ export default function ParentAcademicsPage() {
               Attendance
             </p>
             <p className="text-2xl font-bold text-[#111827] mt-0.5">
-              {academicSummary?.overallAttendance || '100%'}
+              {academicSummary?.overallAttendance ? academicSummary.overallAttendance : 'N/A'}
             </p>
           </div>
         </Card>
@@ -121,7 +120,7 @@ export default function ParentAcademicsPage() {
               Avg Marks
             </p>
             <p className="text-2xl font-bold text-[#111827] mt-0.5">
-              {academicSummary?.averageMarks || '360'}
+              {academicSummary?.completedExams && academicSummary.completedExams > 0 ? academicSummary.averageMarks : 'N/A'}
             </p>
           </div>
         </Card>
@@ -135,7 +134,7 @@ export default function ParentAcademicsPage() {
               Exams Taken
             </p>
             <p className="text-2xl font-bold text-[#111827] mt-0.5">
-              {academicSummary?.completedExams ?? 1}
+              {academicSummary?.completedExams ?? 0}
             </p>
           </div>
         </Card>
@@ -149,7 +148,7 @@ export default function ParentAcademicsPage() {
               Current Rank
             </p>
             <p className="text-2xl font-bold text-[#111827] mt-0.5">
-              #{academicSummary?.currentRank ?? 1}
+              {academicSummary?.currentRank && academicSummary.currentRank > 0 ? `#${academicSummary.currentRank}` : 'N/A'}
             </p>
           </div>
         </Card>
@@ -270,16 +269,8 @@ export default function ParentAcademicsPage() {
                 </div>
               ))
             ) : (
-              <div className="p-3.5 rounded-xl bg-violet-50/50 border border-violet-100 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <h4 className="font-bold text-sm text-[#111827]">{courseDisplay}</h4>
-                  <span className="text-xs font-mono text-violet-700 font-semibold block">
-                    Code: NEET-REG
-                  </span>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Active Enrollment
-                </span>
+              <div className="p-4 text-center rounded-xl bg-slate-50 text-slate-400 text-xs font-medium border border-slate-100">
+                No active course enrollment found
               </div>
             )}
           </div>
@@ -302,7 +293,7 @@ export default function ParentAcademicsPage() {
               </div>
             </div>
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
-              {enrolledBatches.length || 1} Batch(es)
+              {enrolledBatches.length} Batch(es)
             </span>
           </div>
 
@@ -331,17 +322,8 @@ export default function ParentAcademicsPage() {
                 </div>
               ))
             ) : (
-              <div className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <h4 className="font-bold text-sm text-[#111827]">{batchDisplay}</h4>
-                  <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                    <Building2 className="h-3 w-3 text-indigo-500" />
-                    Centre: Main Campus
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded-full">
-                  Enrolled
-                </span>
+              <div className="p-4 text-center rounded-xl bg-slate-50 text-slate-400 text-xs font-medium border border-slate-100">
+                No batch assigned yet
               </div>
             )}
           </div>

@@ -16,6 +16,11 @@ const ADMIN_ROLES = new Set([
   'ADMIN',
   'ADMINISTRATOR',
   'OWNER',
+  'ACADEMIC_ADMIN',
+  'BRANCH_ADMIN',
+  'INSTITUTE_ADMIN',
+  'SYSTEM_ADMIN',
+  'TENANT_ADMINISTRATOR',
 ]);
 
 @Injectable()
@@ -44,7 +49,13 @@ export class RolesGuard implements CanActivate {
     }
 
     const tokenRole = (user.roleCode || '').toUpperCase();
-    if (ADMIN_ROLES.has(tokenRole)) {
+    if (
+      ADMIN_ROLES.has(tokenRole) ||
+      tokenRole.startsWith('TENANT_ADMIN') ||
+      tokenRole.startsWith('SUPER_ADMIN') ||
+      tokenRole.includes('ADMIN') ||
+      tokenRole.includes('OWNER')
+    ) {
       return true;
     }
 
@@ -78,8 +89,13 @@ export class RolesGuard implements CanActivate {
     });
 
     // Any Admin role grants full access across endpoints
-    const isAdmin = Array.from(userRoleCodes).some((code) =>
-      ADMIN_ROLES.has(code),
+    const isAdmin = Array.from(userRoleCodes).some(
+      (code) =>
+        ADMIN_ROLES.has(code) ||
+        code.startsWith('TENANT_ADMIN') ||
+        code.startsWith('SUPER_ADMIN') ||
+        code.includes('ADMIN') ||
+        code.includes('OWNER'),
     );
 
     if (isAdmin) {

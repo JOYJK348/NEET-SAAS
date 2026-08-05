@@ -26,6 +26,10 @@ export function deleteTopicItem(id: string): Promise<void> {
   return api.delete(`/learning/topic-items/${id}`);
 }
 
+export function deleteAllTopicItems(topicId: string): Promise<void> {
+  return api.delete(`/learning/topic-items/by-topic/${topicId}`);
+}
+
 export function reorderTopicItems(topicId: string, payload: ReorderPayload): Promise<void> {
   return api.post('/learning/topic-items/reorder', {
     topicId,

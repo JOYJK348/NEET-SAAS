@@ -278,13 +278,13 @@ function SessionDetailContent() {
   const handleMarkAllPresent = useCallback(() => {
     const allPresent: Record<string, string> = {};
     const att = sessionDetails?.attendance;
-    if (att?.records && att.records.length > 0) {
-      for (const r of att.records) {
-        allPresent[r.admission?.id ?? r.id] = 'PRESENT';
-      }
-    } else if (att?.enrolledStudents && att.enrolledStudents.length > 0) {
+    if (att?.enrolledStudents && att.enrolledStudents.length > 0) {
       for (const s of att.enrolledStudents) {
         allPresent[s.admissionId] = 'PRESENT';
+      }
+    } else if (att?.records && att.records.length > 0) {
+      for (const r of att.records) {
+        allPresent[r.admission?.id ?? r.id] = 'PRESENT';
       }
     }
     setAttendanceMap(allPresent);
@@ -625,12 +625,33 @@ function SessionDetailContent() {
           </CardHeader>
 
           <CardContent className="p-0 space-y-1.5">
-            {attendance.totalStudents === 0 ? (
-              <EmptyState
-                icon={<Users className="h-8 w-8 text-gray-400" />}
-                title="No students enrolled"
-                description="This batch doesn't have any enrolled students to mark attendance for."
-              />
+            {attendance.enrolledStudents && attendance.enrolledStudents.length > 0 ? (
+              attendance.enrolledStudents.map((enrolled) => {
+                const fullName = `${enrolled.firstName} ${enrolled.lastName}`.trim() || 'Student';
+                const initials = `${enrolled.firstName.charAt(0) || 'S'}${enrolled.lastName.charAt(0) || ''}`;
+                
+                // Check if existing record exists for this student
+                const existingRecord = attendance.records.find(
+                  (r) => r.admission?.id === enrolled.admissionId,
+                );
+
+                const currentStatus = attendanceMap[enrolled.admissionId] ?? existingRecord?.attendanceStatus ?? '';
+
+                return (
+                  <AttendanceMarkRow
+                    key={enrolled.admissionId}
+                    studentName={fullName}
+                    initials={initials}
+                    admissionNumber={enrolled.admissionNumber}
+                    currentStatus={currentStatus}
+                    lateMinutes={lateMinutesMap[enrolled.admissionId] ?? existingRecord?.lateMinutes ?? undefined}
+                    onStatusChange={(status) => handleStatusChange(enrolled.admissionId, status)}
+                    onLateMinutesChange={(minutes) =>
+                      handleLateMinutesChange(enrolled.admissionId, minutes)
+                    }
+                  />
+                );
+              })
             ) : attendance.records.length > 0 ? (
               attendance.records.map((record) => {
                 const admissionId = record.admission?.id ?? record.id;
@@ -654,28 +675,13 @@ function SessionDetailContent() {
                   />
                 );
               })
-            ) : attendance.enrolledStudents?.length > 0 ? (
-              attendance.enrolledStudents.map((enrolled) => {
-                const fullName = `${enrolled.firstName} ${enrolled.lastName}`;
-                const initials = `${enrolled.firstName.charAt(0)}${enrolled.lastName.charAt(0)}`;
-                const currentStatus = attendanceMap[enrolled.admissionId] ?? '';
-
-                return (
-                  <AttendanceMarkRow
-                    key={enrolled.admissionId}
-                    studentName={fullName}
-                    initials={initials}
-                    admissionNumber={enrolled.admissionNumber}
-                    currentStatus={currentStatus}
-                    lateMinutes={lateMinutesMap[enrolled.admissionId] ?? undefined}
-                    onStatusChange={(status) => handleStatusChange(enrolled.admissionId, status)}
-                    onLateMinutesChange={(minutes) =>
-                      handleLateMinutesChange(enrolled.admissionId, minutes)
-                    }
-                  />
-                );
-              })
-            ) : null}
+            ) : (
+              <EmptyState
+                icon={<Users className="h-8 w-8 text-gray-400" />}
+                title="No students enrolled"
+                description="This batch doesn't have any enrolled students to mark attendance for."
+              />
+            )}
 
             {/* Success banner */}
             {markResult && markResult.successCount > 0 && (
@@ -766,8 +772,8 @@ function SessionDetailContent() {
                     >
                       {record.attendanceStatus}
                     </span>
-                    {record.lateMinutes && (
-                      <span className="text-[9px] text-muted-foreground">
+                    {record.attendanceStatus === 'LATE' && Boolean(record.lateMinutes) && (
+                      <span className="text-[9px] text-muted-foreground font-semibold">
                         ({record.lateMinutes} min)
                       </span>
                     )}

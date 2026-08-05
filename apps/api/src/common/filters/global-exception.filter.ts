@@ -6,8 +6,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { RequestContextService } from '../middleware/request-context.service';
+
+const SILENT_NOT_FOUND_PATHS = new Set(['/', '/favicon.ico', '/favicon.png', '/robots.txt']);
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -19,6 +21,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
     const context = this.requestContextService.get();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -104,11 +107,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Log the detailed exception trace using Pino logger
-    this.logger.error(
-      `[Exception] ${status} - ${code} - ${message}`,
-      exception instanceof Error ? exception.stack : JSON.stringify(exception),
-    );
+    // Skip noisy 404 logs for root and browser auto-requests
+    const isSilent404 =
+      status === HttpStatus.NOT_FOUND &&
+      SILENT_NOT_FOUND_PATHS.has(request?.path || '');
+
+    if (isSilent404) {
+      this.logger.debug(`[Skipped] ${status} - ${request?.path || 'unknown'}`);
+    } else {
+      // Log the detailed exception trace using Pino logger
+      this.logger.error(
+        `[Exception] ${status} - ${code} - ${message} - Path: ${request?.method} ${request?.originalUrl || request?.url}`,
+        exception instanceof Error ? exception.stack : JSON.stringify(exception),
+      );
+    }
 
     response.status(status).json({
       success: false,

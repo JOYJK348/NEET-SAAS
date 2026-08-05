@@ -47,18 +47,23 @@ export class ChapterService {
       throw new NotFoundException('Course subject mapping not found');
     }
 
-    // Check code uniqueness within parent courseSubject scope
+    const cleanName = dto.name.trim();
+
+    // Check code or name uniqueness within parent courseSubject scope
     const existing = await this.prisma.chapters.findFirst({
       where: {
         tenantId,
         courseSubjectId: dto.courseSubjectId,
-        code: normalizedCode,
         deletedAt: null,
+        OR: [
+          { name: { equals: cleanName, mode: 'insensitive' } },
+          ...(normalizedCode ? [{ code: normalizedCode }] : []),
+        ],
       },
     });
     if (existing) {
       throw new ConflictException(
-        `Chapter with code "${dto.code}" already exists for this subject`,
+        `Chapter "${cleanName}" already exists for this subject`,
       );
     }
 
@@ -92,7 +97,10 @@ export class ChapterService {
     return paginate({
       model: this.prisma.chapters,
       where,
-      orderBy: buildPrismaOrderBy(query.sortBy, query.sortOrder),
+      orderBy: buildPrismaOrderBy(
+        query.sortBy || 'displayOrder',
+        query.sortOrder || 'asc',
+      ),
       query,
       tenantId,
     });
@@ -136,6 +144,24 @@ export class ChapterService {
       if (existing) {
         throw new ConflictException(
           `Chapter with code "${dto.code}" already exists for this subject`,
+        );
+      }
+    }
+
+    if (dto.name) {
+      const cleanName = dto.name.trim();
+      const existingName = await this.prisma.chapters.findFirst({
+        where: {
+          tenantId,
+          courseSubjectId: existingChapter.courseSubjectId,
+          name: { equals: cleanName, mode: 'insensitive' },
+          deletedAt: null,
+          id: { not: id },
+        },
+      });
+      if (existingName) {
+        throw new ConflictException(
+          `Chapter "${cleanName}" already exists for this subject`,
         );
       }
     }

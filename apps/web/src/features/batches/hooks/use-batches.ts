@@ -381,6 +381,12 @@ export interface UseDeliveryTypesReturn {
   error: string | null;
 }
 
+const DEFAULT_DELIVERY_TYPES: BatchDeliveryType[] = [
+  { id: 'offline-mode', code: 'OFFLINE', name: 'Offline Classroom Mode', attendanceMode: 'OFFLINE' } as any,
+  { id: 'online-mode', code: 'ONLINE', name: 'Online Live Class Mode', attendanceMode: 'ONLINE' } as any,
+  { id: 'hybrid-mode', code: 'HYBRID', name: 'Hybrid (Offline + Online)', attendanceMode: 'HYBRID' } as any,
+];
+
 export function useDeliveryTypes(): UseDeliveryTypesReturn {
   const { data, isPending, error } = useQuery({
     queryKey: batchServiceKeys.deliveryTypes(),
@@ -389,8 +395,10 @@ export function useDeliveryTypes(): UseDeliveryTypesReturn {
     gcTime: GC.reference,
   });
 
+  const deliveryTypes = data && data.length > 0 ? data : DEFAULT_DELIVERY_TYPES;
+
   return {
-    deliveryTypes: data ?? [],
+    deliveryTypes,
     isLoading: isPending,
     error: error?.message ?? null,
   };

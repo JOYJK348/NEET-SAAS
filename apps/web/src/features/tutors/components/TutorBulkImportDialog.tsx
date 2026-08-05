@@ -27,8 +27,10 @@ import {
   CheckCircle,
   Loader2,
   X,
+  BookOpen,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useCourseSubjects } from '@/features/master-data/hooks/use-course-subjects';
 
 // For multi-select checkmarks styling
 import { Check } from 'lucide-react';
@@ -49,6 +51,7 @@ interface TutorBulkImportDialogProps {
   branches: Array<{ id: string; name: string }>;
   courses: Array<{ id: string; name: string }>;
   batches: Array<{ id: string; name: string; courseId?: string; branchId?: string }>;
+  subjects: Array<{ id: string; name: string; code?: string }>;
 }
 
 export function TutorBulkImportDialog({
@@ -60,12 +63,14 @@ export function TutorBulkImportDialog({
   branches,
   courses,
   batches,
+  subjects,
 }: TutorBulkImportDialogProps) {
   // Dropdown states
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedBranch, setSelectedBranch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [createLogin, setCreateLogin] = useState('true');
 
   const [file, setFile] = useState<File | null>(null);
@@ -75,6 +80,16 @@ export function TutorBulkImportDialog({
   const [activeTab, setActiveTab] = useState<'summary' | 'logs'>('summary');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch course-specific subjects
+  const { data: courseSubjectsData = [] } = useCourseSubjects(selectedCourse, {
+    enabled: !!selectedCourse,
+  });
+  const courseSubjectIds = courseSubjectsData.map((cs: any) => cs.subjectId);
+  const filteredSubjects =
+    selectedCourse && courseSubjectIds.length > 0
+      ? subjects.filter((s) => courseSubjectIds.includes(s.id))
+      : subjects;
+
   // Filtered lists
   const filteredCourses = selectedBranch ? courses : [];
   const filteredBatches = batches.filter(
@@ -82,6 +97,12 @@ export function TutorBulkImportDialog({
       (!selectedCourse || b.courseId === selectedCourse) &&
       (!selectedBranch || b.branchId === selectedBranch)
   );
+
+  const toggleSubjectSelection = (subjectId: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId]
+    );
+  };
 
   const handleDownloadTemplate = async () => {
     try {
@@ -129,6 +150,7 @@ export function TutorBulkImportDialog({
     if (selectedYear) queryParams.append('academicYearId', selectedYear);
     if (selectedBranch) queryParams.append('branchId', selectedBranch);
     if (selectedBatches.length > 0) queryParams.append('batchIds', selectedBatches.join(','));
+    if (selectedSubjects.length > 0) queryParams.append('subjectIds', selectedSubjects.join(','));
     queryParams.append('createLogin', createLogin);
 
     try {
@@ -169,6 +191,7 @@ export function TutorBulkImportDialog({
     setSelectedBranch('');
     setSelectedCourse('');
     setSelectedBatches([]);
+    setSelectedSubjects([]);
     setCreateLogin('true');
     setActiveTab('summary');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -242,6 +265,7 @@ export function TutorBulkImportDialog({
                   onValueChange={(val) => {
                     setSelectedCourse(val);
                     setSelectedBatches([]);
+                    setSelectedSubjects([]);
                   }}
                   disabled={!selectedBranch}
                 >
@@ -301,6 +325,52 @@ export function TutorBulkImportDialog({
                       );
                     })}
                   </div>
+                )}
+              </div>
+
+              {/* Subject Multi-Select */}
+              <div className="space-y-1.5 col-span-1 sm:col-span-2">
+                <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 text-purple-500" />
+                  Subjects (Select Multiple)
+                </Label>
+                {!selectedCourse ? (
+                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                    Select a course first to view available subjects.
+                  </p>
+                ) : filteredSubjects.length === 0 ? (
+                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                    No subjects found for the selected course.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-white border border-gray-200 rounded-xl p-3 max-h-36 overflow-y-auto">
+                    {filteredSubjects.map((s) => {
+                      const isSelected = selectedSubjects.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => toggleSubjectSelection(s.id)}
+                          className={`flex items-center justify-between text-left text-xs px-3 py-2.5 rounded-lg border transition-all ${
+                            isSelected
+                              ? 'border-purple-500 bg-purple-50/40 text-purple-900 font-bold'
+                              : 'border-gray-100 hover:border-gray-300 bg-gray-50/10 text-gray-700'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <span className="block truncate font-semibold">{s.name}</span>
+                            {s.code && <span className="text-[10px] text-gray-400 font-mono">{s.code}</span>}
+                          </div>
+                          {isSelected && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0 ml-1.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {selectedSubjects.length > 0 && (
+                  <p className="text-[10px] text-purple-600 font-semibold">
+                    {selectedSubjects.length} subject{selectedSubjects.length > 1 ? 's' : ''} selected
+                  </p>
                 )}
               </div>
             </div>

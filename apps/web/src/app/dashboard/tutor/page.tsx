@@ -115,132 +115,98 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
     }
   };
 
-  const subjectColors: Record<string, { card: string; accent: string; text: string }> = {
-    Physics: {
-      card: 'border-l-blue-500 bg-gradient-to-r from-blue-50/60 via-white to-white',
-      accent: 'bg-blue-600',
-      text: 'text-blue-900',
-    },
-    Chemistry: {
-      card: 'border-l-emerald-500 bg-gradient-to-r from-emerald-50/60 via-white to-white',
-      accent: 'bg-emerald-600',
-      text: 'text-emerald-900',
-    },
-    Biology: {
-      card: 'border-l-amber-500 bg-gradient-to-r from-amber-50/60 via-white to-white',
-      accent: 'bg-amber-600',
-      text: 'text-amber-900',
-    },
-    Botany: {
-      card: 'border-l-green-500 bg-gradient-to-r from-green-50/60 via-white to-white',
-      accent: 'bg-green-600',
-      text: 'text-green-900',
-    },
-    Zoology: {
-      card: 'border-l-pink-500 bg-gradient-to-r from-pink-50/60 via-white to-white',
-      accent: 'bg-pink-600',
-      text: 'text-pink-900',
-    },
-  };
-
-  const subjectName = session.subject?.name ?? '';
-  const style = Object.entries(subjectColors).find(([k]) =>
-    subjectName.toLowerCase().includes(k.toLowerCase()),
-  )?.[1] ?? {
-    card: 'border-l-violet-500 bg-white',
-    accent: 'bg-violet-600',
-    text: 'text-slate-900',
-  };
+  const subjectName = session.subject?.name ?? 'Subject Session';
+  const initial = subjectName.charAt(0).toUpperCase();
 
   return (
     <div
       className={cn(
-        'group relative rounded-2xl border-l-[4px] p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 transition-all duration-200 border border-slate-200/80 shadow-2xs hover:shadow-md',
-        isLive
-          ? 'border-emerald-300 bg-gradient-to-r from-emerald-50/90 via-teal-50/40 to-white shadow-md ring-2 ring-emerald-400/30'
-          : isCancelled
-            ? 'border-rose-200 bg-rose-50/40 opacity-75'
-            : style.card,
+        'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3.5 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
+        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
+        isCancelled && 'border-rose-200 bg-rose-50/30 opacity-80',
       )}
     >
-      {/* Upper Info Row (Mobile-Friendly Stack) */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0">
-        {/* Time & Date Header Pill */}
-        <div className="flex items-center justify-between sm:flex-col sm:justify-center p-2 sm:p-2.5 rounded-xl bg-slate-100/90 border border-slate-200/80 shrink-0 sm:min-w-[105px]">
-          <span className="text-xs font-mono font-extrabold text-slate-800">
-            {formatTime(session.startsAt, session.endsAt)}
-          </span>
-          {showDate && session.date && (
-            <span className="text-[10px] text-violet-700 bg-violet-50 sm:bg-transparent px-2 py-0.5 sm:p-0 rounded-md font-extrabold sm:mt-0.5">
-              {new Date(session.date).toLocaleDateString('en-IN', {
-                weekday: 'short',
-                day: '2-digit',
-                month: 'short',
-              })}
-            </span>
-          )}
+      {/* Card Header: Subject Icon Avatar, Title & Live Status Badge */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <h4 className="font-black text-slate-900 text-sm sm:text-base leading-snug truncate">
+              {subjectName}
+            </h4>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-bold font-mono">
+              <Clock className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+              <span>{formatTime(session.startsAt, session.endsAt)}</span>
+              {showDate && session.date && (
+                <span className="text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md font-extrabold ml-1">
+                  {new Date(session.date).toLocaleDateString('en-IN', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                  })}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Details Box */}
-        <div className="space-y-1.5 min-w-0 flex-1">
-          <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-            <h4 className="text-sm font-extrabold text-slate-900 truncate group-hover:text-violet-700 transition-colors">
-              {session.subject?.name || 'Subject Session'}
-            </h4>
-            <LiveStatusBadge status={session.liveStatus || (isLive ? 'LIVE_NOW' : 'UPCOMING')} />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-            {session.batch && (
-              <span className="inline-flex items-center gap-1 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200/80 shadow-2xs font-mono text-[10px]">
-                <Layers className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                <span className="truncate max-w-[120px] sm:max-w-none">{session.batch.name}</span>
-              </span>
-            )}
-            {session.branch && (
-              <span className="inline-flex items-center gap-1 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200/80 text-[10px]">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{session.branch.name}</span>
-              </span>
-            )}
-            <DeliveryBadge mode={session.deliveryMode || 'ONLINE'} />
-          </div>
-
-          {isCancelled && session.cancelledReason && (
-            <p className="text-xs text-rose-600 italic font-medium pt-1">
-              Reason: {session.cancelledReason}
-            </p>
-          )}
+        <div className="shrink-0">
+          <LiveStatusBadge status={session.liveStatus || (isLive ? 'LIVE_NOW' : 'UPCOMING')} />
         </div>
       </div>
 
-      {/* Footer Action Buttons (Full width on Mobile) */}
-      <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0 w-full sm:w-auto">
-        {!isCancelled && (
+      {/* Meta Tags Row: Batch Name, Branch, Delivery Mode */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {session.batch && (
+          <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
+            <Layers className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span className="truncate max-w-[150px] sm:max-w-none">{session.batch.name}</span>
+          </span>
+        )}
+        {session.branch && (
+          <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-600">
+            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="truncate">{session.branch.name}</span>
+          </span>
+        )}
+        <DeliveryBadge mode={session.deliveryMode || 'ONLINE'} />
+      </div>
+
+      {isCancelled && session.cancelledReason && (
+        <p className="text-xs text-rose-600 italic font-semibold p-2.5 rounded-xl bg-rose-50 border border-rose-200">
+          Cancelled: {session.cancelledReason}
+        </p>
+      )}
+
+      {/* Action Buttons: Stacked on Mobile, Inline on Desktop */}
+      {!isCancelled && (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-slate-100">
           <Link
             href={`/dashboard/tutor/sessions/${session.id}`}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 transition-colors shadow-2xs"
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-black text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 transition-all text-center"
           >
-            <UserCheck className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <UserCheck className="w-4 h-4 text-violet-600 shrink-0" />
             <span>Mark Attendance</span>
           </Link>
-        )}
 
-        {!isCancelled && (isLive || session.canJoin) && (
-          <button
-            onClick={handleJoinClass}
-            className={cn(
-              'flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all shadow-md active:scale-95',
-              isLive
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/15',
-            )}
-          >
-            <Video className="w-3.5 h-3.5 shrink-0" />
-            <span>{isLive ? 'Launch Class 🚀' : 'Join Link 🚀'}</span>
-          </button>
-        )}
-      </div>
+          {(isLive || session.canJoin) && (
+            <button
+              onClick={handleJoinClass}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs active:scale-98 text-center',
+                isLive
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/15',
+              )}
+            >
+              <Video className="w-4 h-4 shrink-0" />
+              <span>{isLive ? 'Launch Class 🚀' : 'Join Class 🚀'}</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

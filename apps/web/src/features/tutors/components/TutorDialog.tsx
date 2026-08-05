@@ -179,6 +179,8 @@ export function TutorDialog({
       if (loadedKeyRef.current !== key) {
         loadedKeyRef.current = key;
 
+        const autoEmpCode = `FAC-${Math.floor(1000 + Math.random() * 9000)}`;
+
         setSelectedSubjectIds([]);
         setSelectedBranchIds(defaultBranch ? [defaultBranch] : []);
         setSelectedBatchIds([]);
@@ -187,7 +189,7 @@ export function TutorDialog({
           lastName: '',
           email: '',
           phone: '',
-          employeeCode: '',
+          employeeCode: autoEmpCode,
           designation: '',
           qualification: '',
           specialization: '',
@@ -425,14 +427,21 @@ export function TutorDialog({
           <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1.5">
-                <Label htmlFor="employeeCode" className="text-xs font-semibold">
-                  Employee Code
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="employeeCode" className="text-xs font-semibold">
+                    Employee Code
+                  </Label>
+                  <span className="text-[10px] font-extrabold text-violet-700 bg-violet-50 px-2 py-0.5 rounded border border-violet-200/80">
+                    Auto-Generated (Disabled)
+                  </span>
+                </div>
                 <Input
                   id="employeeCode"
-                  placeholder="e.g. FAC-001"
+                  readOnly
+                  disabled
+                  placeholder="e.g. FAC-1001"
                   {...register('employeeCode')}
-                  className="h-10 sm:h-11 rounded-xl"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-100 dark:bg-slate-800/80 cursor-not-allowed font-mono font-bold text-slate-600 dark:text-slate-300 border-slate-200 select-none"
                 />
               </div>
 

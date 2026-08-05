@@ -67,8 +67,9 @@ export class BatchService {
           'Active Academic Year not found or does not belong to the tenant',
         );
     }
+    let validDeliveryTypeId = deliveryTypeId;
     if (deliveryTypeId) {
-      const dt = await this.prisma.batchDeliveryTypes.findFirst({
+      let dt = await this.prisma.batchDeliveryTypes.findFirst({
         where: {
           id: deliveryTypeId,
           tenantId,
@@ -76,12 +77,68 @@ export class BatchService {
           isActive: true,
         },
       });
-      if (!dt)
-        throw new NotFoundException(
-          'Active Batch Delivery Type not found or does not belong to the tenant',
-        );
+      if (!dt) {
+        dt = await this.prisma.batchDeliveryTypes.findFirst({
+          where: {
+            tenantId,
+            deletedAt: null,
+            isActive: true,
+          },
+        });
+      }
+      if (!dt) {
+        const defaults = [
+          {
+            code: 'OFFLINE',
+            name: 'Offline Classroom Mode',
+            attendanceMode: 'CLASSROOM',
+            displayOrder: 1,
+          },
+          {
+            code: 'ONLINE',
+            name: 'Online Live Class Mode',
+            attendanceMode: 'ONLINE',
+            displayOrder: 2,
+          },
+          {
+            code: 'HYBRID',
+            name: 'Hybrid (Offline + Online)',
+            attendanceMode: 'HYBRID',
+            displayOrder: 3,
+          },
+        ];
+        const now = new Date();
+        const startTime = new Date(now.setHours(9, 0, 0, 0));
+        const endTime = new Date(now.setHours(17, 0, 0, 0));
+
+        for (const d of defaults) {
+          const createdDt = await this.prisma.batchDeliveryTypes.create({
+            data: {
+              tenantId,
+              code: d.code,
+              name: d.name,
+              description: `${d.name} for batches`,
+              attendanceMode: d.attendanceMode as any,
+              defaultMaxStudents: 60,
+              defaultStartTime: startTime,
+              defaultEndTime: endTime,
+              colorCode: '#7c3aed',
+              iconName: 'Layers',
+              displayOrder: d.displayOrder,
+              isDefault: d.code === 'OFFLINE',
+              isActive: true,
+              createdBy: 'system',
+              updatedBy: 'system',
+            },
+          });
+          if (!dt) dt = createdDt;
+        }
+      }
+      if (dt) {
+        validDeliveryTypeId = dt.id;
+      }
     }
-    return academicYear;
+    return { academicYear, deliveryTypeId: validDeliveryTypeId };
   }
 
   async create(dto: CreateBatchDto, tenantId: string, userId: string) {
@@ -92,13 +149,18 @@ export class BatchService {
       throw new BadRequestException('Batch start date must be before end date');
     }
 
-    const academicYear = await this.validateReferences(
+    const refResult = await this.validateReferences(
       tenantId,
       dto.branchId,
       dto.courseId,
       dto.academicYearId,
       dto.deliveryTypeId,
     );
+
+    if (refResult.deliveryTypeId) {
+      dto.deliveryTypeId = refResult.deliveryTypeId;
+    }
+    const academicYear = refResult.academicYear;
 
     // Get Course details to check dates & duration constraints
     const course = await this.prisma.courses.findFirst({
@@ -278,13 +340,17 @@ export class BatchService {
     }
 
     // Validate active references
-    const academicYear = await this.validateReferences(
+    const refResult = await this.validateReferences(
       tenantId,
       dto.branchId,
       dto.courseId,
       dto.academicYearId,
       dto.deliveryTypeId,
     );
+    if (refResult.deliveryTypeId) {
+      dto.deliveryTypeId = refResult.deliveryTypeId;
+    }
+    const academicYear = refResult.academicYear;
 
     // If academicYear is not fetched (optional in update), fetch it to verify date containment bounds
     const targetAY =

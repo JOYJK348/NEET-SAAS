@@ -74,40 +74,27 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
   );
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* ── Signature Violet Gradient Hero Banner (Tenant Admin Theme Match) ── */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <button
-            onClick={() => router.push('/dashboard/tutor/exams')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/25 text-white text-xs font-bold transition-all shadow-sm mb-3"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-200" />
-            <span>← Back to Assigned Exams Queue</span>
-          </button>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Student Submissions Workload
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            {buckets.title} 📄
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] w-full">
+      {/* ── Top Header with Back Button ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+        <Link
+          href="/dashboard/tutor/exams"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:text-slate-900 hover:bg-slate-100 shadow-2xs transition shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 text-violet-600" />
+          <span>Back to Exams</span>
+        </Link>
+
+        <div className="text-left sm:text-center flex-1 space-y-0.5">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
+            {buckets.title}
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
-            Total Submissions: <span className="font-bold text-white">{buckets.totalCount}</span> |
-            Evaluate student OMR answer sheets and submit section marks.
+          <p className="text-xs font-bold text-slate-500">
+            Student submissions workload & OMR marking queue ({buckets.totalCount} Total Papers)
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-center">
-            <p className="text-[10px] font-bold text-violet-200 uppercase tracking-wider">
-              Total Papers
-            </p>
-            <p className="text-lg font-black text-white">{buckets.totalCount}</p>
-          </div>
-        </div>
+        <div className="hidden sm:block w-32 shrink-0" />
       </div>
 
       {/* ── Search & Bucket Category Filter Bar (Modern 2-Row / Mobile Native) ──── */}
@@ -137,12 +124,12 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           </div>
         </div>
 
-        {/* Bottom Row: Category Filter Tabs with Custom Scrollbar Hide */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 rounded-xl border border-slate-200/80 text-xs font-bold overflow-x-auto no-scrollbar scroll-smooth">
+        {/* Bottom Row: Category Filter Tabs (Responsive Flex-Wrap / No Horizontal Scrollbar) */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/70 rounded-xl border border-slate-200/80 text-xs font-bold">
           <button
             type="button"
             onClick={() => setActiveTab('PENDING')}
-            className={`px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'PENDING'
                 ? 'bg-amber-500 text-white shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -155,7 +142,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           <button
             type="button"
             onClick={() => setActiveTab('OVERDUE')}
-            className={`px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'OVERDUE'
                 ? 'bg-rose-600 text-white shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -168,7 +155,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           <button
             type="button"
             onClick={() => setActiveTab('RETURNED')}
-            className={`px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'RETURNED'
                 ? 'bg-violet-600 text-white shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -181,7 +168,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           <button
             type="button"
             onClick={() => setActiveTab('COMPLETED')}
-            className={`px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'COMPLETED'
                 ? 'bg-emerald-600 text-white shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -194,7 +181,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           <button
             type="button"
             onClick={() => setActiveTab('ABSENT')}
-            className={`px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === 'ABSENT'
                 ? 'bg-slate-700 text-white shadow-xs font-extrabold'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -215,61 +202,75 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
         </Card>
       ) : (
         <>
-          {/* Mobile-First View: Responsive Cards List (block sm:hidden - No Horizontal Scroll) */}
+          {/* Mobile-First View: Premium Cards List (block sm:hidden - Matching Courses & Batches) */}
           <div className="block sm:hidden space-y-3">
             {filteredList.map((sub) => (
-              <Card
+              <div
                 key={sub.id}
-                className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs space-y-3"
+                className="bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3 shadow-2xs"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 text-sm leading-snug">
-                      {sub.studentName}
-                    </h4>
-                    <p className="text-[11px] text-slate-400 font-mono font-semibold mt-0.5">
-                      ID: {sub.studentAdmissionId}
-                    </p>
+                {/* Header: Student Name & Avatar */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black text-xs shrink-0">
+                      {sub.studentName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-black text-slate-900 text-sm leading-snug truncate">
+                        {sub.studentName}
+                      </h4>
+                      <p className="text-[10px] font-bold text-slate-400 font-mono">
+                        ADM ID: {sub.studentAdmissionId}
+                      </p>
+                    </div>
                   </div>
-                  <div>
+
+                  <div className="shrink-0">
                     {sub.evaluationStatus === 'RE_EVALUATION' ? (
-                      <span className="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 text-[9px] font-extrabold rounded-lg">
+                      <span className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-black rounded-xl">
                         RETURNED
                       </span>
                     ) : sub.evaluationStatus === 'COMPLETED' ? (
-                      <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-extrabold rounded-lg">
+                      <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black rounded-xl">
                         COMPLETED
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-extrabold rounded-lg">
+                      <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black rounded-xl">
                         PENDING
                       </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium pt-2 border-t border-slate-100">
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <Clock className="w-3.5 h-3.5" />
+                {/* Body Details: Date & Time */}
+                <div className="flex items-center justify-between text-xs text-slate-500 font-semibold p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase">Submitted At:</span>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                    <Clock className="w-3.5 h-3.5 text-violet-500" />
                     <span>
                       {sub.submittedAt
                         ? new Date(sub.submittedAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
+                            day: '2-digit',
+                            month: 'short',
                           })
                         : 'N/A'}
                     </span>
                   </div>
+                </div>
 
+                {/* Full Width Action Button (Courses / Batches Match) */}
+                <div className="pt-0.5">
                   <Link
                     href={`/dashboard/tutor/exams/${examId}/evaluate/${sub.id}`}
-                    className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1 shadow-2xs shadow-violet-600/20"
+                    className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs shadow-violet-600/20 text-center"
                   >
                     <span>Evaluate Paper</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
 

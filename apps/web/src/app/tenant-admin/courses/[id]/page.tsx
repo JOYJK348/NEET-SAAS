@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCourse } from '@/features/master-data/hooks/use-courses';
@@ -39,7 +40,7 @@ import {
   topicKeys,
   topicsApi,
 } from '@/features/master-data/hooks/use-topics';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   BookOpen,
@@ -52,8 +53,12 @@ import {
   ChevronDown,
   Folder,
   Search,
+  Sparkles,
+  Loader2,
+  Eye,
 } from 'lucide-react';
 import { BranchCoursesMappingSection } from '@/features/master-data/components/courses/BranchCoursesMappingSection';
+import { BlockRenderer } from '@/features/course-builder/components/blocks/BlockRenderer';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -133,13 +138,21 @@ export default function CourseDetailPage() {
   // Lazy-fetched list query queries
   const { data: chaptersRes, isLoading: chaptersLoading } = useChapters({
     courseSubjectId: selectedCourseSubjectId || undefined,
+    limit: 1000,
   });
-  const chapters = chaptersRes?.data || [];
+  const chapters = useMemo(() => {
+    const list = (chaptersRes?.data as any[]) || [];
+    return [...list].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  }, [chaptersRes?.data]);
 
   const { data: topicsRes, isLoading: topicsLoading } = useTopics({
     chapterId: selectedChapterId || undefined,
+    limit: 1000,
   });
-  const topics = topicsRes?.data || [];
+  const topics = useMemo(() => {
+    const list = (topicsRes?.data as any[]) || [];
+    return [...list].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+  }, [topicsRes?.data]);
 
   // Dialog toggles
   const [assignOpen, setAssignOpen] = useState(false);
@@ -147,6 +160,23 @@ export default function CourseDetailPage() {
   const [topicOpen, setTopicOpen] = useState(false);
   const [editingChapter, setEditingChapter] = useState<any | null>(null);
   const [editingTopic, setEditingTopic] = useState<any | null>(null);
+  const [previewTopic, setPreviewTopic] = useState<any | null>(null);
+  const [isSyncingMaster, setIsSyncingMaster] = useState(false);
+
+  const handleSyncMasterChapters = async () => {
+    if (!selectedCourseSubjectId) return;
+    setIsSyncingMaster(true);
+    try {
+      const res = await api.post<any>(`/master/course-subjects/${selectedCourseSubjectId}/sync-master`);
+      toast.success(`Synchronized master chapters! (${res?.count || 0} new chapters added)`);
+      void queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId: selectedCourseSubjectId }) });
+      void queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
+    } catch {
+      toast.error('Failed to sync master chapters');
+    } finally {
+      setIsSyncingMaster(false);
+    }
+  };
 
   // Master subjects list for dropdown selection
   const { data: subjectsRes } = useSubjects({ limit: 100 });
@@ -870,9 +900,65 @@ export default function CourseDetailPage() {
               {/* ── LEVEL 2: Chapters Catalog Grid ── */}
               {curriculumLevel === 'chapters' && selectedCourseSubjectId && (
                 <>
+                  {/* Master Sync Info Banner */}
+                  <div className="mb-4 p-3.5 rounded-2xl bg-violet-50/80 border border-violet-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-violet-900">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
+                      <span>
+                        <strong>Master Chapters Synchronized:</strong> Chapters & Topics are auto-populated from Master Subjects.
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        type="button"
+                        disabled={isSyncingMaster}
+                        onClick={handleSyncMasterChapters}
+                        className="font-bold text-violet-700 hover:text-violet-900 bg-violet-100 hover:bg-violet-200 px-3 py-1 rounded-lg text-[11px] transition-colors flex items-center gap-1"
+                      >
+                        {isSyncingMaster ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Sync Master Chapters 🔄'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => router.push('/tenant-admin/subjects')}
+                        className="font-bold text-violet-700 hover:text-violet-900 underline text-[11px]"
+                      >
+                        Subjects Library 📚
+                      </button>
+                    </div>
+                  </div>
+
                   {chaptersLoading ? (
                     <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-xs text-gray-400 uppercase tracking-widest font-bold animate-pulse">
                       Loading chapters...
+                    </div>
+                  ) : chapters.length === 0 ? (
+                    <div className="p-12 text-center border border-dashed rounded-3xl border-slate-200 bg-white space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 mx-auto flex items-center justify-center border border-violet-100">
+                        <BookOpen className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900">No chapters mapped to this subject yet</h3>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        If chapters were created in the Master Subjects Library, click below to sync them into this course program.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 pt-2">
+                        <Button
+                          type="button"
+                          disabled={isSyncingMaster}
+                          onClick={handleSyncMasterChapters}
+                          className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl gap-1.5"
+                        >
+                          {isSyncingMaster ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          Sync Master Chapters 🔄
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => router.push('/tenant-admin/subjects')}
+                          className="text-xs font-bold text-violet-700 border-violet-200 bg-violet-50 hover:bg-violet-100 rounded-xl"
+                        >
+                          Manage Subjects Library 📚
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -985,17 +1071,6 @@ export default function CourseDetailPage() {
                           </div>
                         </div>
                       ))}
-
-                      {/* Add Chapter Action Card */}
-                      <button
-                        type="button"
-                        onClick={() => setChapterOpen(true)}
-                        className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
-                        style={{ minHeight: '220px' }}
-                      >
-                        <Plus className="h-6 w-6 mb-2" />
-                        Add New Chapter
-                      </button>
                     </div>
                   )}
                 </>
@@ -1112,46 +1187,38 @@ export default function CourseDetailPage() {
                                 </span>
                               </div>
 
-                              {/* Action Buttons: View and Edit */}
+                              {/* Action Buttons: View Content Blocks, Edit, and Open Builder */}
                               <div className="flex items-center gap-2">
-                                <button
+                                <Button
                                   type="button"
-                                  onClick={() => {
-                                    setEditingTopic(tp);
-                                    setTopicOpen(true);
-                                  }}
-                                  className="text-xs font-bold text-violet-600 hover:text-violet-850 hover:underline"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    router.push(
+                                      `/tenant-admin/courses/${courseId}/topics/${tp.id}/preview`,
+                                    )
+                                  }
+                                  className="text-[11px] font-bold text-violet-700 border-violet-200 bg-violet-50 hover:bg-violet-100 rounded-xl h-7 px-2.5 gap-1"
                                 >
-                                  Edit
-                                </button>
-                                <button
+                                  <Eye className="w-3.5 h-3.5 text-violet-600" /> View Blocks 👁️
+                                </Button>
+                                <Button
                                   type="button"
+                                  size="sm"
                                   onClick={() => {
-                                    // Redirect to course builder with specific topicId query param
                                     router.push(
                                       `/tenant-admin/courses/${courseId}/builder?topicId=${tp.id}`,
                                     );
                                   }}
-                                  className="text-xs font-bold text-gray-500 hover:text-gray-700 hover:underline"
+                                  className="text-[11px] font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl h-7 px-2.5 gap-1"
                                 >
-                                  View
-                                </button>
+                                  <Sparkles className="w-3 h-3 text-amber-300" /> Builder 🚀
+                                </Button>
                               </div>
                             </div>
                           </div>
                         </div>
                       ))}
-
-                      {/* Add Topic Action Card */}
-                      <button
-                        type="button"
-                        onClick={() => setTopicOpen(true)}
-                        className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-[#7c3aed]/20 hover:border-[#7c3aed]/60 bg-white text-xs font-bold text-[#7c3aed] transition-all hover:bg-[#7c3aed]/3 shadow-3xs"
-                        style={{ minHeight: '200px' }}
-                      >
-                        <Plus className="h-6 w-6 mb-2" />
-                        Add New Topic
-                      </button>
                     </div>
                   )}
                 </>
@@ -1519,7 +1586,122 @@ export default function CourseDetailPage() {
           onSubmit={handleSubjectFormSubmit}
           isSubmitting={createSubjectMutation.isPending || updateSubjectMutation.isPending}
         />
+
+        {/* Modal 5: Topic Content Blocks Live Preview */}
+        <TopicContentPreviewModal
+          topic={previewTopic}
+          courseId={courseId}
+          onClose={() => setPreviewTopic(null)}
+        />
       </div>
     </DashboardLayout>
+  );
+}
+
+function TopicContentPreviewModal({
+  topic,
+  courseId,
+  onClose,
+}: {
+  topic: any;
+  courseId: string;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  const { data: topicItems = [], isLoading } = useQuery({
+    queryKey: ['topic-items-preview', topic?.id],
+    queryFn: async () => {
+      if (!topic?.id) return [];
+      const res = await api.get<any>(`/learning/topic-items?topicId=${topic.id}`);
+      return Array.isArray(res) ? res : res?.data || [];
+    },
+    enabled: !!topic?.id,
+  });
+
+  if (!topic) return null;
+
+  return (
+    <Dialog open={!!topic} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-6 rounded-3xl border border-slate-200 shadow-2xl bg-white">
+        <DialogHeader className="border-b border-slate-100 pb-4 shrink-0 flex flex-row items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <DialogTitle className="text-lg font-black text-slate-900">
+                {topic?.name}
+              </DialogTitle>
+              <span className="text-[10px] font-mono font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-md">
+                {topic?.code}
+              </span>
+            </div>
+            <DialogDescription className="text-xs text-slate-400 mt-0.5">
+              Inspecting content blocks and learning materials for this topic
+            </DialogDescription>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                onClose();
+                router.push(`/tenant-admin/courses/${courseId}/builder?topicId=${topic?.id}`);
+              }}
+              className="gap-1.5 bg-[#7c3aed] hover:bg-violet-700 text-white font-bold rounded-xl text-xs px-3 shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Edit in Course Builder 🚀
+            </Button>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+          {isLoading ? (
+            <div className="py-12 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2 animate-pulse">
+              <Loader2 className="w-4 h-4 animate-spin text-violet-600" />
+              Loading content blocks...
+            </div>
+          ) : topicItems.length === 0 ? (
+            <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-700 mx-auto flex items-center justify-center font-bold">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-800">No content blocks added yet</h4>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Add Key Concepts, Formulas, Worked Examples, Practice Questions, Videos, or PDFs in Course Builder!
+              </p>
+              <Button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  router.push(`/tenant-admin/courses/${courseId}/builder?topicId=${topic?.id}`);
+                }}
+                className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Open Course Builder 🚀
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <span>Total Content Blocks: {topicItems.length}</span>
+                <span className="text-[10px] text-violet-600 font-mono">Live Interactive Preview</span>
+              </div>
+              {topicItems.map((item: any) => (
+                <BlockRenderer
+                  key={item.id}
+                  item={item}
+                  isEditing={false}
+                  onStartEdit={() => {}}
+                  onSave={() => {}}
+                  onDelete={() => {}}
+                  onCancelEdit={() => {}}
+                  isSaving={false}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

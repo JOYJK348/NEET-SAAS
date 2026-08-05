@@ -122,6 +122,13 @@ export interface CreateSubjectInput {
   subjectType?: string;
   displayOrder?: number;
   isActive?: boolean;
+  chapters?: Array<{
+    name: string;
+    code?: string;
+    description?: string;
+    plannedHours?: number;
+    estimatedSessions?: number;
+  }>;
 }
 
 export interface UpdateSubjectInput extends Partial<CreateSubjectInput> {
@@ -154,6 +161,8 @@ export interface CreateCourseSubjectInput {
   passingMarks?: number;
   credits?: number;
   plannedHours?: number;
+  selectedChapterIds?: string[];
+  selectedTopicIds?: string[];
 }
 
 export interface Chapter {

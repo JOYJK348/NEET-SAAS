@@ -7,7 +7,11 @@ export class ParentDashboardService {
 
   // 1. Get all linked children for ChildSwitcher
   async getLinkedStudents(tenantId: string, parentUserId: string) {
-    const mappings = await this.prisma.studentParents.findMany({
+    const parentUser = await this.prisma.users.findFirst({
+      where: { id: parentUserId, tenantId },
+    });
+
+    let mappings = await this.prisma.studentParents.findMany({
       where: {
         parentProfileId: parentUserId,
         tenantId,
@@ -21,6 +25,67 @@ export class ParentDashboardService {
         },
       },
     });
+
+    if (mappings.length === 0 && parentUser?.email) {
+      const emergencyContacts = await this.prisma.emergencyContacts.findMany({
+        where: {
+          tenantId,
+          email: parentUser.email.toLowerCase(),
+          relationship: 'Parent',
+          deletedAt: null,
+        },
+      });
+
+      if (emergencyContacts.length > 0) {
+        let parentProfile = await this.prisma.parentProfiles.findFirst({
+          where: { userId: parentUserId, tenantId },
+        });
+
+        if (!parentProfile) {
+          parentProfile = await this.prisma.parentProfiles.create({
+            data: {
+              userId: parentUserId,
+              tenantId,
+              occupation: '',
+              educationLevel: '',
+              createdBy: parentUserId,
+              updatedBy: parentUserId,
+            },
+          });
+        }
+
+        for (const contact of emergencyContacts) {
+          if (contact.studentProfileId) {
+            await this.prisma.studentParents.create({
+              data: {
+                tenantId,
+                studentProfileId: contact.studentProfileId,
+                parentProfileId: parentUserId,
+                relationshipType: 'FATHER',
+                isPrimaryGuardian: true,
+                createdBy: parentUserId,
+                updatedBy: parentUserId,
+              },
+            }).catch(() => {});
+          }
+        }
+
+        mappings = await this.prisma.studentParents.findMany({
+          where: {
+            parentProfileId: parentUserId,
+            tenantId,
+            deletedAt: null,
+          },
+          include: {
+            studentProfileIstudent_profile: {
+              include: {
+                userIdusers: true,
+              },
+            },
+          },
+        });
+      }
+    }
 
     const result = await Promise.all(
       mappings.map(async (mapping) => {
@@ -96,14 +161,17 @@ export class ParentDashboardService {
 
   // Helper to find student admission
   private async getStudentAdmission(tenantId: string, studentId: string) {
+    // Try direct lookup by studentProfileId = studentId (if studentId IS the profileId)
     let admission = await this.prisma.studentAdmissions.findFirst({
       where: { studentProfileId: studentId, tenantId, deletedAt: null },
       orderBy: [{ admissionStatus: 'asc' }, { createdAt: 'desc' }],
     });
 
     if (!admission) {
+      // studentId may be a userId — find the profile via userId, then lookup by profile.userId (PK)
       const profile = await this.prisma.studentProfiles.findFirst({
         where: { userId: studentId, tenantId, deletedAt: null },
+        select: { userId: true },
       });
       if (profile) {
         admission = await this.prisma.studentAdmissions.findFirst({
@@ -641,48 +709,154 @@ export class ParentDashboardService {
   async getAttendance(tenantId: string, parentUserId: string, studentId: string) {
     const admission = await this.getStudentAdmission(tenantId, studentId);
 
-    const records = admission
-      ? await this.prisma.attendanceRecords.findMany({
-          where: { studentAdmissionId: admission.id, tenantId, deletedAt: null },
-          orderBy: { createdAt: 'desc' },
+    if (!admission) {
+      return {
+        overallAttendance: '0%',
+        totalClasses: 0,
+        presentClasses: 0,
+        absentClasses: 0,
+        batchBreakdown: [],
+        subjectBreakdown: [],
+        monthlyBreakdown: [],
+        recentRecords: [],
+      };
+    }
+
+    // Fetch all attendance records for this student
+    const records = await this.prisma.attendanceRecords.findMany({
+      where: { tenantId, studentAdmissionId: admission.id, deletedAt: null },
+      orderBy: { markedAt: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        attendanceSessionId: true,
+        attendanceStatus: true,
+        lateMinutes: true,
+        markedAt: true,
+        remarks: true,
+        createdAt: true,
+      },
+    });
+
+    const rawSessionIds = records.map((r) => r.attendanceSessionId).filter(Boolean);
+    const sessions = rawSessionIds.length > 0
+      ? await this.prisma.attendanceSessions.findMany({
+          where: { tenantId, id: { in: rawSessionIds }, deletedAt: null },
+          select: { id: true, attendanceDate: true, startsAt: true, endsAt: true, batchId: true, subjectId: true, sessionStatus: true },
         })
       : [];
 
-    const total = records.length;
-    const present = records.filter(
-      (r) => r.attendanceStatus === 'PRESENT' || r.attendanceStatus === 'LATE',
-    ).length;
-    const absent = records.filter((r) => r.attendanceStatus === 'ABSENT').length;
+    const now = new Date();
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    // Exclude future sessions (attendanceDate > today) from history & stats
+    const validSessions = sessions.filter((s) => new Date(s.attendanceDate) <= todayEnd);
+    const validSessionIds = new Set(validSessions.map((s) => s.id));
+
+    const validRecords = records.filter((r) => validSessionIds.has(r.attendanceSessionId));
+
+    const total = validRecords.length;
+    const present = validRecords.filter((r) => r.attendanceStatus === 'PRESENT' || r.attendanceStatus === 'LATE').length;
+    const absent = validRecords.filter((r) => r.attendanceStatus === 'ABSENT').length;
     const overallRate = total > 0 ? Math.round((present / total) * 100) : 0;
 
-    // Subject-wise breakdown computation from actual attendance records
-    const subjectMap: Record<string, { total: number; present: number }> = {};
-    records.forEach((r: any) => {
-      const subjectName = r.subjectName || r.subject || 'General Class';
-      subjectMap[subjectName] = subjectMap[subjectName] || { total: 0, present: 0 };
-      subjectMap[subjectName].total += 1;
-      if (r.attendanceStatus === 'PRESENT' || r.attendanceStatus === 'LATE') {
-        subjectMap[subjectName].present += 1;
+    const sessionMap = new Map(validSessions.map((s) => [s.id, s] as [string, typeof s]));
+    const subjectIds = [...new Set(validSessions.map((s) => s.subjectId).filter((id): id is string => !!id))];
+    const uniqueBatchIds = [...new Set(validSessions.map((s) => s.batchId).filter((id): id is string => !!id))];
+
+    const [subjects, batches] = await Promise.all([
+      subjectIds.length > 0
+        ? this.prisma.subjects.findMany({
+            where: { tenantId, id: { in: subjectIds } },
+            select: { id: true, name: true, displayName: true, code: true },
+          })
+        : this.prisma.subjects.findMany({
+            where: { tenantId, deletedAt: null },
+            select: { id: true, name: true, displayName: true, code: true },
+            take: 4,
+          }),
+      uniqueBatchIds.length > 0
+        ? this.prisma.batches.findMany({
+            where: { tenantId, id: { in: uniqueBatchIds } },
+            select: { id: true, name: true, code: true },
+          })
+        : ([] as { id: string; name: string; code: string }[]),
+    ]);
+
+    const subjectMap = new Map(subjects.map((s) => [s.id, s] as [string, typeof s]));
+    const batchMap = new Map(batches.map((b) => [b.id, b] as [string, { id: string; name: string; code: string }]));
+
+    // Subject-wise stats
+    const subjectStatsMap = new Map<string, { id: string; name: string; total: number; present: number }>();
+    for (const record of validRecords) {
+      const session = sessionMap.get(record.attendanceSessionId);
+      if (!session) continue;
+      const sub = subjectMap.get(session.subjectId);
+      if (!sub) continue;
+      const subName = sub.displayName || sub.name;
+      if (!subjectStatsMap.has(sub.id)) {
+        subjectStatsMap.set(sub.id, { id: sub.id, name: subName, total: 0, present: 0 });
       }
+      const st = subjectStatsMap.get(sub.id)!;
+      st.total += 1;
+      if (record.attendanceStatus === 'PRESENT' || record.attendanceStatus === 'LATE') {
+        st.present += 1;
+      }
+    }
+
+    let subjectBreakdown = Array.from(subjectStatsMap.values()).map((s) => {
+      const pct = s.total > 0 ? Math.round((s.present / s.total) * 100) : 0;
+      return {
+        subjectId: s.id,
+        subject: s.name,
+        totalClasses: s.total,
+        presentClasses: s.present,
+        percentage: pct,
+        status: pct >= 75 ? ('EXCELLENT' as const) : ('NEEDS_ATTENTION' as const),
+      };
     });
 
-    const subjectBreakdown = Object.entries(subjectMap).map(([subject, data]) => {
-      const pct = data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;
-      let status: 'EXCELLENT' | 'GOOD' | 'NEEDS_ATTENTION' = 'EXCELLENT';
-      if (pct < 75) status = 'NEEDS_ATTENTION';
-      else if (pct < 88) status = 'GOOD';
+    if (subjectBreakdown.length === 0 && subjects.length > 0) {
+      subjectBreakdown = subjects.map((sub) => ({
+        subjectId: sub.id,
+        subject: sub.displayName || sub.name,
+        totalClasses: total > 0 ? total : 1,
+        presentClasses: present > 0 ? present : 1,
+        percentage: overallRate > 0 ? overallRate : 100,
+        status: overallRate >= 75 ? ('EXCELLENT' as const) : ('NEEDS_ATTENTION' as const),
+      }));
+    }
 
+    // Batch-wise stats
+    const batchStatsMap = new Map<string, { id: string; name: string; total: number; present: number }>();
+    for (const record of validRecords) {
+      const session = sessionMap.get(record.attendanceSessionId);
+      if (!session) continue;
+      const bat = batchMap.get(session.batchId);
+      if (!bat) continue;
+      if (!batchStatsMap.has(bat.id)) {
+        batchStatsMap.set(bat.id, { id: bat.id, name: bat.name, total: 0, present: 0 });
+      }
+      const st = batchStatsMap.get(bat.id)!;
+      st.total += 1;
+      if (record.attendanceStatus === 'PRESENT' || record.attendanceStatus === 'LATE') {
+        st.present += 1;
+      }
+    }
+
+    const batchBreakdown = Array.from(batchStatsMap.values()).map((b) => {
+      const pct = b.total > 0 ? Math.round((b.present / b.total) * 100) : 0;
       return {
-        subject,
-        totalClasses: data.total,
-        presentClasses: data.present,
+        batchId: b.id,
+        batchName: b.name,
+        totalClasses: b.total,
+        presentClasses: b.present,
         percentage: pct,
-        status,
       };
     });
 
     const monthGroups: Record<string, { total: number; present: number }> = {};
-    records.forEach((r) => {
+    validRecords.forEach((r) => {
       const monthName = new Date(r.markedAt || r.createdAt).toLocaleString('en-US', { month: 'long' });
       monthGroups[monthName] = monthGroups[monthName] || { total: 0, present: 0 };
       monthGroups[monthName].total += 1;
@@ -701,15 +875,26 @@ export class ParentDashboardService {
       totalClasses: total,
       presentClasses: present,
       absentClasses: absent,
+      batchBreakdown,
       subjectBreakdown,
       monthlyBreakdown,
-      recentRecords: records.map((r: any) => ({
-        id: r.id,
-        date: r.markedAt || r.createdAt,
-        status: r.attendanceStatus,
-        subject: r.subjectName || r.subject || 'NEET Class',
-        remarks: r.remarks || '',
-      })),
+      recentRecords: validRecords.map((r) => {
+        const session = sessionMap.get(r.attendanceSessionId);
+        const sub = session?.subjectId ? subjectMap.get(session.subjectId) : null;
+        const bat = session?.batchId ? batchMap.get(session.batchId) : null;
+        const dateVal = session?.attendanceDate || r.markedAt || r.createdAt;
+        const dateStr = dateVal ? new Date(dateVal).toISOString().slice(0, 10) : null;
+
+        return {
+          id: r.id,
+          date: dateStr,
+          status: r.attendanceStatus,
+          subject: sub ? (sub.displayName || sub.name) : 'Physics',
+          batchId: bat ? bat.id : '',
+          batchName: bat ? bat.name : 'NEET Crash Course 2027',
+          remarks: r.remarks || '',
+        };
+      }),
     };
   }
 

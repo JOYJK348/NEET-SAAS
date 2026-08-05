@@ -26,6 +26,7 @@ import {
   Clock,
   Video,
   FileText,
+  Bookmark,
   Shield,
   Sliders,
   BarChart,
@@ -109,6 +110,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       href: '/dashboard/tutor/timetable',
       icon: Clock,
       iconColor: 'text-rose-500',
+    },
+    {
+      name: 'Attendance',
+      href: '/dashboard/tutor/timetable/attendance',
+      icon: ClipboardCheck,
+      iconColor: 'text-teal-500',
     },
     {
       name: 'My Courses',
@@ -247,16 +254,16 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Organization',
       items: [
         {
-          name: 'Branches',
-          href: '/tenant-admin/branches',
-          icon: Building2,
-          iconColor: 'text-indigo-500',
-        },
-        {
           name: 'Academic Years',
           href: '/tenant-admin/academic-years',
           icon: Calendar,
           iconColor: 'text-pink-500',
+        },
+        {
+          name: 'Branches',
+          href: '/tenant-admin/branches',
+          icon: Building2,
+          iconColor: 'text-indigo-500',
         },
         {
           name: 'People',
@@ -275,7 +282,13 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Academics',
       items: [
         {
-          name: 'Curriculum',
+          name: 'Subjects Library',
+          href: '/tenant-admin/subjects',
+          icon: Bookmark,
+          iconColor: 'text-violet-500',
+        },
+        {
+          name: 'Curriculum Mapping',
           href: '/tenant-admin/curriculum',
           icon: FolderTree,
           iconColor: 'text-emerald-500',
@@ -475,8 +488,10 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-6 overflow-y-auto" aria-label="Main navigation">
           {(() => {
-            const currentRole = user?.roleCode || (user as any)?.role || '';
-            if (currentRole === 'PLATFORM_ADMIN') {
+            const rawRole = user?.roleCode || (user as any)?.role || '';
+            const currentRole = rawRole.toUpperCase();
+
+            if (currentRole === 'SUPER_ADMIN' || currentRole === 'PLATFORM_ADMIN') {
               return (
                 <div className="space-y-1">
                   {platformNavigation.map((item) => {
@@ -512,7 +527,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                     const isActive =
                       item.href === '/dashboard/tutor'
                         ? pathname === '/dashboard/tutor'
-                        : pathname === item.href || pathname.startsWith(item.href + '/');
+                        : item.href === '/dashboard/tutor/timetable'
+                          ? pathname === '/dashboard/tutor/timetable'
+                          : pathname === item.href || pathname.startsWith(item.href + '/');
                     const Icon = item.icon;
                     return (
                       <Link
@@ -614,6 +631,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 </div>
               );
             }
+
+            // TENANT_ADMIN / SYSTEM_ADMIN / Default Tenant Menu
             return (
               <div className="space-y-6">
                 {tenantNavigation.map((group, groupIdx) => {

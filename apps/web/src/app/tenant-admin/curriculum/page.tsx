@@ -22,6 +22,9 @@ import {
   X,
   FileText,
   GraduationCap,
+  Upload,
+  FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -162,18 +165,10 @@ function CurriculumContent() {
   const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
 
-  const { data: subjectsData, isLoading: subjectsLoading } = useSubjects(
-    {
-      page: subjectPage,
-      limit: 10,
-      search: activeTab === 'subjects' && search ? search : undefined,
-      sortBy: subjectSortBy,
-      sortOrder: subjectSortOrder,
-    },
-    {
-      enabled: activeTab === 'subjects',
-    },
-  );
+  const { data: subjectsData, isLoading: subjectsLoading } = useSubjects({
+    page: 1,
+    limit: 10,
+  });
 
   const createSubjectMutation = useCreateSubject();
   const updateSubjectMutation = useUpdateSubject();
@@ -229,6 +224,90 @@ function CurriculumContent() {
     }
   };
 
+  const handleManageSubjectSyllabus = async (subjectId: string) => {
+    try {
+      toast.loading('Opening Master Syllabus Builder...', { id: 'master-syllabus' });
+      const cs = await api.get<any>(`/master/subjects/${subjectId}/course-subject`);
+      toast.dismiss('master-syllabus');
+      if (cs?.courseId) {
+        router.push(`/tenant-admin/courses/${cs.courseId}/builder`);
+      }
+    } catch {
+      toast.dismiss('master-syllabus');
+      toast.error('Failed to open master syllabus builder');
+    }
+  };
+
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [bulkImportText, setBulkImportText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleBulkImportSubmit = async () => {
+    if (!bulkImportText.trim()) {
+      toast.error('Please paste or enter subjects data');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      let subjectsPayload: any[] = [];
+      try {
+        const parsed = JSON.parse(bulkImportText);
+        if (Array.isArray(parsed)) subjectsPayload = parsed;
+      } catch {
+        const lines = bulkImportText.split('\n');
+        let currentSubject: { name: string; chapters: Array<{ name: string }> } | null = null;
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (!line) continue;
+
+          if (line.toLowerCase().startsWith('subject:') || line.endsWith(':')) {
+            const subjName = line.replace(/^(subject:|\s*)/i, '').replace(/:$/, '').trim();
+            if (subjName) {
+              currentSubject = { name: subjName, chapters: [] };
+              subjectsPayload.push(currentSubject);
+            }
+          } else if (line.startsWith('-') || line.startsWith('*') || /^[0-9]+\./.test(line)) {
+            const chName = line.replace(/^[-*0-9.]+\s*/, '').trim();
+            if (chName) {
+              if (!currentSubject) {
+                currentSubject = { name: 'General Subject', chapters: [] };
+                subjectsPayload.push(currentSubject);
+              }
+              currentSubject.chapters.push({ name: chName });
+            }
+          } else {
+            if (!currentSubject) {
+              currentSubject = { name: line, chapters: [] };
+              subjectsPayload.push(currentSubject);
+            } else {
+              currentSubject.chapters.push({ name: line });
+            }
+          }
+        }
+      }
+
+      if (subjectsPayload.length === 0) {
+        toast.error('Could not parse any valid subjects from input');
+        setIsImporting(false);
+        return;
+      }
+
+      const res = await api.post<any>('/master/subjects/bulk', subjectsPayload);
+      toast.success(
+        `Successfully imported ${res.count || subjectsPayload.length} Master Subjects with chapters!`,
+      );
+      setBulkImportOpen(false);
+      setBulkImportText('');
+      window.location.reload();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || 'Failed to bulk import subjects';
+      toast.error(errorMsg);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (courseDialogOpen) {
     return (
       <DashboardLayout>
@@ -278,21 +357,18 @@ function CurriculumContent() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-            {activeTab === 'courses' ? (
-              <Button
-                onClick={handleCreateCourse}
-                className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
-              >
-                <Plus className="h-4 w-4 text-violet-600" /> Add Course Program
-              </Button>
-            ) : (
-              <Button
-                onClick={handleCreateSubject}
-                className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
-              >
-                <Plus className="h-4 w-4 text-violet-600" /> Add Master Subject
-              </Button>
-            )}
+            <Button
+              onClick={() => router.push('/tenant-admin/subjects')}
+              className="w-full sm:w-auto gap-2 bg-white/20 hover:bg-white/30 text-white font-bold border border-white/20 shadow-xs shrink-0 rounded-xl text-xs"
+            >
+              <Bookmark className="h-4 w-4 text-violet-100" /> Go to Subjects Library 📚
+            </Button>
+            <Button
+              onClick={handleCreateCourse}
+              className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
+            >
+              <Plus className="h-4 w-4 text-violet-600" /> Add Course Program
+            </Button>
           </div>
         </div>
 
@@ -303,7 +379,7 @@ function CurriculumContent() {
               <BookOpen className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider">
                 Total Course Programs
               </p>
               <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
@@ -317,7 +393,7 @@ function CurriculumContent() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+              <p className="text-[10px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider">
                 Active Courses
               </p>
               <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
@@ -326,106 +402,49 @@ function CurriculumContent() {
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 shrink-0">
+          <Card
+            onClick={() => router.push('/tenant-admin/subjects')}
+            className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50 group"
+          >
+            <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0 group-hover:bg-violet-600 group-hover:text-white transition-colors">
               <Bookmark className="h-5 w-5" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
-                Master Subjects
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] sm:text-xs font-bold text-[#6B7280] uppercase tracking-wider flex items-center justify-between">
+                Master Subjects <ChevronRight className="w-3.5 h-3.5 text-violet-500" />
               </p>
               <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
-                {totalSubjectsCount}
+                {totalSubjectsCount} Subjects
               </p>
             </div>
           </Card>
         </div>
 
-        {/* Toolbar: Navigation Tabs + Search Input */}
+        {/* Toolbar & Guidance Strip */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-3.5 sm:p-4 shadow-xs space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
-            {/* Tab Selector Buttons */}
-            <div className="flex items-center bg-slate-100/80 p-1 rounded-xl gap-1 shrink-0">
-              <button
-                onClick={() => {
-                  setActiveTab('courses');
-                  setSearch('');
-                }}
-                className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all',
-                  activeTab === 'courses'
-                    ? 'bg-white text-violet-700 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900',
-                )}
-              >
-                <BookOpen className="h-4 w-4" />
-                <span>1. Courses Curriculum</span>
-                <span className="text-[10px] font-black bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md">
-                  {courses.length}
-                </span>
+          <div className="flex items-center gap-2 max-w-md bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
+            <Search className="h-4 w-4 text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search course programs by name or code..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
+                <X className="h-3.5 w-3.5" />
               </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab('subjects');
-                  setSearch('');
-                }}
-                className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all',
-                  activeTab === 'subjects'
-                    ? 'bg-white text-violet-700 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900',
-                )}
-              >
-                <Bookmark className="h-4 w-4" />
-                <span>2. Master Subjects Library</span>
-                <span className="text-[10px] font-black bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md">
-                  {totalSubjectsCount}
-                </span>
-              </button>
-            </div>
-
-            {/* Search Box */}
-            <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
-              <Search className="h-4 w-4 text-slate-400 shrink-0" />
-              <input
-                type="text"
-                placeholder={
-                  activeTab === 'courses'
-                    ? 'Search course name or code...'
-                    : 'Search master subjects library...'
-                }
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* User-Friendly Explanatory Workflow Banner */}
           <div className="p-3 rounded-xl bg-violet-50/80 border border-violet-100 text-xs text-violet-900 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
-              {activeTab === 'courses' ? (
-                <span>
-                  <strong>Curriculum Workflow:</strong> Select any course below and click{' '}
-                  <strong>&quot;Manage Curriculum&quot;</strong> to map subjects, chapters, and
-                  topics.
-                </span>
-              ) : (
-                <span>
-                  <strong>Master Subjects Library:</strong> Create core subjects here first (e.g.
-                  Physics, Chemistry, Biology), then map them inside individual Courses Curriculum.
-                </span>
-              )}
+              <span>
+                <strong>Curriculum Workflow:</strong> Select any course below and click{' '}
+                <strong>&quot;Map Subjects / Manage Curriculum&quot;</strong> to configure course syllabus.
+              </span>
             </div>
           </div>
         </div>
@@ -644,21 +663,22 @@ function CurriculumContent() {
 
                         <div className="space-y-3 pt-2 border-t border-slate-100">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg uppercase">
-                              Type: {s.subjectType}
+                            <span className="text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-100 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
+                              <Layers className="w-3 h-3 text-violet-600" />
+                              {(s as any)._count?.chapters ?? 0} Chapters • {(s as any)._count?.topics ?? 0} Topics
                             </span>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                              Short: {s.shortName || 'N/A'}
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">
+                              Type: {s.subjectType}
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleToggleSubjectStatus(s)}
                                 className={cn(
-                                  'relative inline-flex h-4 w-7 shrink-0 cursor-cursor rounded-full border border-transparent transition-colors duration-200 ease-in-out',
+                                  'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out',
                                   s.isActive ? 'bg-emerald-500' : 'bg-slate-300',
                                 )}
                                 title="Toggle status"
@@ -680,18 +700,12 @@ function CurriculumContent() {
                               </span>
                             </div>
 
-                            {/* User-friendly guidance action */}
                             <button
                               type="button"
-                              onClick={() => {
-                                setActiveTab('courses');
-                                toast.info(
-                                  `To map "${s.name}" to a course, click "Manage Curriculum" on any course.`,
-                                );
-                              }}
-                              className="text-[11px] font-bold text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1"
+                              onClick={() => handleManageSubjectSyllabus(s.id)}
+                              className="text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-700 px-3 py-1.5 rounded-xl shadow-xs transition-all flex items-center gap-1 shrink-0"
                             >
-                              Map to Course <ChevronRight className="w-3 h-3" />
+                              Manage Syllabus 📚 <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -728,6 +742,92 @@ function CurriculumContent() {
               </div>
             )}
           </>
+        )}
+
+        {/* Bulk Import Subjects Modal */}
+        {bulkImportOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-2xl w-full border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Bulk Import Master Subjects & Chapters
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Paste structured subjects with chapters to import all at once!
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBulkImportOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Paste Format (Text list or JSON Array):
+                  </label>
+                  <span className="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-md">
+                    Auto-Detects Subjects & Chapters
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-[11px] text-slate-600 font-mono space-y-1">
+                  <p className="font-bold text-slate-700">Sample Text Format:</p>
+                  <pre className="text-[10px] text-slate-500 overflow-x-auto">
+{`Subject: Physics
+- Physical World and Measurement
+- Kinematics & Motion
+- Laws of Motion
+
+Subject: Chemistry
+- Some Basic Concepts of Chemistry
+- Structure of Atom`}
+                  </pre>
+                </div>
+
+                <textarea
+                  value={bulkImportText}
+                  onChange={(e) => setBulkImportText(e.target.value)}
+                  rows={8}
+                  placeholder={`Subject: Physics\n- Physical World and Measurement\n- Kinematics & Motion\n- Laws of Motion\n\nSubject: Chemistry\n- Some Basic Concepts of Chemistry\n- Structure of Atom`}
+                  className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setBulkImportOpen(false)}
+                  className="rounded-xl text-xs font-bold text-slate-600"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={isImporting}
+                  onClick={handleBulkImportSubmit}
+                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs px-5"
+                >
+                  {isImporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  Import All Subjects & Chapters
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Dialog Form for Course Quick Action */}

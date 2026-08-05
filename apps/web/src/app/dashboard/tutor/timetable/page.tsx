@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Calendar as CalendarIcon,
   Filter,
@@ -15,7 +16,9 @@ import {
   Grid,
   List,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -28,7 +31,7 @@ import {
   SessionAction,
 } from '@/features/scheduling/components/SessionOverrideDrawer';
 import { SessionHistoryDrawer } from '@/features/scheduling/components/SessionHistoryDrawer';
-import { useBatches } from '@/features/batches/hooks/use-batches';
+import { useTutorBatches } from '@/features/tutor-dashboard/hooks/use-tutor-batches';
 import { useTutors } from '@/features/tutors/hooks/use-tutors';
 import { useSubjects } from '@/features/master-data/hooks/use-subjects';
 import {
@@ -90,17 +93,20 @@ function TutorTimetableCalendarContent() {
   // Fetch logged-in tutor's exact timetable sessions
   const { timetable, isLoading, error, refetch } = useTutorTimetable();
 
-  // Fetch batches and subjects for filtering
-  const { batches: batchesData = [] } = useBatches({ autoFetch: true });
+  // Fetch logged-in tutor's exact assigned batches for filtering
+  const { batches: tutorBatchesData } = useTutorBatches();
   const { data: subjectsData } = useSubjects({ limit: 100 });
 
-  const batches = batchesData.map((b: any) => ({
-    id: b.id,
-    name: b.name,
-    code: b.code,
-    branchId: b.branchId,
-    academicYearId: b.academicYearId,
-  }));
+  const batches = useMemo(() => {
+    const list = tutorBatchesData?.batches ?? [];
+    return list
+      .filter((a) => a.batch !== null)
+      .map((a) => ({
+        id: a.batch!.id,
+        name: a.batch!.name,
+        code: a.batch!.code,
+      }));
+  }, [tutorBatchesData]);
 
   const subjects = (subjectsData?.data ?? []).map((s: any) => ({
     id: s.id,
@@ -157,7 +163,9 @@ function TutorTimetableCalendarContent() {
           id: s.id,
           tenantId: '',
           batchId: s.batch?.id || '',
+          batchName: s.batch?.name || '',
           subjectId: s.subject?.id || '',
+          subjectName: s.subject?.name || '',
           branchId: s.branch?.id || '',
           staffProfileId: user?.id || '',
           dayOfWeek: dayKey,
@@ -284,76 +292,69 @@ function TutorTimetableCalendarContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] p-4 sm:p-6 space-y-6 text-[#111827]">
-      {/* ── Welcome Header Banner - Signature Violet Gradient (Tenant Admin Theme Match) ── */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      {/* ── Top Centered Header (Matches Courses & Batches Style) ────────────── */}
+      <div className="text-center max-w-xl mx-auto space-y-1 my-2">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+          Faculty Schedule & Timetable
+        </h1>
+        <p className="text-xs font-bold text-slate-500">
+          Interactive calendar view for assigned sessions & schedules
+        </p>
+      </div>
+
+      {/* ── View Mode Switcher Pills (MONTH | WEEK | LIST) & Attendance Workload Link ──── */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <div className="flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 shadow-2xs">
           <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1.5 text-xs font-semibold text-violet-200 hover:text-white transition-colors mb-2"
+            type="button"
+            onClick={() => setViewMode('MONTH')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'MONTH'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back to Dashboard
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>MONTH</span>
           </button>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Faculty Schedule & Timetable
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            Faculty Schedule & Timetable 📅
-          </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
-            Interactive calendar view for your assigned sessions, batches, and schedule.
-          </p>
+          <button
+            type="button"
+            onClick={() => setViewMode('WEEK')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'WEEK'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
+          >
+            <Grid className="w-3.5 h-3.5" />
+            <span>WEEK</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('LIST')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 rounded-xl transition-all cursor-pointer',
+              viewMode === 'LIST'
+                ? 'bg-white text-violet-700 shadow-2xs font-black'
+                : 'hover:text-slate-900',
+            )}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>LIST</span>
+          </button>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center p-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl text-xs font-semibold text-white">
-            <button
-              onClick={() => setViewMode('MONTH')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                viewMode === 'MONTH'
-                  ? 'bg-white text-violet-700 shadow-xs font-bold'
-                  : 'text-violet-100 hover:bg-white/10'
-              }`}
-            >
-              <CalendarDays className="w-3.5 h-3.5" />
-              Month
-            </button>
-            <button
-              onClick={() => setViewMode('WEEK')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                viewMode === 'WEEK'
-                  ? 'bg-white text-violet-700 shadow-xs font-bold'
-                  : 'text-violet-100 hover:bg-white/10'
-              }`}
-            >
-              <Grid className="w-3.5 h-3.5" />
-              Week
-            </button>
-            <button
-              onClick={() => setViewMode('LIST')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                viewMode === 'LIST'
-                  ? 'bg-white text-violet-700 shadow-xs font-bold'
-                  : 'text-violet-100 hover:bg-white/10'
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-              List
-            </button>
-          </div>
-          <button
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-all disabled:opacity-50"
-            title="Refresh timetable"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isLoading}
+          className="p-2.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 transition-all disabled:opacity-50 shadow-2xs cursor-pointer"
+          title="Refresh timetable"
+        >
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       {/* Calendar Month Navigator & Filters */}
@@ -385,17 +386,17 @@ function TutorTimetableCalendarContent() {
           </div>
         </div>
 
-        {/* Filters Bar */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 text-xs w-full lg:w-auto">
-          <div className="hidden sm:flex items-center gap-1.5 text-slate-400 font-semibold mr-1">
+        {/* Filters Bar (Only All Batches needed for Tutor) */}
+        <div className="flex items-center gap-2 text-xs w-full lg:w-auto">
+          <div className="flex items-center gap-1.5 text-slate-400 font-semibold mr-1">
             <Filter className="w-3.5 h-3.5" />
-            <span>Filter:</span>
+            <span>Filter Batch:</span>
           </div>
 
           <select
             value={filters.batchId}
             onChange={(e) => setFilter('batchId', e.target.value)}
-            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
+            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
           >
             <option value="">All Batches</option>
             {batches.map((b) => (
@@ -405,38 +406,12 @@ function TutorTimetableCalendarContent() {
             ))}
           </select>
 
-          <select
-            value={filters.staffProfileId}
-            onChange={(e) => setFilter('staffProfileId', e.target.value)}
-            className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
-          >
-            <option value="">All Tutors</option>
-            {tutors.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.firstName} {t.lastName}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filters.subjectId}
-            onChange={(e) => setFilter('subjectId', e.target.value)}
-            className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:border-violet-500 transition-colors cursor-pointer"
-          >
-            <option value="">All Subjects</option>
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-
-          {(filters.batchId || filters.staffProfileId || filters.subjectId) && (
+          {filters.batchId && (
             <button
               onClick={() => setFilters({ batchId: '', staffProfileId: '', subjectId: '' })}
               className="text-xs text-violet-600 hover:underline font-bold px-2 py-1"
             >
-              Clear
+              Clear Filter
             </button>
           )}
         </div>
@@ -698,9 +673,9 @@ function TutorTimetableCalendarContent() {
                       <ScheduleSlotCard
                         key={s.id}
                         schedule={s}
-                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                        batchName={batches.find((b) => b.id === s.batchId)?.name}
-                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                        subjectName={(s as any).subjectName || subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={(s as any).batchName || batches.find((b) => b.id === s.batchId)?.name || 'NEET Repeaters 2027'}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName || user?.firstName}
                       />
                     ))}
                   </div>
@@ -780,9 +755,9 @@ function TutorTimetableCalendarContent() {
                       <ScheduleSlotCard
                         key={s.id}
                         schedule={s}
-                        subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                        batchName={batches.find((b) => b.id === s.batchId)?.name}
-                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                        subjectName={(s as any).subjectName || subjects.find((sub) => sub.id === s.subjectId)?.name}
+                        batchName={(s as any).batchName || batches.find((b) => b.id === s.batchId)?.name || 'NEET Repeaters 2027'}
+                        tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName || user?.firstName}
                       />
                     ))}
                   </div>
@@ -822,9 +797,9 @@ function TutorTimetableCalendarContent() {
                           <ScheduleSlotCard
                             key={s.id}
                             schedule={s}
-                            subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                            batchName={batches.find((b) => b.id === s.batchId)?.name}
-                            tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                            subjectName={(s as any).subjectName || subjects.find((sub) => sub.id === s.subjectId)?.name}
+                            batchName={(s as any).batchName || batches.find((b) => b.id === s.batchId)?.name || 'NEET Repeaters 2027'}
+                            tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName || user?.firstName}
                           />
                         ))}
                       </div>

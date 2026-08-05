@@ -80,6 +80,138 @@ export class CourseSubjectService {
       },
     });
 
+    // Auto-clone existing master chapters and topics for this subject if available
+    try {
+      const existingCSList = await this.prisma.courseSubjects.findMany({
+        where: {
+          tenantId,
+          subjectId: dto.subjectId,
+          id: { not: created.id },
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      const existingCSIds = existingCSList.map((cs) => cs.id);
+
+      if (existingCSIds.length > 0) {
+        const masterChapters = await this.prisma.chapters.findMany({
+          where: {
+            tenantId,
+            courseSubjectId: { in: existingCSIds },
+            deletedAt: null,
+          },
+          orderBy: { displayOrder: 'asc' },
+        });
+
+        // Deduplicate chapters by code or uppercase name
+        const uniqueChaptersMap = new Map<string, (typeof masterChapters)[0]>();
+        for (const ch of masterChapters) {
+          const key = ch.code || ch.name.trim().toUpperCase();
+          if (!uniqueChaptersMap.has(key)) {
+            // If specific chapter IDs are passed, check inclusion
+            if (
+              dto.selectedChapterIds &&
+              dto.selectedChapterIds.length > 0 &&
+              !dto.selectedChapterIds.includes(ch.id) &&
+              !dto.selectedChapterIds.includes(ch.code)
+            ) {
+              continue;
+            }
+            uniqueChaptersMap.set(key, ch);
+          }
+        }
+
+        for (const ch of uniqueChaptersMap.values()) {
+          const newChapter = await this.prisma.chapters.create({
+            data: {
+              tenantId,
+              courseSubjectId: created.id,
+              code: ch.code,
+              name: ch.name,
+              shortName: ch.shortName,
+              description: ch.description,
+              plannedHours: ch.plannedHours,
+              estimatedSessions: ch.estimatedSessions,
+              displayOrder: ch.displayOrder,
+              isActive: ch.isActive,
+              isSystem: ch.isSystem,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+
+          const topics = await this.prisma.topics.findMany({
+            where: { tenantId, chapterId: ch.id, deletedAt: null },
+            orderBy: { displayOrder: 'asc' },
+          });
+
+          const uniqueTopicsMap = new Map<string, (typeof topics)[0]>();
+          for (const tp of topics) {
+            const key = tp.code || tp.name.trim().toUpperCase();
+            if (!uniqueTopicsMap.has(key)) {
+              // If specific topic IDs are passed, check inclusion
+              if (
+                dto.selectedTopicIds &&
+                dto.selectedTopicIds.length > 0 &&
+                !dto.selectedTopicIds.includes(tp.id) &&
+                !dto.selectedTopicIds.includes(tp.code)
+              ) {
+                continue;
+              }
+              uniqueTopicsMap.set(key, tp);
+            }
+          }
+
+          for (const tp of uniqueTopicsMap.values()) {
+            const newTopic = await this.prisma.topics.create({
+              data: {
+                tenantId,
+                chapterId: newChapter.id,
+                code: tp.code,
+                name: tp.name,
+                shortName: tp.shortName,
+                description: tp.description,
+                learningObjectives: tp.learningObjectives,
+                difficultyLevel: tp.difficultyLevel,
+                plannedHours: tp.plannedHours,
+                plannedSessions: tp.plannedSessions,
+                displayOrder: tp.displayOrder,
+                isActive: tp.isActive,
+                isSystem: tp.isSystem,
+                createdBy: userId,
+                updatedBy: userId,
+              },
+            });
+
+            const topicItems = await this.prisma.topicItems.findMany({
+              where: { tenantId, topicId: tp.id, deletedAt: null },
+              orderBy: { displayOrder: 'asc' },
+            });
+
+            for (const item of topicItems) {
+              await this.prisma.topicItems.create({
+                data: {
+                  tenantId,
+                  topicId: newTopic.id,
+                  type: item.type,
+                  title: item.title,
+                  content: (item.content as any) ?? {},
+                  metadata: (item.metadata as any) ?? {},
+                  displayOrder: item.displayOrder,
+                  isActive: item.isActive,
+                  createdBy: userId,
+                  updatedBy: userId,
+                },
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore cloning error to ensure courseSubject creation completes
+    }
+
     return { ...created, subject };
   }
 
@@ -116,7 +248,7 @@ export class CourseSubjectService {
 
     const topicItemCounts = await this.prisma.topicItems.groupBy({
       by: ['topicId'],
-      where: { tenantId, topicId: { in: topics.map((tp) => tp.id) } },
+      where: { tenantId, topicId: { in: topics.map((tp) => tp.id) }, deletedAt: null },
       _count: { id: true },
     });
     const countMap: Record<string, number> = {};
@@ -148,6 +280,101 @@ export class CourseSubjectService {
       subject: subjectMap[cs.subjectId] ?? null,
       chapters: chapterMap[cs.id] || [],
     }));
+  }
+
+  async syncMasterChapters(
+    courseSubjectId: string,
+    tenantId: string,
+    userId: string,
+  ) {
+    const cs = await this.prisma.courseSubjects.findFirst({
+      where: { id: courseSubjectId, tenantId, deletedAt: null },
+    });
+    if (!cs) throw new NotFoundException('Course subject not found');
+
+    const allCSList = await this.prisma.courseSubjects.findMany({
+      where: { tenantId, subjectId: cs.subjectId, deletedAt: null },
+      select: { id: true },
+    });
+    const allCSIds = allCSList.map((c) => c.id);
+
+    if (allCSIds.length === 0) return { count: 0 };
+
+    const masterChapters = await this.prisma.chapters.findMany({
+      where: { tenantId, courseSubjectId: { in: allCSIds }, deletedAt: null },
+      orderBy: { displayOrder: 'asc' },
+    });
+
+    // Deduplicate chapters by code or uppercase name
+    const uniqueChaptersMap = new Map<string, (typeof masterChapters)[0]>();
+    for (const ch of masterChapters) {
+      if (ch.courseSubjectId === cs.id) continue; // Skip existing in current
+      const key = ch.code || ch.name.trim().toUpperCase();
+      if (!uniqueChaptersMap.has(key)) {
+        uniqueChaptersMap.set(key, ch);
+      }
+    }
+
+    let addedCount = 0;
+    for (const mCh of uniqueChaptersMap.values()) {
+      let existingCh = await this.prisma.chapters.findFirst({
+        where: { tenantId, courseSubjectId: cs.id, code: mCh.code, deletedAt: null },
+      });
+
+      if (!existingCh) {
+        existingCh = await this.prisma.chapters.create({
+          data: {
+            tenantId,
+            courseSubjectId: cs.id,
+            code: mCh.code,
+            name: mCh.name,
+            shortName: mCh.shortName,
+            description: mCh.description,
+            plannedHours: mCh.plannedHours,
+            estimatedSessions: mCh.estimatedSessions,
+            displayOrder: mCh.displayOrder,
+            isActive: mCh.isActive,
+            isSystem: mCh.isSystem,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+        addedCount++;
+      }
+
+      const masterTopics = await this.prisma.topics.findMany({
+        where: { tenantId, chapterId: mCh.id, deletedAt: null },
+      });
+
+      for (const mTp of masterTopics) {
+        const existingTp = await this.prisma.topics.findFirst({
+          where: { tenantId, chapterId: existingCh.id, code: mTp.code, deletedAt: null },
+        });
+        if (!existingTp) {
+          await this.prisma.topics.create({
+            data: {
+              tenantId,
+              chapterId: existingCh.id,
+              code: mTp.code,
+              name: mTp.name,
+              shortName: mTp.shortName,
+              description: mTp.description,
+              learningObjectives: mTp.learningObjectives,
+              difficultyLevel: mTp.difficultyLevel,
+              plannedHours: mTp.plannedHours,
+              plannedSessions: mTp.plannedSessions,
+              displayOrder: mTp.displayOrder,
+              isActive: mTp.isActive,
+              isSystem: mTp.isSystem,
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        }
+      }
+    }
+
+    return { count: addedCount };
   }
 
   async remove(id: string, tenantId: string, userId: string) {

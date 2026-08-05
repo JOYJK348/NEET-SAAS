@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useAdminExams, usePublishExam } from '../../hooks/use-admin-exams';
+import { useBatches } from '@/features/students/hooks/use-students';
 import type { ExamItem } from '../../types/admin-exams';
 import { CreateExamModal } from './create-exam-modal';
 import { LiveDashboardModal } from './live-dashboard-modal';
@@ -43,10 +44,43 @@ export function AdminExamsDashboard() {
   const [analyticsModalExamId, setAnalyticsModalExamId] = useState<string | null>(null);
   const [uploadModalExam, setUploadModalExam] = useState<ExamItem | null>(null);
 
+  const { batches } = useBatches();
+  const batchMap = new Map(batches.map((b) => [b.id, b.name]));
+
   const { data: response, isLoading, refetch } = useAdminExams();
   const publishExamMutation = usePublishExam();
 
-  const exams = response?.data || [];
+  const rawExams = response?.data || [];
+
+  // Deduplicate and group exams with same title & course into a single row with multi-batch badges
+  const groupedExamsMap = new Map<
+    string,
+    ExamItem & { batchNames: string[]; allExamIds: string[] }
+  >();
+
+  rawExams.forEach((exam) => {
+    const groupKey = `${exam.title.trim().toLowerCase()}-${exam.courseId}-${exam.durationMinutes}`;
+    const batchName = batchMap.get(exam.batchId) || exam.batchId;
+
+    if (!groupedExamsMap.has(groupKey)) {
+      groupedExamsMap.set(groupKey, {
+        ...exam,
+        batchNames: [batchName],
+        allExamIds: [exam.id],
+      });
+    } else {
+      const existing = groupedExamsMap.get(groupKey)!;
+      if (batchName && !existing.batchNames.includes(batchName)) {
+        existing.batchNames.push(batchName);
+      }
+      if (!existing.allExamIds.includes(exam.id)) {
+        existing.allExamIds.push(exam.id);
+      }
+    }
+  });
+
+  const groupedExams = Array.from(groupedExamsMap.values());
+  const exams = groupedExams;
 
   const filteredExams = exams.filter((exam) => {
     const matchesSearch =
@@ -288,7 +322,18 @@ export function AdminExamsDashboard() {
                   <tr key={exam.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-4 px-4">
                       <p className="font-bold text-slate-900 text-sm">{exam.title}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate max-w-xs">
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {exam.batchNames.map((bName, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200"
+                          >
+                            <Layers className="w-3 h-3 text-violet-500" />
+                            {bName}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate max-w-xs">
                         {exam.description || 'No description provided'}
                       </p>
                     </td>
@@ -335,7 +380,7 @@ export function AdminExamsDashboard() {
                         {exam.publishStatus === 'DRAFT' && (
                           <Button
                             size="sm"
-                            onClick={() => publishExamMutation.mutate(exam.id)}
+                            onClick={() => exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))}
                             disabled={publishExamMutation.isPending}
                             className="h-9 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-xs px-3"
                           >

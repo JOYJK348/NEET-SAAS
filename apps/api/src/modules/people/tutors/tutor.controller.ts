@@ -110,9 +110,11 @@ export class TutorController {
     @Query('branchId') branchId?: string,
     @Query('courseId') courseId?: string,
     @Query('batchIds') batchIdsRaw?: string,
+    @Query('subjectIds') subjectIdsRaw?: string,
     @Query('createLogin') createLoginRaw?: string,
   ) {
     const batchIds = batchIdsRaw ? batchIdsRaw.split(',') : [];
+    const subjectIds = subjectIdsRaw ? subjectIdsRaw.split(',') : [];
     const createLogin = createLoginRaw === 'true';
     return this.tutorService.bulkImport(
       file.buffer,
@@ -123,6 +125,7 @@ export class TutorController {
       courseId,
       batchIds,
       createLogin,
+      subjectIds,
     );
   }
 }

@@ -39,4 +39,14 @@ export class CreateCourseSubjectDto {
   @IsOptional()
   @IsInt()
   plannedHours?: number = 100;
+
+  @ApiPropertyOptional({ example: ['chap-1', 'chap-2'] })
+  @IsOptional()
+  @IsString({ each: true })
+  selectedChapterIds?: string[];
+
+  @ApiPropertyOptional({ example: ['top-1', 'top-2'] })
+  @IsOptional()
+  @IsString({ each: true })
+  selectedTopicIds?: string[];
 }

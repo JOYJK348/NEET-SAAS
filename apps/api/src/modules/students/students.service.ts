@@ -38,6 +38,18 @@ const STUDENT_SEARCH_FIELDS = [
   'userIdusers.lastName',
 ];
 
+const PARENT_LOGIN_PASSWORD_PREFIX = 'Par@';
+
+function generateParentPasswordFromPhone(phone?: string): string {
+  if (phone) {
+    const digits = phone.replace(/\D/g, '');
+    const last4 = digits.slice(-4);
+    if (last4.length === 4) return `${PARENT_LOGIN_PASSWORD_PREFIX}${last4}`;
+  }
+  const fallback = String(1000 + Math.floor(Math.random() * 9000));
+  return `${PARENT_LOGIN_PASSWORD_PREFIX}${fallback}`;
+}
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -265,9 +277,29 @@ export class StudentsService {
       }
 
       // Assign STUDENT role for portal access
-      const studentRole = await tx.roles.findFirst({
-        where: { tenantId, code: 'STUDENT' },
+      let studentRole = await tx.roles.findFirst({
+        where: {
+          code: 'STUDENT',
+          deletedAt: null,
+        },
       });
+      if (!studentRole) {
+        studentRole = await tx.roles.create({
+          data: {
+            tenantId,
+            code: 'STUDENT',
+            name: 'Student',
+            roleType: 'SYSTEM',
+            isDefault: true,
+            isEditable: false,
+            isDeletable: false,
+            priority: 1,
+            metadata: {},
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+      }
       if (studentRole) {
         await tx.userRoles
           .create({
@@ -417,7 +449,7 @@ export class StudentsService {
           };
         } else {
           // Create New Parent Account
-          const rawParentPassword = `ISML@${Math.floor(100000 + Math.random() * 900000)}`;
+          const rawParentPassword = generateParentPasswordFromPhone(dto.parentPhone);
           const parentPasswordHash = hashSync(rawParentPassword, genSaltSync(10));
           const pNameParts = (dto.parentName || 'Parent').trim().split(' ');
           const pFirstName = pNameParts[0] || 'Parent';
@@ -600,7 +632,10 @@ export class StudentsService {
     }
 
     const parentUser = mapping.parentProfileIdparent_profiles.userIdusers;
-    const newRawPassword = `ISML@${Math.floor(100000 + Math.random() * 900000)}`;
+    const parentContact = await this.prisma.emergencyContacts.findFirst({
+      where: { tenantId, studentProfileId: studentId, relationship: 'Parent' },
+    });
+    const newRawPassword = generateParentPasswordFromPhone(parentContact?.phone || undefined);
     const newHash = hashSync(newRawPassword, genSaltSync(10));
 
     await this.prisma.users.update({
@@ -1040,6 +1075,47 @@ export class StudentsService {
     return buf;
   }
 
+  private parseBulkImportDate(val: any): Date | null {
+    if (val === undefined || val === null || val === '') return null;
+    if (val instanceof Date && !isNaN(val.getTime())) return val;
+
+    // Handle Excel Serial Number (e.g. 38486 or "38486")
+    const num = Number(val);
+    if (!isNaN(num) && num > 10000 && num < 100000) {
+      // Excel base date Jan 1 1970 is serial 25569
+      const dateMs = Math.round((num - 25569) * 86400 * 1000);
+      const date = new Date(dateMs);
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    const str = String(val).trim();
+
+    // YYYY-MM-DD or YYYY/MM/DD
+    if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+      const parts = str.split('T')[0].split(/[-/]/);
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    // DD-MM-YYYY or DD/MM/YYYY
+    if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(str)) {
+      const parts = str.split(/[-/]/);
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) return date;
+    }
+
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    return null;
+  }
+
   async bulkImport(
     fileBuffer: Buffer,
     tenantId: string,
@@ -1053,7 +1129,7 @@ export class StudentsService {
     errors: string[];
     loginCredentials: { email: string; password: string }[];
   }> {
-    const wb = XLSX.read(fileBuffer, { type: 'buffer' });
+    const wb = XLSX.read(fileBuffer, { type: 'buffer', cellDates: true });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
@@ -1065,15 +1141,38 @@ export class StudentsService {
 
     const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
 
+    let studentRole = await this.prisma.roles.findFirst({
+      where: {
+        code: 'STUDENT',
+        deletedAt: null,
+      },
+    });
+    if (!studentRole) {
+      studentRole = await this.prisma.roles.create({
+        data: {
+          tenantId,
+          code: 'STUDENT',
+          name: 'Student',
+          roleType: 'SYSTEM',
+          isDefault: true,
+          isEditable: false,
+          isDeletable: false,
+          priority: 1,
+          metadata: {},
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    }
+
     // Load active academic status maps for quick lookups
-    const [courses, batches, branches, years, studentRole] = await Promise.all([
+    const [courses, batches, branches, years] = await Promise.all([
       this.prisma.courses.findMany({ where: { tenantId, deletedAt: null } }),
       this.prisma.batches.findMany({ where: { tenantId, deletedAt: null } }),
       this.prisma.branches.findMany({ where: { tenantId, deletedAt: null } }),
       this.prisma.academicYears.findMany({
         where: { tenantId, deletedAt: null },
       }),
-      this.prisma.roles.findFirst({ where: { tenantId, code: 'STUDENT' } }),
     ]);
 
     const courseMap = new Map(
@@ -1110,13 +1209,12 @@ export class StudentsService {
         .toString()
         .trim()
         .toUpperCase();
-      const dobRaw = (
-        row['Date of Birth (YYYY-MM-DD)'] ||
-        row['dateOfBirth'] ||
-        ''
-      )
-        .toString()
-        .trim();
+      const dobRaw =
+        row['Date of Birth (YYYY-MM-DD)'] ??
+        row['Date of Birth'] ??
+        row['dateOfBirth'] ??
+        row['dob'] ??
+        '';
 
       const address = (row['Address'] || row['address'] || '')
         .toString()
@@ -1218,28 +1316,20 @@ export class StudentsService {
       }
 
       // Validate DOB and check strict age limits (15 - 25 years)
-      let dob: Date;
-      if (!dobRaw) {
+      const dob = this.parseBulkImportDate(dobRaw);
+      if (!dob) {
         errors.push(
-          `Row ${lineNum} [Student: ${identifier}]: Date of Birth (YYYY-MM-DD) is required.`,
+          `Row ${lineNum} [Student: ${identifier}]: Date of Birth '${dobRaw}' is invalid. Must be YYYY-MM-DD.`,
         );
         continue;
-      } else {
-        dob = new Date(dobRaw);
-        if (isNaN(dob.getTime())) {
-          errors.push(
-            `Row ${lineNum} [Student: ${identifier}]: Date of Birth '${dobRaw}' is in an invalid format. Must be YYYY-MM-DD.`,
-          );
-          continue;
-        }
-        try {
-          validateAge(dob);
-        } catch (ageErr: any) {
-          errors.push(
-            `Row ${lineNum} [Student: ${identifier}]: Date of Birth validation failed — ${ageErr?.message || ageErr}.`,
-          );
-          continue;
-        }
+      }
+      try {
+        validateAge(dob);
+      } catch (ageErr: any) {
+        errors.push(
+          `Row ${lineNum} [Student: ${identifier}]: Date of Birth validation failed — ${ageErr?.message || ageErr}.`,
+        );
+        continue;
       }
 
       const gender = ['MALE', 'FEMALE', 'OTHER'].includes(genderRaw)
@@ -1299,6 +1389,7 @@ export class StudentsService {
                 tenantId,
                 userId: user.id,
                 roleId: studentRole.id,
+                effectiveFrom: new Date(),
                 effectiveTo: defaultDeletedAt,
                 revokedBy: '',
                 revokedReason: '',
@@ -1345,21 +1436,122 @@ export class StudentsService {
             });
           }
 
-          // Parent details
-          if (parentPhone || parentName) {
+          // Parent details & Portal account creation
+          if (parentEmail || parentPhone || parentName) {
+            const pEmail = (parentEmail || `parent.${user.id}@noreply.internal`).trim().toLowerCase();
+            const pPhone = parentPhone || '';
+            const pName = parentName || 'Parent';
+
             await tx.emergencyContacts.create({
               data: {
                 tenantId,
                 studentProfileId: user.id,
-                name: parentName || 'Parent',
+                name: pName,
                 relationship: 'Parent',
-                phone: parentPhone || '',
-                email: parentEmail || `parent.${user.id}@noreply.internal`,
+                phone: pPhone,
+                email: pEmail,
                 isPrimary: false,
                 createdBy: userId,
                 updatedBy: userId,
               },
             });
+
+            if (!pEmail.includes('noreply.internal')) {
+              let parentUser = await tx.users.findFirst({
+                where: { email: pEmail, tenantId, deletedAt: null },
+              });
+
+              const rawParentPassword = generateParentPasswordFromPhone(pPhone);
+              const parentPasswordHash = hashSync(rawParentPassword, genSaltSync(10));
+
+              if (!parentUser) {
+                const nameParts = pName.trim().split(' ');
+                const pFirstName = nameParts[0] || 'Parent';
+                const pLastName = nameParts.slice(1).join(' ') || '';
+
+                parentUser = await tx.users.create({
+                  data: {
+                    tenantId,
+                    branchId: '',
+                    email: pEmail,
+                    firstName: pFirstName,
+                    lastName: pLastName,
+                    userType: 'PARENT',
+                    status: 'ACTIVE',
+                    passwordHash: parentPasswordHash,
+                    forcePasswordChange: true,
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                });
+              }
+
+              let parentProfile = await tx.parentProfiles.findFirst({
+                where: { userId: parentUser.id, deletedAt: null },
+              });
+
+              if (!parentProfile) {
+                parentProfile = await tx.parentProfiles.create({
+                  data: {
+                    userId: parentUser.id,
+                    tenantId,
+                    occupation: '',
+                    educationLevel: '',
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                });
+              }
+
+              let parentRole = await tx.roles.findFirst({
+                where: { code: 'PARENT', deletedAt: null },
+              });
+
+              if (parentRole) {
+                const existingUserRole = await tx.userRoles.findFirst({
+                  where: { userId: parentUser.id, roleId: parentRole.id },
+                });
+                if (!existingUserRole) {
+                  await tx.userRoles.create({
+                    data: {
+                      tenantId,
+                      userId: parentUser.id,
+                      roleId: parentRole.id,
+                      effectiveFrom: new Date(),
+                      effectiveTo: defaultDeletedAt,
+                      revokedBy: '',
+                      revokedReason: '',
+                      assignedBy: userId,
+                      assignmentReason: 'Bulk Import Parent Auto Allocation',
+                      metadata: {},
+                      createdBy: userId,
+                      updatedBy: userId,
+                    },
+                  }).catch(() => {});
+                }
+              }
+
+              const existingMap = await tx.studentParents.findFirst({
+                where: {
+                  studentProfileId: user.id,
+                  parentProfileId: parentProfile.userId,
+                },
+              });
+
+              if (!existingMap) {
+                await tx.studentParents.create({
+                  data: {
+                    tenantId,
+                    studentProfileId: user.id,
+                    parentProfileId: parentProfile.userId,
+                    relationshipType: 'FATHER',
+                    isPrimaryGuardian: true,
+                    createdBy: userId,
+                    updatedBy: userId,
+                  },
+                }).catch(() => {});
+              }
+            }
           }
 
           // 5. Enrollments mapping

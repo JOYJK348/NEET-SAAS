@@ -24,7 +24,8 @@ import { cn } from '@/lib/utils';
 const generateUniqueYearCode = () => {
   const currentYear = new Date().getFullYear();
   const nextYearShort = String(currentYear + 1).slice(-2);
-  return `AY-${currentYear}-${nextYearShort}`;
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
+  return `AY-${currentYear}-${nextYearShort}-${randomSuffix}`;
 };
 
 interface FormErrors {
@@ -86,13 +87,10 @@ function CreateAcademicYearContent() {
     }
 
     try {
-      const result = await createMutation.mutateAsync(formData);
+      await createMutation.mutateAsync(formData);
       toast.success('New Academic Year created successfully!');
-      if (result?.id) {
-        router.push(`/tenant-admin/academic-years/${result.id}`);
-      } else {
-        router.push('/tenant-admin/academic-years');
-      }
+      router.push('/tenant-admin/academic-years');
+      router.refresh();
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || 'Failed to create academic year';
       toast.error(errorMsg);

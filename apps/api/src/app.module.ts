@@ -23,6 +23,7 @@ import { StudentDashboardModule } from './modules/student-dashboard/student-dash
 import { ParentDashboardModule } from './modules/parent-dashboard/parent-dashboard.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboard.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { StorageModule } from './modules/storage/storage.module';
     ParentDashboardModule,
     AttendanceModule,
     StorageModule,
+    TenantDashboardModule,
     HealthModule,
   ],
   controllers: [],
