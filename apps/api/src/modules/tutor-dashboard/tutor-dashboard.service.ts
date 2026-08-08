@@ -306,7 +306,7 @@ export class TutorDashboardService {
     const subjectIds = [...new Set(sessions.map((s) => s.subjectId))];
     const branchIds = [...new Set(sessions.map((s) => s.branchId))];
 
-    const [batches, subjects, branches] = await Promise.all([
+    const [batches, subjects, branches, activeLiveClasses] = await Promise.all([
       this.prisma.batches.findMany({
         where: { tenantId, id: { in: batchIds } },
         select: { id: true, name: true, code: true },
@@ -319,6 +319,14 @@ export class TutorDashboardService {
         where: { tenantId, id: { in: branchIds } },
         select: { id: true, name: true },
       }),
+      this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          status: { in: ['SCHEDULED', 'LIVE', 'DRAFT'] },
+          deletedAt: null,
+        },
+        select: { id: true, batchId: true, subjectId: true, scheduledStart: true, scheduledEnd: true, status: true },
+      }),
     ]);
 
     const scheduleIds = sessions
@@ -329,7 +337,7 @@ export class TutorDashboardService {
       scheduleIds.length > 0
         ? await this.prisma.schedules.findMany({
             where: { tenantId, id: { in: scheduleIds } },
-            select: { id: true, deliveryMode: true, meetingLink: true },
+            select: { id: true, startTime: true, endTime: true, deliveryMode: true, meetingLink: true },
           })
         : [];
 
@@ -340,13 +348,50 @@ export class TutorDashboardService {
 
     return sessions.map((s) => {
       const sched = s.scheduleId ? scheduleMap.get(s.scheduleId) : null;
+
+      const matchingLiveClass = activeLiveClasses.find(
+        (lc) =>
+          lc.id === s.id ||
+          (lc.batchId && lc.batchId === s.batchId && lc.subjectId === s.subjectId) ||
+          (lc.batchId && lc.batchId === s.batchId),
+      );
+
+      // Always use the actual session row times (s.startsAt/endsAt) as ground truth.
+      // The session row is synced by ScheduleService.update whenever the schedule changes.
+      // sched.startTime/endTime is the TEMPLATE and may be stale if the series was split.
+      let startHHMM = this.formatTime(new Date(s.startsAt));
+      let endHHMM = this.formatTime(new Date(s.endsAt));
+
+      // Also check the schedule template - if it has a LATER end time than the session row,
+      // use the template's time (handles race condition where session sync hasn't happened yet)
+      if (sched?.endTime && sched.endTime > endHHMM) {
+        endHHMM = sched.endTime;
+      }
+      if (sched?.startTime && sched.startTime < startHHMM) {
+        startHHMM = sched.startTime;
+      }
+
+      // If a live class is active, its scheduled times take highest priority
+      if (matchingLiveClass?.scheduledStart) {
+        startHHMM = this.formatTime(new Date(matchingLiveClass.scheduledStart));
+      }
+
+      if (matchingLiveClass?.scheduledEnd) {
+        endHHMM = this.formatTime(new Date(matchingLiveClass.scheduledEnd));
+      }
+
       const now = new Date();
       const todayKey = this.toLocalDateKey(now);
       const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
 
-      const currentHHMM = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const startHHMM = this.formatTime(s.startsAt);
-      const endHHMM = this.formatTime(s.endsAt);
+      const [sH, sM] = startHHMM.split(':').map(Number);
+      const [eH, eM] = endHHMM.split(':').map(Number);
+
+      const realStart = new Date(s.attendanceDate);
+      realStart.setHours(sH, sM, 0, 0);
+
+      const realEnd = new Date(s.attendanceDate);
+      realEnd.setHours(eH, eM, 0, 0);
 
       const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
       let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
@@ -357,17 +402,17 @@ export class TutorDashboardService {
         liveStatus = 'UPCOMING';
       } else {
         // Same day (Today)
-        if (isFinished || endHHMM < currentHHMM) {
-          liveStatus = 'COMPLETED';
-        } else if (startHHMM <= currentHHMM && endHHMM >= currentHHMM) {
+        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= realEnd)) {
           liveStatus = 'LIVE_NOW';
+        } else if (isFinished || now > realEnd) {
+          liveStatus = 'COMPLETED';
         } else {
           liveStatus = 'UPCOMING';
         }
       }
 
       return {
-        id: s.id,
+        id: matchingLiveClass ? matchingLiveClass.id : s.id,
         date: sessionDateKey,
         startsAt: startHHMM,
         endsAt: endHHMM,
@@ -375,9 +420,13 @@ export class TutorDashboardService {
         batch: batchMap.get(s.batchId) ?? null,
         branch: branchMap.get(s.branchId) ?? null,
         sessionStatus:
-          s.sessionStatus === 'DRAFT' && s.scheduleId
-            ? 'SCHEDULED'
-            : s.sessionStatus,
+          s.sessionStatus === 'CANCELLED'
+            ? 'CANCELLED'
+            : liveStatus === 'LIVE_NOW'
+              ? 'STARTED'
+              : s.sessionStatus === 'DRAFT' && s.scheduleId
+                ? 'SCHEDULED'
+                : s.sessionStatus,
         sessionSource: s.sessionSource,
         overrideType: s.overrideType,
         cancelledReason: s.cancelledReason,

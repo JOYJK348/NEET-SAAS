@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   BadRequestException,
@@ -13,6 +14,7 @@ import { CheckConflictsDto } from '../dto/check-conflicts.dto';
 import {
   WeekdayType,
   AttendanceModeType,
+  AttendanceSessionStatusEnum,
   ScheduleStatusEnum,
 } from '@prisma/client';
 
@@ -83,6 +85,7 @@ const SCHEDULE_SELECT = {
 
 @Injectable()
 export class ScheduleService {
+  private readonly logger = new Logger(ScheduleService.name);
   constructor(private readonly prisma: PrismaService) {}
 
   // ─── CONFLICT DETECTION ENGINE ─────────────────────────────────────────────
@@ -601,17 +604,70 @@ export class ScheduleService {
       }
     }
 
-    return this.prisma.schedules.update({
+    const { courseId, bypassStudentConflict, ...cleanData } = d;
+
+    const updatedSchedule = await this.prisma.schedules.update({
       where: { id },
       data: {
-        ...d,
-        ...(d.effectiveFrom && { effectiveFrom: new Date(d.effectiveFrom) }),
-        ...(d.effectiveUntil && { effectiveUntil: new Date(d.effectiveUntil) }),
+        ...cleanData,
+        ...(cleanData.effectiveFrom && { effectiveFrom: new Date(cleanData.effectiveFrom) }),
+        ...(cleanData.effectiveUntil && { effectiveUntil: new Date(cleanData.effectiveUntil) }),
         updatedBy: userId,
         updatedAt: new Date(),
       },
       select: SCHEDULE_SELECT,
     });
+
+    // Sync any future scheduled attendance sessions linked to this schedule
+    try {
+      if (
+        cleanData.startTime ||
+        cleanData.endTime ||
+        cleanData.staffProfileId ||
+        cleanData.subjectId ||
+        cleanData.batchId
+      ) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const futureSessions = await this.prisma.attendanceSessions.findMany({
+          where: {
+            scheduleId: id,
+            sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
+            attendanceDate: { gte: today },
+          },
+        });
+
+        for (const session of futureSessions) {
+          const newStartStr = cleanData.startTime || updatedSchedule.startTime;
+          const newEndStr = cleanData.endTime || updatedSchedule.endTime;
+
+          const [sH, sM] = newStartStr.split(':').map(Number);
+          const [eH, eM] = newEndStr.split(':').map(Number);
+
+          const newStartsAt = new Date(session.attendanceDate);
+          newStartsAt.setHours(sH, sM, 0, 0);
+
+          const newEndsAt = new Date(session.attendanceDate);
+          newEndsAt.setHours(eH, eM, 0, 0);
+
+          await this.prisma.attendanceSessions.update({
+            where: { id: session.id },
+            data: {
+              startsAt: newStartsAt,
+              endsAt: newEndsAt,
+              ...(cleanData.staffProfileId && { staffProfileId: cleanData.staffProfileId }),
+              ...(cleanData.subjectId && { subjectId: cleanData.subjectId }),
+              ...(cleanData.batchId && { batchId: cleanData.batchId }),
+              updatedBy: userId,
+            },
+          });
+        }
+      }
+    } catch (e) {
+      this.logger.warn(`Schedule ${id} session sync failed: ${(e as Error)?.message}`);
+    }
+    return updatedSchedule;
   }
 
   // ─── DEACTIVATE / DELETE ───────────────────────────────────────────────────
@@ -767,10 +823,6 @@ export class ScheduleService {
   }
 
   private validateDeliveryMode(dto: CreateScheduleDto) {
-    if (dto.deliveryMode === AttendanceModeType.CLASSROOM && !dto.roomId) {
-      throw new BadRequestException(
-        'roomId is required for CLASSROOM delivery mode',
-      );
-    }
+    // roomId is optional for CLASSROOM delivery mode
   }
 }

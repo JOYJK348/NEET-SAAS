@@ -432,6 +432,8 @@ export class StudentDashboardService {
             where: { tenantId, id: { in: scheduleIds } },
             select: {
               id: true,
+              startTime: true,
+              endTime: true,
               deliveryMode: true,
               roomId: true,
               meetingLink: true,
@@ -445,7 +447,7 @@ export class StudentDashboardService {
       ...new Set(scheduleRows.map((s) => s.staffProfileId).filter(Boolean)),
     ] as string[];
 
-    const [batches, subjects, staffProfiles] = await Promise.all([
+    const [batches, subjects, staffProfiles, activeLiveClasses] = await Promise.all([
       this.prisma.batches.findMany({
         where: { tenantId, id: { in: batchIds } },
         select: { id: true, name: true, code: true, deliveryTypeId: true },
@@ -465,6 +467,14 @@ export class StudentDashboardService {
             },
           })
         : Promise.resolve([]),
+      this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          status: { in: ['SCHEDULED', 'LIVE', 'DRAFT'] },
+          deletedAt: null,
+        },
+        select: { id: true, batchId: true, subjectId: true, scheduledStart: true, scheduledEnd: true, status: true },
+      }),
     ]);
 
     const batchMap = new Map(batches.map((b) => [b.id, b]));
@@ -483,15 +493,55 @@ export class StudentDashboardService {
         const sched = s.scheduleId
           ? (scheduleMap.get(s.scheduleId) ?? null)
           : null;
+
+        const matchingLiveClass = activeLiveClasses.find(
+          (lc) =>
+            lc.id === s.id ||
+            (lc.batchId && lc.batchId === s.batchId && lc.subjectId === s.subjectId) ||
+            (lc.batchId && lc.batchId === s.batchId),
+        );
+
+        // Always use the actual session row times (s.startsAt/endsAt) as ground truth.
+        // The session row is synced by ScheduleService.update whenever the schedule changes.
+        // sched.startTime/endTime is the TEMPLATE and may be stale if the series was split.
+        let startStr = this.formatTime(new Date(s.startsAt));
+        let endStr = this.formatTime(new Date(s.endsAt));
+
+        // Also check the schedule template - if it has a LATER end time than the session row,
+        // use the template's time (handles race condition where session sync hasn't happened yet)
+        if (sched?.endTime && sched.endTime > endStr) {
+          endStr = sched.endTime;
+        }
+        if (sched?.startTime && sched.startTime < startStr) {
+          startStr = sched.startTime;
+        }
+
+        // If a live class is active, its scheduled times take highest priority
+        if (matchingLiveClass?.scheduledStart) {
+          startStr = this.formatTime(new Date(matchingLiveClass.scheduledStart));
+        }
+
+        if (matchingLiveClass?.scheduledEnd) {
+          endStr = this.formatTime(new Date(matchingLiveClass.scheduledEnd));
+        }
+
         const now = new Date();
-        const sessionStart = new Date(s.startsAt);
-        const sessionEnd = new Date(s.endsAt);
+        const [sH, sM] = startStr.split(':').map(Number);
+        const [eH, eM] = endStr.split(':').map(Number);
+
+        const realStart = new Date(s.attendanceDate);
+        realStart.setHours(sH, sM, 0, 0);
+
+        const realEnd = new Date(s.attendanceDate);
+        realEnd.setHours(eH, eM, 0, 0);
+
         const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
         let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
-        if (isFinished || sessionEnd < now) {
-          liveStatus = 'COMPLETED';
-        } else if (sessionStart <= now && sessionEnd >= now) {
+
+        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= realEnd)) {
           liveStatus = 'LIVE_NOW';
+        } else if (isFinished || now > realEnd) {
+          liveStatus = 'COMPLETED';
         }
 
         const tutorName = sched?.staffProfileId
@@ -499,10 +549,10 @@ export class StudentDashboardService {
           : null;
 
         return {
-          id: s.id,
+          id: matchingLiveClass ? matchingLiveClass.id : s.id,
           date: this.toLocalDateKey(s.attendanceDate),
-          startsAt: this.formatTime(s.startsAt),
-          endsAt: this.formatTime(s.endsAt),
+          startsAt: startStr,
+          endsAt: endStr,
           dayOfWeek: this.weekdayFromDateKey(
             this.toLocalDateKey(s.attendanceDate),
           ),
@@ -512,11 +562,13 @@ export class StudentDashboardService {
           sessionStatus:
             s.sessionStatus === 'CANCELLED'
               ? 'CANCELLED'
-              : liveStatus === 'COMPLETED'
-                ? 'COMPLETED'
-                : s.sessionStatus === 'DRAFT' && s.scheduleId
-                  ? 'SCHEDULED'
-                  : s.sessionStatus,
+              : liveStatus === 'LIVE_NOW'
+                ? 'STARTED'
+                : liveStatus === 'COMPLETED'
+                  ? 'COMPLETED'
+                  : s.sessionStatus === 'DRAFT' && s.scheduleId
+                    ? 'SCHEDULED'
+                    : s.sessionStatus,
           sessionSource: s.sessionSource,
           deliveryMode: sched?.deliveryMode ?? null,
           liveStatus,

@@ -67,7 +67,7 @@ export function SessionOverrideDrawer({
         cancel: 'Class cancelled',
       };
       toast.success(`${labels[action!]}. Notifications queued for students.`);
-      queryClient.invalidateQueries({ queryKey: ['weekly-view'] });
+      queryClient.invalidateQueries({ queryKey: ['schedules'] });
       setScopeDialogOpen(false);
       handleClose();
       onSuccess();

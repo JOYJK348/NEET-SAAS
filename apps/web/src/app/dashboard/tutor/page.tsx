@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -103,16 +105,41 @@ function LiveStatusBadge({ status }: { status: string }) {
   );
 }
 
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+
 // ─── Session Card ────────────────────────────────────────────────────────────
 
 function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
+  const router = useRouter();
   const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isLive = session.liveStatus === 'LIVE_NOW';
+  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED' || Boolean(session.canJoin);
+
+  const canJoinNow = useMemo(() => {
+    if (isCancelled) return false;
+    if (isLive) return true;
+    if (session.liveStatus === 'COMPLETED' || session.sessionStatus === 'COMPLETED') return false;
+
+    if (session.date && session.startsAt && session.endsAt) {
+      try {
+        const now = new Date();
+        const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
+        const start = new Date(`${dateStr}T${session.startsAt}:00`);
+        const end = new Date(`${dateStr}T${session.endsAt}:00`);
+
+        // Allow tutor to start 15 mins before session until end
+        const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+        return now >= windowStart && now <= end;
+      } catch {}
+    }
+    return true;
+  }, [isLive, isCancelled, session]);
 
   const handleJoinClass = () => {
-    if (session.meetingLink) {
-      window.open(session.meetingLink, '_blank', 'noopener,noreferrer');
-    }
+    toast.success("Opening Tutor Live Studio 🚀", {
+      description: `Launching classroom studio for ${session.subject?.name || 'Live Class'}...`,
+    });
+    router.push(`/dashboard/tutor/live/${session.id || 'demo-class-1'}`);
   };
 
   const subjectName = session.subject?.name ?? 'Subject Session';
@@ -180,31 +207,16 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
         </p>
       )}
 
-      {/* Action Buttons: Stacked on Mobile, Inline on Desktop */}
-      {!isCancelled && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 border-t border-slate-100">
-          <Link
-            href={`/dashboard/tutor/sessions/${session.id}`}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-black text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/80 transition-all text-center"
+      {/* Action Buttons: Only shown when class can be started/launched */}
+      {!isCancelled && canJoinNow && (isLive || session.liveStatus === 'LIVE_NOW' || session.deliveryMode === 'ONLINE' || session.deliveryMode === 'HYBRID' || Boolean(session.meetingLink)) && (
+        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+          <button
+            onClick={handleJoinClass}
+            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
           >
-            <UserCheck className="w-4 h-4 text-violet-600 shrink-0" />
-            <span>Mark Attendance</span>
-          </Link>
-
-          {(isLive || session.canJoin) && (
-            <button
-              onClick={handleJoinClass}
-              className={cn(
-                'flex-1 inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs active:scale-98 text-center',
-                isLive
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/15',
-              )}
-            >
-              <Video className="w-4 h-4 shrink-0" />
-              <span>{isLive ? 'Launch Class 🚀' : 'Join Class 🚀'}</span>
-            </button>
-          )}
+            <Video className="w-4 h-4 shrink-0" />
+            <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
+          </button>
         </div>
       )}
     </div>

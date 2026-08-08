@@ -24,9 +24,12 @@ import { ParentDashboardModule } from './modules/parent-dashboard/parent-dashboa
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboard.module';
+import { LiveModule } from './modules/live/live.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         name: 'default',
@@ -53,6 +56,7 @@ import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboa
     AttendanceModule,
     StorageModule,
     TenantDashboardModule,
+    LiveModule,
     HealthModule,
   ],
   controllers: [],

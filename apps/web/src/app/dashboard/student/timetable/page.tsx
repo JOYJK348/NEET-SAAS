@@ -117,39 +117,39 @@ function LiveStatusBadge({ status }: { status: string }) {
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 function TimetableSessionCard({ session, date }: { session: StudentSessionDto; date: string }) {
-  const { join, isJoining } = useJoinSession();
-  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
+  const router = useRouter();
   const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isLive = session.liveStatus === 'LIVE_NOW';
+  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
 
   const subjectName = session.subject?.name ?? 'Subject Session';
   const initial = subjectName.charAt(0).toUpperCase();
 
-  const handleJoin = async () => {
-    setIsWaitingApproval(true);
-    toast.info("Waiting for Tutor's Approval ⏳", {
-      description: `Request sent to ${session.tutorName || 'Bharathi M'}. You will be redirected once approved.`,
-    });
+  const canJoinNow = useMemo(() => {
+    if (isLive) return true;
+    if (isCancelled || session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
 
-    try {
-      setTimeout(async () => {
-        try {
-          await join(session.id);
-          setIsWaitingApproval(false);
-        } catch {
-          setIsWaitingApproval(false);
-          toast.error('Cannot join class', {
-            description: 'Meeting link not available or class has ended.',
-          });
-        }
-      }, 2500);
-    } catch {
-      setIsWaitingApproval(false);
-      toast.error('Cannot join class', {
-        description: 'Meeting link not available or class has ended.',
-      });
+    const sessionDate = date || session.date;
+    if (sessionDate && session.startsAt && session.endsAt) {
+      try {
+        const now = new Date();
+        const dateStr = sessionDate.includes('T') ? sessionDate.split('T')[0] : sessionDate;
+        const start = new Date(`${dateStr}T${session.startsAt}:00`);
+        const end = new Date(`${dateStr}T${session.endsAt}:00`);
+
+        // Allow joining 10 mins before start until end time
+        const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
+        return now >= windowStart && now <= end;
+      } catch {}
     }
+
+    return session.canJoin ?? false;
+  }, [isLive, isCancelled, session, date]);
+
+  const handleJoin = () => {
+    router.push(`/dashboard/student/live/${session.id || 'demo-class-1'}`);
   };
 
   return (
@@ -199,25 +199,23 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
         <DeliveryModeBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Action Button */}
-      {(session.canJoin || isLive) && !isCancelled && (
+      {/* Action Button: Enabled ONLY for active/current sessions */}
+      {!isCancelled && (
         <div className="pt-1 border-t border-slate-100">
           <button
             onClick={handleJoin}
-            disabled={isJoining || isWaitingApproval}
+            disabled={!canJoinNow}
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[40px] disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs active:scale-98 text-center',
-              isWaitingApproval
-                ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20',
+              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[40px] shadow-2xs text-center',
+              canJoinNow
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
+                : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed'
             )}
           >
-            {isJoining || isWaitingApproval ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Video className="w-4 h-4" />
-            )}
-            {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
+            <Video className="w-4 h-4" />
+            <span>
+              {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
+            </span>
           </button>
         </div>
       )}
@@ -227,7 +225,7 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
 
 function TimetableContent() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('LIST');
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

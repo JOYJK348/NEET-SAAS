@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+// NestJS Live Class AutoEnd Service Update
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import {
@@ -53,6 +54,14 @@ async function bootstrap() {
       'Content-Type, Accept, Authorization, X-Requested-With, x-request-id, x-correlation-id, x-tenant-id, x-branch-id, x-academic-year-id',
   });
 
+  // Rewrite legacy/direct route /v1/live-classes to /api/v1/live-classes
+  app.use((req: any, res: any, next: any) => {
+    if (req.url && req.url.startsWith('/v1/live-classes')) {
+      req.url = '/api' + req.url;
+    }
+    next();
+  });
+
   // Global prefixes and versioning
   app.setGlobalPrefix('api');
   app.enableVersioning({
@@ -87,6 +96,22 @@ async function bootstrap() {
       },
     }),
   );
-  await app.listen(process.env.PORT ?? 3000);
+
+  const port = Number(process.env.PORT) || 3000;
+  await app.listen(port, '0.0.0.0');
+
+  const { networkInterfaces } = await import('os');
+  const nets = networkInterfaces();
+  let localIp = 'localhost';
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if ((net.family === 'IPv4' || (net.family as any) === 4) && !net.internal) {
+        localIp = net.address;
+        break;
+      }
+    }
+  }
+  console.log(`\n🚀 NestJS API Local: http://localhost:${port}`);
+  console.log(`📱 Mobile Network API: http://${localIp}:${port}\n`);
 }
 void bootstrap();

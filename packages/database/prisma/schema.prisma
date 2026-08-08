@@ -2592,23 +2592,23 @@ model LiveClasses {
   id                  String              @id @default(uuid())
   tenantId            String
   courseId            String
-  academicYearId      String
+  academicYearId      String?
   batchId             String
   subjectId           String
   chapterId           String
   topicId             String
-  questionPaperId     String
+  questionPaperId     String?             // nullable — not required for scheduling
   title               String
-  subtitle            String
-  description         String
+  subtitle            String?
+  description         String?
   learningObjectives  String[]
   prerequisites       String[]
-  teacherNotes        String
-  classType           LiveClassTypeEnum
-  sessionType         SessionTypeEnum
-  meetingProvider     MeetingProviderEnum
-  meetingCode         String
-  meetingPassword     String
+  teacherNotes        String?
+  classType           LiveClassTypeEnum   @default(LIVE)
+  sessionType         SessionTypeEnum     @default(BATCH)
+  meetingProvider     MeetingProviderEnum @default(LIVEKIT)
+  meetingCode         String?             // nullable — assigned on room creation
+  meetingPassword     String?             // nullable — assigned on room creation
   waitingRoomEnabled  Boolean             @default(true)
   lobbyEnabled        Boolean             @default(false)
   recordingEnabled    Boolean             @default(true)
@@ -2618,19 +2618,19 @@ model LiveClasses {
   breakoutRoomEnabled Boolean             @default(false)
   scheduledStart      DateTime
   scheduledEnd        DateTime
-  actualStart         DateTime
-  actualEnd           DateTime
-  durationMinutes     Int
+  actualStart         DateTime?           // nullable — set when class actually starts
+  actualEnd           DateTime?           // nullable — set when class actually ends
+  durationMinutes     Int                 @default(0)
   maximumStudents     Int                 @default(500)
   minimumStudents     Int                 @default(1)
   allowWaitlist       Boolean             @default(false)
   waitlistCount       Int                 @default(0)
-  status              LiveClassStatusEnum
-  publishedAt         DateTime
-  publishedBy         String
-  cancelledAt         DateTime
-  cancelledBy         String
-  cancelReason        String
+  status              LiveClassStatusEnum @default(SCHEDULED)
+  publishedAt         DateTime?           // nullable — set on publish
+  publishedBy         String?             // nullable — set on publish
+  cancelledAt         DateTime?           // nullable — set on cancel
+  cancelledBy         String?             // nullable — set on cancel
+  cancelReason        String?             // nullable — set on cancel
   createdAt           DateTime            @default(now())
   createdBy           String
   updatedAt           DateTime            @default(now())
@@ -2672,15 +2672,15 @@ model LiveClassSessions {
   liveClassId         String
   sessionNumber       Int                  @default(1)
   providerSessionId   String
-  providerMetadata    Json
-  status              SessionStatusEnum
-  endedReason         SessionEndReasonEnum
-  startedAt           DateTime
-  endedAt             DateTime
-  hostJoinedAt        DateTime
-  hostLeftAt          DateTime
+  providerMetadata    Json?               // nullable — populated when LiveKit room is created
+  status              SessionStatusEnum   @default(CREATED)
+  endedReason         SessionEndReasonEnum? // nullable — set when session ends
+  startedAt           DateTime?           // nullable — set when teacher joins
+  endedAt             DateTime?           // nullable — set when session ends
+  hostJoinedAt        DateTime?           // nullable — set when host joins
+  hostLeftAt          DateTime?           // nullable — set when host leaves
   peakParticipants    Int                  @default(0)
-  networkQualityScore Decimal
+  networkQualityScore Decimal?            // nullable — computed after session
   createdAt           DateTime             @default(now())
   createdBy           String
   updatedAt           DateTime             @default(now())
@@ -2698,13 +2698,13 @@ model LiveClassParticipants {
   tenantId           String
   sessionId          String
   studentAdmissionId String
-  deviceType         String
-  browser            String
-  os                 String
-  ipAddress          String
-  networkType        String
+  deviceType         String?
+  browser            String?
+  os                 String?
+  ipAddress          String?
+  networkType        String?
   joinedAt           DateTime   @default(now())
-  leftAt             DateTime
+  leftAt             DateTime?  // nullable — still in session
   cameraEnabled      Boolean    @default(false)
   micEnabled         Boolean    @default(false)
   createdAt          DateTime   @default(now())
@@ -2754,19 +2754,20 @@ model LiveClassRecordings {
   id                    String              @id @default(uuid())
   tenantId              String
   sessionId             String
-  storageObjectId       String
-  thumbnailObjectId     String
-  transcriptObjectId    String
-  subtitleObjectId      String
+  storageObjectId       String?             // nullable — filled after upload
+  thumbnailObjectId     String?             // nullable — filled after thumbnail generation
+  transcriptObjectId    String?             // nullable — V2 feature
+  subtitleObjectId      String?             // nullable — V2 feature
+  rawEgressUrl          String?             // LiveKit raw egress download URL
   durationSeconds       Int                 @default(0)
-  resolution            String
-  bitrateKbps           Int
-  fileSizeBytes         BigInt
-  status                RecordingStatusEnum
-  processingStartedAt   DateTime
-  processingCompletedAt DateTime
-  transcriptCompletedAt DateTime
-  aiSummaryCompletedAt  DateTime
+  resolution            String?             // nullable — filled after processing
+  bitrateKbps           Int?               // nullable — filled after processing
+  fileSizeBytes         BigInt?             // nullable — filled after upload
+  status                RecordingStatusEnum @default(SCHEDULED)
+  processingStartedAt   DateTime?           // nullable
+  processingCompletedAt DateTime?           // nullable
+  transcriptCompletedAt DateTime?           // nullable
+  aiSummaryCompletedAt  DateTime?           // nullable
   createdAt             DateTime            @default(now())
   createdBy             String
   updatedAt             DateTime            @default(now())
@@ -6203,6 +6204,7 @@ enum MeetingProviderEnum {
   GOOGLE_MEET
   TEAMS
   LMS_INTERNAL
+  LIVEKIT
   OTHER
 }
 
@@ -6328,8 +6330,12 @@ enum ReconciliationStatusEnum {
 }
 
 enum RecordingStatusEnum {
+  SCHEDULED
+  LIVE
+  RECORDING
   PROCESSING
-  COMPLETED
+  READY
+  COMPLETED  // legacy alias for READY — kept for backward compatibility
   FAILED
   ARCHIVED
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Plus,
@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useWeeklyView } from '@/features/scheduling/hooks/use-schedules';
 import { CreateScheduleDrawer } from '@/features/scheduling/components/CreateScheduleDrawer';
 import { ScheduleSlotCard } from '@/features/scheduling/components/ScheduleSlotCard';
@@ -68,7 +69,7 @@ interface FilterState {
 export default function TimetablePage() {
   const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('LIST');
 
   // Calendar Date Navigation State
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -97,6 +98,11 @@ export default function TimetablePage() {
     ...(filters.subjectId && { subjectId: filters.subjectId }),
   });
 
+  // Always refetch timetable data on mount / page focus
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   // Fetch batches, tutors, and subjects
   const { batches: batchesData = [] } = useBatches({ autoFetch: true });
   const { data: tutorsData } = useTutors({ limit: 100 });
@@ -108,6 +114,8 @@ export default function TimetablePage() {
     code: b.code,
     branchId: b.branchId,
     academicYearId: b.academicYearId,
+    startDate: b.startDate,
+    endDate: b.endDate,
   }));
 
   const tutors = (tutorsData?.data ?? []).map((t: any) => ({
@@ -214,8 +222,12 @@ export default function TimetablePage() {
   ][selectedDate.getDay()] as WeekdayType;
   const selectedDaySchedules = weekly[selectedDayKey] || [];
 
-  const handleSessionAction = (action: SessionAction, schedule: ScheduleDetail) => {
-    setOverrideAction(action);
+  const handleSessionAction = (action: SessionAction | 'edit', schedule: ScheduleDetail) => {
+    if (action === 'reschedule' || (action as string) === 'edit') {
+      router.push(`/dashboard/timetable/new?editId=${schedule.id}`);
+      return;
+    }
+    setOverrideAction(action as SessionAction);
     setSelectedSchedule(schedule);
   };
 
@@ -229,7 +241,8 @@ export default function TimetablePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 space-y-6">
+    <DashboardLayout>
+      <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 space-y-6">
       {/* Header & Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-1.5">
@@ -305,8 +318,8 @@ export default function TimetablePage() {
             </button>
 
             <button
-              onClick={() => setDrawerOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-xs sm:text-sm font-bold hover:bg-violet-700 transition-all shadow-md shadow-violet-500/15"
+              onClick={() => router.push('/dashboard/timetable/new')}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-600 text-white text-xs sm:text-sm font-bold hover:bg-violet-700 transition-all shadow-md shadow-violet-500/15 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Create Schedule</span>
@@ -838,5 +851,6 @@ export default function TimetablePage() {
         onClose={() => setHistorySchedule(null)}
       />
     </div>
+    </DashboardLayout>
   );
 }

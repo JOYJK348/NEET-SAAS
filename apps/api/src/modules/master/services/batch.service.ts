@@ -681,25 +681,43 @@ export class BatchService {
   }
 
   private async mapBatchResponse(batch: any) {
-    const [branch, course, academicYear, deliveryType, enrolledCount] =
-      await Promise.all([
-        this.prisma.branches.findFirst({ where: { id: batch.branchId } }),
-        this.prisma.courses.findFirst({ where: { id: batch.courseId } }),
-        this.prisma.academicYears.findFirst({
-          where: { id: batch.academicYearId },
-        }),
-        this.prisma.batchDeliveryTypes.findFirst({
-          where: { id: batch.deliveryTypeId },
-        }),
-        this.prisma.studentBatchEnrollments.count({
-          where: {
-            tenantId: batch.tenantId,
-            batchId: batch.id,
-            deletedAt: null,
-            status: 'ACTIVE',
-          },
-        }),
-      ]);
+    let branch: any = null;
+    let course: any = null;
+    let academicYear: any = null;
+    let deliveryType: any = null;
+    let enrolledCount = 0;
+
+    try {
+      [branch, course, academicYear, deliveryType, enrolledCount] =
+        await Promise.all([
+          batch.branchId
+            ? this.prisma.branches.findFirst({ where: { id: batch.branchId } }).catch(() => null)
+            : null,
+          batch.courseId
+            ? this.prisma.courses.findFirst({ where: { id: batch.courseId } }).catch(() => null)
+            : null,
+          batch.academicYearId
+            ? this.prisma.academicYears.findFirst({
+                where: { id: batch.academicYearId },
+              }).catch(() => null)
+            : null,
+          batch.deliveryTypeId
+            ? this.prisma.batchDeliveryTypes.findFirst({
+                where: { id: batch.deliveryTypeId },
+              }).catch(() => null)
+            : null,
+          this.prisma.studentBatchEnrollments
+            .count({
+              where: {
+                tenantId: batch.tenantId,
+                batchId: batch.id,
+                deletedAt: null,
+                status: 'ACTIVE',
+              },
+            })
+            .catch(() => 0),
+        ]);
+    } catch {}
 
     return {
       ...batch,

@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 
+
 @theme {
   --color-background: #ffffff;
   --color-foreground: #111827;
@@ -331,3 +332,44 @@
     @apply h-3.5 w-3.5 flex-shrink-0;
   }
 }
+
+/* tldraw Mobile Responsive Enhancements */
+@media (max-width: 768px) {
+  .tl-layout {
+    touch-action: none;
+  }
+  .tlui-navigation-zone {
+    transform: scale(0.85);
+    transform-origin: bottom left;
+  }
+  .tlui-toolbar {
+    max-width: 95vw !important;
+    overflow-x: auto !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  .tlui-toolbar__tools {
+    gap: 2px !important;
+  }
+  .tlui-button {
+    min-width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+/* Hide tldraw watermark / license badge / helper buttons */
+.tlui-watermark,
+.tlui-debug-panel,
+.tlui-helper-buttons,
+.tlui-layout__bottom__right,
+[class*="watermark"],
+[class*="helper-button"],
+a[href*="tldraw"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+
+

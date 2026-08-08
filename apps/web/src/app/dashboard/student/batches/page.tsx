@@ -79,14 +79,20 @@ function BatchCard({ enrollment }: { enrollment: StudentEnrollmentDto }) {
           </span>
         </div>
 
-        {/* Large Batch Title */}
-        <div className="text-center my-2">
-          <h3 className="text-xl font-black text-slate-900 tracking-tight leading-snug">
-            {batch.name}
-          </h3>
-          {batch.course && (
-            <p className="text-xs font-bold text-slate-500 mt-0.5">{batch.course.name}</p>
+        {/* Large Batch Title & Course Info */}
+        <div className="text-center my-2 space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-violet-100/70 border border-violet-200/80 text-violet-800 rounded-lg text-xs font-black">
+            <span>Batch Name:</span>
+            <span className="font-extrabold">{batch.name}</span>
+          </div>
+          {batch.course && batch.course.name !== batch.name && (
+            <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug pt-1">
+              Course: {batch.course.name}
+            </h3>
           )}
+          <p className="text-xs font-extrabold text-slate-500">
+            Section / Batch Code: <span className="font-mono text-slate-800 font-bold">{batch.code}</span>
+          </p>
         </div>
 
         {/* Info Pills */}
