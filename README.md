@@ -45,6 +45,8 @@ We are executing a multi-phased roadmap spanning structural foundation, database
 
 These files detail the system standards, database boundaries, and security rules of the platform:
 
+- 🗄️ **[Database Design Standards & Specs](docs/03-database/database-design.md)** — Comprehensive Database Architecture, Naming Conventions, and Tenant Scoping Standards.
+- ⚡ **[Prisma Database Schema File](packages/database/prisma/schema.prisma)** — Complete technical database models, relations, and enums in Prisma format.
 - 📑 **[Project Overview](docs/00-project-overview.md)** — Business specifications and long-term vision.
 - 💬 **[Meeting Notes Index](docs/01-meeting-notes.md)** — Chronological log of stakeholder alignments and choices.
 - 🔑 **[Authentication Architecture](docs/architecture/auth-architecture.md)** — JWT + Supabase Auth management, silent HttpOnly Cookie refresh rotation, and session invalidation workflow.
@@ -57,7 +59,7 @@ These files detail the system standards, database boundaries, and security rules
 
 ## 📂 Domain Breakdown & Database Models (ERD)
 
-The system enforces type-safe entity definitions. Each domain is completely specifications-defined:
+The system enforces type-safe entity definitions. View the full **[Prisma Schema File](packages/database/prisma/schema.prisma)** or **[Database Architecture Design](docs/03-database/database-design.md)** for authoritative definitions. Each domain is completely specifications-defined:
 
 | Domain                      | Entity Specs                                                                     | ERD Model & Database Schema                                    |
 | :-------------------------- | :------------------------------------------------------------------------------- | :------------------------------------------------------------- |
