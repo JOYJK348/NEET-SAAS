@@ -439,18 +439,22 @@ function EditStudentContent() {
   );
 }
 
+import { ProtectedRoute } from '@/components/auth/protected-route';
+
 export default function EditStudentPage() {
   return (
-    <Suspense
-      fallback={
-        <DashboardLayout>
-          <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
-            <LoadingSpinner size="lg" />
-          </div>
-        </DashboardLayout>
-      }
-    >
-      <EditStudentContent />
-    </Suspense>
+    <ProtectedRoute allowedRoles={['TENANT_ADMIN', 'SUPER_ADMIN']}>
+      <Suspense
+        fallback={
+          <DashboardLayout>
+            <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
+              <LoadingSpinner size="lg" />
+            </div>
+          </DashboardLayout>
+        }
+      >
+        <EditStudentContent />
+      </Suspense>
+    </ProtectedRoute>
   );
 }

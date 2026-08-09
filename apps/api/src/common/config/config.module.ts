@@ -9,6 +9,7 @@ import mailConfig from '../../config/mail.config';
 import storageConfig from '../../config/storage.config';
 import queueConfig from '../../config/queue.config';
 import swaggerConfig from '../../config/swagger.config';
+import livekitConfig from '../../config/livekit.config';
 import { validate } from '../../config/env.validation';
 
 @Module({
@@ -29,6 +30,7 @@ import { validate } from '../../config/env.validation';
         storageConfig,
         queueConfig,
         swaggerConfig,
+        livekitConfig,
       ],
       validate,
       cache: true,

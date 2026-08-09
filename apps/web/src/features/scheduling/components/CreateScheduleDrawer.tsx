@@ -15,6 +15,9 @@ import {
   Loader2,
   Building2,
   GraduationCap,
+  Sparkles,
+  Repeat,
+  Calendar,
 } from 'lucide-react';
 import { ConflictAlert } from './ConflictAlert';
 import { useCheckConflicts, useCreateSchedule, useRooms } from '../hooks/use-schedules';
@@ -34,12 +37,34 @@ for (let h = 6; h <= 22; h++) {
   if (h < 22) TIME_OPTIONS.push(`${String(h).padStart(2, '0')}:30`);
 }
 
+const WEEKDAY_NAMES: WeekdayType[] = [
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+];
+
+const getWeekdayFromDateStr = (dateStr: string): WeekdayType => {
+  if (!dateStr) return 'MONDAY';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return WEEKDAY_NAMES[d.getDay()] || 'MONDAY';
+  }
+  return 'MONDAY';
+};
+
 interface Batch {
   id: string;
   name: string;
   code: string;
   branchId: string;
   academicYearId: string;
+  startDate?: string;
+  endDate?: string;
 }
 interface Subject {
   id: string;
@@ -78,15 +103,32 @@ interface FormState {
   notes: string;
 }
 
+const getTodayDateStr = () => new Date().toISOString().split('T')[0];
+const getNextMonthDateStr = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().split('T')[0];
+};
+const getThreeMonthsDateStr = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 3);
+  return d.toISOString().split('T')[0];
+};
+const getNextYearDateStr = () => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().split('T')[0];
+};
+
 const INITIAL_FORM: FormState = {
   batchId: '',
   subjectId: '',
   staffProfileId: '',
-  dayOfWeek: '',
+  dayOfWeek: getWeekdayFromDateStr(getTodayDateStr()),
   startTime: '08:00',
   endTime: '10:00',
-  effectiveFrom: '',
-  effectiveUntil: '',
+  effectiveFrom: getTodayDateStr(),
+  effectiveUntil: getNextYearDateStr(),
   deliveryMode: 'CLASSROOM',
   roomId: '',
   meetingLink: '',
@@ -101,6 +143,8 @@ export function CreateScheduleDrawer({
   subjects,
   tutors,
 }: CreateScheduleDrawerProps) {
+  const [scheduleType, setScheduleType] = useState<'ONE_TIME' | 'RECURRING'>('RECURRING');
+  const [singleDate, setSingleDate] = useState<string>(getTodayDateStr());
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [conflictResult, setConflictResult] = useState<ConflictResult | null>(null);
   const [conflictChecked, setConflictChecked] = useState(false);
@@ -119,17 +163,78 @@ export function CreateScheduleDrawer({
   const { mutate: runConflictCheck, isPending: checkingConflicts } = useCheckConflicts();
   const { mutate: createSchedule, isPending: creating } = useCreateSchedule();
 
-  const set = useCallback((key: keyof FormState, value: string) => {
-    setForm((f) => ({ ...f, [key]: value }));
-    // Reset conflict state when any scheduling field changes
-    if (
-      ['dayOfWeek', 'startTime', 'endTime', 'staffProfileId', 'batchId', 'roomId'].includes(key)
-    ) {
-      setConflictResult(null);
-      setConflictChecked(false);
+  const handleSingleDateChange = (dateVal: string) => {
+    setSingleDate(dateVal);
+    const day = getWeekdayFromDateStr(dateVal);
+    setForm((f) => ({
+      ...f,
+      effectiveFrom: dateVal,
+      effectiveUntil: dateVal,
+      dayOfWeek: day,
+    }));
+    setConflictResult(null);
+    setConflictChecked(false);
+  };
+
+  const handleScheduleTypeChange = (type: 'ONE_TIME' | 'RECURRING') => {
+    setScheduleType(type);
+    if (type === 'ONE_TIME') {
+      const day = getWeekdayFromDateStr(singleDate);
+      setForm((f) => ({
+        ...f,
+        effectiveFrom: singleDate,
+        effectiveUntil: singleDate,
+        dayOfWeek: day,
+      }));
+    } else {
+      if (selectedBatch?.startDate) {
+        setForm((f) => ({
+          ...f,
+          effectiveFrom: new Date(selectedBatch.startDate!).toISOString().split('T')[0],
+          effectiveUntil: selectedBatch?.endDate
+            ? new Date(selectedBatch.endDate).toISOString().split('T')[0]
+            : getNextYearDateStr(),
+        }));
+      } else {
+        setForm((f) => ({
+          ...f,
+          effectiveFrom: getTodayDateStr(),
+          effectiveUntil: getNextYearDateStr(),
+        }));
+      }
     }
-    setErrors((e) => ({ ...e, [key]: undefined }));
-  }, []);
+    setConflictResult(null);
+    setConflictChecked(false);
+  };
+
+  const set = useCallback(
+    (key: keyof FormState, value: string) => {
+      setForm((f) => {
+        const next = { ...f, [key]: value };
+        if (key === 'batchId' && value) {
+          const targetBatch = batches.find((b) => b.id === value);
+          if (scheduleType === 'RECURRING') {
+            if (targetBatch?.startDate) {
+              next.effectiveFrom = new Date(targetBatch.startDate).toISOString().split('T')[0];
+            }
+            if (targetBatch?.endDate) {
+              next.effectiveUntil = new Date(targetBatch.endDate).toISOString().split('T')[0];
+            }
+          }
+        }
+        return next;
+      });
+
+      if (
+        ['dayOfWeek', 'startTime', 'endTime', 'staffProfileId', 'batchId', 'roomId'].includes(key)
+      ) {
+        setConflictResult(null);
+        setConflictChecked(false);
+      }
+      setErrors((e) => ({ ...e, [key]: undefined }));
+    },
+    [batches, scheduleType],
+  );
 
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormState, string>> = {};
@@ -142,8 +247,6 @@ export function CreateScheduleDrawer({
     if (form.startTime >= form.endTime) newErrors.endTime = 'End time must be after start time';
     if (!form.effectiveFrom) newErrors.effectiveFrom = 'Start date is required';
     if (!form.effectiveUntil) newErrors.effectiveUntil = 'End date is required';
-    if (form.deliveryMode === 'CLASSROOM' && !form.roomId)
-      newErrors.roomId = 'Room is required for offline classes';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -214,7 +317,6 @@ export function CreateScheduleDrawer({
   if (!open) return null;
 
   const showOnline = form.deliveryMode === 'ONLINE' || form.deliveryMode === 'HYBRID';
-  const showRoom = form.deliveryMode === 'CLASSROOM' || form.deliveryMode === 'HYBRID';
 
   return (
     <>
@@ -340,30 +442,89 @@ export function CreateScheduleDrawer({
               Schedule Settings
             </h3>
 
-            {/* Day of Week */}
-            <div className="mb-3.5">
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Day of Week <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-1.5 flex-wrap">
-                {WEEKDAYS.map((day) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => set('dayOfWeek', day)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border
-                      ${
+            {/* Schedule Type Toggle Switcher (Weekly Recurring 1st) */}
+            <div className="flex p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 text-xs font-bold mb-4">
+              <button
+                type="button"
+                onClick={() => handleScheduleTypeChange('RECURRING')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all ${
+                  scheduleType === 'RECURRING'
+                    ? 'bg-white text-violet-700 shadow-sm border border-slate-200/80 font-black'
+                    : 'text-slate-500 hover:text-slate-800 font-bold'
+                }`}
+              >
+                <Repeat className="w-3.5 h-3.5 text-violet-600" />
+                <span>Weekly Recurring 🔄</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleScheduleTypeChange('ONE_TIME')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl transition-all ${
+                  scheduleType === 'ONE_TIME'
+                    ? 'bg-white text-violet-700 shadow-sm border border-slate-200/80 font-black'
+                    : 'text-slate-500 hover:text-slate-800 font-bold'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                <span>One-Time Class / Event 🎯</span>
+              </button>
+            </div>
+
+            {/* Option A: ONE-TIME Single Class Date */}
+            {scheduleType === 'ONE_TIME' && (
+              <div className="mb-4 bg-violet-50/70 border border-violet-200/80 p-3.5 rounded-2xl space-y-2">
+                <label className="block text-xs font-extrabold text-violet-950">
+                  Exact Class Date 📅 <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
+                  <input
+                    type="date"
+                    value={singleDate}
+                    onChange={(e) => handleSingleDateChange(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white border border-violet-200 text-sm font-bold text-slate-800 outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all cursor-pointer shadow-2xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-violet-800 font-extrabold pt-1">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                  <span>
+                    Class occurs on {WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']},{' '}
+                    {new Date(singleDate).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}{' '}
+                    (Single Event)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Option B: RECURRING Day of Week Selector */}
+            {scheduleType === 'RECURRING' && (
+              <div className="mb-3.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Day of Week <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {WEEKDAYS.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => set('dayOfWeek', day)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                         form.dayOfWeek === day
                           ? 'bg-primary text-white border-primary shadow-sm shadow-primary/10'
                           : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                       }`}
-                  >
-                    {WEEKDAY_FULL_LABELS[day].slice(0, 3)}
-                  </button>
-                ))}
+                    >
+                      {WEEKDAY_FULL_LABELS[day].slice(0, 3)}
+                    </button>
+                  ))}
+                </div>
+                {errors.dayOfWeek && <p className="text-xs text-red-500 mt-1">{errors.dayOfWeek}</p>}
               </div>
-              {errors.dayOfWeek && <p className="text-xs text-red-500 mt-1">{errors.dayOfWeek}</p>}
-            </div>
+            )}
 
             {/* Times */}
             <div className="grid grid-cols-2 gap-3 mb-3.5">
@@ -409,39 +570,91 @@ export function CreateScheduleDrawer({
               </div>
             </div>
 
-            {/* Date range */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Effective From <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={form.effectiveFrom}
-                  onChange={(e) => set('effectiveFrom', e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-lg bg-white border text-sm text-slate-800 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all
-                    ${errors.effectiveFrom ? 'border-red-300 bg-red-50/5' : 'border-slate-200'}`}
-                />
-                {errors.effectiveFrom && (
-                  <p className="text-xs text-red-500 mt-1">{errors.effectiveFrom}</p>
-                )}
+            {/* RECURRING Active Period Date Range Picker */}
+            {scheduleType === 'RECURRING' && (
+              <div className="mt-4 bg-slate-50/80 border border-slate-200/80 p-3.5 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                    <CalendarDays className="w-4 h-4 text-violet-600" />
+                    <span>Course Schedule Duration</span>
+                  </label>
+                  {selectedBatch?.name && (
+                    <span className="text-[10px] text-emerald-700 font-extrabold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      Auto-synced with Batch ✨
+                    </span>
+                  )}
+                </div>
+
+                {/* Duration Months Selector */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                    Select Course Length / Duration
+                  </label>
+                  <select
+                    defaultValue="12"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'CUSTOM') return;
+                      const months = parseInt(val, 10);
+                      if (!isNaN(months)) {
+                        const startD = new Date(form.effectiveFrom || getTodayDateStr());
+                        const endD = new Date(startD);
+                        endD.setMonth(endD.getMonth() + months);
+                        set('effectiveUntil', endD.toISOString().split('T')[0]);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all cursor-pointer shadow-2xs"
+                  >
+                    <option value="1">1 Month Course</option>
+                    <option value="2">2 Months Course</option>
+                    <option value="3">3 Months (Quarterly / Crash Course)</option>
+                    <option value="4">4 Months Semester</option>
+                    <option value="6">6 Months (Half Yearly Term)</option>
+                    <option value="9">9 Months Academic Term</option>
+                    <option value="12">12 Months (Full 1 Year Course Batch)</option>
+                    <option value="CUSTOM">Custom Start & End Date 📅</option>
+                  </select>
+                </div>
+
+                {/* Start Date & End Date Range Input Controls */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Starts On Date 📅
+                    </label>
+                    <input
+                      type="date"
+                      value={form.effectiveFrom}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        set('effectiveFrom', newStart);
+                      }}
+                      className="w-full px-2.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all cursor-pointer shadow-2xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      Repeats Until Date 📅
+                    </label>
+                    <input
+                      type="date"
+                      value={form.effectiveUntil}
+                      onChange={(e) => set('effectiveUntil', e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all cursor-pointer shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] font-extrabold text-violet-800 bg-violet-50/80 border border-violet-200/80 p-2.5 rounded-xl flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                  <span>
+                    Class repeats every {WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} from{' '}
+                    {form.effectiveFrom} to {form.effectiveUntil}
+                  </span>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Effective Until <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={form.effectiveUntil}
-                  onChange={(e) => set('effectiveUntil', e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-lg bg-white border text-sm text-slate-800 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all
-                    ${errors.effectiveUntil ? 'border-red-300 bg-red-50/5' : 'border-slate-200'}`}
-                />
-                {errors.effectiveUntil && (
-                  <p className="text-xs text-red-500 mt-1">{errors.effectiveUntil}</p>
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Section: Delivery */}
@@ -473,58 +686,30 @@ export function CreateScheduleDrawer({
               ))}
             </div>
 
-            {/* Room (offline/hybrid) */}
-            {showRoom && (
-              <div className="mb-3.5">
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Room{' '}
-                  {form.deliveryMode === 'CLASSROOM' && <span className="text-red-400">*</span>}
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <select
-                    value={form.roomId}
-                    onChange={(e) => set('roomId', e.target.value)}
-                    disabled={!form.batchId}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border text-sm text-slate-800 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all disabled:opacity-50
-                      ${errors.roomId ? 'border-red-300 bg-red-50/5' : 'border-slate-200'}`}
-                  >
-                    <option value="" className="text-slate-500">
-                      {!form.batchId
-                        ? 'Select a batch first'
-                        : roomsLoading
-                          ? 'Loading rooms...'
-                          : 'Select a room...'}
-                    </option>
-                    {rooms
-                      .filter((r) => r.isActive)
-                      .map((r) => (
-                        <option key={r.id} value={r.id} className="text-slate-800">
-                          {r.name} ({r.code}) — cap. {r.capacity}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                {errors.roomId && <p className="text-xs text-red-500 mt-1">{errors.roomId}</p>}
-              </div>
-            )}
-
             {/* Meeting link (online/hybrid) */}
             {showOnline && (
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Meeting Link
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Meeting Link <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <span className="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded">
+                    Auto-uses LiveKit Studio if empty ✨
+                  </span>
+                </div>
                 <div className="relative">
                   <Wifi className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="url"
                     value={form.meetingLink}
                     onChange={(e) => set('meetingLink', e.target.value)}
-                    placeholder="https://meet.google.com/..."
+                    placeholder="Leave empty for Built-in LiveKit Studio, or paste Google Meet / Zoom link"
                     className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                   />
                 </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  💡 If left empty, our built-in interactive LiveKit Studio (whiteboard + recording) will be automatically assigned.
+                </p>
               </div>
             )}
           </div>

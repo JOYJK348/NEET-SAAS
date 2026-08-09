@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { ProtectedRoute } from '@/components/auth/protected-route';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -611,5 +612,9 @@ function StudentsPageContent() {
 }
 
 export default function StudentsPage() {
-  return <StudentsPageContent />;
+  return (
+    <ProtectedRoute allowedRoles={['TENANT_ADMIN', 'SUPER_ADMIN']}>
+      <StudentsPageContent />
+    </ProtectedRoute>
+  );
 }

@@ -183,16 +183,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasHydrated || isLoading || !isAuthenticated || !user) return;
 
-    const isParentRole = user.roleCode === 'PARENT';
-    const isParentPath = pathname.startsWith('/dashboard/parent');
-    const isDashboardPath =
-      pathname.startsWith('/dashboard') || pathname.startsWith('/tenant-admin');
+    const role = (user.roleCode || (user as any).role || '').toUpperCase();
+    const isStudent = role === 'STUDENT';
+    const isTutor = role === 'TUTOR' || role === 'FACULTY';
+    const isParent = role === 'PARENT';
+    const isAdmin = role === 'TENANT_ADMIN' || role.startsWith('TENANT_ADMIN') || role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
 
-    if (isParentRole && isDashboardPath && !isParentPath) {
-      // PARENT user attempting to access non-parent routes -> redirect to parent portal
-      router.replace('/dashboard/parent/academics');
-    } else if (!isParentRole && isParentPath) {
-      // NON-PARENT user attempting to access parent portal -> redirect to main dashboard
+    // Routes that are ONLY for admins
+    const isAdminOnlyPath =
+      pathname === '/dashboard/students' ||
+      pathname.startsWith('/dashboard/students/') ||
+      pathname === '/dashboard/tutors' ||
+      pathname.startsWith('/dashboard/tutors/') ||
+      pathname.startsWith('/tenant-admin');
+
+    if (isStudent) {
+      if (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student'))) {
+        router.replace('/dashboard/student');
+      }
+    } else if (isTutor) {
+      if (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/tutor'))) {
+        router.replace('/dashboard/tutor');
+      }
+    } else if (isParent) {
+      if (!pathname.startsWith('/dashboard/parent')) {
+        router.replace('/dashboard/parent/academics');
+      }
+    } else if (!isAdmin && pathname.startsWith('/dashboard/parent')) {
       router.replace('/dashboard');
     }
   }, [hasHydrated, isLoading, isAuthenticated, user, pathname, router]);

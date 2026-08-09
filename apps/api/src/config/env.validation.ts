@@ -29,6 +29,15 @@ export const EnvSchema = z.object({
   SUPABASE_STORAGE_PRIVATE_BUCKET: z.string().default('private-files'),
   JITSI_SECRET_KEY: z.string().optional().default(''),
   JITSI_APP_ID: z.string().optional().default(''),
+  // LiveKit Cloud
+  LIVEKIT_API_KEY: z.string().optional().default(''),
+  LIVEKIT_API_SECRET: z.string().optional().default(''),
+  LIVEKIT_URL: z.string().optional().default(''),
+  LIVEKIT_WEBHOOK_SECRET: z.string().optional().default(''),
+  // Supabase Storage Buckets
+  SUPABASE_STORAGE_LIVE_RECORDINGS_BUCKET: z
+    .string()
+    .default('live-class-recordings'),
   RAZORPAY_KEY_ID: z.string().optional().default(''),
   RAZORPAY_KEY_SECRET: z.string().optional().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(''),

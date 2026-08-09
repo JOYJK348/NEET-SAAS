@@ -13,7 +13,16 @@ declare module 'axios' {
   }
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+function getApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const hostname = window.location.hostname;
+    return `http://${hostname}:3000/api/v1`;
+  }
+  return 'http://localhost:3000/api/v1';
+}
 
 class ApiClient {
   private client: AxiosInstance;
@@ -25,7 +34,6 @@ class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -37,9 +45,10 @@ class ApiClient {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor - attach access token and tenant context
+    // Request interceptor - attach access token, tenant context, and dynamic baseURL
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
+        config.baseURL = getApiBaseUrl();
         const state = useAuthStore.getState();
         const accessToken = state.accessToken;
         if (accessToken && config.headers) {
@@ -99,7 +108,7 @@ class ApiClient {
           try {
             const rfToken = useAuthStore.getState().refreshToken;
             const response = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
+              `${getApiBaseUrl()}/auth/refresh`,
               rfToken ? { refreshToken: rfToken } : {},
               { withCredentials: true },
             );

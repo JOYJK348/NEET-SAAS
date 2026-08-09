@@ -11,17 +11,17 @@
 
 This document defines the strict, non-negotiable database design standards and schema guidelines for the Coaching Management Platform.
 
-All future database changes, Prisma schema files, and SQL migration files **MUST** conform to these rules. Any schema pull request that violates these rules will fail code review automatically.
+All database changes, Prisma schema files, and SQL migration files **MUST** conform to these rules. Any schema pull request that violates these rules will fail code review automatically.
 
 ---
 
 ## 🛠️ 1. Naming & Case Strategy
 
-PostgreSQL is case-insensitive by default and wraps camelCase in double quotes, leading to messy raw SQL queries. To prevent this, we enforce a strict separation between database-level names and application-level code names.
+PostgreSQL is case-insensitive by default and wraps camelCase in double quotes, leading to messy raw SQL queries. To prevent this, we enforce a strict mapping between database-level names and Prisma model declarations.
 
 ### 1.1 Database-Level (PostgreSQL)
 
-- **Tables:** Plural and `snake_case` (e.g., `student_admissions`, `student_batch_enrollments`).
+- **Tables:** Plural and `snake_case` (e.g., `student_admissions`, `batches`, `live_classes`).
 - **Columns:** Singular and `snake_case` (e.g., `admission_number`, `tenant_id`).
 - **Foreign Keys:** End with `_id` suffix (e.g., `student_admission_id`, `batch_id`).
 - **Indexes:** Prefixed with `idx_` followed by table name and indexed columns (e.g., `idx_student_admissions_tenant_course`).
@@ -29,31 +29,45 @@ PostgreSQL is case-insensitive by default and wraps camelCase in double quotes, 
 
 ### 1.2 Application-Level (Prisma Schema)
 
-- **Models:** Singular and `PascalCase` (e.g., `StudentAdmission`).
-- **Relations:** Singular/Plural `camelCase` depending on cardinality (e.g., `studentAdmission`, `attendanceRecords`).
-- **Directives:** Model names must explicitly map to snake_case tables using `@@map("table_name")`. Columns must map via `@map("column_name")` if they differ from camelCase fields.
+- **Models:** Plural `PascalCase` matching PostgreSQL table identifiers (e.g., `Institutes`, `Batches`, `StudentAdmissions`, `LiveClasses`).
+- **Fields:** `camelCase` identifiers in Prisma schema mapping to mapped column keys (e.g., `tenantId`, `academicYearId`, `createdAt`).
+- **Relations:** `camelCase` relation field names linking models through named relations (e.g., `tenant`, `course`, `academicYear`).
 
-#### Example Model Definition:
+#### Standard Model Definition Example (from `schema.prisma`):
 
 ```prisma
-model StudentAdmission {
-  id              String   @id @default(dbgenerated("generate_primary_key()")) @db.Uuid
-  tenantId        String   @map("tenant_id") @db.Uuid
-  studentId       String   @map("student_id") @db.Uuid
-  admissionNumber String   @map("admission_number") @db.VarChar(50)
-  courseId        String   @map("course_id") @db.Uuid
-  academicYearId  String   @map("academic_year_id") @db.Uuid
-  branchId        String?  @map("branch_id") @db.Uuid
-  feeStructureId  String?  @map("fee_structure_id") @db.Uuid
+model Batches {
+  id                 String          @id @default(uuid())
+  tenantId           String
+  branchId           String
+  courseId           String
+  academicYearId     String
+  deliveryTypeId     String
+  code               String
+  name               String
+  description        String
+  status             BatchStatusType
+  maxStudents        Int             @default(40)
+  startDate          DateTime
+  endDate            DateTime
+  startTime          String?
+  endTime            String?
+  allowNewAdmissions Boolean         @default(true)
+  isActive           Boolean         @default(true)
+  isSystem           Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  createdBy          String
+  updatedAt          DateTime        @default(now())
+  updatedBy          String
+  deletedAt          DateTime?
+  deletedBy          String?
+  version            Int             @default(1)
+  
+  tenant             Institutes      @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+  course             Courses         @relation("batches_course_id_to_courses", fields: [courseId], references: [id])
 
-  // Relations
-  institute       Institute @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  student         Student   @relation(fields: [studentId], references: [id], onDelete: Restrict)
-
-  @@map("student_admissions") // ← MANDATORY snake_case mapping
-  @@index([tenantId, courseId], name: "idx_student_admissions_tenant_course")
-  @@unique([tenantId, id], name: "uq_student_admissions_tenant_id")
-  @@unique([tenantId, admissionNumber], name: "uq_student_admissions_tenant_code")
+  @@unique([tenantId, id])
+  @@index([tenantId, code])
 }
 ```
 
@@ -61,118 +75,97 @@ model StudentAdmission {
 
 ## 🔑 2. Primary Keys & Identity Protocol
 
-1.  **UUID Primary Keys:** Every table must use **UUID** as its primary key.
-    - _Why?_ Auto-incrementing integers (`SERIAL` / `BIGINT`) expose the system to ID enumeration attacks. UUIDs make IDs unguessable.
-2.  **PostgreSQL Engine Generation:** Define primary keys in Prisma using `@default(dbgenerated("gen_random_uuid()")) @db.Uuid`. This ensures the database generates the key natively instead of forcing Prisma to make an extra roundtrip. (Letting PostgreSQL generate UUIDs dynamically allows future support of newer UUID variants).
-3.  **Junction Tables:** Do not use composite primary keys `PRIMARY KEY (A_id, B_id)` on junction tables. Always use a single surrogate `id UUID PRIMARY KEY` and enforce uniqueness via a `@@unique([A_id, B_id])` constraint.
-    - _Why?_ Many GraphQL/REST API builders and ORMs handle single surrogate primary keys significantly better than composite keys.
+1.  **UUID Primary Keys:** Every table uses **UUID String** as its primary key (`id String @id @default(uuid())`).
+    - _Why?_ Auto-incrementing integers (`SERIAL` / `BIGINT`) expose the system to ID enumeration attacks. UUIDs make IDs unguessable across distributed nodes.
+2.  **Prisma Generator Default:** Primary key fields are specified using `@id @default(uuid())` or `@default(dbgenerated("gen_random_uuid()"))`.
+3.  **Junction Tables:** Do not use composite primary keys `PRIMARY KEY (A_id, B_id)` on junction tables. Always use a single surrogate `id String @id @default(uuid())` and enforce uniqueness via `@@unique([tenantId, A_id, B_id])` or `@@unique([tenantId, id])` constraints.
 
 ---
 
 ## 🔒 3. Tenant Isolation Indexing Rules
 
-Every tenant-scoped table **must** include an `institute_id UUID` column pointing to the `institutes` table. To enforce RLS performance and security, follow these rules:
+Every tenant-scoped model **must** include a `tenantId String` column pointing to the `Institutes` model via `tenant Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])`. To enforce multi-tenant isolation, performance, and security:
 
-1.  **Leftmost Index Rule:** Every lookup index on a tenant-scoped table must include `institute_id` as the **leftmost (first)** column.
+1.  **Leftmost Index Rule:** Every lookup index on a tenant-scoped table must include `tenantId` as the **leftmost (first)** column.
     ```prisma
     // ✅ CORRECT - PostgreSQL filters out other tenants first
-    @@index([institute_id, id])
-    @@index([institute_id, status])
+    @@index([tenantId, code])
+    @@index([tenantId, slug])
 
     // ❌ INCORRECT - index scan will bleed across other tenants
-    @@index([status, institute_id])
+    @@index([code, tenantId])
     ```
-2.  **Unique Constraint Scoping:** Any unique constraint (e.g. unique student email, unique transaction number) must include `institute_id`.
+2.  **Unique Constraint Scoping:** Any unique constraint must include `tenantId`.
     ```prisma
-    // ✅ CORRECT - Email unique within the same institute, allows user to exist in multiple institutes
-    @@unique([institute_id, email])
+    // ✅ CORRECT - Unique within the same institute tenant
+    @@unique([tenantId, id])
+    @@unique([tenantId, code])
 
-    // ❌ INCORRECT - Email globally unique, blocks users joining other institutes
-    @@unique([email])
+    // ❌ INCORRECT - Globally unique across tenants
+    @@unique([code])
     ```
 
 ---
 
 ## 🌊 4. Referential Integrity & Deletion Protocols
 
-To prevent orphaned rows and accidental bulk data loss, deletion behaviors must follow strict guidelines:
-
-1.  **Restricted Deletions (`onDelete: Restrict`):**
-    - Applying `ON DELETE RESTRICT` is the **default rule** for all primary business entities (e.g., deleting a Course should fail if students are enrolled in it).
-    - Deleting an `Institute` must NEVER cascade delete core transactional records like `payments` or `attendance_records`. These must be explicitly archived or deleted via admin script.
-2.  **Cascade Deletions (`onDelete: Cascade`):**
-    - Allowed **ONLY** for private child records that cannot exist without their parent.
-    - _Allowed example:_ `QuestionPaper` → `QuestionPaperQuestion` (junction entity). If the paper is deleted, it is safe to cascade delete its question-mapping rows.
-    - _Allowed example:_ `User` → `LoginSession`. If a user is deleted, delete their sessions.
-3.  **Standardized Soft Delete Pattern:**
-    - Core business entities (`Student`, `Tutor`, `Course`, `Batch`) must not support physical SQL `DELETE` calls.
-    - Standardize on a domain-specific `status` column mapping to a PostgreSQL `ENUM` (e.g. `ACTIVE`, `INACTIVE`, `ARCHIVED`, `DROPPED`, `COMPLETED`).
-    - Avoid binary boolean `is_active` fields for primary business models, as business lifecycles almost always expand beyond two states.
+1.  **Restricted & Explicit Relations:**
+    - Primary relations link back to `Institutes` via named relations (e.g. `@relation("tenant_id_to_institutes", fields: [tenantId], references: [id])`).
+    - Deleting an `Institute` tenant must NEVER cascade delete core transactional records like `payments`, `attendance_records`, or `exam_attempts`.
+2.  **Standardized Soft Delete Pattern:**
+    - Core business entities (`StudentAdmissions`, `Batches`, `Courses`, `LiveClasses`) support soft delete tracking using audit columns:
+      ```prisma
+      deletedAt DateTime?
+      deletedBy String?
+      ```
+    - Primary state tracking uses explicit domain `status` Enums (e.g., `BatchStatusType`, `AttendanceSessionStatusEnum`, `ExamPublishStatusEnum`).
 
 ---
 
 ## 📅 5. Datetime & Audit Trail Protocols
 
-1.  **Timestamptz (UTC):** All timestamps must be stored as `TIMESTAMP WITH TIME ZONE` (`DateTime @db.Timestamptz(6)` in Prisma).
-2.  **UTC Only:** The database engine timezone must be set to `UTC`.
-3.  **Presentation Separation:** The database never handles local timezone formatting (e.g. Indian Standard Time). Timezone conversions must be done at the API client or frontend level.
-4.  **Audit Columns:** Every table must have audit columns:
+1.  **Timestamptz (UTC):** All timestamps are stored in UTC format.
+2.  **Presentation Separation:** The database stores UTC timestamps (`DateTime`). Timezone conversions (e.g., Indian Standard Time `Asia/Kolkata`) are handled at the presentation/API level.
+3.  **Mandatory Audit Footprint:** Every model in `schema.prisma` includes the standardized audit suite:
     ```prisma
-    created_at DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
-    updated_at DateTime @updatedAt @db.Timestamptz(6) @map("updated_at")
+    createdAt DateTime  @default(now())
+    createdBy String
+    updatedAt DateTime  @default(now())
+    updatedBy String
+    deletedAt DateTime?
+    deletedBy String?
+    version   Int       @default(1)
     ```
-5.  **Creator References (Optional but Recommended):** For primary configuration and content models (e.g., `Course`, `Subject`, `Assessment`), include direct creator references:
-    ```prisma
-    created_by String? @map("created_by") @db.Uuid
-    updated_by String? @map("updated_by") @db.Uuid
-    ```
-    This provides an immediate audit footprint on the row itself, bypassing heavy joins on system audit tables.
 
 ---
 
 ## 📈 6. Data Types & Precision Standards
 
-- **Money & Currency (Fees, Payments):** Never use `Float` or `Real` for financial amounts (due to floating-point rounding errors). Always use `Decimal` with fixed precision:
+- **Money & Currency (Fees, Billing):** Never use `Float` for financial transactions. Always use `Decimal` with fixed precision:
   ```prisma
-  amount Decimal @db.Decimal(10, 2) // Supports up to 99,999,999.99
+  amount Decimal @db.Decimal(10, 2)
   ```
-- **Assessment Marks:** Use `Decimal(5, 2)` to support half or quarter marks (e.g., `4.25` or `-1.33` for negative markings) without rounding loss:
+- **Marks & Scores:** Use `Decimal(5, 2)` to support negative markings or decimal scores (e.g., `4.25` or `-1.33`):
   ```prisma
   marks Decimal @db.Decimal(5, 2)
   ```
-- **PostgreSQL Native ENUM Strategy:**
-  - Always use database-level native enums for columns with predefined, static business states (e.g. `Role`, `Gender`, `AttendanceStatus`, `PaymentStatus`). Do not store them as free text.
-  - _Example in Prisma:_
-    ```prisma
-    enum AttendanceStatus {
-      PRESENT
-      ABSENT
-      LATE
-      EXCUSED
-      @@map("attendance_status")
-    }
-    ```
-- **JSONB Only for Documents:**
-  - Any dynamic payload, settings object, metadata bag, or rich configuration must use PostgreSQL `JSONB` data type (`Json @db.JsonB` in Prisma).
-  - _Why?_ `JSONB` stores data in a decomposed binary format, enabling GIN (Generalized Inverted Index) indexing and fast search evaluations. Never use plain `JSON` in PostgreSQL.
+- **Native Prisma ENUMs:** Always use native Enums for predefined static domain states (e.g., `BatchStatusType`, `AttendanceSessionStatusEnum`, `ExamPublishStatusEnum`, `LiveClassStatusEnum`).
 
 ---
 
 ## 🔍 7. Index Optimization & Guardrails
 
-- **Do Not Over-Index:** Every index created adds a write/insert performance tax (Postgres must update the B-Tree on every insert, update, or delete).
-- **Query-Driven Indexes:** Do not add database indexes speculatively. Only introduce indexes when:
-  1.  The column is a foreign key (`_id`).
-  2.  The column is actively used in a search filter (`WHERE` / `AND`) or joining query.
-  3.  The column is used for ordering list results (`ORDER BY`).
-- **Composite Index Column Ordering:** When defining a multi-column index, place the most selective filter column first. For tenant tables, `institute_id` is always leftmost.
+- **Index Primary Keys & Foreign Keys:** Ensure foreign keys (`tenantId`, `branchId`, `courseId`, `batchId`) are indexed with `tenantId` leftmost.
+- **Composite Uniqueness:** Combine `tenantId` and business unique identifiers into compound unique directives:
+  ```prisma
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  ```
 
 ---
 
-## 🚀 8. Protocol for Schema Migrations
+## 🚀 8. Migration & Schema Workflow
 
-- **No Manual Production Alterations:** Developers must never run manual `ALTER TABLE` commands on live databases. All changes must be packaged into Prisma migrations.
-- **Migration Naming Scheme:** Use descriptive names for database changes:
-  - `20260708000000_init_auth`
-  - `20260708123000_add_attendance_records`
-- **Destructive Migration Guard:** If a migration contains a column drop or type change that might cause data loss, the migration script must include a data preservation step (copying to temporary storage or transforming column values first) before execution.
+- **Prisma Migrations:** All production schema changes are applied via versioned Prisma migration scripts (`pnpm prisma migrate dev` / `pnpm prisma migrate deploy`).
+- **Single Source of Truth:** `packages/database/prisma/schema.prisma` is the single source of truth for all database models, relations, and TypeScript client definitions across the monorepo.
+

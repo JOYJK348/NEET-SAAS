@@ -152,10 +152,10 @@ export function ScheduleSlotCard({
     icon: React.ComponentType<any>;
     danger?: boolean;
   }[] = [
-    { action: 'change_tutor', label: 'Change Tutor', icon: User },
-    { action: 'reschedule', label: 'Reschedule', icon: RefreshCw },
-    { action: 'cancel', label: 'Cancel Class', icon: Ban, danger: true },
-    { action: 'history', label: 'View History', icon: History },
+    { action: 'reschedule', label: 'Edit / Reschedule ✏️', icon: RefreshCw },
+    { action: 'change_tutor', label: 'Change Tutor 👨‍🏫', icon: User },
+    { action: 'cancel', label: 'Cancel Class 🚫', icon: Ban, danger: true },
+    { action: 'history', label: 'View History 📜', icon: History },
   ];
 
   const handleMenuAction = (action: SessionAction | 'history') => {
@@ -176,7 +176,7 @@ export function ScheduleSlotCard({
         ${colors.bg} ${colors.border} space-y-3
       `}
     >
-      {/* Top Bar: Subject Badge + Actions dropdown */}
+      {/* Top Bar: Subject Badge + Edit / Actions */}
       <div className="flex items-center justify-between">
         <span
           className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
@@ -185,20 +185,37 @@ export function ScheduleSlotCard({
           {subjectName ?? 'Subject'}
         </span>
 
-        {/* Options Trigger */}
-        {Boolean(onAction || onHistory) && (
-          <div ref={menuRef} className="relative">
+        {/* Edit & Options Action Buttons */}
+        <div className="flex items-center gap-1.5">
+          {Boolean(onAction) && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setMenuOpen((v) => !v);
+                onAction?.('reschedule', schedule);
               }}
-              className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs hover:bg-white text-slate-600 transition-all"
-              title="Class Options"
+              className="px-2.5 py-1 rounded-xl bg-white/90 border border-slate-200/80 shadow-2xs hover:bg-violet-600 hover:text-white text-slate-700 text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer"
+              title="Edit / Reschedule Class"
             >
-              <MoreVertical className="w-4 h-4" />
+              <RefreshCw className="w-3 h-3 text-violet-600 group-hover:text-white transition-colors" />
+              <span>Edit</span>
             </button>
+          )}
+
+          {/* Options Trigger */}
+          {Boolean(onAction || onHistory) && (
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen((v) => !v);
+                }}
+                className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs hover:bg-white text-slate-600 transition-all cursor-pointer"
+                title="Class Options"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
 
             {/* Dropdown Menu */}
             {menuOpen && (
@@ -230,6 +247,7 @@ export function ScheduleSlotCard({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* Batch & Tutor Info */}

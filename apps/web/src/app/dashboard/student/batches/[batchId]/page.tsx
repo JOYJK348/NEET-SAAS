@@ -288,19 +288,32 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                     const sessionEndDateTime = s.date ? new Date(`${s.date}T${s.endsAt || '23:59'}`) : new Date(0);
                     const now = new Date();
                     const isPast = sessionEndDateTime < now;
-                    const effectiveStatus = s.sessionStatus === 'CANCELLED' ? 'CANCELLED' : isPast || s.liveStatus === 'COMPLETED' ? 'COMPLETED' : s.sessionStatus;
+                    const isLive = s.liveStatus === 'LIVE_NOW' || s.sessionStatus === 'STARTED';
+                    const effectiveStatus = s.sessionStatus === 'CANCELLED' ? 'CANCELLED' : isPast || s.liveStatus === 'COMPLETED' ? 'COMPLETED' : isLive ? 'LIVE NOW' : s.sessionStatus;
 
                     return (
-                      <span
-                        className={cn(
-                          'text-[10px] font-black px-2.5 py-1 rounded-xl border',
-                          effectiveStatus === 'COMPLETED' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                          effectiveStatus === 'CANCELLED' && 'bg-rose-50 text-rose-700 border-rose-200',
-                          effectiveStatus === 'SCHEDULED' && 'bg-violet-50 text-violet-700 border-violet-200',
+                      <div className="flex items-center gap-2">
+                        {(isLive || s.deliveryMode === 'ONLINE' || s.deliveryMode === 'HYBRID' || (s as any).meetingLink) && s.sessionStatus !== 'CANCELLED' && (
+                          <Link
+                            href={`/dashboard/student/live/${s.id || 'demo-class-1'}`}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs transition"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span>Join Live Class 🚀</span>
+                          </Link>
                         )}
-                      >
-                        {effectiveStatus}
-                      </span>
+                        <span
+                          className={cn(
+                            'text-[10px] font-black px-2.5 py-1 rounded-xl border',
+                            isLive && 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse',
+                            effectiveStatus === 'COMPLETED' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                            effectiveStatus === 'CANCELLED' && 'bg-rose-50 text-rose-700 border-rose-200',
+                            effectiveStatus === 'SCHEDULED' && 'bg-violet-50 text-violet-700 border-violet-200',
+                          )}
+                        >
+                          {effectiveStatus}
+                        </span>
+                      </div>
                     );
                   })()}
                 </div>

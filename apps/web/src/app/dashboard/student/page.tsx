@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/providers/auth-provider';
@@ -133,40 +133,41 @@ function KpiCard({
   );
 }
 
+import { useRouter } from 'next/navigation';
+
 // ─── Session Card ─────────────────────────────────────────────────────────────
 function SessionCard({ session, showDate }: { session: StudentSessionDto; showDate?: boolean }) {
-  const { join, isJoining } = useJoinSession();
-  const [isWaitingApproval, setIsWaitingApproval] = useState(false);
+  const router = useRouter();
 
   const handleJoin = async () => {
-    setIsWaitingApproval(true);
-    toast.info("Waiting for Tutor's Approval ⏳", {
-      description: `Request sent to ${session.tutorName || 'Bharathi M'}. You will be redirected once approved.`,
-    });
-
-    try {
-      setTimeout(async () => {
-        try {
-          await join(session.id);
-          setIsWaitingApproval(false);
-        } catch {
-          setIsWaitingApproval(false);
-          toast.error('Cannot join class', {
-            description: 'Meeting link not available or class has ended.',
-          });
-        }
-      }, 2500);
-    } catch {
-      setIsWaitingApproval(false);
-      toast.error('Cannot join class', {
-        description: 'Meeting link not available or class has ended.',
-      });
-    }
+    router.push(`/dashboard/student/live/${session.id || 'demo-class-1'}`);
   };
 
   const subjectName = session.subject?.name ?? 'Subject Session';
   const initial = subjectName.charAt(0).toUpperCase();
-  const isLive = session.liveStatus === 'LIVE_NOW';
+  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED' || Boolean(session.canJoin);
+  const isCancelled = session.sessionStatus === 'CANCELLED';
+
+  const canJoinNow = useMemo(() => {
+    if (isCancelled) return false;
+    if (isLive) return true;
+    if (session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
+
+    if (session.date && session.startsAt && session.endsAt) {
+      try {
+        const now = new Date();
+        const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
+        const start = new Date(`${dateStr}T${session.startsAt}:00`);
+        const end = new Date(`${dateStr}T${session.endsAt}:00`);
+
+        // Allow joining 10 mins before start until end time
+        const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
+        return now >= windowStart && now <= end;
+      } catch {}
+    }
+
+    return session.canJoin ?? false;
+  }, [isLive, isCancelled, session]);
 
   return (
     <div
@@ -222,25 +223,23 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
         <DeliveryBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Action Button: Full-width on Mobile */}
-      {(session.canJoin || isLive) && (
+      {/* Action Button: Enabled ONLY for current/live sessions */}
+      {!isCancelled && (
         <div className="pt-1 border-t border-slate-100">
           <button
             onClick={handleJoin}
-            disabled={isJoining || isWaitingApproval}
+            disabled={!canJoinNow}
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] disabled:opacity-75 disabled:cursor-not-allowed shadow-2xs active:scale-98 text-center',
-              isWaitingApproval
-                ? 'bg-amber-500 text-white shadow-amber-500/20 animate-pulse'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20',
+              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] shadow-2xs text-center',
+              canJoinNow
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
+                : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed'
             )}
           >
-            {isJoining || isWaitingApproval ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Video className="w-4 h-4" />
-            )}
-            {isWaitingApproval ? "Waiting for Tutor's Approval... ⏳" : 'Join Live Class 🚀'}
+            <Video className="w-4 h-4" />
+            <span>
+              {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
+            </span>
           </button>
         </div>
       )}

@@ -73,7 +73,7 @@ interface FilterState {
 function TutorTimetableCalendarContent() {
   const router = useRouter();
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('MONTH');
+  const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('LIST');
 
   // Calendar Date Navigation State
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
