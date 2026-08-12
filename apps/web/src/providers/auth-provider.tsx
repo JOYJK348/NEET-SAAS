@@ -5,6 +5,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, User } from '@/stores/auth-store';
 import { useRouter, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
+import { prefetchCriticalData } from '@/lib/prefetchOrchestrator';
+import { CACHE_STORAGE_KEY } from '@/lib/queryPersister';
 
 const PROACTIVE_INTERVAL_MS = 12 * 60 * 60 * 1000; // every 12 hours
 
@@ -109,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       const { user, accessToken, refreshToken } = data;
       setAuth(user, accessToken, refreshToken, rememberMe);
+      // Fire lean background prefetch for master data
+      prefetchCriticalData(queryClient, user.tenantId);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -125,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       const { user, accessToken, refreshToken } = response;
       setAuth(user, accessToken, refreshToken);
+      prefetchCriticalData(queryClient, user.tenantId);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -138,6 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       queryClient.clear();
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(CACHE_STORAGE_KEY);
+      }
       logoutStore();
       router.replace('/auth/login');
     }
@@ -159,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const user = await api.get<User>('/auth/me');
           setUser(user);
           setLoading(false);
+          prefetchCriticalData(queryClient, user.tenantId);
         } catch {
           await refreshAccessToken();
         }
@@ -177,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logoutStore,
     setLoading,
     setUser,
+    queryClient,
   ]);
 
   // Strict Role Route Guard across tabs

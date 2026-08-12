@@ -1,14 +1,14 @@
-import { api } from '@/lib/api';
+import { api, AxiosRequestConfig } from '@/lib/api';
 import type { PaginatedResponse, FilterParams } from '@/types/api';
 import type { Subject, CreateSubjectInput, UpdateSubjectInput } from '../types';
 
 export const subjectsApi = {
-  async getSubjects(params?: FilterParams): Promise<PaginatedResponse<Subject>> {
-    return api.get<PaginatedResponse<Subject>>('/master/subjects', { params });
+  async getSubjects(params?: FilterParams, options?: AxiosRequestConfig): Promise<PaginatedResponse<Subject>> {
+    return api.get<PaginatedResponse<Subject>>('/master/subjects', { ...options, params });
   },
 
-  async getSubjectById(id: string): Promise<Subject> {
-    return api.get<Subject>(`/master/subjects/${id}`);
+  async getSubjectById(id: string, options?: AxiosRequestConfig): Promise<Subject> {
+    return api.get<Subject>(`/master/subjects/${id}`, options);
   },
 
   async createSubject(input: CreateSubjectInput): Promise<Subject> {
