@@ -12,7 +12,7 @@ export const academicYearKeys = {
   lists: () => [...academicYearKeys.all, 'list'] as const,
   list: (params?: FilterParams) => queryKeys.academicYears.list(params),
   details: () => [...academicYearKeys.all, 'detail'] as const,
-  detail: (id: string) => [...academicYearKeys.academicYears.all(), 'detail', id] as const,
+  detail: (id: string) => queryKeys.academicYears.list(id),
 };
 
 export function useAcademicYears(params?: FilterParams) {
