@@ -1,14 +1,14 @@
-import { api } from '@/lib/api';
+import { api, AxiosRequestConfig } from '@/lib/api';
 import type { PaginatedResponse, FilterParams } from '@/types/api';
 import type { AcademicYear, CreateAcademicYearInput, UpdateAcademicYearInput } from '../types';
 
 export const academicYearsApi = {
-  async getAcademicYears(params?: FilterParams): Promise<PaginatedResponse<AcademicYear>> {
-    return api.get<PaginatedResponse<AcademicYear>>('/master/academic-years', { params });
+  async getAcademicYears(params?: FilterParams, options?: AxiosRequestConfig): Promise<PaginatedResponse<AcademicYear>> {
+    return api.get<PaginatedResponse<AcademicYear>>('/master/academic-years', { ...options, params });
   },
 
-  async getAcademicYearById(id: string): Promise<AcademicYear> {
-    return api.get<AcademicYear>(`/master/academic-years/${id}`);
+  async getAcademicYearById(id: string, options?: AxiosRequestConfig): Promise<AcademicYear> {
+    return api.get<AcademicYear>(`/master/academic-years/${id}`, options);
   },
 
   async createAcademicYear(input: CreateAcademicYearInput): Promise<AcademicYear> {
