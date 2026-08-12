@@ -7,12 +7,5 @@ export function ThemeProvider({
   children,
   ...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
-  return (
-    <NextThemesProvider
-      {...props}
-      scriptProps={{ 'data-cfasync': 'false' } as React.ScriptHTMLAttributes<HTMLScriptElement>}
-    >
-      {children}
-    </NextThemesProvider>
-  );
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }

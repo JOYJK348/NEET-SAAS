@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -33,6 +33,8 @@ import {
   CalendarDays,
   FileCheck2,
   Zap,
+  Search,
+  X,
 } from 'lucide-react';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -113,7 +115,7 @@ import { toast } from 'sonner';
 function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
   const router = useRouter();
   const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED' || Boolean(session.canJoin);
+  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
 
   const canJoinNow = useMemo(() => {
     if (isCancelled) return false;
@@ -124,15 +126,15 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
       try {
         const now = new Date();
         const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const start = new Date(`${dateStr}T${session.startsAt}:00`);
-        const end = new Date(`${dateStr}T${session.endsAt}:00`);
+        const start = new Date(`${dateStr}T${session.startsAt.length === 5 ? session.startsAt + ':00' : session.startsAt}`);
+        const end = new Date(`${dateStr}T${session.endsAt.length === 5 ? session.endsAt + ':00' : session.endsAt}`);
 
-        // Allow tutor to start 15 mins before session until end
-        const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+        // Allow tutor to start 10 mins before scheduled start time until end
+        const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
         return now >= windowStart && now <= end;
       } catch {}
     }
-    return true;
+    return false;
   }, [isLive, isCancelled, session]);
 
   const handleJoinClass = () => {
@@ -207,16 +209,26 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
         </p>
       )}
 
-      {/* Action Buttons: Only shown when class can be started/launched */}
-      {!isCancelled && canJoinNow && (isLive || session.liveStatus === 'LIVE_NOW' || session.deliveryMode === 'ONLINE' || session.deliveryMode === 'HYBRID' || Boolean(session.meetingLink)) && (
+      {/* Action Buttons: Disabled when Upcoming, Enabled ONLY when Live or exact time window */}
+      {!isCancelled && (
         <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-          <button
-            onClick={handleJoinClass}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
-          >
-            <Video className="w-4 h-4 shrink-0" />
-            <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
-          </button>
+          {canJoinNow ? (
+            <button
+              onClick={handleJoinClass}
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
+            >
+              <Video className="w-4 h-4 shrink-0" />
+              <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
+            </button>
+          ) : (
+            <button
+              disabled
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-80"
+            >
+              <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+              <span>Class Starts at {formatTime(session.startsAt, session.endsAt).split('–')[0].trim()} (Upcoming)</span>
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -300,6 +312,148 @@ function OverviewStats({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Bounded Scrollable & Filterable Upcoming Schedule Section ─────────────
+
+function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: TutorialSessionDto[] }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+
+  // Standard NEET curriculum subjects + any extra scheduled subjects
+  const subjectList = useMemo(() => {
+    const defaultSubjects = ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology', 'Maths'];
+    const set = new Set<string>(defaultSubjects);
+    (upcomingSchedule || []).forEach((s) => {
+      if (s.subject?.name) set.add(s.subject.name);
+    });
+    return Array.from(set);
+  }, [upcomingSchedule]);
+
+  // Filtered upcoming sessions
+  const filteredSchedule = useMemo(() => {
+    return upcomingSchedule.filter((s) => {
+      const subj = (s.subject?.name || '').toLowerCase();
+      const batch = (s.batch?.name || '').toLowerCase();
+      const branch = (s.branch?.name || '').toLowerCase();
+      const mode = (s.deliveryMode || '').toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+
+      const matchesSearch =
+        !q ||
+        subj.includes(q) ||
+        batch.includes(q) ||
+        branch.includes(q) ||
+        mode.includes(q);
+
+      const matchesSubject =
+        selectedSubjectFilter === 'ALL' ||
+        (s.subject?.name || '').toLowerCase() === selectedSubjectFilter.toLowerCase();
+
+      return matchesSearch && matchesSubject;
+    });
+  }, [upcomingSchedule, searchQuery, selectedSubjectFilter]);
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+      {/* Section Header */}
+      <div className="space-y-3 border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4.5 h-4.5 text-sky-600 shrink-0" />
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+              Upcoming Sessions (Next 7 Days)
+            </h2>
+          </div>
+          <span className="self-start sm:self-auto text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100 shrink-0">
+            {filteredSchedule.length} of {upcomingSchedule.length} Sessions
+          </span>
+        </div>
+
+        {/* Filter & Search Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search subject, batch or mode..."
+              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 transition"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Subject Filter Pills */}
+          {subjectList.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px] font-bold">
+              <button
+                onClick={() => setSelectedSubjectFilter('ALL')}
+                className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
+                  selectedSubjectFilter === 'ALL'
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                All
+              </button>
+              {subjectList.map((subj) => (
+                <button
+                  key={subj}
+                  onClick={() => setSelectedSubjectFilter(subj)}
+                  className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
+                    selectedSubjectFilter.toLowerCase() === subj.toLowerCase()
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {subj}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Fixed Height Scrollable Sessions Container */}
+      <div className="max-h-[500px] overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-slate-200">
+        {upcomingSchedule.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+            <BookOpen className="w-8 h-8 text-slate-300 mb-2" />
+            <p className="text-sm font-bold text-slate-700">No upcoming classes scheduled</p>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs">
+              New sessions will appear here once published by management.
+            </p>
+          </div>
+        ) : filteredSchedule.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40 space-y-2">
+            <p className="text-xs font-bold text-slate-700">No sessions match your search/filter</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSubjectFilter('ALL');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-bold shadow-2xs hover:bg-violet-700 transition cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          filteredSchedule.map((session, index) => (
+            <SessionCard key={`${session.id || 'upcoming'}-${index}`} session={session} showDate />
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -453,43 +607,15 @@ function TutorDashboardContent() {
             </div>
           ) : (
             <div className="space-y-3">
-              {overview.todaysSchedule.map((session) => (
-                <SessionCard key={session.id} session={session} />
+              {overview.todaysSchedule.map((session, index) => (
+                <SessionCard key={`${session.id || 'today'}-${index}`} session={session} />
               ))}
             </div>
           )}
         </div>
 
-        {/* Upcoming Schedule */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4.5 h-4.5 text-sky-600" />
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                Upcoming Sessions (Next 7 Days)
-              </h2>
-            </div>
-            <span className="text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100">
-              {overview.upcomingSchedule.length} Sessions
-            </span>
-          </div>
-
-          {overview.upcomingSchedule.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
-              <BookOpen className="w-8 h-8 text-slate-300 mb-2" />
-              <p className="text-sm font-bold text-slate-700">No upcoming classes scheduled</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                New sessions will appear here once published by management.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {overview.upcomingSchedule.map((session) => (
-                <SessionCard key={session.id} session={session} showDate />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Bounded Scrollable & Filterable Upcoming Schedule */}
+        <UpcomingScheduleSection upcomingSchedule={overview.upcomingSchedule} />
       </div>
     </div>
   );

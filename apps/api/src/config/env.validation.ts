@@ -38,6 +38,11 @@ export const EnvSchema = z.object({
   SUPABASE_STORAGE_LIVE_RECORDINGS_BUCKET: z
     .string()
     .default('live-class-recordings'),
+  // Supabase S3-compatible endpoint (LiveKit Egress writes recordings directly here)
+  SUPABASE_S3_ACCESS_KEY: z.string().optional().default(''),
+  SUPABASE_S3_SECRET_KEY: z.string().optional().default(''),
+  SUPABASE_S3_ENDPOINT: z.string().optional().default(''),
+  SUPABASE_S3_REGION: z.string().optional().default('us-east-1'),
   RAZORPAY_KEY_ID: z.string().optional().default(''),
   RAZORPAY_KEY_SECRET: z.string().optional().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional().default(''),

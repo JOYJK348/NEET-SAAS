@@ -195,6 +195,45 @@ export class TutorDashboardService {
       }
     }
 
+    // Merge active/LIVE LiveClasses into todaysSessions for tutor's assigned batches or tenant
+    try {
+      const activeLiveClasses = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          status: { in: ['LIVE', 'SCHEDULED'] },
+          deletedAt: null,
+          ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
+        },
+      });
+
+      for (const lc of activeLiveClasses) {
+        const exists = todaysSessions.some(
+          (s) => s.id === lc.id || (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+        );
+        if (!exists) {
+          todaysSessions.unshift({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            branchId: 'main-branch',
+            staffProfileId,
+            scheduleId: null,
+            attendanceDate: lc.scheduledStart || today,
+            startsAt: lc.scheduledStart || today,
+            endsAt: lc.scheduledEnd || tomorrow,
+            sessionStatus: lc.status === 'LIVE' ? ('STARTED' as AttendanceSessionStatusEnum) : ('SCHEDULED' as AttendanceSessionStatusEnum),
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            deletedAt: null,
+          } as unknown as AttendanceSessions);
+        }
+      }
+    } catch {}
+
     // Upcoming classes
     let upcomingSessions = await this.prisma.attendanceSessions.findMany({
       where: {

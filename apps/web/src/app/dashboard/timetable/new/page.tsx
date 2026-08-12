@@ -104,6 +104,9 @@ interface FormState {
   roomId: string;
   meetingLink: string;
   notes: string;
+  recordingEnabled: boolean;
+  whiteboardEnabled: boolean;
+  chatEnabled: boolean;
 }
 
 function CreateScheduleContent() {
@@ -131,6 +134,9 @@ function CreateScheduleContent() {
     roomId: '',
     meetingLink: '',
     notes: '',
+    recordingEnabled: true,
+    whiteboardEnabled: true,
+    chatEnabled: true,
   });
 
   const [conflictResult, setConflictResult] = useState<ConflictResult | null>(null);
@@ -174,6 +180,9 @@ function CreateScheduleContent() {
         roomId: scheduleToEdit.roomId || '',
         meetingLink: scheduleToEdit.meetingLink || '',
         notes: scheduleToEdit.notes || '',
+        recordingEnabled: scheduleToEdit.recordingEnabled ?? true,
+        whiteboardEnabled: scheduleToEdit.whiteboardEnabled ?? true,
+        chatEnabled: scheduleToEdit.chatEnabled ?? true,
       });
 
       if (scheduleToEdit.scheduleType === 'ONE_TIME' || scheduleToEdit.isOneTime) {
@@ -247,7 +256,7 @@ function CreateScheduleContent() {
     : tutors;
 
   const { mutate: runConflictCheck, isPending: checkingConflicts } = useCheckConflicts();
-  const { mutate: createSchedule, isPending: creating } = useCreateSchedule();
+  const { mutateAsync: createSchedule, isPending: creating } = useCreateSchedule();
 
   const set = useCallback(
     (key: keyof FormState, value: string) => {
@@ -365,6 +374,9 @@ function CreateScheduleContent() {
       effectiveUntil: form.effectiveUntil,
       deliveryMode: form.deliveryMode,
       bypassStudentConflict: bypassStudent,
+      recordingEnabled: form.recordingEnabled,
+      whiteboardEnabled: form.whiteboardEnabled,
+      chatEnabled: form.chatEnabled,
       ...(form.roomId && { roomId: form.roomId }),
       ...(form.meetingLink && { meetingLink: form.meetingLink }),
       ...(form.notes && { notes: form.notes }),
@@ -406,15 +418,13 @@ function CreateScheduleContent() {
           description: `Updated schedule for ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']}.`,
         });
       } else {
-        await createSchedule(payload, {
-          onSuccess: () => {
-            toast.success('Class Schedule Created Successfully! 🚀', {
-              description: `Scheduled ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} (${form.startTime} - ${form.endTime}).`,
-            });
-          },
+        await createSchedule(payload);
+        toast.success('Class Schedule Created Successfully! 🚀', {
+          description: `Scheduled ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} (${form.startTime} - ${form.endTime}).`,
         });
       }
       await queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      await queryClient.refetchQueries({ queryKey: ['schedules'] });
       router.push('/dashboard/timetable');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || err?.message || 'Failed to save class schedule');
@@ -633,7 +643,7 @@ function CreateScheduleContent() {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-violet-800 font-extrabold pt-1">
                 <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
-                <span>
+                <span suppressHydrationWarning>
                   Single Class scheduled for {WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']},{' '}
                   {new Date(singleDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
@@ -647,10 +657,24 @@ function CreateScheduleContent() {
 
           {/* Option B: RECURRING Day of Week Selector */}
           {scheduleType === 'RECURRING' && (
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold text-slate-700">
-                Repeat Day of Week <span className="text-red-500">*</span>
-              </label>
+            <div className="space-y-3 bg-violet-50/50 border border-violet-100 p-4 rounded-2xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="block text-xs font-extrabold text-slate-800">
+                  Repeat Day of Week <span className="text-red-500">*</span>
+                </label>
+
+                {/* Starts From Date Picker */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-extrabold text-violet-900">Starts From Date:</span>
+                  <input
+                    type="date"
+                    value={form.effectiveFrom}
+                    onChange={(e) => set('effectiveFrom', e.target.value)}
+                    className="px-2.5 py-1 rounded-xl bg-white border border-violet-200 text-xs font-bold text-slate-800 outline-none focus:border-violet-600 transition-all cursor-pointer shadow-2xs"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-2 flex-wrap">
                 {WEEKDAYS.map((day) => (
                   <button
@@ -661,7 +685,7 @@ function CreateScheduleContent() {
                       'px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer',
                       form.dayOfWeek === day
                         ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/20'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100',
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100',
                     )}
                   >
                     {WEEKDAY_FULL_LABELS[day]}
@@ -669,6 +693,22 @@ function CreateScheduleContent() {
                 ))}
               </div>
               {errors.dayOfWeek && <p className="text-xs text-red-500 mt-1 font-semibold">{errors.dayOfWeek}</p>}
+
+              {/* Dynamic Live Banner: From this date onwards */}
+              <div className="flex items-center gap-2 text-xs text-violet-900 bg-white/90 border border-violet-200/80 px-3.5 py-2.5 rounded-xl font-extrabold shadow-2xs">
+                <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
+                <span suppressHydrationWarning>
+                  Weekly Class repeats every <strong>{WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']}</strong> starting from{' '}
+                  <span className="underline decoration-violet-400">
+                    {new Date(form.effectiveFrom || getTodayDateStr()).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>{' '}
+                  onwards 📅
+                </span>
+              </div>
             </div>
           )}
 
@@ -930,6 +970,53 @@ function CreateScheduleContent() {
               rows={2}
               className="w-full p-3 rounded-xl bg-slate-50/50 border border-slate-200 text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-violet-600 transition-all resize-none"
             />
+          </div>
+
+          {/* Live Classroom Feature Toggles */}
+          <div className="pt-3 border-t border-slate-200/80 space-y-2">
+            <label className="block text-xs font-extrabold text-slate-700">
+              Live Classroom Feature Toggles
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl border bg-slate-50 border-slate-200/80 cursor-pointer hover:bg-slate-100/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={form.recordingEnabled ?? true}
+                  onChange={(e) => setForm((f) => ({ ...f, recordingEnabled: e.target.checked }))}
+                  className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
+                />
+                <div className="text-xs">
+                  <span className="font-extrabold text-slate-800 block">🔴 Auto Record</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Record live stream MP4</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl border bg-slate-50 border-slate-200/80 cursor-pointer hover:bg-slate-100/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={form.whiteboardEnabled ?? true}
+                  onChange={(e) => setForm((f) => ({ ...f, whiteboardEnabled: e.target.checked }))}
+                  className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
+                />
+                <div className="text-xs">
+                  <span className="font-extrabold text-slate-800 block">🎨 Whiteboard</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Interactive Excalidraw</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-2xl border bg-slate-50 border-slate-200/80 cursor-pointer hover:bg-slate-100/80 transition-all">
+                <input
+                  type="checkbox"
+                  checked={form.chatEnabled ?? true}
+                  onChange={(e) => setForm((f) => ({ ...f, chatEnabled: e.target.checked }))}
+                  className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 accent-violet-600"
+                />
+                <div className="text-xs">
+                  <span className="font-extrabold text-slate-800 block">💬 Student Chat</span>
+                  <span className="text-[10px] text-slate-500 font-medium">In-room messaging</span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 

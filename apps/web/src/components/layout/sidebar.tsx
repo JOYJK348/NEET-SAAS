@@ -27,6 +27,7 @@ import {
   Video,
   FileText,
   Bookmark,
+  PlayCircle,
   Shield,
   Sliders,
   BarChart,
@@ -112,6 +113,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-rose-500',
     },
     {
+      name: 'Recordings',
+      href: '/dashboard/tutor/recordings',
+      icon: PlayCircle,
+      iconColor: 'text-purple-500',
+    },
+    {
       name: 'Attendance',
       href: '/dashboard/tutor/timetable/attendance',
       icon: ClipboardCheck,
@@ -149,6 +156,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       href: '/dashboard/student/timetable',
       icon: Clock,
       iconColor: 'text-rose-500',
+    },
+    {
+      name: 'Recordings',
+      href: '/dashboard/student/recordings',
+      icon: PlayCircle,
+      iconColor: 'text-purple-500',
     },
     {
       name: 'My Courses',
@@ -301,7 +314,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           iconColor: 'text-teal-500',
         },
         { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
-        { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
+        {
+          name: 'Recordings',
+          href: '/dashboard/recordings',
+          icon: FileText,
+          iconColor: 'text-purple-500',
+        },
         { name: 'Examinations', href: '/dashboard/exams', icon: Target, iconColor: 'text-red-500' },
       ],
     },

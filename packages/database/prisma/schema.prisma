@@ -2611,7 +2611,7 @@ model LiveClasses {
   meetingPassword     String?             // nullable — assigned on room creation
   waitingRoomEnabled  Boolean             @default(true)
   lobbyEnabled        Boolean             @default(false)
-  recordingEnabled    Boolean             @default(true)
+  recordingEnabled    Boolean             @default(false)
   chatEnabled         Boolean             @default(true)
   screenShareEnabled  Boolean             @default(true)
   whiteboardEnabled   Boolean             @default(true)
@@ -2753,12 +2753,14 @@ model LiveClassAttendance {
 model LiveClassRecordings {
   id                    String              @id @default(uuid())
   tenantId              String
+  liveClassId           String?             // nullable — direct link to LiveClasses (course/batch/subject/chapter/topic/instructor)
   sessionId             String
   storageObjectId       String?             // nullable — filled after upload
   thumbnailObjectId     String?             // nullable — filled after thumbnail generation
   transcriptObjectId    String?             // nullable — V2 feature
   subtitleObjectId      String?             // nullable — V2 feature
   rawEgressUrl          String?             // LiveKit raw egress download URL
+  egressId              String?             @unique // LiveKit Egress ID for tracking/stopping
   durationSeconds       Int                 @default(0)
   resolution            String?             // nullable — filled after processing
   bitrateKbps           Int?               // nullable — filled after processing

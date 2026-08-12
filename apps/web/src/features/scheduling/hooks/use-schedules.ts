@@ -77,7 +77,7 @@ export function useSchedules(params?: QueryScheduleParams) {
   return useQuery({
     queryKey: scheduleKeys.list(params),
     queryFn: () => getSchedules(params),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
   });
 }
 
@@ -85,7 +85,7 @@ export function useWeeklyView(params?: QueryScheduleParams) {
   return useQuery({
     queryKey: scheduleKeys.weeklyView(params),
     queryFn: () => getWeeklyView(params),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
   });
 }
 

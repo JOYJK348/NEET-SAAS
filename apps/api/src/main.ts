@@ -41,8 +41,16 @@ async function bootstrap() {
   app.use(cookieParser());
   app.use(compression());
 
-  // Body limits
-  app.use(json({ limit: '10mb' }));
+  // Body limits — stash the raw body so LiveKit webhooks can verify their HMAC
+  // against the exact payload (LiveKit verifies a SHA-256 of the raw bytes).
+  app.use(
+    json({
+      limit: '10mb',
+      verify: (req: any, _res: any, buf: Buffer) => {
+        (req as any).rawBody = buf.toString('utf8');
+      },
+    }),
+  );
   app.use(urlencoded({ limit: '10mb', extended: true }));
 
   // Configure CORS

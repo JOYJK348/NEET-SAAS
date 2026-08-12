@@ -10,10 +10,20 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Req,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { TenantGuard } from '../../auth/guards/tenant.guard';
+import { Public } from '../../../common/decorators/public.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import type { AuthenticatedRequestUser } from '../../auth/auth.types';
 import { LiveClassService } from '../services/live-class.service';
+import { LiveRecordingsService } from '../services/live-recordings.service';
 import { ScheduleLiveClassDto } from '../dto/schedule-live-class.dto';
 import { UpdateLiveClassDto } from '../dto/update-live-class.dto';
 
@@ -21,16 +31,26 @@ import { UpdateLiveClassDto } from '../dto/update-live-class.dto';
 @ApiBearerAuth()
 @Controller('live-classes')
 export class LiveClassController {
-  constructor(private readonly liveClassService: LiveClassService) {}
+  constructor(
+    private readonly liveClassService: LiveClassService,
+    private readonly recordingsService: LiveRecordingsService,
+  ) {}
 
   // ─── Schedule ─────────────────────────────────────────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Tenant Admin: Schedule a new live class' })
-  async schedule(@Body() dto: ScheduleLiveClassDto) {
-    return this.liveClassService.scheduleLiveClass(dto);
+  async schedule(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Body() dto: ScheduleLiveClassDto,
+  ) {
+    return this.liveClassService.scheduleLiveClass(
+      user.tenantId!,
+      user.sub,
+      dto,
+    );
   }
 
   // ─── Start Class (Teacher) ──────────────────────────────────────────────────
@@ -63,6 +83,36 @@ export class LiveClassController {
   @ApiOperation({ summary: 'Teacher: End live class (Deletes LiveKit room)' })
   async endClass(@Param('id') id: string) {
     return this.liveClassService.endClass(id);
+  }
+
+  // ─── Upload Recording Video (Teacher Studio Live Recording) ───────────────
+
+  @Post(':id/upload-recording')
+  @UseInterceptors(FileInterceptor('video'))
+  @ApiOperation({ summary: 'Teacher: Upload live recorded class video' })
+  async uploadRecording(
+    @Param('id') id: string,
+    @UploadedFile() file?: any,
+    @Body() body?: any,
+    @Query('durationSeconds') durationQuery?: string,
+    @Query('topicCovered') topicQuery?: string,
+  ) {
+    const durationSeconds = durationQuery || body?.durationSeconds;
+    const topicCovered = topicQuery || body?.topicCovered;
+    return this.liveClassService.saveUploadedRecording(id, file, { ...body, durationSeconds, topicCovered });
+  }
+
+  // ─── Stream Recording Video ───────────────────────────────────────────────
+
+  @Public()
+  @Get(':id/video')
+  @ApiOperation({ summary: 'Stream recorded class video with range headers' })
+  async streamRecordingVideo(
+    @Param('id') id: string,
+    @Req() req: any,
+    @Res() res: any,
+  ) {
+    return this.liveClassService.streamRecordingVideo(id, req, res);
   }
 
   // ─── Get upcoming ──────────────────────────────────────────────────────────
@@ -103,6 +153,20 @@ export class LiveClassController {
     return this.liveClassService.getParticipants(id);
   }
 
+  // ─── Recording status (studio / timetable chip) ──────────────────────────
+
+  @Get(':id/recording')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get recording status for a live class (Processing/Ready/Failed or null)',
+  })
+  async getRecordingStatus(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.recordingsService.getStatusForClass(user.tenantId!, id);
+  }
+
   // ─── Extend Class Duration ───────────────────────────────────────────────
 
   @Post(':id/extend')
@@ -118,20 +182,50 @@ export class LiveClassController {
   // ─── Update ────────────────────────────────────────────────────────────────
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @ApiOperation({ summary: 'Tenant Admin: Update a scheduled live class' })
-  async update(@Param('id') id: string, @Body() dto: UpdateLiveClassDto) {
-    return this.liveClassService.updateLiveClass(id, dto);
+  async update(
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateLiveClassDto,
+  ) {
+    return this.liveClassService.updateLiveClass(id, dto, user.tenantId!, user.sub);
   }
 
   // ─── Cancel ────────────────────────────────────────────────────────────────
 
   @Delete(':id/cancel')
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tenant Admin: Cancel a live class' })
   async cancel(
+    @CurrentUser() user: AuthenticatedRequestUser,
     @Param('id') id: string,
     @Query('reason') reason?: string,
   ) {
-    return this.liveClassService.cancelLiveClass(id, reason);
+    return this.liveClassService.cancelLiveClass(
+      id,
+      reason,
+      user.tenantId!,
+      user.sub,
+    );
+  }
+
+  // ─── Attendance ────────────────────────────────────────────────────────────
+
+  @Get(':id/attendance')
+  @ApiOperation({ summary: 'Teacher Studio: Get enrolled students attendance sheet for live class' })
+  async getLiveClassAttendance(@Param('id') id: string) {
+    return this.liveClassService.getLiveClassAttendance(id);
+  }
+
+  @Post(':id/attendance')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Teacher Studio: Save manual attendance marked during live class' })
+  async markLiveClassAttendance(
+    @Param('id') id: string,
+    @Body() body: { records: { studentAdmissionId: string; attendanceStatus: string; remarks?: string }[] },
+  ) {
+    return this.liveClassService.markLiveClassAttendance(id, body.records || []);
   }
 }

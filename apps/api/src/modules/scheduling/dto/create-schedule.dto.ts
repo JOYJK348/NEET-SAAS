@@ -88,4 +88,16 @@ export class CreateScheduleDto {
   @IsBoolean()
   @IsOptional()
   bypassStudentConflict?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  recordingEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  whiteboardEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  chatEnabled?: boolean;
 }

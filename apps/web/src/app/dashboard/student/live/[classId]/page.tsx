@@ -28,6 +28,7 @@ import {
   Volume2,
   Clock,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import {
   LiveKitRoom,
@@ -42,6 +43,7 @@ import {
 import { ConnectionState, Track } from 'livekit-client';
 import { useAuth } from '@/providers/auth-provider';
 import { useAuthStore } from '@/stores/auth-store';
+import { api } from '@/lib/api';
 
 import StudioWhiteboard from '@/components/live/studio-whiteboard';
 
@@ -63,32 +65,12 @@ export default function StudentClassroomPage() {
   const classId = params.classId as string;
   const { user, hasHydrated } = useAuthStore();
 
-  // ── Admission state (waiting room)
+  // ── Admission state (waiting room) — always start fresh in waiting room
   const studentId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('studentId') || 'student-1' : 'student-1');
-  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>(() => {
-    if (typeof window !== 'undefined') {
-      const hasAnyApproval = Object.keys(localStorage).some(k => k.startsWith(`class_${classId}_approved`));
-      const hasToken = Boolean(localStorage.getItem(`student_token_${classId}`));
-      if (hasAnyApproval || hasToken) return 'admitted';
-    }
-    return 'waiting';
-  });
+  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('waiting');
 
-  // ── LiveKit config — only populated AFTER admission
-  const [liveKitConfig, setLiveKitConfig] = useState<{ token: string; wsUrl: string; classTitle?: string; scheduledEnd?: string | Date } | null>(() => {
-    if (typeof window !== 'undefined') {
-      const cachedToken = localStorage.getItem(`student_token_${classId}`);
-      const cachedWsUrl = localStorage.getItem(`student_wsUrl_${classId}`);
-      if (cachedToken && cachedWsUrl && isTokenFresh(cachedToken)) {
-        return {
-          token: cachedToken,
-          wsUrl: cachedWsUrl,
-          classTitle: 'NEET Live Interactive Session',
-        };
-      }
-    }
-    return null;
-  });
+  // ── LiveKit config — populated AFTER tutor approval
+  const [liveKitConfig, setLiveKitConfig] = useState<{ token: string; wsUrl: string; classTitle?: string; scheduledEnd?: string | Date } | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState(false);
   const [retryCount, setRetryCount] = useState(0); // incremented to trigger retry
@@ -104,14 +86,8 @@ export default function StudentClassroomPage() {
         if (res.ok) {
           const json = await res.json();
           const data = json?.data ?? json;
-          if (data?.status === 'ENDED' || data?.status === 'CANCELLED') {
-            try {
-              localStorage.removeItem(`class_${classId}_approved_${studentId}`);
-              localStorage.removeItem(`class_${classId}_approved`);
-              localStorage.removeItem(`class_${classId}_approved_global`);
-              localStorage.removeItem(`student_token_${classId}`);
-              localStorage.removeItem(`student_wsUrl_${classId}`);
-            } catch {}
+          if (data?.status === 'CANCELLED') {
+            toast.error('This class has been cancelled.');
             if (typeof window !== 'undefined') {
               window.location.href = '/dashboard/student';
             }
@@ -120,9 +96,7 @@ export default function StudentClassroomPage() {
       } catch {}
     };
     checkStatusOnMount();
-    const interval = setInterval(checkStatusOnMount, 2000);
-    return () => clearInterval(interval);
-  }, [classId, studentId]);
+  }, [classId]);
 
   // ── Step 1: Waiting room — send join-request & listen for admit/deny
   useEffect(() => {
@@ -143,7 +117,16 @@ export default function StudentClassroomPage() {
 
     joinChannel.onmessage = (e) => {
       const d = e.data;
-      if (d.type === 'join-approved' && (!d.classId || d.classId === classId) &&
+      if (d.type === 'class-ended' && (!d.classId || d.classId === classId)) {
+        setAdmissionState('waiting');
+        setLiveKitConfig(null);
+        tokenFetchedRef.current = false;
+        toast.info('The tutor ended the live session.');
+      } else if (d.type === 'class-reopened' && (!d.classId || d.classId === classId)) {
+        setAdmissionState('waiting');
+        setLiveKitConfig(null);
+        tokenFetchedRef.current = false;
+      } else if (d.type === 'join-approved' && (!d.classId || d.classId === classId) &&
         (!d.studentId || d.studentId === studentId || d.studentId === 'all')) {
         try {
           localStorage.setItem(`class_${classId}_approved`, 'true');
@@ -175,17 +158,15 @@ export default function StudentClassroomPage() {
     };
   }, [admissionState, classId, studentId, user]);
 
-  // ── Step 2: Once admitted, fetch real LiveKit join token — runs ONCE per admission
+  // ── Step 2: Once admitted, fetch real LiveKit join token
   useEffect(() => {
-    if (admissionState !== 'admitted' || tokenFetchedRef.current) return;
+    if (admissionState !== 'admitted') return;
     if (!hasHydrated) return;
 
-    tokenFetchedRef.current = true; // guard: don't re-enter
+    let isMounted = true;
 
     const fetchToken = async () => {
-      if (!liveKitConfig) {
-        setTokenLoading(true);
-      }
+      setTokenLoading(true);
       setTokenError(false);
       try {
         const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -200,30 +181,52 @@ export default function StudentClassroomPage() {
         };
         const encodedName = encodeURIComponent(studentName);
 
+        try {
+          const data = await api.get<any>(
+            `/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
+            { skipGlobalToast: true },
+          );
+          if (data && data.token && isMounted) {
+            const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
+            setLiveKitConfig({
+              token: data.token,
+              wsUrl,
+              classTitle: data.classTitle || 'NEET Live Interactive Session',
+              scheduledEnd: data.scheduledEnd,
+            });
+            localStorage.setItem(`student_token_${classId}`, data.token);
+            localStorage.setItem(`student_wsUrl_${classId}`, wsUrl);
+            setTokenLoading(false);
+            return;
+          }
+        } catch {}
+
         const endpoints = [
+          `http://${host}:3000/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
           `http://${host}:3000/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-          `/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
           `/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
+          `/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
         ];
 
         for (const url of endpoints) {
           try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 800);
+            const timer = setTimeout(() => controller.abort(), 8000);
             const res = await fetch(url, { headers, signal: controller.signal });
             clearTimeout(timer);
             if (res.ok) {
               const data = await res.json();
-              if (data.token) {
+              if (data.token && isMounted) {
                 const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
                 setLiveKitConfig({
                   token: data.token,
                   wsUrl,
-                  classTitle: data.classTitle,
+                  classTitle: data.classTitle || 'NEET Live Interactive Session',
                   scheduledEnd: data.scheduledEnd,
                 });
                 localStorage.setItem(`student_token_${classId}`, data.token);
                 localStorage.setItem(`student_wsUrl_${classId}`, wsUrl);
+                setTokenLoading(false);
                 return;
               }
             }
@@ -231,46 +234,61 @@ export default function StudentClassroomPage() {
         }
 
         // Direct fallback token so student enters room immediately
-        const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-        const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-        setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
-        return;
+        if (isMounted) {
+          const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
+          const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
+          setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
+        }
       } catch {
-        const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-        const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-        setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
-        return;
+        if (isMounted) {
+          const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
+          const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
+          setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
+        }
       } finally {
-        setTokenLoading(false);
+        if (isMounted) {
+          setTokenLoading(false);
+        }
       }
     };
 
     fetchToken();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [admissionState, classId, user, hasHydrated, liveKitConfig, retryCount]);
+    return () => {
+      isMounted = false;
+    };
+  }, [admissionState, classId, user, hasHydrated, retryCount]);
 
   // ── Show waiting room (Seamless Dark Meeting Theme)
   if (admissionState === 'waiting') {
     return (
-      <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
+      <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
         {/* Header Bar */}
-        <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-md">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
-              <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+        <header className="h-12 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-30 shadow-md">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+              <Video className="w-4 h-4" />
             </div>
-            <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">Connect Meet</h1>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+            <h1 className="text-sm font-extrabold text-white tracking-tight">Connect Meet</h1>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse shrink-0">
               <Radio className="w-2.5 h-2.5" /> LIVE
             </div>
           </div>
         </header>
 
-        {/* Dark Classroom Placeholder */}
-        <div className="flex-1 bg-slate-950 flex items-center justify-center p-4">
-          <div className="flex flex-col items-center gap-3 text-slate-400">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="text-xs font-semibold tracking-wide">Connecting live stream...</span>
+        {/* Dark Waiting Room */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="flex flex-col items-center gap-5 text-center max-w-xs w-full">
+            <div className="w-20 h-20 rounded-3xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-xl">
+              <Loader2 className="w-10 h-10 animate-spin" />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-lg font-black text-white">Waiting for Admission</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">Your request has been sent to the tutor. Please wait while the tutor admits you into the live class.</p>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              Connecting live stream...
+            </div>
           </div>
         </div>
       </div>
@@ -809,8 +827,11 @@ function StudentClassroomInner({
             if (res.ok) {
               const json = await res.json();
               const data = json?.data ?? json; // unwrap {success, data: {...}} wrapper
-              if (data.status === 'ENDED' || data.status === 'CANCELLED') {
-                handleTriggerClassEnded('The live class has been ended.');
+              if (data.status === 'LIVE' || data.status === 'SCHEDULED' || data.status === 'WAITING') {
+                autoEndingRef.current = false;
+                setIsClassEnded(false);
+              } else if (data.status === 'CANCELLED') {
+                handleTriggerClassEnded('The live class has been cancelled.');
                 return;
               }
 
@@ -842,6 +863,9 @@ function StudentClassroomInner({
         if (evt.data?.classId === classId) {
           if (evt.data?.type === 'class-ended') {
             handleTriggerClassEnded('The teacher has ended today\'s live session.');
+          } else if (evt.data?.type === 'class-reopened') {
+            autoEndingRef.current = false;
+            setIsClassEnded(false);
           } else if (evt.data?.type === 'class-extended') {
             if (evt.data?.scheduledEnd) {
               const endMs = parseEndMs(evt.data.scheduledEnd);
@@ -1999,18 +2023,18 @@ function StudentClassroomInner({
 
       {/* ── Teacher / Auto Ended Class Modal ── */}
       {isClassEnded && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 font-sans">
-          <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto text-4xl shadow-inner">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 font-sans animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-5 animate-in zoom-in duration-200">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto text-3xl sm:text-4xl shadow-inner">
               🎓
             </div>
 
             <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-black uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
                 Live Session Completed
               </span>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Class Has Ended</h2>
-              <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Class Has Ended 🎉</h2>
+              <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200">
                 {endedReason}
               </p>
             </div>
@@ -2020,7 +2044,7 @@ function StudentClassroomInner({
                 stopAllMediaTracks();
                 router.push('/dashboard/student');
               }}
-              className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-95 text-white font-black text-sm rounded-2xl shadow-lg shadow-violet-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Return to Dashboard</span>
               <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px] font-mono font-bold">

@@ -522,6 +522,82 @@ export class SupabaseStorageService implements IStorageService {
   }
 
   /**
+   * Generates a short-lived signed URL for a raw storage object by bucket + path.
+   * Used for live-class recordings, which live in a dedicated bucket and are NOT
+   * tracked by the FileUploads table (no FileUploadId to resolve from).
+   */
+  async createBucketSignedUrl(params: {
+    bucketName: string;
+    path: string;
+    expiresInSeconds?: number;
+    download?: boolean;
+  }): Promise<string> {
+    const { bucketName, path, expiresInSeconds, download } = params;
+
+    // Supabase max signed URL expiry is 604,800 seconds (7 days)
+    const expiry = Math.min(expiresInSeconds ?? 3600, 604800);
+
+    const options: { download?: string | boolean } = {};
+    if (download) {
+      options.download = true;
+    }
+
+    const { data, error } = await this.supabaseClient.storage
+      .from(bucketName)
+      .createSignedUrl(path, expiry, options);
+
+    if (error || !data?.signedUrl) {
+      this.logSanitizedEvent('STORAGE_BUCKET_SIGNED_URL_FAILED', {
+        tenantId: path.split('/')[1], // best-effort: tenants/{tenantId}/...
+        error: error?.message || 'Failed to generate signed URL',
+      });
+      throw new InternalServerErrorException(
+        `Failed to generate signed URL: ${error?.message || 'Unknown storage error'}`,
+      );
+    }
+
+    this.logSanitizedEvent('STORAGE_BUCKET_SIGNED_URL_CREATED', {
+      tenantId: path.split('/')[1],
+      storedFileName: path,
+    });
+
+    return data.signedUrl;
+  }
+
+  /**
+   * Hard-removes a raw storage object by bucket + path. Unlike `deleteFile`, this
+   * does NOT involve the FileUploads table — used for live-class recordings on
+   * tenant-admin delete. Best-effort within the caller (record soft-delete still
+   * happens even if physical removal fails).
+   */
+  async removeBucketObject(params: {
+    bucketName: string;
+    path: string;
+  }): Promise<void> {
+    const { bucketName, path } = params;
+
+    const { error } = await this.supabaseClient.storage
+      .from(bucketName)
+      .remove([path]);
+
+    if (error) {
+      this.logSanitizedEvent('STORAGE_BUCKET_REMOVE_FAILED', {
+        tenantId: path.split('/')[1], // best-effort: tenants/{tenantId}/...
+        storedFileName: path,
+        error: error.message,
+      });
+      throw new InternalServerErrorException(
+        `Failed to remove object from storage: ${error.message}`,
+      );
+    }
+
+    this.logSanitizedEvent('STORAGE_BUCKET_REMOVE_OK', {
+      tenantId: path.split('/')[1],
+      storedFileName: path,
+    });
+  }
+
+  /**
    * Generates batch signed URLs for list rendering (e.g. tutor answer sheet lists).
    * Eliminates N+1 API calls.
    */

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/providers/auth-provider';
@@ -19,6 +20,8 @@ import {
   Video,
   MapPin,
   AlertCircle,
+  Search,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -135,6 +138,18 @@ function KpiCard({
 
 import { useRouter } from 'next/navigation';
 
+function formatTime(startsAt: string, endsAt: string): string {
+  const fmt = (t: string) => {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return t;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+  };
+  return `${fmt(startsAt)} – ${fmt(endsAt)}`;
+}
+
 // ─── Session Card ─────────────────────────────────────────────────────────────
 function SessionCard({ session, showDate }: { session: StudentSessionDto; showDate?: boolean }) {
   const router = useRouter();
@@ -145,7 +160,7 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
 
   const subjectName = session.subject?.name ?? 'Subject Session';
   const initial = subjectName.charAt(0).toUpperCase();
-  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED' || Boolean(session.canJoin);
+  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
   const isCancelled = session.sessionStatus === 'CANCELLED';
 
   const canJoinNow = useMemo(() => {
@@ -157,8 +172,8 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
       try {
         const now = new Date();
         const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const start = new Date(`${dateStr}T${session.startsAt}:00`);
-        const end = new Date(`${dateStr}T${session.endsAt}:00`);
+        const start = new Date(`${dateStr}T${session.startsAt.length === 5 ? session.startsAt + ':00' : session.startsAt}`);
+        const end = new Date(`${dateStr}T${session.endsAt.length === 5 ? session.endsAt + ':00' : session.endsAt}`);
 
         // Allow joining 10 mins before start until end time
         const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
@@ -166,7 +181,7 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
       } catch {}
     }
 
-    return session.canJoin ?? false;
+    return false;
   }, [isLive, isCancelled, session]);
 
   return (
@@ -187,7 +202,7 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
               {subjectName}
             </h4>
             <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-bold font-mono">
-              <span>{session.startsAt} – {session.endsAt}</span>
+              <span>{formatTime(session.startsAt, session.endsAt)}</span>
               {showDate && session.date && (
                 <span className="text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md font-extrabold ml-1">
                   {new Date(session.date).toLocaleDateString('en-IN', {
@@ -256,6 +271,142 @@ function EmptySchedule({ title = 'No classes today', sub = 'Enjoy your free day!
       </div>
       <p className="text-sm font-bold text-slate-700">{title}</p>
       <p className="text-xs text-slate-400 mt-1 max-w-xs">{sub}</p>
+    </div>
+  );
+}
+
+// ─── Student Upcoming Schedule Section (Bounded Scroll + Search/Filter) ─────
+
+function StudentUpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: StudentSessionDto[] }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+
+  // Standard NEET curriculum subjects + any extra scheduled subjects
+  const subjectList = useMemo(() => {
+    const defaultSubjects = ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology', 'Maths'];
+    const set = new Set<string>(defaultSubjects);
+    (upcomingSchedule || []).forEach((s) => {
+      if (s.subject?.name) set.add(s.subject.name);
+    });
+    return Array.from(set);
+  }, [upcomingSchedule]);
+
+  // Filtered upcoming sessions
+  const filteredSchedule = useMemo(() => {
+    return (upcomingSchedule || []).filter((s) => {
+      const subj = (s.subject?.name || '').toLowerCase();
+      const batch = (s.batch?.name || '').toLowerCase();
+      const tutor = (s.tutorName || '').toLowerCase();
+      const mode = (s.deliveryMode || '').toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+
+      const matchesSearch =
+        !q ||
+        subj.includes(q) ||
+        batch.includes(q) ||
+        tutor.includes(q) ||
+        mode.includes(q);
+
+      const matchesSubject =
+        selectedSubjectFilter === 'ALL' ||
+        (s.subject?.name || '').toLowerCase() === selectedSubjectFilter.toLowerCase();
+
+      return matchesSearch && matchesSubject;
+    });
+  }, [upcomingSchedule, searchQuery, selectedSubjectFilter]);
+
+  return (
+    <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+      {/* Section Header */}
+      <div className="space-y-3 border-b border-slate-100 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CalendarCheck2 className="w-4.5 h-4.5 text-sky-600 shrink-0" />
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+              Upcoming Sessions (Next 7 Days)
+            </h2>
+          </div>
+          <span className="self-start sm:self-auto text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100 shrink-0">
+            {filteredSchedule.length} of {upcomingSchedule?.length || 0} Sessions
+          </span>
+        </div>
+
+        {/* Filter & Search Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search subject, tutor or batch..."
+              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 transition"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Subject Filter Pills */}
+          {subjectList.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px] font-bold">
+              <button
+                onClick={() => setSelectedSubjectFilter('ALL')}
+                className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
+                  selectedSubjectFilter === 'ALL'
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                All
+              </button>
+              {subjectList.map((subj) => (
+                <button
+                  key={subj}
+                  onClick={() => setSelectedSubjectFilter(subj)}
+                  className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
+                    selectedSubjectFilter.toLowerCase() === subj.toLowerCase()
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {subj}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Fixed Height Scrollable Sessions Container */}
+      <div className="max-h-[500px] overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-slate-200">
+        {!upcomingSchedule || upcomingSchedule.length === 0 ? (
+          <EmptySchedule title="No upcoming classes scheduled" sub="Upcoming sessions for the next 7 days will appear here." />
+        ) : filteredSchedule.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40 space-y-2">
+            <p className="text-xs font-bold text-slate-700">No sessions match your search or filter</p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSubjectFilter('ALL');
+              }}
+              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-bold shadow-2xs hover:bg-violet-700 transition cursor-pointer"
+            >
+              Clear Filters
+            </button>
+          </div>
+        ) : (
+          filteredSchedule.map((session, idx) => (
+            <SessionCard key={`${session.id || 'upcoming'}-${session.startsAt || idx}-${session.date || idx}-${idx}`} session={session} showDate />
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -403,35 +554,15 @@ function StudentOverviewContent() {
             <EmptySchedule title="No classes scheduled for today" sub="Enjoy your free day! 🎉" />
           ) : (
             <div className="space-y-3">
-              {overview.todaysSchedule.map((session) => (
-                <SessionCard key={session.id} session={session} />
+              {overview.todaysSchedule.map((session, idx) => (
+                <SessionCard key={`${session.id || 'today'}-${session.startsAt || idx}-${idx}`} session={session} />
               ))}
             </div>
           )}
         </div>
 
-        {/* Upcoming Sessions (Next 7 Days) */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <CalendarCheck2 className="w-4 h-4 text-sky-600" />
-              Upcoming Sessions (Next 7 Days)
-            </h2>
-            <span className="text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100">
-              {overview?.upcomingSchedule?.length || 0} Sessions
-            </span>
-          </div>
-
-          {!overview || !overview.upcomingSchedule || overview.upcomingSchedule.length === 0 ? (
-            <EmptySchedule title="No upcoming classes scheduled" sub="Upcoming sessions for the next 7 days will appear here." />
-          ) : (
-            <div className="space-y-3">
-              {overview.upcomingSchedule.map((session) => (
-                <SessionCard key={session.id} session={session} showDate />
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Bounded Scrollable & Filterable Upcoming Schedule */}
+        <StudentUpcomingScheduleSection upcomingSchedule={overview?.upcomingSchedule || []} />
       </div>
     </div>
   );
