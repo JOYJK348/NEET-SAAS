@@ -12,6 +12,8 @@ import {
   Eye,
   CheckCircle2,
   XCircle,
+  Sparkles,
+  ArrowRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { AcademicYear } from '../../types';
@@ -220,8 +222,8 @@ export function AcademicYearTable({
 
   return (
     <div>
-      {/* Mobile Card View - Shown on mobile screens (<640px) */}
-      <div className="block sm:hidden space-y-3.5">
+      {/* ── Ultra-Sleek Mobile Native Card View (<640px) ── */}
+      <div className="block sm:hidden space-y-3">
         {years.map((year) => {
           const isActive = year.isActive;
           const isToggling = togglingId === year.id;
@@ -229,15 +231,57 @@ export function AcademicYearTable({
           return (
             <div
               key={year.id}
-              className="bg-white rounded-2xl border border-[#E5E7EB] p-4 shadow-xs space-y-3 transition-all hover:border-violet-300"
+              className={cn(
+                'relative bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3 transition-all active:scale-[0.99] overflow-hidden',
+                year.isCurrent && 'border-amber-300 bg-gradient-to-r from-amber-50/30 via-white to-white ring-1 ring-amber-400/20',
+              )}
             >
-              {/* Mobile Card Header: Code & Status Toggle */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-700 font-mono font-bold text-xs border border-violet-100">
-                  {year.code}
-                </span>
+              {/* Left Accent Indicator Bar */}
+              <div
+                className={cn(
+                  'absolute left-0 top-0 bottom-0 w-1.5',
+                  year.isCurrent
+                    ? 'bg-amber-500'
+                    : isActive
+                    ? 'bg-emerald-500'
+                    : 'bg-slate-300',
+                )}
+              />
+
+              {/* Card Header: Code Badge, Current Star, and iOS Status Switch */}
+              <div className="flex items-center justify-between pl-2">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-700 font-mono font-extrabold text-xs border border-violet-100">
+                    {year.code}
+                  </span>
+                  {year.isCurrent && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                      ★ Current
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2">
+                  {/* Status Pill Badge */}
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border',
+                      isActive
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200',
+                    )}
+                  >
+                    {isActive ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Active
+                      </>
+                    ) : (
+                      'Inactive'
+                    )}
+                  </span>
+
+                  {/* iOS Toggle Switch */}
                   <button
                     type="button"
                     disabled={isToggling}
@@ -266,70 +310,59 @@ export function AcademicYearTable({
                       )}
                     />
                   </button>
-
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border',
-                      isActive
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200',
-                    )}
-                  >
-                    {isActive ? 'Active' : 'Inactive'}
-                  </span>
                 </div>
               </div>
 
-              {/* Year Name & Description */}
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 flex items-center justify-center font-bold shrink-0 border border-violet-200/50 mt-0.5">
-                  <Calendar className="w-5 h-5" />
+              {/* Year Name, Icon & Calendar Dates */}
+              <div className="flex items-start gap-3 pl-2">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center font-black shrink-0 shadow-xs mt-0.5">
+                  <Calendar className="w-5 h-5 text-white" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-sm text-slate-900 leading-snug break-words">
-                      {year.name}
-                    </h4>
-                    {year.isCurrent && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                        ★ Current Active
-                      </span>
-                    )}
-                  </div>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <h4 className="font-black text-sm text-slate-900 leading-snug break-words">
+                    {year.name}
+                  </h4>
                   {year.description && (
-                    <p className="text-xs text-slate-400 mt-0.5 break-words">{year.description}</p>
+                    <p className="text-xs font-medium text-slate-500 break-words line-clamp-2">
+                      {year.description}
+                    </p>
                   )}
-                  <p className="text-xs font-semibold text-slate-600 mt-1 flex items-center gap-1">
-                    🗓 {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : ''}{' '}
-                    &mdash; {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : ''}
+                  <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 pt-1">
+                    <span>🗓</span>
+                    <span>
+                      {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : ''} &mdash;{' '}
+                      {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : ''}
+                    </span>
                   </p>
                 </div>
               </div>
 
-              {/* Mobile Actions Bar */}
-              <div className="flex items-center justify-between border-t border-slate-100 pt-2.5 gap-2">
+              {/* Mobile Actions Bar - Touch friendly 44px buttons */}
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 pl-2">
                 <button
                   onClick={() => onView(year)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-violet-50 text-violet-700 font-bold text-xs border border-violet-100 hover:bg-violet-100 transition"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-2xl bg-violet-600 text-white font-black text-xs shadow-xs hover:bg-violet-700 transition active:scale-95 cursor-pointer"
                 >
-                  <Eye className="w-3.5 h-3.5 text-violet-600" /> View & Edit Details
+                  <Eye className="w-3.5 h-3.5" /> View Details
                 </button>
 
                 {!year.isCurrent && (
                   <button
                     onClick={() => onSetCurrent(year.id)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-xs border border-amber-200 hover:bg-amber-100 transition flex items-center gap-1 shrink-0"
-                    title="Set as Current"
+                    className="h-10 px-3 rounded-2xl bg-amber-50 text-amber-700 font-bold text-xs border border-amber-200 hover:bg-amber-100 transition flex items-center justify-center gap-1 shrink-0 active:scale-95 cursor-pointer"
+                    title="Set as Current Active Session"
                   >
-                    <CalendarCheck className="w-3.5 h-3.5 text-amber-600" /> Set Current
+                    <CalendarCheck className="w-4 h-4 text-amber-600" />
+                    <span className="hidden xs:inline">Set Current</span>
                   </button>
                 )}
 
                 <button
                   onClick={() => onDelete(year.id)}
-                  className="px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 font-bold text-xs border border-rose-100 hover:bg-rose-100 transition flex items-center gap-1 shrink-0"
+                  className="h-10 w-10 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
+                  title={`Delete ${year.name}`}
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
