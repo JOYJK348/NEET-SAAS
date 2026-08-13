@@ -103,9 +103,11 @@ export function ConfirmActionModal({
           </div>
         </div>
 
-        {/* Description Body */}
-        <DialogDescription className="text-xs font-medium text-slate-600 leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100">
-          {description}
+        {/* Description Body - asChild renders a <div> instead of <p> to allow nested divs/ps without HTML hydration errors */}
+        <DialogDescription asChild>
+          <div className="text-xs font-medium text-slate-600 leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100">
+            {description}
+          </div>
         </DialogDescription>
 
         {/* Action Buttons Footer */}
