@@ -279,6 +279,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           icon: FolderTree,
           iconColor: 'text-emerald-600',
         },
+        {
+          name: 'Examinations',
+          href: '#',
+          icon: Target,
+          iconColor: 'text-red-500',
+        },
       ],
     },
     {
@@ -295,6 +301,103 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           href: '/dashboard/timetable/live-classes',
           icon: Video,
           iconColor: 'text-rose-500',
+        },
+        {
+          name: 'Events',
+          href: '#',
+          icon: Target,
+          iconColor: 'text-orange-500',
+        },
+        {
+          name: 'Google Calendar',
+          href: '#',
+          icon: Calendar,
+          iconColor: 'text-sky-500',
+        },
+      ],
+    },
+    {
+      category: 'Operations',
+      items: [
+        {
+          name: 'Attendance',
+          href: '/dashboard/tutor/batches/attendance',
+          icon: ClipboardCheck,
+          iconColor: 'text-teal-500',
+        },
+        {
+          name: 'Live Classes',
+          href: '/dashboard/timetable/live-classes',
+          icon: Video,
+          iconColor: 'text-indigo-500',
+        },
+        {
+          name: 'Recordings Library',
+          href: '/dashboard/tutor/recordings',
+          icon: FileText,
+          iconColor: 'text-purple-500',
+        },
+      ],
+    },
+    {
+      category: 'Finance',
+      items: [
+        {
+          name: 'Fees & Billing',
+          href: '#',
+          icon: DollarSign,
+          iconColor: 'text-emerald-500',
+        },
+      ],
+    },
+    {
+      category: 'Communication',
+      items: [
+        {
+          name: 'Announcements',
+          href: '#',
+          icon: Volume2,
+          iconColor: 'text-amber-500',
+        },
+        {
+          name: 'Notifications',
+          href: '#',
+          icon: Bell,
+          iconColor: 'text-yellow-500',
+        },
+      ],
+    },
+    {
+      category: 'Analytics',
+      items: [
+        {
+          name: 'Analytics & Reports',
+          href: '#',
+          icon: BarChart,
+          iconColor: 'text-fuchsia-500',
+        },
+      ],
+    },
+    {
+      category: 'Settings',
+      items: [
+        {
+          name: 'Roles & Permissions',
+          href: '#',
+          icon: Shield,
+          iconColor: 'text-red-500',
+        },
+        {
+          name: 'Institute Settings',
+          href: '#',
+          icon: Building2,
+          iconColor: 'text-blue-500',
+        },
+        {
+          name: 'System Configuration',
+          href: '#',
+          icon: Sliders,
+          iconColor: 'text-slate-500',
         },
       ],
     },
