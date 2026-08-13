@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   Student,
   StudentListItem,
@@ -12,21 +12,14 @@ import {
 } from '@/features/students/types/student';
 import type { PaginatedResponse } from '@/types/api';
 import { studentService, studentServiceKeys } from '@/features/students/services/student-service';
-
-const STALE = {
-  list: 30 * 1000,
-  detail: 60 * 1000,
-  stats: 60 * 1000,
-  timeline: 30 * 1000,
-  reference: 5 * 60 * 1000,
-};
+import { STALE_TIMES } from '@/lib/staleTimes';
 
 const GC = {
-  list: 5 * 60 * 1000,
+  list: 30 * 60 * 1000,
   detail: 30 * 60 * 1000,
-  stats: 5 * 60 * 1000,
-  timeline: 5 * 60 * 1000,
-  reference: 30 * 60 * 1000,
+  stats: 30 * 60 * 1000,
+  timeline: 15 * 60 * 1000,
+  reference: 60 * 60 * 1000,
 };
 
 export interface UseStudentsOptions {
@@ -66,9 +59,10 @@ export function useStudents(options: UseStudentsOptions = {}): UseStudentsReturn
 
   const { data, isPending, error, refetch } = useQuery({
     queryKey: studentServiceKeys.list(filters),
-    queryFn: () => studentService.getStudents(filters),
-    staleTime: STALE.list,
+    queryFn: ({ signal }) => studentService.getStudents(filters, { signal }),
+    staleTime: STALE_TIMES.STUDENTS,
     gcTime: GC.list,
+    placeholderData: keepPreviousData,
     enabled: autoFetch,
   });
 
@@ -158,9 +152,10 @@ export interface UseStudentStatsReturn {
 export function useStudentStats(): UseStudentStatsReturn {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: studentServiceKeys.stats(),
-    queryFn: () => studentService.getStudentStats(),
-    staleTime: STALE.stats,
+    queryFn: ({ signal }) => studentService.getStudentStats({ signal }),
+    staleTime: STALE_TIMES.STUDENTS,
     gcTime: GC.stats,
+    placeholderData: keepPreviousData,
   });
 
   return {
@@ -181,8 +176,8 @@ export interface UseStudentReturn {
 export function useStudent(id: string | null): UseStudentReturn {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: studentServiceKeys.detail(id ?? '__skip__'),
-    queryFn: () => studentService.getStudentById(id!),
-    staleTime: STALE.detail,
+    queryFn: ({ signal }) => studentService.getStudentById(id!, { signal }),
+    staleTime: STALE_TIMES.STUDENTS,
     gcTime: GC.detail,
     enabled: !!id,
   });
@@ -350,8 +345,8 @@ export interface UseStudentTimelineReturn {
 export function useStudentTimeline(studentId: string | null): UseStudentTimelineReturn {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: studentServiceKeys.timeline(studentId ?? '__skip__'),
-    queryFn: () => studentService.getTimelineEvents(studentId!),
-    staleTime: STALE.timeline,
+    queryFn: ({ signal }) => studentService.getTimelineEvents(studentId!),
+    staleTime: STALE_TIMES.STUDENTS,
     gcTime: GC.timeline,
     enabled: !!studentId,
   });
@@ -419,9 +414,10 @@ export interface UseBatchesReturn {
 export function useBatches(): UseBatchesReturn {
   const { data, isPending, error } = useQuery({
     queryKey: studentServiceKeys.batches(),
-    queryFn: () => studentService.getBatches(),
-    staleTime: STALE.reference,
+    queryFn: ({ signal }) => studentService.getBatches({ signal }),
+    staleTime: STALE_TIMES.MASTERS,
     gcTime: GC.reference,
+    placeholderData: keepPreviousData,
   });
 
   return {
@@ -440,9 +436,10 @@ export interface UseCoursesReturn {
 export function useCourses(): UseCoursesReturn {
   const { data, isPending, error } = useQuery({
     queryKey: studentServiceKeys.courses(),
-    queryFn: () => studentService.getCourses(),
-    staleTime: STALE.reference,
+    queryFn: ({ signal }) => studentService.getCourses({ signal }),
+    staleTime: STALE_TIMES.MASTERS,
     gcTime: GC.reference,
+    placeholderData: keepPreviousData,
   });
 
   return {
@@ -458,8 +455,8 @@ export function usePrefetchStudentDetail() {
     (id: string) => {
       queryClient.prefetchQuery({
         queryKey: studentServiceKeys.detail(id),
-        queryFn: () => studentService.getStudentById(id),
-        staleTime: STALE.detail,
+        queryFn: ({ signal }) => studentService.getStudentById(id, { signal }),
+        staleTime: STALE_TIMES.STUDENTS,
       });
     },
     [queryClient],

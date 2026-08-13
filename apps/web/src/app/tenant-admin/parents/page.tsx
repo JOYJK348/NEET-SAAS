@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { api } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { queryKeys } from '@/lib/queryKeys';
+import { STALE_TIMES } from '@/lib/staleTimes';
+import { useAuthStore } from '@/stores/auth-store';
 import {
   Users,
   Search,
   RefreshCw,
-  Lock,
-  ShieldCheck,
   Mail,
   Phone,
   GraduationCap,
-  Sparkles,
   UserCheck,
   HeartHandshake,
 } from 'lucide-react';
@@ -38,14 +38,13 @@ interface ParentListItem {
 }
 
 export default function TenantAdminParentsPage() {
-  const [parents, setParents] = useState<ParentListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const tenantId = useAuthStore((state) => state.user?.tenantId);
 
-  const fetchParents = async () => {
-    try {
-      setIsLoading(true);
-      const res = await api.get<any>('/students?limit=100');
+  const { data: parents = [], isPending: isLoading, refetch } = useQuery({
+    queryKey: queryKeys.parents.list({ limit: 100 }, tenantId),
+    queryFn: async ({ signal }) => {
+      const res = await api.get<any>('/students?limit=100', { signal });
       const studentsList = res.data?.data || res.data || [];
 
       // Extract unique parent details from student responses
@@ -83,17 +82,11 @@ export default function TenantAdminParentsPage() {
         }
       });
 
-      setParents(Array.from(parentMap.values()));
-    } catch (err) {
-      console.error('Failed to fetch parents list:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchParents();
-  }, []);
+      return Array.from(parentMap.values());
+    },
+    staleTime: STALE_TIMES.STUDENTS,
+    placeholderData: keepPreviousData,
+  });
 
   const filteredParents = parents.filter(
     (p) =>
@@ -129,7 +122,7 @@ export default function TenantAdminParentsPage() {
               </div>
             </div>
             <Button
-              onClick={fetchParents}
+              onClick={() => refetch()}
               disabled={isLoading}
               className="bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl px-4 py-2.5 text-xs font-bold gap-2 backdrop-blur-md transition-all self-start sm:self-auto shrink-0 shadow-xs"
             >
@@ -226,7 +219,7 @@ export default function TenantAdminParentsPage() {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && parents.length === 0 ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3">
               <LoadingSpinner size="lg" />
               <p className="text-xs text-slate-500 font-medium">
