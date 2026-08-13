@@ -77,6 +77,16 @@ class ApiClient {
         return response;
       },
       async (error: AxiosError) => {
+        // Ignore silent request cancellations (AbortSignal / fast typing / route changes)
+        if (
+          axios.isCancel(error) ||
+          error.name === 'CanceledError' ||
+          error.message === 'canceled' ||
+          error.code === 'ERR_CANCELED'
+        ) {
+          return Promise.reject(error);
+        }
+
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
         const isAuthRequest =
@@ -170,6 +180,16 @@ class ApiClient {
   }
 
   private handleGlobalError(error: AxiosError): void {
+    // Suppress toasts for intentional request cancellations (AbortSignal / fast typing / route changes)
+    if (
+      axios.isCancel(error) ||
+      error.name === 'CanceledError' ||
+      error.message === 'canceled' ||
+      error.code === 'ERR_CANCELED'
+    ) {
+      return;
+    }
+
     const status = error.response?.status;
     const message = (error.response?.data as { message?: string })?.message || error.message;
 

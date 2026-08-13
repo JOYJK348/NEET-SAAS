@@ -17,7 +17,17 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             gcTime: 30 * 60 * 1000, // Keep in memory for 30 min
             refetchOnWindowFocus: 'always',
             refetchOnMount: true,
-            retry: 2,
+            retry: (failureCount, error: any) => {
+              // Never retry intentionally cancelled requests (AbortSignal)
+              if (
+                error?.name === 'CanceledError' ||
+                error?.message === 'canceled' ||
+                error?.code === 'ERR_CANCELED'
+              ) {
+                return false;
+              }
+              return failureCount < 2;
+            },
           },
         },
       }),
