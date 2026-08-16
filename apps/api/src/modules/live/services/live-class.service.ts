@@ -1123,7 +1123,10 @@ export class LiveClassService {
 
   // ─── Live Class Attendance (Tutor Studio Attendance Sheet) ─────────────
 
-  async getLiveClassAttendance(liveClassId: string) {
+  async getLiveClassAttendance(
+    liveClassId: string,
+    queryOpts?: { sessionType?: string; studentAdmissionId?: string; studentName?: string },
+  ) {
     const liveClass = await this.prisma.liveClasses.findUnique({
       where: { id: liveClassId },
     });
@@ -1131,6 +1134,48 @@ export class LiveClassService {
     const tenantId = liveClass?.tenantId || 'review-academy';
     const batchId = liveClass?.batchId;
     const subjectId = liveClass?.subjectId;
+
+    let isOneOnOne = queryOpts?.sessionType === 'ONE_TO_ONE' || Boolean(queryOpts?.studentAdmissionId) || Boolean(queryOpts?.studentName);
+    let targetStudentAdmissionId: string | null = queryOpts?.studentAdmissionId || null;
+    let targetStudentName: string | null = queryOpts?.studentName || null;
+
+    if (liveClass) {
+      if ((liveClass.sessionType as string) === 'ONE_TO_ONE') {
+        isOneOnOne = true;
+      }
+      const notesStr = liveClass.teacherNotes || liveClass.description;
+      if (notesStr) {
+        try {
+          const meta = JSON.parse(notesStr) as { sessionType?: string; studentAdmissionId?: string; studentName?: string };
+          if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+            isOneOnOne = true;
+            if (meta.studentAdmissionId) targetStudentAdmissionId = meta.studentAdmissionId;
+            if (meta.studentName) targetStudentName = meta.studentName;
+          }
+        } catch {
+          /* empty */
+        }
+      }
+    }
+
+    if (!isOneOnOne) {
+      const sched = await this.prisma.schedules.findFirst({
+        where: { id: liveClassId, deletedAt: null },
+        select: { notes: true },
+      });
+      if (sched?.notes) {
+        try {
+          const meta = JSON.parse(sched.notes) as { sessionType?: string; studentAdmissionId?: string; studentName?: string };
+          if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+            isOneOnOne = true;
+            if (meta.studentAdmissionId) targetStudentAdmissionId = meta.studentAdmissionId;
+            if (meta.studentName) targetStudentName = meta.studentName;
+          }
+        } catch {
+          /* empty */
+        }
+      }
+    }
 
     let batchName = 'NEET Crash Course 2027';
     let subjectName = 'Physics';
@@ -1230,7 +1275,7 @@ export class LiveClassService {
       existingRecords.map((r) => [r.studentAdmissionId, r.attendanceStatus]),
     );
 
-    const students = admissions.map((adm) => {
+    let students = admissions.map((adm) => {
       const studentUserId = profileUserMap.get(adm.studentProfileId);
       const user = studentUserId ? userMap.get(studentUserId) : null;
       const fullName = user
@@ -1244,6 +1289,21 @@ export class LiveClassService {
         attendanceStatus: statusMap.get(adm.id) || '',
       };
     });
+
+    // 1:1 Live Studio Attendance Privacy Filter: Restrict to exact 1:1 student
+    if (isOneOnOne) {
+      if (targetStudentAdmissionId) {
+        const matched = students.filter((s) => s.studentAdmissionId === targetStudentAdmissionId);
+        if (matched.length > 0) students = matched;
+        else if (students.length > 0) students = students.slice(0, 1);
+      } else if (targetStudentName) {
+        const matched = students.filter((s) => s.studentName.toLowerCase().includes(targetStudentName!.toLowerCase()));
+        if (matched.length > 0) students = matched;
+        else if (students.length > 0) students = students.slice(0, 1);
+      } else if (students.length > 0) {
+        students = students.slice(0, 1);
+      }
+    }
 
     return {
       liveClassId,

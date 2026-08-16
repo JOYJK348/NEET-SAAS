@@ -36,6 +36,8 @@ export const studentService: StudentService = {
       search: filters.search || undefined,
       sortBy: filters.sortBy || undefined,
       sortOrder: filters.sortOrder || undefined,
+      batchId: filters.batchId || undefined,
+      courseId: filters.courseId || undefined,
     };
     if (filters.status && filters.status !== 'ALL') {
       params.academicStatus = filters.status === 'INACTIVE' ? 'SUSPENDED' : filters.status;

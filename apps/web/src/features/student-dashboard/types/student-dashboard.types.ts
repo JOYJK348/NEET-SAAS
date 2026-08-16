@@ -55,6 +55,8 @@ export interface StudentSessionDto {
   sessionSource?: string | null;
   deliveryMode: DeliveryMode | null;
   liveStatus: LiveStatus;
+  sessionType?: string;
+  studentName?: string;
   canJoin: boolean;
 }
 

@@ -35,6 +35,8 @@ export interface TutorialSessionDto {
   liveStatus?: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED';
   deliveryMode?: string | null;
   meetingLink?: string | null;
+  sessionType?: string;
+  studentName?: string;
   canJoin?: boolean;
 }
 

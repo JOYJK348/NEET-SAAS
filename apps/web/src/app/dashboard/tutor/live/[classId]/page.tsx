@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Mic,
   MicOff,
@@ -864,15 +864,26 @@ function TeacherStudioInner({
     }>;
   }>({ students: [] });
 
+  const searchParams = useSearchParams();
+  const sessionTypeParam = searchParams?.get('sessionType');
+  const studentNameParam = searchParams?.get('studentName');
+  const studentAdmissionIdParam = searchParams?.get('studentAdmissionId');
+
   const fetchLiveAttendance = useCallback(async () => {
     try {
       setAttendanceLoading(true);
       const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+      const qParams = new URLSearchParams();
+      if (sessionTypeParam) qParams.set('sessionType', sessionTypeParam);
+      if (studentNameParam) qParams.set('studentName', studentNameParam);
+      if (studentAdmissionIdParam) qParams.set('studentAdmissionId', studentAdmissionIdParam);
+      const qs = qParams.toString() ? `?${qParams.toString()}` : '';
+
       const endpoints = [
-        `/api/v1/live-classes/${classId}/attendance`,
-        `http://${host}:3000/api/v1/live-classes/${classId}/attendance`,
-        `/v1/live-classes/${classId}/attendance`,
-        `http://${host}:3000/v1/live-classes/${classId}/attendance`,
+        `/api/v1/live-classes/${classId}/attendance${qs}`,
+        `http://${host}:3000/api/v1/live-classes/${classId}/attendance${qs}`,
+        `/v1/live-classes/${classId}/attendance${qs}`,
+        `http://${host}:3000/v1/live-classes/${classId}/attendance${qs}`,
       ];
 
       for (const url of endpoints) {
@@ -881,11 +892,29 @@ function TeacherStudioInner({
           if (res.ok) {
             const data = await res.json();
             const payload = data?.data ?? data;
+            let rawStudents = payload.students || [];
+
+            const is1on1 = sessionTypeParam === 'ONE_TO_ONE' || Boolean(studentNameParam) || Boolean(studentAdmissionIdParam);
+
+            if (is1on1 && rawStudents.length > 0) {
+              if (studentAdmissionIdParam) {
+                const match = rawStudents.filter((s: any) => s.studentAdmissionId === studentAdmissionIdParam);
+                if (match.length > 0) rawStudents = match;
+                else rawStudents = rawStudents.slice(0, 1);
+              } else if (studentNameParam) {
+                const match = rawStudents.filter((s: any) => s.studentName.toLowerCase().includes(studentNameParam.toLowerCase()));
+                if (match.length > 0) rawStudents = match;
+                else rawStudents = rawStudents.slice(0, 1);
+              } else {
+                rawStudents = rawStudents.slice(0, 1);
+              }
+            }
+
             setAttendanceData({
               sessionId: payload.sessionId,
               batchName: payload.batchName,
               subjectName: payload.subjectName,
-              students: payload.students || [],
+              students: rawStudents,
             });
             break;
           }
@@ -896,7 +925,7 @@ function TeacherStudioInner({
     } finally {
       setAttendanceLoading(false);
     }
-  }, [classId]);
+  }, [classId, sessionTypeParam, studentNameParam, studentAdmissionIdParam]);
 
   useEffect(() => {
     if (activeTab === 'attendance') {

@@ -24,7 +24,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { useBatches, useCourses } from '@/features/students/hooks/use-students';
+import { useBatches, useCourses, useStudents } from '@/features/students/hooks/use-students';
 import { useTutors } from '@/features/tutors/hooks/use-tutors';
 import { useSubjects } from '@/features/master-data/hooks/use-subjects';
 import { useCheckConflicts, useCreateSchedule } from '@/features/scheduling/hooks/use-schedules';
@@ -93,6 +93,7 @@ const getNextYearDateStr = () => {
 interface FormState {
   courseId: string;
   batchId: string;
+  studentAdmissionId: string;
   subjectId: string;
   staffProfileId: string;
   dayOfWeek: WeekdayType | '';
@@ -116,13 +117,14 @@ function CreateScheduleContent() {
   const queryClient = useQueryClient();
 
   // Schedule Frequency Switcher (Default: RECURRING)
-  const [scheduleType, setScheduleType] = useState<'ONE_TIME' | 'RECURRING'>('RECURRING');
+  const [scheduleType, setScheduleType] = useState<'ONE_TIME' | 'RECURRING' | 'ONE_TO_ONE'>('RECURRING');
   const [singleDate, setSingleDate] = useState<string>(getTodayDateStr());
 
   // Form State
   const [form, setForm] = useState<FormState>({
     courseId: '',
     batchId: '',
+    studentAdmissionId: '',
     subjectId: '',
     staffProfileId: '',
     dayOfWeek: getWeekdayFromDateStr(getTodayDateStr()),
@@ -170,6 +172,7 @@ function CreateScheduleContent() {
       setForm({
         courseId: cId,
         batchId: bId,
+        studentAdmissionId: scheduleToEdit.studentAdmissionId || '',
         subjectId: scheduleToEdit.subjectId || '',
         staffProfileId: scheduleToEdit.staffProfileId || scheduleToEdit.staffProfile?.id || '',
         dayOfWeek: scheduleToEdit.dayOfWeek || 'MONDAY',
@@ -314,15 +317,28 @@ function CreateScheduleContent() {
     setConflictChecked(false);
   };
 
-  const handleScheduleTypeChange = (type: 'ONE_TIME' | 'RECURRING') => {
+  const { students: filteredStudents = [] } = useStudents({
+    initialFilters: { batchId: form.batchId, perPage: 100 },
+    autoFetch: !!form.batchId,
+  });
+
+  const { students: allStudents = [] } = useStudents({
+    initialFilters: { perPage: 100 },
+    autoFetch: scheduleType === 'ONE_TO_ONE',
+  });
+
+  const displayStudents = filteredStudents.length > 0 ? filteredStudents : allStudents;
+
+  const handleScheduleTypeChange = (type: 'ONE_TIME' | 'RECURRING' | 'ONE_TO_ONE') => {
     setScheduleType(type);
-    if (type === 'ONE_TIME') {
+    if (type === 'ONE_TIME' || type === 'ONE_TO_ONE') {
       const day = getWeekdayFromDateStr(singleDate);
       setForm((f) => ({
         ...f,
         effectiveFrom: singleDate,
         effectiveUntil: singleDate,
         dayOfWeek: day,
+        ...(type === 'ONE_TO_ONE' ? { deliveryMode: 'ONLINE', recordingEnabled: true } : {}),
       }));
     } else {
       if (selectedBatch?.startDate) {
@@ -348,6 +364,9 @@ function CreateScheduleContent() {
   const validate = (): boolean => {
     const newErrors: Partial<Record<keyof FormState, string>> = {};
     if (!form.batchId) newErrors.batchId = 'Batch is required';
+    if (scheduleType === 'ONE_TO_ONE' && !form.studentAdmissionId) {
+      newErrors.studentAdmissionId = 'Target student is required for 1:1 class';
+    }
     if (!form.subjectId) newErrors.subjectId = 'Subject is required';
     if (!form.staffProfileId) newErrors.staffProfileId = 'Tutor is required';
     if (!form.dayOfWeek) newErrors.dayOfWeek = 'Day of week is required';
@@ -387,6 +406,8 @@ function CreateScheduleContent() {
       recordingEnabled: form.recordingEnabled,
       whiteboardEnabled: form.whiteboardEnabled,
       chatEnabled: form.chatEnabled,
+      studentAdmissionId: form.studentAdmissionId || undefined,
+      sessionType: scheduleType === 'ONE_TO_ONE' ? 'ONE_TO_ONE' : scheduleType === 'ONE_TIME' ? 'GROUP' : 'BATCH',
       ...(form.roomId && { roomId: form.roomId }),
       ...(form.meetingLink && { meetingLink: form.meetingLink }),
       ...(form.notes && { notes: form.notes }),
@@ -557,6 +578,40 @@ function CreateScheduleContent() {
               {errors.batchId && <p className="text-xs text-red-500 mt-1 font-semibold">{errors.batchId}</p>}
             </div>
 
+            {/* Step 2.5: Enrolled Student (Rendered only when scheduleType === 'ONE_TO_ONE') */}
+            {scheduleType === 'ONE_TO_ONE' && (
+              <div>
+                <label className="block text-xs font-extrabold text-violet-950 mb-1.5">
+                  Target Student (1:1 Class) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
+                  <select
+                    value={form.studentAdmissionId}
+                    disabled={!form.batchId}
+                    onChange={(e) => set('studentAdmissionId', e.target.value)}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      !form.batchId
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
+                        : 'bg-violet-50/70 text-violet-950 border-violet-200 cursor-pointer focus:border-violet-600 focus:ring-1 focus:ring-violet-600'
+                    } ${errors.studentAdmissionId ? 'border-red-300 bg-red-50/5' : ''}`}
+                  >
+                    <option value="" className="text-slate-500 font-normal">
+                      {!form.batchId ? 'Select a batch first...' : 'Select enrolled student...'}
+                    </option>
+                    {displayStudents.map((st: any) => (
+                      <option key={st.id} value={st.id} className="text-slate-800 font-bold">
+                        {st.firstName || st.name} {st.lastName || ''} ({st.admissionNo || st.email || st.code || 'Student'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.studentAdmissionId && (
+                  <p className="text-xs text-red-500 mt-1 font-semibold">{errors.studentAdmissionId}</p>
+                )}
+              </div>
+            )}
+
             {/* Step 3: Subject (Disabled until Batch selected) */}
             <div>
               <label className="block text-xs font-extrabold text-slate-700 mb-1.5">
@@ -634,7 +689,7 @@ function CreateScheduleContent() {
               type="button"
               onClick={() => handleScheduleTypeChange('RECURRING')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl transition-all cursor-pointer',
                 scheduleType === 'RECURRING'
                   ? 'bg-white text-violet-700 shadow-sm border border-slate-200/80 font-black'
                   : 'text-slate-500 hover:text-slate-800 font-bold',
@@ -647,19 +702,32 @@ function CreateScheduleContent() {
               type="button"
               onClick={() => handleScheduleTypeChange('ONE_TIME')}
               className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl transition-all cursor-pointer',
                 scheduleType === 'ONE_TIME'
                   ? 'bg-white text-violet-700 shadow-sm border border-slate-200/80 font-black'
                   : 'text-slate-500 hover:text-slate-800 font-bold',
               )}
             >
               <Sparkles className="w-4 h-4 text-violet-600" />
-              <span>One-Time Event / 1 Day Class 🎯</span>
+              <span>Group One-Time Class 🎯</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleScheduleTypeChange('ONE_TO_ONE')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl transition-all cursor-pointer',
+                scheduleType === 'ONE_TO_ONE'
+                  ? 'bg-violet-600 text-white shadow-sm border border-violet-600 font-black'
+                  : 'text-slate-500 hover:text-slate-800 font-bold',
+              )}
+            >
+              <Users className="w-4 h-4" />
+              <span>1:1 Class (Personalized 👤)</span>
             </button>
           </div>
 
-          {/* Option A: ONE-TIME Single Class Date */}
-          {scheduleType === 'ONE_TIME' && (
+          {/* Option A: ONE-TIME / 1:1 Class Date */}
+          {(scheduleType === 'ONE_TIME' || scheduleType === 'ONE_TO_ONE') && (
             <div className="bg-violet-50/70 border border-violet-200/80 p-4 rounded-2xl space-y-2">
               <label className="block text-xs font-extrabold text-violet-950">
                 Select Exact Class Date 📅 <span className="text-red-500">*</span>
@@ -676,7 +744,7 @@ function CreateScheduleContent() {
               <div className="flex items-center gap-1.5 text-xs text-violet-800 font-extrabold pt-1">
                 <Sparkles className="w-4 h-4 text-violet-600 shrink-0" />
                 <span suppressHydrationWarning>
-                  Single Class scheduled for {WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']},{' '}
+                  {scheduleType === 'ONE_TO_ONE' ? '1:1 Personalized Class' : 'Single Class'} scheduled for {WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']},{' '}
                   {new Date(singleDate).toLocaleDateString('en-IN', {
                     day: '2-digit',
                     month: 'short',
@@ -684,6 +752,14 @@ function CreateScheduleContent() {
                   })}
                 </span>
               </div>
+              {scheduleType === 'ONE_TO_ONE' && (
+                <div className="mt-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-900 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    ⏱️ <strong>Extra 15m Grace Time</strong>: The Live Class button stays active for an extra 15 minutes after class end time, then automatically completes and saves the MP4 recording to the Recordings Library!
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -967,28 +1043,7 @@ function CreateScheduleContent() {
             ))}
           </div>
 
-          {(form.deliveryMode === 'ONLINE' || form.deliveryMode === 'HYBRID') && (
-            <div className="space-y-1.5 pt-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-extrabold text-slate-700">
-                  External Meeting Link <span className="text-slate-400 font-normal">(Optional)</span>
-                </label>
-                <span className="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded">
-                  Auto-uses LiveKit Studio if empty ✨
-                </span>
-              </div>
-              <div className="relative">
-                <Wifi className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="url"
-                  value={form.meetingLink}
-                  onChange={(e) => set('meetingLink', e.target.value)}
-                  placeholder="Leave empty for Built-in LiveKit Studio, or paste Google Meet / Zoom link"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50/50 border border-slate-200 text-xs font-bold text-slate-800 placeholder:text-slate-400 outline-none focus:border-violet-600 transition-all"
-                />
-              </div>
-            </div>
-          )}
+
 
           {/* Notes */}
           <div className="pt-2">

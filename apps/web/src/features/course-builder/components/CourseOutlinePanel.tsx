@@ -515,10 +515,37 @@ export function CourseOutlinePanel({
   };
 
   const handleCopySampleTemplate = () => {
-    navigator.clipboard.writeText(sampleTemplateText);
-    setCopiedTemplate(true);
-    toast.success('Sample template copied to clipboard!');
-    setTimeout(() => setCopiedTemplate(false), 2000);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(sampleTemplateText);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = sampleTemplateText;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedTemplate(true);
+      toast.success('Sample template copied to clipboard!');
+      setTimeout(() => setCopiedTemplate(false), 2000);
+    } catch {
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = sampleTemplateText;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopiedTemplate(true);
+        toast.success('Sample template copied to clipboard!');
+        setTimeout(() => setCopiedTemplate(false), 2000);
+      } catch {
+        toast.error('Failed to copy sample template');
+      }
+    }
   };
 
   // Fetch topic items for the selected topic to show ToC

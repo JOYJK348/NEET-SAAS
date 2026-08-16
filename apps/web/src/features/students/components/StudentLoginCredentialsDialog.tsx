@@ -56,13 +56,37 @@ export function StudentLoginCredentialsDialog({
   };
 
   const handleCopy = async () => {
+    const text = formatTextForCopy();
     try {
-      await navigator.clipboard.writeText(formatTextForCopy());
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       setCopied(true);
       toast.success('Credentials copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Failed to copy');
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopied(true);
+        toast.success('Credentials copied to clipboard');
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        toast.error('Failed to copy');
+      }
     }
   };
 

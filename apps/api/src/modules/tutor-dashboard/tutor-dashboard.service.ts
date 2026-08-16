@@ -139,7 +139,15 @@ export class TutorDashboardService {
 
     // Fallback: If no materialized attendance sessions exist for today, check recurring schedules for today's weekday
     if (todaysSessions.length === 0) {
-      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+      const weekdays = [
+        'SUNDAY',
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+      ] as const;
       const todayDayOfWeek = weekdays[today.getDay()];
 
       const todaySchedules = await this.prisma.schedules.findMany({
@@ -208,7 +216,9 @@ export class TutorDashboardService {
 
       for (const lc of activeLiveClasses) {
         const exists = todaysSessions.some(
-          (s) => s.id === lc.id || (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+          (s) =>
+            s.id === lc.id ||
+            (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
         );
         if (!exists) {
           todaysSessions.unshift({
@@ -222,7 +232,10 @@ export class TutorDashboardService {
             attendanceDate: lc.scheduledStart || today,
             startsAt: lc.scheduledStart || today,
             endsAt: lc.scheduledEnd || tomorrow,
-            sessionStatus: lc.status === 'LIVE' ? ('STARTED' as AttendanceSessionStatusEnum) : ('SCHEDULED' as AttendanceSessionStatusEnum),
+            sessionStatus:
+              lc.status === 'LIVE'
+                ? ('STARTED' as AttendanceSessionStatusEnum)
+                : ('SCHEDULED' as AttendanceSessionStatusEnum),
             sessionSource: 'SCHEDULED',
             overrideType: null,
             cancelledReason: null,
@@ -232,7 +245,9 @@ export class TutorDashboardService {
           } as unknown as AttendanceSessions);
         }
       }
-    } catch {}
+    } catch {
+      /* empty */
+    }
 
     // Upcoming classes
     let upcomingSessions = await this.prisma.attendanceSessions.findMany({
@@ -249,7 +264,15 @@ export class TutorDashboardService {
 
     // Fallback: If no materialized attendance sessions exist for upcoming days, generate virtual slots for next 7 days (starting tomorrow)
     if (upcomingSessions.length === 0) {
-      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+      const weekdays = [
+        'SUNDAY',
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+      ] as const;
 
       const futureSchedules = await this.prisma.schedules.findMany({
         where: {
@@ -278,7 +301,9 @@ export class TutorDashboardService {
           futureDate.setHours(0, 0, 0, 0);
 
           const futureWeekday = weekdays[futureDate.getDay()];
-          const matchingSchedules = futureSchedules.filter((sch) => sch.dayOfWeek === futureWeekday);
+          const matchingSchedules = futureSchedules.filter(
+            (sch) => sch.dayOfWeek === futureWeekday,
+          );
 
           for (const sch of matchingSchedules) {
             const [startH, startM] = sch.startTime.split(':').map(Number);
@@ -323,7 +348,9 @@ export class TutorDashboardService {
     ]);
 
     // Live-now detection
-    const liveNow = todaysEnriched.filter((s) => s.liveStatus === 'LIVE_NOW' || s.canJoin);
+    const liveNow = todaysEnriched.filter(
+      (s) => s.liveStatus === 'LIVE_NOW' || s.canJoin,
+    );
 
     return {
       stats: { todaysClasses, upcomingClasses, myBatches, totalStudents },
@@ -364,7 +391,14 @@ export class TutorDashboardService {
           status: { in: ['SCHEDULED', 'LIVE', 'DRAFT'] },
           deletedAt: null,
         },
-        select: { id: true, batchId: true, subjectId: true, scheduledStart: true, scheduledEnd: true, status: true },
+        select: {
+          id: true,
+          batchId: true,
+          subjectId: true,
+          scheduledStart: true,
+          scheduledEnd: true,
+          status: true,
+        },
       }),
     ]);
 
@@ -372,13 +406,68 @@ export class TutorDashboardService {
       .map((s) => s.scheduleId)
       .filter((id): id is string => id !== null);
 
-    const schedules =
+    const schedules: Array<{
+      id: string;
+      startTime: string;
+      endTime: string;
+      deliveryMode: string;
+      meetingLink: string | null;
+      notes: string | null;
+    }> =
       scheduleIds.length > 0
         ? await this.prisma.schedules.findMany({
             where: { tenantId, id: { in: scheduleIds } },
-            select: { id: true, startTime: true, endTime: true, deliveryMode: true, meetingLink: true },
+            select: {
+              id: true,
+              startTime: true,
+              endTime: true,
+              deliveryMode: true,
+              meetingLink: true,
+              notes: true,
+            },
           })
         : [];
+
+    const enrollments =
+      batchIds.length > 0
+        ? await this.prisma.studentBatchEnrollments.findMany({
+            where: { tenantId, batchId: { in: batchIds }, deletedAt: null },
+            select: { batchId: true, studentAdmissionId: true },
+          })
+        : [];
+
+    const admissionIds = [
+      ...new Set(enrollments.map((e) => e.studentAdmissionId)),
+    ];
+    const admissions =
+      admissionIds.length > 0
+        ? await this.prisma.studentAdmissions.findMany({
+            where: { tenantId, id: { in: admissionIds } },
+            select: {
+              id: true,
+              studentProfileIstudent_profile: {
+                select: {
+                  userIdusers: {
+                    select: { firstName: true, lastName: true },
+                  },
+                },
+              },
+            },
+          })
+        : [];
+
+    const admissionMap = new Map(admissions.map((a) => [a.id, a]));
+    const batchStudentMap = new Map<string, string[]>();
+    for (const e of enrollments) {
+      const adm = admissionMap.get(e.studentAdmissionId);
+      const u = adm?.studentProfileIstudent_profile?.userIdusers;
+      if (u) {
+        const name = `${u.firstName} ${u.lastName}`.trim();
+        const list = batchStudentMap.get(e.batchId) || [];
+        list.push(name);
+        batchStudentMap.set(e.batchId, list);
+      }
+    }
 
     const batchMap = new Map(batches.map((b) => [b.id, b]));
     const subjectMap = new Map(subjects.map((s) => [s.id, s]));
@@ -388,10 +477,35 @@ export class TutorDashboardService {
     return sessions.map((s) => {
       const sched = s.scheduleId ? scheduleMap.get(s.scheduleId) : null;
 
+      let sessionType = 'BATCH';
+      let studentName: string | undefined = undefined;
+      if (sched?.notes) {
+        try {
+          const meta = JSON.parse(sched.notes) as { sessionType?: string; studentName?: string };
+          if (meta?.sessionType) sessionType = meta.sessionType;
+          if (meta?.studentName) studentName = meta.studentName;
+        } catch {
+          /* empty */
+        }
+      }
+
+      const enrolledStudents = batchStudentMap.get(s.batchId) || [];
+      if (!studentName && enrolledStudents.length > 0) {
+        studentName = enrolledStudents[0];
+      }
+      if (
+        sessionType !== 'ONE_TO_ONE' &&
+        (enrolledStudents.length > 0 || studentName)
+      ) {
+        sessionType = 'ONE_TO_ONE';
+      }
+
       const matchingLiveClass = activeLiveClasses.find(
         (lc) =>
           lc.id === s.id ||
-          (lc.batchId && lc.batchId === s.batchId && lc.subjectId === s.subjectId) ||
+          (lc.batchId &&
+            lc.batchId === s.batchId &&
+            lc.subjectId === s.subjectId) ||
           (lc.batchId && lc.batchId === s.batchId),
       );
 
@@ -441,9 +555,14 @@ export class TutorDashboardService {
         liveStatus = 'UPCOMING';
       } else {
         // Same day (Today)
-        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= realEnd)) {
+        const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
+        if (
+          matchingLiveClass?.status === 'LIVE' ||
+          (now >= new Date(realStart.getTime() - 15 * 60 * 1000) &&
+            now <= graceEnd)
+        ) {
           liveStatus = 'LIVE_NOW';
-        } else if (isFinished || now > realEnd) {
+        } else if (isFinished || now > graceEnd) {
           liveStatus = 'COMPLETED';
         } else {
           liveStatus = 'UPCOMING';
@@ -473,7 +592,12 @@ export class TutorDashboardService {
         liveStatus,
         deliveryMode: sched?.deliveryMode ?? null,
         meetingLink: sched?.meetingLink ?? null,
-        canJoin: sessionDateKey === todayKey && s.sessionStatus !== 'CANCELLED' && liveStatus !== 'COMPLETED',
+        sessionType,
+        studentName,
+        canJoin:
+          sessionDateKey === todayKey &&
+          s.sessionStatus !== 'CANCELLED' &&
+          liveStatus !== 'COMPLETED',
       };
     });
   }
@@ -513,7 +637,15 @@ export class TutorDashboardService {
     });
 
     if (sessions.length === 0) {
-      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+      const weekdays = [
+        'SUNDAY',
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+      ] as const;
 
       const recurringSchedules = await this.prisma.schedules.findMany({
         where: {
@@ -529,7 +661,9 @@ export class TutorDashboardService {
 
         while (curDate <= toDate) {
           const dayName = weekdays[curDate.getDay()];
-          const dayMatches = recurringSchedules.filter((sch) => sch.dayOfWeek === dayName);
+          const dayMatches = recurringSchedules.filter(
+            (sch) => sch.dayOfWeek === dayName,
+          );
 
           for (const sch of dayMatches) {
             const [startH, startM] = sch.startTime.split(':').map(Number);
@@ -661,7 +795,10 @@ export class TutorDashboardService {
         batch: batchMap.get(session.batchId) ?? null,
         branch: branchMap.get(session.branchId) ?? null,
         room: sched?.roomId ? (roomMap.get(sched.roomId) ?? null) : null,
-        sessionStatus: hasRecords && effectiveStatus === 'SCHEDULED' ? 'PUBLISHED' : effectiveStatus,
+        sessionStatus:
+          hasRecords && effectiveStatus === 'SCHEDULED'
+            ? 'PUBLISHED'
+            : effectiveStatus,
         hasAttendanceRecords: hasRecords,
         sessionSource: session.sessionSource,
         overrideType: session.overrideType,
@@ -904,7 +1041,6 @@ export class TutorDashboardService {
         })),
       };
     }
-
 
     const csIds = courseSubjects.map((cs) => cs.id);
     const subjectIds = [...new Set(courseSubjects.map((cs) => cs.subjectId))];
@@ -1408,8 +1544,61 @@ export class TutorDashboardService {
       studentProfiles.map((sp) => [sp.userId, sp.userId]),
     );
 
+    // Check if session or schedule is 1:1
+    let isOneOnOne = false;
+    let targetStudentAdmissionId: string | null = null;
+
+    const schedIdToQuery = session.scheduleId || session.id;
+    const schedWithNotes = await this.prisma.schedules.findFirst({
+      where: { tenantId, id: schedIdToQuery },
+      select: { notes: true },
+    });
+    if (schedWithNotes?.notes) {
+      try {
+        const meta = JSON.parse(schedWithNotes.notes) as { sessionType?: string; studentAdmissionId?: string };
+        if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+          isOneOnOne = true;
+          targetStudentAdmissionId = meta.studentAdmissionId || null;
+        }
+      } catch {
+        /* empty */
+      }
+    }
+
+    if (!isOneOnOne) {
+      const lc = await this.prisma.liveClasses.findFirst({
+        where: {
+          tenantId,
+          OR: [{ id: session.id }, { batchId: session.batchId }],
+          deletedAt: null,
+        },
+        select: { sessionType: true, teacherNotes: true, description: true },
+      });
+      if (lc) {
+        if ((lc.sessionType as string) === 'ONE_TO_ONE') {
+          isOneOnOne = true;
+        }
+        const notesStr = lc.teacherNotes || lc.description;
+        if (notesStr) {
+          try {
+            const meta = JSON.parse(notesStr) as { sessionType?: string; studentAdmissionId?: string };
+            if (
+              meta?.sessionType === 'ONE_TO_ONE' ||
+              meta?.studentAdmissionId
+            ) {
+              isOneOnOne = true;
+              targetStudentAdmissionId =
+                meta.studentAdmissionId || targetStudentAdmissionId;
+            }
+          } catch {
+            /* empty */
+          }
+        }
+      }
+    }
+
     // Get total enrolled students for this batch
-    const totalStudents = await this.prisma.studentBatchEnrollments.count({
+    let totalStudents = await this.prisma.studentBatchEnrollments.count({
       where: {
         tenantId,
         batchId: session.batchId,
@@ -1430,7 +1619,21 @@ export class TutorDashboardService {
         studentAdmissionId: true,
       },
     });
-    const enrolledAdmissionIds = enrollments.map((e) => e.studentAdmissionId);
+    let enrolledAdmissionIds = enrollments.map((e) => e.studentAdmissionId);
+
+    // 1:1 Attendance Roster Privacy Filter: Restrict roster to the exact 1:1 student ONLY
+    if (isOneOnOne) {
+      if (
+        targetStudentAdmissionId &&
+        enrolledAdmissionIds.includes(targetStudentAdmissionId)
+      ) {
+        enrolledAdmissionIds = [targetStudentAdmissionId];
+      } else if (enrolledAdmissionIds.length > 0) {
+        enrolledAdmissionIds = [enrolledAdmissionIds[0]];
+      }
+      totalStudents = enrolledAdmissionIds.length;
+    }
+
     const enrolledAdmissions = await this.prisma.studentAdmissions.findMany({
       where: { tenantId, id: { in: enrolledAdmissionIds } },
       select: {
@@ -1456,14 +1659,20 @@ export class TutorDashboardService {
       enrolledProfiles.map((sp) => [sp.userId, sp.userId]),
     );
 
+    const filteredAttendanceRecords = isOneOnOne
+      ? attendanceRecords.filter((r) =>
+          enrolledAdmissionIds.includes(r.studentAdmissionId),
+        )
+      : attendanceRecords;
+
     // Attendance stats
-    const presentCount = attendanceRecords.filter(
+    const presentCount = filteredAttendanceRecords.filter(
       (r) => r.attendanceStatus === 'PRESENT',
     ).length;
-    const absentCount = attendanceRecords.filter(
+    const absentCount = filteredAttendanceRecords.filter(
       (r) => r.attendanceStatus === 'ABSENT',
     ).length;
-    const lateCount = attendanceRecords.filter(
+    const lateCount = filteredAttendanceRecords.filter(
       (r) => r.attendanceStatus === 'LATE',
     ).length;
 
@@ -1489,12 +1698,12 @@ export class TutorDashboardService {
       },
       attendance: {
         totalStudents,
-        markedCount: attendanceRecords.length,
+        markedCount: filteredAttendanceRecords.length,
         presentCount,
         absentCount,
         lateCount,
-        unmarkedCount: totalStudents - attendanceRecords.length,
-        records: attendanceRecords.map((r) => {
+        unmarkedCount: totalStudents - filteredAttendanceRecords.length,
+        records: filteredAttendanceRecords.map((r) => {
           const admission = admissionMap.get(r.studentAdmissionId);
           const studentUserId = admission
             ? profileUserMap.get(admission.studentProfileId)

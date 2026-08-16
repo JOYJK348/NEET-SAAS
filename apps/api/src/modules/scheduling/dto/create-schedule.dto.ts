@@ -100,4 +100,12 @@ export class CreateScheduleDto {
   @IsBoolean()
   @IsOptional()
   chatEnabled?: boolean;
+
+  @IsString()
+  @IsOptional()
+  studentAdmissionId?: string;
+
+  @IsString()
+  @IsOptional()
+  sessionType?: string;
 }

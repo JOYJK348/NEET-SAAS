@@ -215,8 +215,13 @@ export class LiveClassController {
 
   @Get(':id/attendance')
   @ApiOperation({ summary: 'Teacher Studio: Get enrolled students attendance sheet for live class' })
-  async getLiveClassAttendance(@Param('id') id: string) {
-    return this.liveClassService.getLiveClassAttendance(id);
+  async getLiveClassAttendance(
+    @Param('id') id: string,
+    @Query('sessionType') sessionType?: string,
+    @Query('studentAdmissionId') studentAdmissionId?: string,
+    @Query('studentName') studentName?: string,
+  ) {
+    return this.liveClassService.getLiveClassAttendance(id, { sessionType, studentAdmissionId, studentName });
   }
 
   @Post(':id/attendance')
