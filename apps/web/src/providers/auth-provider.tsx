@@ -165,23 +165,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check auth status on mount (runs EXACTLY ONCE to prevent infinite loop)
   useEffect(() => {
-    if (!hasHydrated || hasCheckedAuthRef.current) return;
-    hasCheckedAuthRef.current = true;
+    if (hasCheckedAuthRef.current) return;
 
-    const checkAuth = async () => {
-      if (accessToken && !isAuthenticated) {
-        try {
-          const fetchedUser = await api.get<User>('/auth/me', { skipGlobalToast: true });
-          setUser(fetchedUser);
-          void prefetchCriticalData(queryClient, fetchedUser.tenantId, fetchedUser.roleCode);
-        } catch {
-          // silent catch
+    if (hasHydrated) {
+      hasCheckedAuthRef.current = true;
+      const checkAuth = async () => {
+        if (accessToken && !isAuthenticated) {
+          try {
+            const fetchedUser = await api.get<User>('/auth/me', { skipGlobalToast: true });
+            setUser(fetchedUser);
+            void prefetchCriticalData(queryClient, fetchedUser.tenantId, fetchedUser.roleCode);
+          } catch {
+            // silent catch
+          }
         }
-      }
-      setLoading(false);
-    };
+        setLoading(false);
+      };
 
-    checkAuth();
+      checkAuth();
+    } else {
+      const timeout = setTimeout(() => {
+        setLoading(false);
+      }, 200);
+      return () => clearTimeout(timeout);
+    }
   }, [hasHydrated, accessToken, isAuthenticated, setUser, setLoading, queryClient]);
 
   const prefetchedRef = useRef(false);

@@ -232,7 +232,7 @@ function LoginForm() {
                       autoComplete="email"
                       placeholder="you@example.com"
                       className={cn('pl-12 pr-4', errors.email && 'input-error')}
-                      disabled={isLoadingOrSubmitting}
+                      disabled={isSubmitting}
                       aria-invalid={errors.email ? 'true' : 'false'}
                       aria-describedby={errors.email ? 'email-error' : undefined}
                       {...register('email')}
@@ -266,7 +266,7 @@ function LoginForm() {
                       autoComplete="current-password"
                       placeholder="••••••••"
                       className={cn('pl-12 pr-12', errors.password && 'input-error')}
-                      disabled={isLoadingOrSubmitting}
+                      disabled={isSubmitting}
                       aria-invalid={errors.password ? 'true' : 'false'}
                       aria-describedby={errors.password ? 'password-error' : undefined}
                       {...register('password')}
@@ -279,7 +279,7 @@ function LoginForm() {
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       aria-pressed={showPassword}
-                      disabled={isLoadingOrSubmitting}
+                      disabled={isSubmitting}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </Button>
@@ -302,7 +302,7 @@ function LoginForm() {
                       id="rememberMe"
                       className="login-page__checkbox"
                       {...register('rememberMe')}
-                      disabled={isLoadingOrSubmitting}
+                      disabled={isSubmitting}
                     />
                     <Label
                       htmlFor="rememberMe"
@@ -316,10 +316,10 @@ function LoginForm() {
                 <Button
                   type="submit"
                   className="login-page__submit"
-                  disabled={isLoadingOrSubmitting || !isValid}
-                  aria-busy={isLoadingOrSubmitting}
+                  disabled={isSubmitting}
+                  aria-busy={isSubmitting}
                 >
-                  {isLoadingOrSubmitting ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
                       Signing in...
