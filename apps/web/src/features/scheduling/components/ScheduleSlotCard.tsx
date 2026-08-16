@@ -167,6 +167,16 @@ export function ScheduleSlotCard({
     }
   };
 
+  let sessionType = 'BATCH';
+  let studentName: string | undefined = undefined;
+  if (schedule.notes) {
+    try {
+      const meta = JSON.parse(schedule.notes);
+      if (meta?.sessionType) sessionType = meta.sessionType;
+      if (meta?.studentName) studentName = meta.studentName;
+    } catch {}
+  }
+
   return (
     <div
       onClick={onClick}
@@ -177,13 +187,22 @@ export function ScheduleSlotCard({
       `}
     >
       {/* Top Bar: Subject Badge + Edit / Actions */}
-      <div className="flex items-center justify-between">
-        <span
-          className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${colors.accent}`} />
-          {subjectName ?? 'Subject'}
-        </span>
+      <div className="flex items-center justify-between gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${colors.accent}`} />
+            {subjectName ?? 'Subject'}
+          </span>
+
+          {(sessionType === 'ONE_TO_ONE' || studentName) && (
+            <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-violet-600 text-white flex items-center gap-1 shadow-2xs">
+              <Sparkles className="w-3 h-3 text-white" />
+              1:1 Class {studentName ? `(${studentName})` : ''}
+            </span>
+          )}
+        </div>
 
         {/* Edit & Options Action Buttons */}
         <div className="flex items-center gap-1.5">

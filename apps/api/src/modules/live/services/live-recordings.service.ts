@@ -172,15 +172,50 @@ export class LiveRecordingsService {
         classWhere.id = { in: taught };
       } else if (scope === 'student') {
         const batchIds = await this.resolveStudentBatchIds(p.tenantId, p.userId);
+        const studentAdmissionId = await this.resolveStudentAdmissionId(p.tenantId, p.userId);
+
         const batchClasses = await this.prisma.liveClasses.findMany({
           where: {
             tenantId: p.tenantId,
             batchId: { in: batchIds },
             deletedAt: null,
           },
-          select: { id: true },
+          select: { id: true, sessionType: true, teacherNotes: true, description: true },
         });
-        classWhere.id = { in: batchClasses.map((c) => c.id) };
+
+        const allowedClassIds: string[] = [];
+        for (const c of batchClasses) {
+          const notesStr = c.teacherNotes || c.description;
+
+          let isOneOnOne = (c.sessionType as string) === 'ONE_TO_ONE';
+          let targetStudentAdmissionId: string | null = null;
+
+          if (notesStr) {
+            try {
+              const meta = JSON.parse(notesStr);
+              if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+                isOneOnOne = true;
+                targetStudentAdmissionId = meta.studentAdmissionId;
+              }
+            } catch {}
+          }
+
+          if (isOneOnOne) {
+            // 1:1 Recording Privacy Filter: Only allow the specific target student to see their recording
+            if (studentAdmissionId && targetStudentAdmissionId) {
+              if (targetStudentAdmissionId === studentAdmissionId) {
+                allowedClassIds.push(c.id);
+              }
+            } else if (studentAdmissionId) {
+              allowedClassIds.push(c.id);
+            }
+          } else {
+            // Regular batch recording, visible to all enrolled students
+            allowedClassIds.push(c.id);
+          }
+        }
+
+        classWhere.id = { in: allowedClassIds };
       }
 
       if (p.courseId) classWhere.courseId = p.courseId;
@@ -469,6 +504,26 @@ export class LiveRecordingsService {
     return [...new Set(allTaught)];
   }
 
+  /** Student Admission ID for student user profile. */
+  private async resolveStudentAdmissionId(
+    tenantId: string,
+    userId: string,
+  ): Promise<string | null> {
+    const profile = await this.prisma.studentProfiles.findFirst({
+      where: { userId, deletedAt: null },
+      select: { userId: true },
+    });
+    if (profile) {
+      const admission = await this.prisma.studentAdmissions.findFirst({
+        where: { studentProfileId: profile.userId, deletedAt: null },
+        orderBy: [{ admissionStatus: 'asc' }, { admissionDate: 'desc' }],
+        select: { id: true },
+      });
+      if (admission) return admission.id;
+    }
+    return null;
+  }
+
   private async assertCanView(
     scope: RoleScope,
     tenantId: string,
@@ -493,6 +548,28 @@ export class LiveRecordingsService {
         'This recording is not available for students yet',
       );
     }
+
+    // 1:1 Session Privacy Check for direct access/playback
+    let isOneOnOne = (liveClass.sessionType as string) === 'ONE_TO_ONE';
+    let targetStudentAdmissionId: string | null = null;
+    const notesStr = liveClass.teacherNotes || liveClass.description;
+    if (notesStr) {
+      try {
+        const meta = JSON.parse(notesStr);
+        if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+          isOneOnOne = true;
+          targetStudentAdmissionId = meta.studentAdmissionId;
+        }
+      } catch {}
+    }
+
+    if (isOneOnOne && targetStudentAdmissionId) {
+      const studentAdmissionId = await this.resolveStudentAdmissionId(tenantId, userId);
+      if (!studentAdmissionId || targetStudentAdmissionId !== studentAdmissionId) {
+        throw new ForbiddenException('This 1:1 session recording is private to its assigned student');
+      }
+    }
+
     const batchIds = await this.resolveStudentBatchIds(tenantId, userId);
     if (batchIds.includes(liveClass.batchId) || batchIds.length > 0) return;
     throw new ForbiddenException('You do not have access to this recording');

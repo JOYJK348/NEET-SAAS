@@ -424,6 +424,37 @@ export class ScheduleService {
       }
     }
 
+    let notesValue = dto.notes ?? null;
+    if (dto.studentAdmissionId || dto.sessionType === 'ONE_TO_ONE') {
+      let studentName = 'Student';
+      if (dto.studentAdmissionId) {
+        try {
+          const studentAdmission = await this.prisma.studentAdmissions.findFirst({
+            where: { id: dto.studentAdmissionId, tenantId },
+            select: {
+              studentProfileIstudent_profile: {
+                select: {
+                  userIdusers: {
+                    select: { firstName: true, lastName: true },
+                  },
+                },
+              },
+            },
+          });
+          const user = studentAdmission?.studentProfileIstudent_profile?.userIdusers;
+          if (user) {
+            studentName = `${user.firstName} ${user.lastName}`.trim();
+          }
+        } catch {}
+      }
+      notesValue = JSON.stringify({
+        notes: dto.notes || '',
+        sessionType: dto.sessionType || 'ONE_TO_ONE',
+        studentAdmissionId: dto.studentAdmissionId || null,
+        studentName,
+      });
+    }
+
     const schedule = await this.prisma.schedules.create({
       data: {
         tenantId,
@@ -443,7 +474,7 @@ export class ScheduleService {
         meetingLink: dto.meetingLink ?? null,
         meetingCode: dto.meetingCode ?? null,
         meetingPassword: dto.meetingPassword ?? null,
-        notes: dto.notes ?? null,
+        notes: notesValue,
         status: ScheduleStatusEnum.ACTIVE,
         createdBy: userId,
         updatedBy: userId,

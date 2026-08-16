@@ -96,6 +96,8 @@ export interface CreateSchedulePayload {
   recordingEnabled?: boolean;
   whiteboardEnabled?: boolean;
   chatEnabled?: boolean;
+  studentAdmissionId?: string;
+  sessionType?: 'BATCH' | 'GROUP' | 'ONE_TO_ONE';
 }
 
 export interface CheckConflictsPayload extends CreateSchedulePayload {

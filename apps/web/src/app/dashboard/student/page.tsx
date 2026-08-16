@@ -223,6 +223,12 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
 
       {/* Meta Details Row: Batch, Tutor Name & Delivery Mode */}
       <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {(session.sessionType === 'ONE_TO_ONE' || session.studentName) && (
+          <span className="inline-flex items-center gap-1 bg-violet-600 text-white border border-violet-600 px-2.5 py-1 rounded-xl text-[11px] font-black shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
+            <span>1:1 Live Class {session.studentName ? `(${session.studentName})` : ''}</span>
+          </span>
+        )}
         {session.batch?.name && (
           <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
             <Layers className="w-3.5 h-3.5 text-violet-600 shrink-0" />
@@ -232,7 +238,7 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
         <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
           <span className="text-slate-400">👤 Tutor:</span>
           <strong className="text-slate-900 font-black">
-            {session.tutorName || 'Bharathi M'}
+            {session.tutorName || 'Faculty'}
           </strong>
         </span>
         <DeliveryBadge mode={session.deliveryMode} />
@@ -417,7 +423,7 @@ function StudentOverviewContent() {
   const { overview, isLoading, error } = useStudentOverview();
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+  const greeting = hour < 12 ? 'Good Morning' : hour < 16 ? 'Good Afternoon' : 'Good Evening';
 
   if (isLoading) return <OverviewSkeleton />;
 

@@ -243,6 +243,9 @@ function TenantAdminDashboard() {
     },
   ];
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good Morning' : hour < 16 ? 'Good Afternoon' : 'Good Evening';
+
   return (
     <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
       {/* 1. Welcome Header - Clean Student-Style Header Banner */}
@@ -255,7 +258,7 @@ function TenantAdminDashboard() {
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            Good Morning, {user?.firstName || 'Admin'}! 👋
+            {greeting}, {user?.firstName || 'Admin'}! 👋
           </h1>
           <p className="text-violet-200 text-xs mt-0.5">
             Welcome back to your Tenant Administration Portal

@@ -439,6 +439,7 @@ export class StudentDashboardService {
               meetingLink: true,
               meetingProvider: true,
               staffProfileId: true,
+              notes: true,
             },
           })
         : [];
@@ -447,7 +448,7 @@ export class StudentDashboardService {
       ...new Set(scheduleRows.map((s) => s.staffProfileId).filter(Boolean)),
     ] as string[];
 
-    const [batches, subjects, staffProfiles, activeLiveClasses] = await Promise.all([
+    const [batches, subjects, staffProfiles, activeLiveClasses, enrollments] = await Promise.all([
       this.prisma.batches.findMany({
         where: { tenantId, id: { in: batchIds } },
         select: { id: true, name: true, code: true, deliveryTypeId: true },
@@ -475,7 +476,43 @@ export class StudentDashboardService {
         },
         select: { id: true, batchId: true, subjectId: true, scheduledStart: true, scheduledEnd: true, status: true },
       }),
+      batchIds.length > 0
+        ? this.prisma.studentBatchEnrollments.findMany({
+            where: { tenantId, batchId: { in: batchIds }, deletedAt: null },
+            select: { batchId: true, studentAdmissionId: true },
+          })
+        : Promise.resolve([]),
     ]);
+
+    const admissionIds = [...new Set(enrollments.map((e) => e.studentAdmissionId))];
+    const admissions = admissionIds.length > 0
+      ? await this.prisma.studentAdmissions.findMany({
+          where: { tenantId, id: { in: admissionIds } },
+          select: {
+            id: true,
+            studentProfileIstudent_profile: {
+              select: {
+                userIdusers: {
+                  select: { firstName: true, lastName: true },
+                },
+              },
+            },
+          },
+        })
+      : [];
+
+    const admissionMap = new Map(admissions.map((a) => [a.id, a]));
+    const batchStudentMap = new Map<string, string[]>();
+    for (const e of enrollments) {
+      const adm = admissionMap.get(e.studentAdmissionId);
+      const u = adm?.studentProfileIstudent_profile?.userIdusers;
+      if (u) {
+        const name = `${u.firstName} ${u.lastName}`.trim();
+        const list = batchStudentMap.get(e.batchId) || [];
+        list.push(name);
+        batchStudentMap.set(e.batchId, list);
+      }
+    }
 
     const batchMap = new Map(batches.map((b) => [b.id, b]));
     const subjectMap = new Map(subjects.map((s) => [s.id, s]));
@@ -493,6 +530,26 @@ export class StudentDashboardService {
         const sched = s.scheduleId
           ? (scheduleMap.get(s.scheduleId) ?? null)
           : null;
+
+        let isOneOnOne = false;
+        let targetStudentAdmissionId: string | null = null;
+        let targetStudentName: string | null = null;
+
+        if (sched?.notes) {
+          try {
+            const meta = JSON.parse(sched.notes);
+            if (meta?.sessionType) sessionType = meta.sessionType;
+            if (meta?.studentName) studentName = meta.studentName;
+          } catch {}
+        }
+
+        const enrolledStudents = batchStudentMap.get(s.batchId) || [];
+        if (!studentName && enrolledStudents.length > 0) {
+          studentName = enrolledStudents[0];
+        }
+        if (sessionType !== 'ONE_TO_ONE' && (enrolledStudents.length > 0 || studentName)) {
+          sessionType = 'ONE_TO_ONE';
+        }
 
         const matchingLiveClass = activeLiveClasses.find(
           (lc) =>
@@ -538,9 +595,10 @@ export class StudentDashboardService {
         const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
         let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
 
-        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= realEnd)) {
+        const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
+        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= graceEnd)) {
           liveStatus = 'LIVE_NOW';
-        } else if (isFinished || now > realEnd) {
+        } else if (isFinished || now > graceEnd) {
           liveStatus = 'COMPLETED';
         }
 
@@ -572,6 +630,8 @@ export class StudentDashboardService {
           sessionSource: s.sessionSource,
           deliveryMode: sched?.deliveryMode ?? null,
           liveStatus,
+          sessionType,
+          studentName,
           // canJoin: Allow joining when live or within 15 mins early window
           canJoin:
             s.sessionStatus !== 'CANCELLED' &&

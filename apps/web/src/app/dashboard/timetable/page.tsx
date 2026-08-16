@@ -602,73 +602,92 @@ export default function TimetablePage() {
                           </div>
 
                           <div className="space-y-1 sm:space-y-1.5 mt-1 sm:mt-2 flex-1 flex flex-col justify-start">
-                            {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
-                              const subName =
-                                subjects.find((s) => s.id === sch.subjectId)?.name || 'Class';
-                              const tutorName = tutors.find(
-                                (t) => t.id === sch.staffProfileId,
-                              )?.firstName;
+                              {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
+                                const subName =
+                                  subjects.find((s) => s.id === sch.subjectId)?.name || 'Class';
+                                const tutorName = tutors.find(
+                                  (t) => t.id === sch.staffProfileId,
+                                )?.firstName;
 
-                              let badgeStyle = 'bg-violet-50 text-violet-900 border-violet-200/80';
-                              let timeBadge = 'bg-violet-100/80 text-violet-800';
-                              let dotBg = 'bg-violet-600';
+                                let isOneOnOne = false;
+                                let studentName = '';
+                                if (sch.notes) {
+                                  try {
+                                    const meta = JSON.parse(sch.notes);
+                                    if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentName) {
+                                      isOneOnOne = true;
+                                      studentName = meta.studentName || '';
+                                    }
+                                  } catch {}
+                                }
 
-                              if (subName.toLowerCase().includes('physics')) {
-                                badgeStyle = 'bg-sky-50 text-sky-950 border-sky-200/80';
-                                timeBadge = 'bg-sky-100 text-sky-900';
-                                dotBg = 'bg-sky-600';
-                              } else if (subName.toLowerCase().includes('chemistry')) {
-                                badgeStyle = 'bg-emerald-50 text-emerald-950 border-emerald-200/80';
-                                timeBadge = 'bg-emerald-100 text-emerald-900';
-                                dotBg = 'bg-emerald-600';
-                              } else if (subName.toLowerCase().includes('biology')) {
-                                badgeStyle = 'bg-amber-50 text-amber-950 border-amber-200/80';
-                                timeBadge = 'bg-amber-100 text-amber-900';
-                                dotBg = 'bg-amber-600';
-                              } else if (subName.toLowerCase().includes('math')) {
-                                badgeStyle = 'bg-rose-50 text-rose-950 border-rose-200/80';
-                                timeBadge = 'bg-rose-100 text-rose-900';
-                                dotBg = 'bg-rose-600';
-                              }
+                                let badgeStyle = 'bg-violet-50 text-violet-900 border-violet-200/80';
+                                let timeBadge = 'bg-violet-100/80 text-violet-800';
+                                let dotBg = 'bg-violet-600';
 
-                              return (
-                                <div key={sch.id || sIdx}>
-                                  <div
-                                    className={`sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md ${badgeStyle} truncate flex items-center gap-1 border`}
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${dotBg} shrink-0`} />
-                                    <span className="truncate">{subName}</span>
-                                  </div>
+                                if (subName.toLowerCase().includes('physics')) {
+                                  badgeStyle = 'bg-sky-50 text-sky-950 border-sky-200/80';
+                                  timeBadge = 'bg-sky-100 text-sky-900';
+                                  dotBg = 'bg-sky-600';
+                                } else if (subName.toLowerCase().includes('chemistry')) {
+                                  badgeStyle = 'bg-emerald-50 text-emerald-950 border-emerald-200/80';
+                                  timeBadge = 'bg-emerald-100 text-emerald-900';
+                                  dotBg = 'bg-emerald-600';
+                                } else if (subName.toLowerCase().includes('biology')) {
+                                  badgeStyle = 'bg-amber-50 text-amber-950 border-amber-200/80';
+                                  timeBadge = 'bg-amber-100 text-amber-900';
+                                  dotBg = 'bg-amber-600';
+                                } else if (subName.toLowerCase().includes('math')) {
+                                  badgeStyle = 'bg-rose-50 text-rose-950 border-rose-200/80';
+                                  timeBadge = 'bg-rose-100 text-rose-900';
+                                  dotBg = 'bg-rose-600';
+                                }
 
-                                  <div
-                                    className={`hidden sm:block text-[10px] font-bold p-2 rounded-xl border ${badgeStyle} shadow-2xs space-y-1 hover:brightness-95 transition-all`}
-                                  >
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span className="font-extrabold truncate text-slate-900 text-[10.5px]">
-                                        {subName}
-                                      </span>
-                                      <span className="text-[8.5px] font-extrabold uppercase text-slate-500 bg-white/70 px-1 py-0.2 rounded border border-slate-200/60">
-                                        {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
-                                      </span>
+                                return (
+                                  <div key={sch.id || sIdx}>
+                                    <div
+                                      className={`sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md ${badgeStyle} truncate flex items-center gap-1 border`}
+                                    >
+                                      <span className={`w-1.5 h-1.5 rounded-full ${dotBg} shrink-0`} />
+                                      <span className="truncate">{isOneOnOne ? `1:1 ${subName}` : subName}</span>
                                     </div>
 
                                     <div
-                                      className={`flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold ${timeBadge}`}
+                                      className={`hidden sm:block text-[10px] font-bold p-2 rounded-xl border ${badgeStyle} shadow-2xs space-y-1 hover:brightness-95 transition-all`}
                                     >
-                                      <span>{sch.startTime}</span>
-                                      <span>-</span>
-                                      <span>{sch.endTime}</span>
-                                    </div>
+                                      <div className="flex items-center justify-between gap-1">
+                                        <span className="font-extrabold truncate text-slate-900 text-[10.5px]">
+                                          {subName}
+                                        </span>
+                                        <span className="text-[8.5px] font-extrabold uppercase text-slate-500 bg-white/70 px-1 py-0.2 rounded border border-slate-200/60">
+                                          {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
+                                        </span>
+                                      </div>
 
-                                    {tutorName && (
-                                      <p className="text-[9px] text-slate-600 truncate font-semibold pt-0.5 border-t border-slate-200/40">
-                                        Tutor: <strong className="text-slate-900">{tutorName}</strong>
-                                      </p>
-                                    )}
+                                      {isOneOnOne && (
+                                        <div className="text-[9px] font-black text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded flex items-center gap-1 truncate">
+                                          <Sparkles className="w-2.5 h-2.5 shrink-0" />
+                                          <span>1:1 {studentName ? `(${studentName})` : 'Class'}</span>
+                                        </div>
+                                      )}
+
+                                      <div
+                                        className={`flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold ${timeBadge}`}
+                                      >
+                                        <span>{sch.startTime}</span>
+                                        <span>-</span>
+                                        <span>{sch.endTime}</span>
+                                      </div>
+
+                                      {tutorName && (
+                                        <p className="text-[9px] text-slate-600 truncate font-semibold pt-0.5 border-t border-slate-200/40">
+                                          Tutor: <strong className="text-slate-900">{tutorName}</strong>
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
 
                             {dateSchedules.length > 2 && (
                               <div className="mt-auto text-right">
