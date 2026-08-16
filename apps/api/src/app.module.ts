@@ -25,6 +25,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboard.module';
 import { LiveModule } from './modules/live/live.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -57,6 +58,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     StorageModule,
     TenantDashboardModule,
     LiveModule,
+    BillingModule,
     HealthModule,
   ],
   controllers: [],

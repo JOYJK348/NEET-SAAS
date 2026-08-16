@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api, AxiosRequestConfig } from '@/lib/api';
 import type {
   Tutor,
   CreateTutorInput,
@@ -19,29 +19,30 @@ export const tutorService = {
 
   create: (data: CreateTutorInput): Promise<Tutor> => api.post('/people/tutors', data),
 
-  findAll: (filters?: TutorFilters): Promise<PaginatedResult<Tutor>> =>
-    api.get('/people/tutors', { params: filters }),
+  findAll: (filters?: TutorFilters, options?: AxiosRequestConfig): Promise<PaginatedResult<Tutor>> =>
+    api.get('/people/tutors', { ...options, params: filters }),
 
-  findOne: (id: string): Promise<Tutor> => api.get(`/people/tutors/${id}`),
+  findOne: (id: string, options?: AxiosRequestConfig): Promise<Tutor> =>
+    api.get(`/people/tutors/${id}`, options),
 
   update: (id: string, data: UpdateTutorInput): Promise<Tutor> =>
     api.patch(`/people/tutors/${id}`, data),
 
   remove: (id: string): Promise<void> => api.delete(`/people/tutors/${id}`),
 
-  getSubjects: async (): Promise<{ id: string; name: string; code: string }[]> => {
-    const res =
-      await api.get<PaginatedResponse<{ id: string; name: string; code: string }>>(
-        '/master/subjects',
-      );
+  getSubjects: async (options?: AxiosRequestConfig): Promise<{ id: string; name: string; code: string }[]> => {
+    const res = await api.get<PaginatedResponse<{ id: string; name: string; code: string }>>(
+      '/master/subjects',
+      options,
+    );
     return res.data;
   },
 
-  getBranches: async (): Promise<{ id: string; name: string; code: string }[]> => {
-    const res =
-      await api.get<PaginatedResponse<{ id: string; name: string; code: string }>>(
-        '/master/branches',
-      );
+  getBranches: async (options?: AxiosRequestConfig): Promise<{ id: string; name: string; code: string }[]> => {
+    const res = await api.get<PaginatedResponse<{ id: string; name: string; code: string }>>(
+      '/master/branches',
+      options,
+    );
     return res.data;
   },
 };

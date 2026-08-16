@@ -85,6 +85,8 @@ model Institutes {
   fee_collection_closuress         FeeCollectionClosures[]        @relation("tenant_id_to_institutes")
   fee_discountss                   FeeDiscounts[]                 @relation("tenant_id_to_institutes")
   fee_installmentss                FeeInstallments[]              @relation("tenant_id_to_institutes")
+  fee_installment_plans            FeeInstallmentPlans[]          @relation("tenant_id_to_institutes")
+  fee_installment_plan_items       FeeInstallmentPlanItems[]      @relation("tenant_id_to_institutes")
   fee_notificationss               FeeNotifications[]             @relation("tenant_id_to_institutes")
   fee_paymentss                    FeePayments[]                  @relation("tenant_id_to_institutes")
   fee_penaltiess                   FeePenalties[]                 @relation("tenant_id_to_institutes")
@@ -2611,7 +2613,7 @@ model LiveClasses {
   meetingPassword     String?             // nullable — assigned on room creation
   waitingRoomEnabled  Boolean             @default(true)
   lobbyEnabled        Boolean             @default(false)
-  recordingEnabled    Boolean             @default(true)
+  recordingEnabled    Boolean             @default(false)
   chatEnabled         Boolean             @default(true)
   screenShareEnabled  Boolean             @default(true)
   whiteboardEnabled   Boolean             @default(true)
@@ -2753,12 +2755,14 @@ model LiveClassAttendance {
 model LiveClassRecordings {
   id                    String              @id @default(uuid())
   tenantId              String
+  liveClassId           String?             // nullable — direct link to LiveClasses (course/batch/subject/chapter/topic/instructor)
   sessionId             String
   storageObjectId       String?             // nullable — filled after upload
   thumbnailObjectId     String?             // nullable — filled after thumbnail generation
   transcriptObjectId    String?             // nullable — V2 feature
   subtitleObjectId      String?             // nullable — V2 feature
   rawEgressUrl          String?             // LiveKit raw egress download URL
+  egressId              String?             @unique // LiveKit Egress ID for tracking/stopping
   durationSeconds       Int                 @default(0)
   resolution            String?             // nullable — filled after processing
   bitrateKbps           Int?               // nullable — filled after processing
@@ -3050,6 +3054,7 @@ model StudentFeeAssignments {
   tenantId           String
   studentAdmissionId String
   feeStructureId     String
+  installmentPlanId  String?
   assignedDate       DateTime   @default(now())
   effectiveDate      DateTime   @default(now())
   baseAmount         Decimal
@@ -3057,6 +3062,7 @@ model StudentFeeAssignments {
   discountAmount     Decimal
   adjustmentAmount   Decimal
   finalAmount        Decimal
+  outstandingAmount  Decimal    @default(0)
   assignedBy         String
   remarks            String
   createdAt          DateTime   @default(now())
@@ -3070,6 +3076,50 @@ model StudentFeeAssignments {
   tenant             Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
 
   @@unique([tenantId, id])
+}
+
+model FeeInstallmentPlans {
+  id             String                 @id @default(uuid())
+  tenantId       String
+  feeStructureId String
+  name           String
+  description    String?
+  isDefault      Boolean                @default(false)
+  status         FeeStructureStatusEnum @default(ACTIVE)
+  createdAt      DateTime               @default(now())
+  createdBy      String
+  updatedAt      DateTime               @default(now())
+  updatedBy      String
+  deletedAt      DateTime?
+  deletedBy      String?
+  version        Int                    @default(1)
+  tenant         Institutes             @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+
+  @@unique([tenantId, id])
+  @@index([tenantId, feeStructureId])
+}
+
+model FeeInstallmentPlanItems {
+  id                String     @id @default(uuid())
+  tenantId          String
+  installmentPlanId String
+  installmentNumber Int        @default(1)
+  label             String
+  dueDate           DateTime
+  amountFixed       Decimal?
+  amountPercentage  Decimal?
+  graceDays         Int        @default(7)
+  createdAt         DateTime   @default(now())
+  createdBy         String
+  updatedAt         DateTime   @default(now())
+  updatedBy         String
+  deletedAt         DateTime?
+  deletedBy         String?
+  version           Int        @default(1)
+  tenant            Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
+
+  @@unique([tenantId, id])
+  @@index([tenantId, installmentPlanId])
 }
 
 model FeeInstallments {
@@ -3150,14 +3200,17 @@ model PaymentTransactions {
   id                   String                @id @default(uuid())
   tenantId             String
   paymentId            String
+  paymentIntentId      String?               @unique
+  razorpayOrderId      String?
+  razorpaySignature    String?
   gatewayName          String
   gatewayTransactionId String
   amount               Decimal
   currency             String                @default("INR")
   status               TransactionStatusEnum
-  failureReason        String
+  failureReason        String?
   retryCount           Int                   @default(0)
-  gatewayResponse      Json
+  gatewayResponse      Json?
   createdAt            DateTime              @default(now())
   createdBy            String
   updatedAt            DateTime              @default(now())
@@ -3168,6 +3221,7 @@ model PaymentTransactions {
   tenant               Institutes            @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
 
   @@unique([tenantId, id])
+  @@index([tenantId, razorpayOrderId])
 }
 
 model PaymentRefunds {
@@ -3906,10 +3960,11 @@ model WebhookEvents {
   tenantId        String
   providerName    String
   eventType       String
+  externalEventId String?
   payload         Json
   processedStatus String     @default("PENDING")
   receivedAt      DateTime   @default(now())
-  processedAt     DateTime
+  processedAt     DateTime?
   createdAt       DateTime   @default(now())
   createdBy       String
   updatedAt       DateTime   @default(now())
@@ -3920,6 +3975,7 @@ model WebhookEvents {
   tenant          Institutes @relation("tenant_id_to_institutes", fields: [tenantId], references: [id])
 
   @@unique([tenantId, id])
+  @@index([tenantId, providerName, externalEventId])
 }
 
 model WebhookDeliveries {

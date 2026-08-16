@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { FeeAssignmentService } from '../billing/assignment/assignment.service';
 
 @Injectable()
 export class ParentDashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly feeAssignmentService: FeeAssignmentService,
+  ) {}
 
   // 1. Get all linked children for ChildSwitcher
   async getLinkedStudents(tenantId: string, parentUserId: string) {
@@ -425,55 +429,57 @@ export class ParentDashboardService {
       return match ? match.isActive : true;
     };
 
-    const examHistory = await Promise.all(
-      submissions.map(async (s) => {
-        const exam = await this.prisma.exams.findFirst({
-          where: { id: s.examId, tenantId },
-        });
-        const totalPossible = Number(exam?.totalMarks || 720);
-        const obtained = Number(s.obtainedMarks || 0);
-        const percentage = totalPossible > 0 ? Math.round((obtained / totalPossible) * 1000) / 10 : 0;
+    const examIds = [...new Set(submissions.map((s) => s.examId).filter(Boolean))];
+    const dbExams = examIds.length > 0
+      ? await this.prisma.exams.findMany({ where: { id: { in: examIds }, tenantId } })
+      : [];
+    const examMap = new Map(dbExams.map((e) => [e.id, e]));
 
-        const rawBreakdown = Array.isArray(s.marksBreakdown) ? (s.marksBreakdown as any[]) : [];
-        const names = ['Physics', 'Chemistry', 'Botany', 'Zoology'];
-        const perSecObt = Math.round(obtained * 0.25);
-        const perSecMax = Math.round(totalPossible * 0.25) || 180;
+    const examHistory = submissions.map((s) => {
+      const exam = examMap.get(s.examId);
+      const totalPossible = Number(exam?.totalMarks || 720);
+      const obtained = Number(s.obtainedMarks || 0);
+      const percentage = totalPossible > 0 ? Math.round((obtained / totalPossible) * 1000) / 10 : 0;
 
-        const subjectBreakdown = names.map((name, idx) => {
-          const item = rawBreakdown[idx];
-          const hasValidObj = typeof item === 'object' && item !== null && !Array.isArray(item);
-          const obt = hasValidObj
-            ? Number(item.obtainedMarks ?? item.marks ?? item.score ?? perSecObt)
-            : perSecObt;
-          const max = hasValidObj
-            ? Number(item.maxMarks ?? item.totalMarks ?? perSecMax)
-            : perSecMax;
-          const pct = max > 0 ? Math.round((obt / max) * 100) : 0;
-          const isActive = isSubjectActive(name);
+      const rawBreakdown = Array.isArray(s.marksBreakdown) ? (s.marksBreakdown as any[]) : [];
+      const names = ['Physics', 'Chemistry', 'Botany', 'Zoology'];
+      const perSecObt = Math.round(obtained * 0.25);
+      const perSecMax = Math.round(totalPossible * 0.25) || 180;
 
-          return {
-            subject: name,
-            obtained: obt,
-            total: max,
-            percentage: pct,
-            isActive,
-            inactiveMessage: isActive ? null : 'Currently this subject is inactive',
-          };
-        });
+      const subjectBreakdown = names.map((name, idx) => {
+        const item = rawBreakdown[idx];
+        const hasValidObj = typeof item === 'object' && item !== null && !Array.isArray(item);
+        const obt = hasValidObj
+          ? Number(item.obtainedMarks ?? item.marks ?? item.score ?? perSecObt)
+          : perSecObt;
+        const max = hasValidObj
+          ? Number(item.maxMarks ?? item.totalMarks ?? perSecMax)
+          : perSecMax;
+        const pct = max > 0 ? Math.round((obt / max) * 100) : 0;
+        const isActive = isSubjectActive(name);
 
         return {
-          id: s.id,
-          examId: s.examId,
-          examTitle: exam?.title || 'Exam Result',
-          obtainedMarks: obtained,
-          totalMarks: totalPossible,
-          percentage,
-          rank: s.rank ?? 1,
-          evaluatedAt: s.evaluatedAt || s.approvedAt || s.createdAt,
-          subjectBreakdown,
+          subject: name,
+          obtained: obt,
+          total: max,
+          percentage: pct,
+          isActive,
+          inactiveMessage: isActive ? null : 'Currently this subject is inactive',
         };
-      }),
-    );
+      });
+
+      return {
+        id: s.id,
+        examId: s.examId,
+        examTitle: exam?.title || 'Exam Result',
+        obtainedMarks: obtained,
+        totalMarks: totalPossible,
+        percentage,
+        rank: s.rank ?? 1,
+        evaluatedAt: s.evaluatedAt || s.approvedAt || s.createdAt,
+        subjectBreakdown,
+      };
+    });
 
     let subjects = [
       { subject: 'Physics', scorePercentage: 82 },
@@ -900,13 +906,9 @@ export class ParentDashboardService {
 
   // 7. Fees (Strict DB query)
   async getFees(tenantId: string, parentUserId: string, studentId: string) {
-    return {
-      totalFees: 0,
-      paidFees: 0,
-      pendingFees: 0,
-      dueDate: null,
-      transactions: [],
-    };
+    const admission = await this.getStudentAdmission(tenantId, studentId);
+    const targetId = admission?.id || studentId;
+    return this.feeAssignmentService.getStudentFeeAccount(targetId, tenantId);
   }
 
   // 8. Notifications (Strict DB query)

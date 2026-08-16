@@ -1,6 +1,7 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import {
   getSchedules,
   getWeeklyView,
@@ -77,7 +78,8 @@ export function useSchedules(params?: QueryScheduleParams) {
   return useQuery({
     queryKey: scheduleKeys.list(params),
     queryFn: () => getSchedules(params),
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -85,7 +87,8 @@ export function useWeeklyView(params?: QueryScheduleParams) {
   return useQuery({
     queryKey: scheduleKeys.weeklyView(params),
     queryFn: () => getWeeklyView(params),
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
   });
 }
 

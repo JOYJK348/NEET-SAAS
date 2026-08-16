@@ -1,7 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { tutorService } from '../services/tutor-service';
 import type { CreateTutorInput, UpdateTutorInput, TutorFilters } from '../types/tutor';
 import { toast } from 'sonner';
+import { STALE_TIMES } from '@/lib/staleTimes';
 
 interface ApiError {
   message?: string;
@@ -20,14 +21,17 @@ function parseError(err: unknown): string {
 export function useTutors(filters?: TutorFilters) {
   return useQuery({
     queryKey: tutorService.keys.list(filters),
-    queryFn: () => tutorService.findAll(filters),
+    queryFn: ({ signal }) => tutorService.findAll(filters, { signal }),
+    staleTime: STALE_TIMES.STUDENTS,
+    placeholderData: keepPreviousData,
   });
 }
 
 export function useTutor(id: string | null) {
   return useQuery({
     queryKey: tutorService.keys.detail(id ?? ''),
-    queryFn: () => tutorService.findOne(id!),
+    queryFn: ({ signal }) => tutorService.findOne(id!, { signal }),
+    staleTime: STALE_TIMES.STUDENTS,
     enabled: !!id,
   });
 }
@@ -35,14 +39,18 @@ export function useTutor(id: string | null) {
 export function useSubjects() {
   return useQuery({
     queryKey: tutorService.keys.subjects(),
-    queryFn: () => tutorService.getSubjects(),
+    queryFn: ({ signal }) => tutorService.getSubjects({ signal }),
+    staleTime: STALE_TIMES.MASTERS,
+    placeholderData: keepPreviousData,
   });
 }
 
 export function useBranches() {
   return useQuery({
     queryKey: tutorService.keys.branches(),
-    queryFn: () => tutorService.getBranches(),
+    queryFn: ({ signal }) => tutorService.getBranches({ signal }),
+    staleTime: STALE_TIMES.MASTERS,
+    placeholderData: keepPreviousData,
   });
 }
 

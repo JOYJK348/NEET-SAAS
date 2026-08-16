@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsInt } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCourseDto {
@@ -24,11 +25,13 @@ export class UpdateCourseDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   durationMonths?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   displayOrder?: number;
 
@@ -46,4 +49,19 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsString()
   endDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  feeStructureId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  branchId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  academicYearId?: string;
 }

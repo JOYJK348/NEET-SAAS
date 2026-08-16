@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useBranches } from '../../hooks/use-branches';
@@ -18,7 +18,9 @@ import {
 import { courseSchema } from '../../validation/schemas';
 import type { Course, CreateCourseInput } from '../../types';
 import { useAcademicYears } from '../../hooks/use-academic-years';
-import { ArrowLeft, GraduationCap, Save, Calendar, Building2, BookOpen } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Save, Calendar, Building2, BookOpen, CreditCard } from 'lucide-react';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface CourseDialogProps {
   open: boolean;
@@ -42,6 +44,9 @@ export function CourseDialog({
 
   const { data: yearsRes } = useAcademicYears({ limit: 100, status: 'ACTIVE' } as any);
   const academicYears = yearsRes?.data || [];
+
+  const [feePlans, setFeePlans] = useState<Array<{ id: string; name: string; code: string; totalAmount: number }>>([]);
+  const [selectedFeePlanId, setSelectedFeePlanId] = useState<string>('');
 
   const {
     register,
@@ -84,7 +89,24 @@ export function CourseDialog({
   useEffect(() => {
     register('branchId');
     register('academicYearId');
-  }, [register]);
+
+    async function fetchFeePlans() {
+      try {
+        const data = await api.get<any>('/billing/fee-plans');
+        if (Array.isArray(data)) {
+          setFeePlans(data);
+          if (data.length > 0 && !selectedFeePlanId) {
+            setSelectedFeePlanId(data[0].id);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load fee plans for course mapping', e);
+      }
+    }
+    if (open) {
+      fetchFeePlans();
+    }
+  }, [register, open]);
 
   useEffect(() => {
     if (startDate && endDate) {
@@ -136,7 +158,11 @@ export function CourseDialog({
   }, [course, reset, open]);
 
   const onFormSubmit = async (data: any) => {
-    await onSubmit(data);
+    if (!selectedFeePlanId || selectedFeePlanId === 'none') {
+      toast.error('Fee Plan is required! Please select a Fee Structure Plan for this course.');
+      return;
+    }
+    await onSubmit({ ...data, feeStructureId: selectedFeePlanId });
     onOpenChange(false);
   };
 
@@ -401,6 +427,47 @@ export function CourseDialog({
             </CardContent>
           </Card>
         )}
+
+        {/* SECTION 4: Fee Structure Mapping */}
+        <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
+          <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm sm:text-base font-semibold">
+                Fee Structure & Plan Mapping
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-muted-foreground">
+              Map default tuition & installment fee structure for students enrolling in this course program
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-rose-600">Target Fee Structure Plan * (Mandatory)</Label>
+              <Select
+                value={selectedFeePlanId}
+                onValueChange={(val) => setSelectedFeePlanId(val)}
+              >
+                <SelectTrigger className="rounded-xl h-10 sm:h-11">
+                  <SelectValue placeholder="Select fee structure plan (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {feePlans.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No Fee Plans Configured Yet
+                    </SelectItem>
+                  ) : (
+                    feePlans.map((fp: any) => (
+                      <SelectItem key={fp.id} value={fp.id}>
+                        {fp.name} ({fp.code}) — ₹{Number(fp.totalAmount || 0).toLocaleString('en-IN')}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Action Controls Footer Bar */}
         <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-border">

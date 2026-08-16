@@ -1,426 +1,392 @@
 'use client';
 
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   ArrowLeft,
-  GraduationCap,
   Sparkles,
-  Save,
-  Loader2,
-  X,
-  AlertCircle,
-  Clock,
+  CheckCircle2,
   BookOpen,
+  RefreshCw,
   Layers,
-  MapPin,
+  Tag,
+  Clock,
+  Building2,
   Calendar,
 } from 'lucide-react';
-import { useCreateCourse } from '@/features/master-data/hooks/use-courses';
-import { useBranches } from '@/features/master-data/hooks/use-branches';
+import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import type { CreateCourseInput } from '@/features/master-data/types';
-import { cn } from '@/lib/utils';
+import { useBranches } from '@/features/master-data/hooks/use-branches';
+import { useAcademicYears } from '@/features/master-data/hooks/use-academic-years';
 
-const generateCourseCode = (nameVal?: string) => {
-  const clean = (nameVal || '').trim().replace(/[^a-zA-Z0-9]/g, '');
-  const prefix = clean.length >= 3 ? clean.substring(0, 3).toUpperCase() : 'NEET';
-  const randomDigits = Math.floor(100 + Math.random() * 900);
-  return `CRS-${prefix}-${randomDigits}`;
-};
-
-interface FormErrors {
-  name?: string;
-  code?: string;
-  durationMonths?: string;
-}
-
-function CreateCourseContent() {
+function CourseFormBody() {
   const router = useRouter();
-  const createMutation = useCreateCourse();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('id');
+
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Auto-generate unique course code!
+  const generateUniqueCode = () => {
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    return `CRS-NEET-${randomNum}`;
+  };
+
+  // Form states
+  const [code, setCode] = useState(generateUniqueCode());
+  const [name, setName] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Medical / NEET');
+  const [duration, setDuration] = useState('1 Year');
+  const [isActive, setIsActive] = useState(true);
+
+  // Branch & Academic Year mappings
+  const [branchId, setBranchId] = useState('');
+  const [academicYearId, setAcademicYearId] = useState('');
+
   const { data: branchesData } = useBranches({ limit: 100 });
+  const { data: academicYearsData } = useAcademicYears({ limit: 100 });
+
   const branches = branchesData?.data || [];
+  const academicYears = academicYearsData?.data || [];
 
-  const [errors, setErrors] = useState<FormErrors>({});
+  useEffect(() => {
+    if (branches.length > 0 && !branchId) setBranchId(branches[0].id);
+    if (academicYears.length > 0 && !academicYearId) setAcademicYearId(academicYears[0].id);
+  }, [branches, academicYears]);
 
-  const [formData, setFormData] = useState<CreateCourseInput>({
-    code: generateCourseCode(''),
-    name: '',
-    displayName: '',
-    description: '',
-    courseType: 'REGULAR',
-    durationMonths: 12,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
-      .toISOString()
-      .split('T')[0],
-    displayOrder: 1,
-    isActive: true,
-    branchIds: [],
-  });
+  useEffect(() => {
+    if (!editId) return;
 
-  const validateForm = (): boolean => {
-    const errs: FormErrors = {};
-
-    if (!formData.name || !formData.name.trim()) {
-      errs.name = 'Course Name is required';
+    async function loadExistingCourse() {
+      try {
+        setLoading(true);
+        const res = await api.get<any>(`/master/courses/${editId}`);
+        const data = res?.data || res;
+        if (data) {
+          setCode(data.code || '');
+          setName(data.name || '');
+          setDisplayName(data.displayName || data.name || '');
+          setDescription(data.description || '');
+          setIsActive(data.isActive !== false);
+        }
+      } catch (err: any) {
+        toast.error('Failed to load existing course details');
+      } finally {
+        setLoading(false);
+      }
     }
 
-    if (!formData.code || !formData.code.trim()) {
-      errs.code = 'Course Code is required';
-    }
+    loadExistingCourse();
+  }, [editId]);
 
-    if (formData.durationMonths === undefined || formData.durationMonths <= 0) {
-      errs.durationMonths = 'Duration must be greater than 0 months';
-    }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const handleNameChange = (nameVal: string) => {
-    if (errors.name) {
-      setErrors((prev) => ({ ...prev, name: undefined }));
-    }
-
-    const clean = nameVal.trim().replace(/[^a-zA-Z0-9]/g, '');
-    const prefix = clean.length >= 3 ? clean.substring(0, 3).toUpperCase() : 'NEET';
-    const randomDigits = formData.code ? formData.code.split('-').pop() || '101' : '101';
-    const updatedCode = `CRS-${prefix}-${randomDigits}`;
-
-    setFormData((prev) => ({
-      ...prev,
-      name: nameVal,
-      code: updatedCode,
-      displayName: prev.displayName || nameVal,
-    }));
-  };
-
-  const toggleBranchSelection = (bId: string) => {
-    const current = formData.branchIds || [];
-    if (current.includes(bId)) {
-      setFormData({ ...formData, branchIds: current.filter((id) => id !== bId) });
-    } else {
-      setFormData({ ...formData, branchIds: [...current, bId] });
-    }
+  const handleRegenerateCode = () => {
+    const newCode = generateUniqueCode();
+    setCode(newCode);
+    toast.info(`Generated new unique course code: ${newCode}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) {
-      toast.error('Please fix the highlighted validation errors');
+
+    if (!name.trim()) {
+      toast.error('Please enter a Course Name');
+      return;
+    }
+
+    if (!code.trim()) {
+      toast.error('Please enter a Course Code');
       return;
     }
 
     try {
-      await createMutation.mutateAsync(formData);
-      toast.success('New Course Program created successfully!');
-      router.push('/tenant-admin/curriculum');
+      setSubmitting(true);
+
+      const payload = {
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
+        displayName: displayName.trim() || name.trim(),
+        description: description.trim(),
+        isActive,
+      };
+
+      if (editId) {
+        // Update existing course
+        await api.patch(`/master/courses/${editId}`, payload);
+        toast.success('Course updated successfully!');
+      } else {
+        // Create new course
+        const newCourse = await api.post<any>('/master/courses', payload);
+        const courseObj = newCourse?.data || newCourse;
+
+        // Optionally map branch and academic year
+        if (courseObj?.id && branchId && academicYearId) {
+          try {
+            await api.post('/master/branch-courses', {
+              courseId: courseObj.id,
+              branchId,
+              academicYearId,
+            });
+          } catch (e) {
+            console.log('Branch course mapping ignored or already exists');
+          }
+        }
+
+        toast.success('🎉 Course created successfully with unique code!');
+      }
+
+      router.push('/tenant-admin/courses');
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || 'Failed to create course program';
-      toast.error(errorMsg);
+      toast.error(err.response?.data?.message || 'Failed to save course');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Top Back Action Bar */}
-        <div className="flex flex-row items-center justify-between gap-2 w-full">
-          <button
-            onClick={() => router.push('/tenant-admin/curriculum')}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
-            <span className="hidden sm:inline">Back to Curriculum Architecture</span>
-            <span className="sm:hidden">Back</span>
-          </button>
+  if (loading) {
+    return <div className="text-center py-12 text-slate-500 font-bold">Loading course details...</div>;
+  }
 
+  return (
+    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827] w-full">
+      {/* Top Navigation */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/tenant-admin/courses')}
+          className="text-xs font-bold text-slate-600 hover:text-slate-900 rounded-xl"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
+          Back to Courses
+        </Button>
+        <span className="text-xs font-semibold text-slate-400">
+          {editId ? 'Edit Course Mode' : 'Create Course Mode'}
+        </span>
+      </div>
+
+      {/* Signature Violet Gradient Hero Banner */}
+      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
+            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
+              {editId ? 'Course Editor' : 'Academic Course Creator'}
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+            {editId ? `Edit Course: ${name || 'Details'} ✏️` : 'Create New Academic Course 📚'}
+          </h1>
+          <p className="text-violet-200 text-xs mt-0.5">
+            Define course titles, auto-generate unique course codes, and assign branch curriculum mappings.
+          </p>
+        </div>
+      </div>
+
+      {/* Form Container (100% Mobile-First Card Design) */}
+      <form onSubmit={handleSubmit} className="space-y-6 w-full">
+        {/* Core Course Information Card */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs space-y-6">
+          <div className="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Basic Course Specifications</h3>
+              <p className="text-xs text-slate-500">Provide official course title, display name, and auto-generated unique code.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Auto Unique Code Generator */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-700 block">Unique Course Code *</label>
+                {!editId && (
+                  <button
+                    type="button"
+                    onClick={handleRegenerateCode}
+                    className="text-[11px] font-bold text-violet-600 hover:text-violet-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Auto Generate
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Input
+                  placeholder="e.g. CRS-NEET-5491"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  required
+                  className="rounded-xl text-xs font-mono font-bold text-violet-900 bg-violet-50/50 border-violet-200 uppercase"
+                />
+                <span className="absolute right-3 top-2.5 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                  AUTO UNIQUE
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Unique identifier used in admissions and fee structures.</p>
+            </div>
+
+            {/* Course Name */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Official Course Name *</label>
+              <Input
+                placeholder="e.g. NEET Crash Course 2027"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (!displayName) setDisplayName(e.target.value);
+                }}
+                required
+                className="rounded-xl text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Display Name */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Short Display Name</label>
+              <Input
+                placeholder="e.g. NEET 2027"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="rounded-xl text-xs"
+              />
+            </div>
+
+            {/* Category Dropdown */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Course Category *</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              >
+                <option value="Medical / NEET">Medical / NEET</option>
+                <option value="Engineering / JEE">Engineering / JEE</option>
+              </select>
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Course Duration</label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              >
+                <option value="1 Year">1 Year Academic Program</option>
+                <option value="2 Years">2 Years Integrated Program</option>
+                <option value="6 Months">6 Months Crash Course</option>
+                <option value="3 Months">3 Months Fast Track</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Detailed Overview / Description</label>
+            <Input
+              placeholder="Comprehensive coaching covering Physics, Chemistry, Botany, and Zoology with weekly mock exams."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="rounded-xl text-xs"
+            />
+          </div>
+        </Card>
+
+        {/* Branch & Academic Year Mapping Card */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-xs space-y-5">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Branch & Academic Year Mapping</h3>
+              <p className="text-xs text-slate-500">Link course directly to your primary branch and current academic session.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Assign to Branch</label>
+              <select
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              >
+                {branches.length === 0 ? (
+                  <option value="">Main Branch (Default)</option>
+                ) : (
+                  branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.code || 'BRANCH'})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Academic Year</label>
+              <select
+                value={academicYearId}
+                onChange={(e) => setAcademicYearId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              >
+                {academicYears.length === 0 ? (
+                  <option value="">2026-2027 Session</option>
+                ) : (
+                  academicYears.map((ay) => (
+                    <option key={ay.id} value={ay.id}>
+                      {ay.name} ({ay.code})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+        </Card>
+
+        {/* Action Footer Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between bg-white border border-slate-200 rounded-2xl p-4 shadow-xs gap-3">
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push('/tenant-admin/curriculum')}
-            className="rounded-xl text-xs font-bold text-slate-600 shrink-0 px-3 sm:px-4 py-2"
+            onClick={() => router.push('/tenant-admin/courses')}
+            className="rounded-xl text-xs font-bold text-slate-700 w-full sm:w-auto"
           >
-            <X className="w-4 h-4 text-slate-400 shrink-0 mr-1" />
             Cancel
           </Button>
+
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs gap-2 w-full sm:w-auto py-3 sm:py-2 cursor-pointer"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{submitting ? 'Saving Course...' : editId ? 'Update & Save Changes' : 'Save & Publish Course'}</span>
+          </Button>
         </div>
-
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <GraduationCap className="w-5 h-5 sm:w-7 sm:h-7 text-violet-100" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                  <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                    New Program Setup
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
-                  Create New Course Program 🎓
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5">
-                  Configure course credentials, syllabus timeline, and associate initial campus
-                  branches.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Create Form Container */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white border border-[#E5E7EB] rounded-3xl p-5 sm:p-7 shadow-sm space-y-6"
-        >
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-violet-600" /> Course Program Identity
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Provide basic credentials, program name, and unique code identification.
-              </p>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm shrink-0 px-4 py-2"
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Program
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Course Code *
-                </label>
-                <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-violet-500" /> Auto-Generated
-                </span>
-              </div>
-              <Input
-                value={formData.code}
-                disabled
-                readOnly
-                placeholder="Auto-generating..."
-                className="rounded-xl border-slate-200 text-xs font-mono font-bold bg-slate-100 text-slate-500 cursor-not-allowed border-dashed"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Course Program Name *
-              </label>
-              <Input
-                value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="e.g. NEET UG 2-Year Integrated Master"
-                required
-                className={cn(
-                  'rounded-xl text-xs font-bold',
-                  errors.name
-                    ? 'border-rose-400 focus:ring-rose-500 bg-rose-50/20'
-                    : 'border-slate-200',
-                )}
-              />
-              {errors.name && (
-                <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-1">
-                  <AlertCircle className="w-3 h-3" /> {errors.name}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Display Name (Student Portal)
-              </label>
-              <Input
-                value={formData.displayName || ''}
-                onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                placeholder="e.g. NEET 2026 Achievers Program"
-                className="rounded-xl border-slate-200 text-xs font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Program Type *
-              </label>
-              <select
-                value={formData.courseType || 'REGULAR'}
-                onChange={(e) => setFormData({ ...formData, courseType: e.target.value })}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="REGULAR">REGULAR (Standard Academic Batch)</option>
-                <option value="CRASH">CRASH COURSE (Accelerated Program)</option>
-                <option value="REPEATERS">REPEATERS / DROPPER BATCH</option>
-                <option value="FOUNDATION">FOUNDATION (Class 9 & 10 Preparation)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Duration (Months) *
-              </label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  min={1}
-                  max={48}
-                  value={formData.durationMonths || 12}
-                  onChange={(e) =>
-                    setFormData({ ...formData, durationMonths: parseInt(e.target.value, 10) || 12 })
-                  }
-                  className="rounded-xl border-slate-200 text-xs font-bold pr-12"
-                />
-                <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">
-                  Months
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Initial Status
-              </label>
-              <select
-                value={formData.isActive ? 'ACTIVE' : 'INACTIVE'}
-                onChange={(e) =>
-                  setFormData({ ...formData, isActive: e.target.value === 'ACTIVE' })
-                }
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="ACTIVE">Active (Available for Enrollment)</option>
-                <option value="INACTIVE">Inactive (Draft Setup)</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-violet-600" /> Start Date
-              </label>
-              <Input
-                type="date"
-                value={formData.startDate || ''}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="rounded-xl border-slate-200 text-xs font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-violet-600" /> Expected End Date
-              </label>
-              <Input
-                type="date"
-                value={formData.endDate || ''}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="rounded-xl border-slate-200 text-xs font-medium"
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Program Description & Highlights
-              </label>
-              <textarea
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                placeholder="Enter detailed syllabus highlights, course objectives, and target NEET goals..."
-                className="w-full p-3 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-
-            {/* Associate Branches Selection Strip */}
-            <div className="space-y-2 sm:col-span-2 pt-2 border-t border-slate-100">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-violet-600" /> Associate Initial Campus Branches
-              </label>
-              <p className="text-xs text-slate-400">
-                Select campuses where this course program will be offered.
-              </p>
-
-              {branches.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No campuses available.</p>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
-                  {branches.map((b) => {
-                    const isSelected = (formData.branchIds || []).includes(b.id);
-                    return (
-                      <button
-                        type="button"
-                        key={b.id}
-                        onClick={() => toggleBranchSelection(b.id)}
-                        className={cn(
-                          'p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between gap-2',
-                          isSelected
-                            ? 'border-violet-600 bg-violet-50 text-violet-700 shadow-xs'
-                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300',
-                        )}
-                      >
-                        <span className="truncate">{b.name}</span>
-                        {isSelected && (
-                          <span className="w-2 h-2 rounded-full bg-violet-600 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/tenant-admin/curriculum')}
-              className="rounded-xl text-xs font-bold text-slate-600"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Create & Save Program
-            </Button>
-          </div>
-        </form>
-      </div>
-    </DashboardLayout>
+      </form>
+    </div>
   );
 }
 
 export default function CreateCoursePage() {
   return (
     <ProtectedRoute allowedRoles={['TENANT_ADMIN', 'SUPER_ADMIN']}>
-      <CreateCourseContent />
+      <DashboardLayout>
+        <Suspense fallback={<div className="p-6 text-slate-500 font-bold">Loading course creation form...</div>}>
+          <CourseFormBody />
+        </Suspense>
+      </DashboardLayout>
     </ProtectedRoute>
   );
 }

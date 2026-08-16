@@ -604,7 +604,14 @@ export class ScheduleService {
       }
     }
 
-    const { courseId, bypassStudentConflict, ...cleanData } = d;
+    const {
+      courseId,
+      bypassStudentConflict,
+      recordingEnabled,
+      whiteboardEnabled,
+      chatEnabled,
+      ...cleanData
+    } = d;
 
     const updatedSchedule = await this.prisma.schedules.update({
       where: { id },

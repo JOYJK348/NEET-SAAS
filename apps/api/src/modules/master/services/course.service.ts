@@ -58,7 +58,9 @@ export class CourseService {
       );
     }
 
-    return this.prisma.courses.create({
+    const { feeStructureId, branchId, academicYearId } = dto;
+
+    const createdCourse = await this.prisma.courses.create({
       data: {
         tenantId,
         code: normalizedCode,
@@ -75,6 +77,15 @@ export class CourseService {
         updatedBy: userId,
       },
     });
+
+    if (feeStructureId) {
+      await this.prisma.feeStructures.updateMany({
+        where: { id: feeStructureId, tenantId },
+        data: { courseId: createdCourse.id },
+      });
+    }
+
+    return createdCourse;
   }
 
   async findAll(
@@ -150,8 +161,10 @@ export class CourseService {
       }
     }
 
+    const { feeStructureId, branchId, academicYearId, ...cleanDto } = dto;
+
     const updatePayload: Record<string, any> = {
-      ...dto,
+      ...cleanDto,
       updatedBy: userId,
     };
     if (dto.name) updatePayload.name = dto.name.trim();
@@ -159,10 +172,19 @@ export class CourseService {
     if (start !== undefined) updatePayload.startDate = start;
     if (end !== undefined) updatePayload.endDate = end;
 
-    return this.prisma.courses.update({
+    const updatedCourse = await this.prisma.courses.update({
       where: { tenantId_id: { tenantId, id } },
       data: updatePayload,
     });
+
+    if (feeStructureId) {
+      await this.prisma.feeStructures.updateMany({
+        where: { id: feeStructureId, tenantId },
+        data: { courseId: id },
+      });
+    }
+
+    return updatedCourse;
   }
 
   async remove(id: string, tenantId: string, userId: string) {

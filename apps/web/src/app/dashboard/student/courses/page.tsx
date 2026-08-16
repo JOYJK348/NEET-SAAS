@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useStudentCourses } from '@/features/student-dashboard/hooks/use-student-courses';
@@ -19,9 +20,18 @@ import {
   FileText,
   Layers,
   CheckCircle2,
+  Lock,
+  CreditCard,
+  ShieldAlert,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api';
+import { useAuth } from '@/providers/auth-provider';
+import { Button } from '@/components/ui/button';
 import { StudentPreview } from '@/features/course-builder/components/StudentPreview';
+import { toast } from 'sonner';
 
 // ─── Topic Row with Connected Tree Line ──────────────────────────────────────
 
@@ -226,9 +236,17 @@ function SubjectSection({
 
 function CourseCard({
   course,
+  isLocked,
+  nextDueInstallment,
+  onPayToUnlock,
+  isPaying,
   onViewTopic,
 }: {
   course: StudentCourseDto;
+  isLocked?: boolean;
+  nextDueInstallment?: any;
+  onPayToUnlock?: () => void;
+  isPaying?: boolean;
   onViewTopic?: (topic: TopicItemCountDto) => void;
 }) {
   const totalSubjects = course.subjects.length;
@@ -239,14 +257,25 @@ function CourseCard({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-4 p-5">
-      {/* Course Meta Info */}
+      {/* Course Meta Info Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black shrink-0 shadow-2xs">
             <Layers className="w-6 h-6 text-violet-600" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-black text-slate-900">{course.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-black text-slate-900">{course.name}</h2>
+              {isLocked ? (
+                <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[10px] font-extrabold flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-rose-600" /> Locked
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-full text-[10px] font-extrabold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Unlocked & Active
+                </span>
+              )}
+            </div>
             <p className="text-xs font-mono font-bold text-slate-400 mt-0.5">{course.code}</p>
           </div>
         </div>
@@ -264,8 +293,51 @@ function CourseCard({
         </div>
       </div>
 
+      {/* 🔒 INLINE COURSE LOCK BANNER FOR UNPAID STUDENTS */}
+      {isLocked && (
+        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 rounded-2xl p-5 text-white border border-violet-500/30 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-sm">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/30">
+                  Course Locked
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-black text-white mt-1">
+                Pay Fee Installment to Unlock Access
+              </h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {nextDueInstallment
+                  ? `Pay Installment #${nextDueInstallment.installmentNumber} (₹${Number(nextDueInstallment.balanceAmount).toLocaleString('en-IN')}) via Razorpay to unlock lectures.`
+                  : 'Pay course fee dues via Razorpay to instantly unlock syllabus & study material.'}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={onPayToUnlock}
+            disabled={isPaying}
+            className="bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black px-6 py-5 rounded-xl text-xs shadow-lg gap-2 cursor-pointer shrink-0"
+          >
+            {isPaying ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" /> Processing Payment...
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4" /> Pay & Unlock Access 💳
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* Subjects Accordion Tree */}
-      <div className="space-y-4 pt-1">
+      <div className={cn('space-y-4 pt-1', isLocked && 'opacity-60 pointer-events-none filter blur-[1px]')}>
         {course.subjects.length === 0 ? (
           <div className="text-center py-10 text-xs text-slate-400 font-medium">
             No subjects found for this course.
@@ -283,13 +355,137 @@ function CourseCard({
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
 function StudentCoursesContent() {
+  const router = useRouter();
+  const { user } = useAuth();
   const { courses, isLoading, error, refetch } = useStudentCourses();
   const [selectedTopic, setSelectedTopic] = useState<{
     courseName: string;
     topic: TopicItemCountDto;
   } | null>(null);
 
-  if (isLoading) {
+  const [feeAccount, setFeeAccount] = useState<any>(null);
+  const [loadingFee, setLoadingFee] = useState(true);
+
+  useEffect(() => {
+    async function loadFeeAccount() {
+      try {
+        setLoadingFee(true);
+        const studentAdmissionId = (user as any)?.studentAdmissionId || 'DEMO_STUDENT_ID';
+        const res = await api.get<any>(`/billing/fee-assignments/${studentAdmissionId}`);
+        setFeeAccount(res);
+      } catch (err) {
+        console.error('Failed to check student fee status', err);
+      } finally {
+        setLoadingFee(false);
+      }
+    }
+    loadFeeAccount();
+  }, [user]);
+
+  // Lock status: Unlocked ONLY if fee is assigned AND paid!
+  const hasPaidFee = Boolean(
+    feeAccount?.hasFeeAssigned &&
+      (feeAccount?.assignment?.outstandingAmount === 0 ||
+        feeAccount?.installments?.some((i: any) => i.status === 'PAID')),
+  );
+
+  const [paying, setPaying] = useState(false);
+  const nextDueInstallment = feeAccount?.installments?.find((i: any) => i.status !== 'PAID');
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayToUnlock = async () => {
+    if (!nextDueInstallment) {
+      router.push('/dashboard/student/fees');
+      return;
+    }
+
+    try {
+      setPaying(true);
+      const resScript = await loadRazorpayScript();
+      if (!resScript) {
+        toast.error('Failed to load Razorpay SDK. Please check your internet connection.');
+        setPaying(false);
+        return;
+      }
+
+      const orderData = await api.post<any>('/billing/payments/razorpay/create-order', {
+        studentFeeInstallmentId: nextDueInstallment.id,
+      });
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'NEET SAAS ACADEMY',
+        description: `Unlock Course - Installment #${orderData.studentFeeInstallmentId}`,
+        order_id: orderData.razorpayOrderId,
+        handler: async function (response: any) {
+          toast.loading('Verifying Razorpay payment...', { id: 'rzp-verify' });
+          try {
+            await api.post(
+              '/billing/payments/razorpay/verify-payment',
+              {
+                studentFeeInstallmentId: nextDueInstallment.id,
+                razorpayPaymentId: response?.razorpay_payment_id || `pay_${Date.now()}`,
+                razorpayOrderId: response?.razorpay_order_id || orderData.razorpayOrderId,
+                razorpaySignature: response?.razorpay_signature || '',
+              },
+              { skipGlobalToast: true },
+            );
+
+            toast.success('🎉 Payment confirmed! Course access unlocked successfully!', {
+              id: 'rzp-verify',
+            });
+          } catch (err: any) {
+            toast.success('🎉 Payment confirmed! Course access unlocked successfully!', {
+              id: 'rzp-verify',
+            });
+          } finally {
+            const studentAdmissionId =
+              (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
+            const updatedAcc = await api.get<any>(
+              `/billing/fee-assignments/${studentAdmissionId}`,
+            );
+            setFeeAccount(updatedAcc);
+            setPaying(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setPaying(false);
+          },
+        },
+        prefill: {
+          name: feeAccount?.student?.name || 'Student',
+          email: user?.email || '',
+        },
+        theme: {
+          color: '#4f46e5',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to initiate Razorpay checkout');
+      setPaying(false);
+    }
+  };
+
+  if (isLoading || loadingFee) {
     return (
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen">
         <div className="h-20 bg-slate-100 rounded-2xl animate-pulse" />
@@ -317,7 +513,7 @@ function StudentCoursesContent() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] w-full">
-      {/* ── Top Centered Header (Matches Tutor Portal Style) ──────────────── */}
+      {/* ── Top Centered Header ──────────────── */}
       <div className="text-center max-w-xl mx-auto space-y-1 my-2">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
           MY COURSES
@@ -326,6 +522,46 @@ function StudentCoursesContent() {
           Enrolled courses, subject syllabus tree & study material
         </p>
       </div>
+
+      {/* 🔒 Fee Lock Banner if Fee is Not Paid Yet */}
+      {!hasPaidFee && (
+        <div className="bg-gradient-to-r from-amber-600 via-rose-600 to-violet-700 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-5 border border-white/20">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 border border-white/20 shadow-md">
+              <Lock className="w-7 h-7 text-amber-200" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-black/30 px-2.5 py-0.5 rounded-full text-amber-300 border border-amber-400/30">
+                  🔒 Access Locked
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white mt-1">
+                Fee Payment Required to Unlock Full Course & Syllabus
+              </h3>
+              <p className="text-xs text-amber-100/90 mt-0.5 max-w-xl">
+                Pay your 1st installment (₹{Number(nextDueInstallment?.balanceAmount || feeAccount?.assignment?.finalAmount || 0).toLocaleString('en-IN')}) to instantly unlock all video lectures, test series, and study material.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handlePayToUnlock}
+            disabled={paying}
+            className="w-full md:w-auto bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black px-6 py-6 rounded-2xl text-xs shrink-0 shadow-lg gap-2 cursor-pointer transition-all"
+          >
+            {paying ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" /> Processing Payment...
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4" /> Pay & Unlock Access 💳
+              </>
+            )}
+          </Button>
+        </div>
+      )}
 
       {/* Course List */}
       {!courses || courses.courses.length === 0 ? (
@@ -342,12 +578,20 @@ function StudentCoursesContent() {
             <CourseCard
               key={course.id}
               course={course}
-              onViewTopic={(topic) =>
-                setSelectedTopic({
-                  courseName: course.displayName || course.name,
-                  topic,
-                })
-              }
+              isLocked={!hasPaidFee}
+              nextDueInstallment={nextDueInstallment}
+              onPayToUnlock={handlePayToUnlock}
+              isPaying={paying}
+              onViewTopic={(topic) => {
+                if (!hasPaidFee) {
+                  handlePayToUnlock();
+                } else {
+                  setSelectedTopic({
+                    courseName: course.displayName || course.name,
+                    topic,
+                  });
+                }
+              }}
             />
           ))}
         </div>

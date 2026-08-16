@@ -195,6 +195,45 @@ export class TutorDashboardService {
       }
     }
 
+    // Merge active/LIVE LiveClasses into todaysSessions for tutor's assigned batches or tenant
+    try {
+      const activeLiveClasses = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          status: { in: ['LIVE', 'SCHEDULED'] },
+          deletedAt: null,
+          ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
+        },
+      });
+
+      for (const lc of activeLiveClasses) {
+        const exists = todaysSessions.some(
+          (s) => s.id === lc.id || (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+        );
+        if (!exists) {
+          todaysSessions.unshift({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            branchId: 'main-branch',
+            staffProfileId,
+            scheduleId: null,
+            attendanceDate: lc.scheduledStart || today,
+            startsAt: lc.scheduledStart || today,
+            endsAt: lc.scheduledEnd || tomorrow,
+            sessionStatus: lc.status === 'LIVE' ? ('STARTED' as AttendanceSessionStatusEnum) : ('SCHEDULED' as AttendanceSessionStatusEnum),
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            deletedAt: null,
+          } as unknown as AttendanceSessions);
+        }
+      }
+    } catch {}
+
     // Upcoming classes
     let upcomingSessions = await this.prisma.attendanceSessions.findMany({
       where: {
@@ -458,10 +497,12 @@ export class TutorDashboardService {
     if (dateFrom) fromDate.setHours(0, 0, 0, 0);
 
     const toDate = dateTo ? new Date(dateTo) : new Date(fromDate);
-    toDate.setDate(fromDate.getDate() + 6);
+    if (!dateTo) {
+      toDate.setDate(fromDate.getDate() + 6);
+    }
     toDate.setHours(23, 59, 59, 999);
 
-    const sessions = await this.prisma.attendanceSessions.findMany({
+    let sessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
         staffProfileId,
@@ -470,6 +511,63 @@ export class TutorDashboardService {
       },
       orderBy: [{ attendanceDate: 'asc' }, { startsAt: 'asc' }],
     });
+
+    if (sessions.length === 0) {
+      const weekdays = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
+
+      const recurringSchedules = await this.prisma.schedules.findMany({
+        where: {
+          tenantId,
+          staffProfileId,
+          effectiveFrom: { lte: toDate },
+        },
+      });
+
+      if (recurringSchedules.length > 0) {
+        const virtualSessions: AttendanceSessions[] = [];
+        const curDate = new Date(fromDate);
+
+        while (curDate <= toDate) {
+          const dayName = weekdays[curDate.getDay()];
+          const dayMatches = recurringSchedules.filter((sch) => sch.dayOfWeek === dayName);
+
+          for (const sch of dayMatches) {
+            const [startH, startM] = sch.startTime.split(':').map(Number);
+            const [endH, endM] = sch.endTime.split(':').map(Number);
+
+            const sTime = new Date(curDate);
+            sTime.setHours(startH, startM, 0, 0);
+
+            const eTime = new Date(curDate);
+            eTime.setHours(endH, endM, 0, 0);
+
+            virtualSessions.push({
+              id: `${sch.id}-${curDate.toISOString().slice(0, 10)}`,
+              tenantId,
+              batchId: sch.batchId,
+              subjectId: sch.subjectId,
+              branchId: sch.branchId,
+              staffProfileId,
+              scheduleId: sch.id,
+              attendanceDate: new Date(curDate),
+              startsAt: sTime,
+              endsAt: eTime,
+              sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
+              sessionSource: 'SCHEDULED',
+              overrideType: null,
+              cancelledReason: null,
+              createdAt: new Date(curDate),
+              updatedAt: new Date(curDate),
+              deletedAt: null,
+            } as unknown as AttendanceSessions);
+          }
+
+          curDate.setDate(curDate.getDate() + 1);
+        }
+
+        sessions = virtualSessions;
+      }
+    }
 
     // Fetch related data
     const batchIds = [...new Set(sessions.map((s) => s.batchId))];

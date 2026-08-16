@@ -4,13 +4,16 @@ import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import { api } from '@/lib/api';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/queryKeys';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Download, Sparkles, Building2 } from 'lucide-react';
 
 import {
@@ -18,16 +21,6 @@ import {
   platformQuickActions,
   platformRecentActivity,
   platformFeatures,
-  tenantStats,
-  tenantQuickActions,
-  todayClasses,
-  recentAdmissions,
-  feeSummary,
-  upcomingMockTests,
-  aiInsights,
-  parentMessages,
-  pendingTasks,
-  performanceOverview,
 } from '@/features/dashboard/mock/dashboard.mock';
 
 function PlatformAdminDashboard() {
@@ -174,53 +167,48 @@ function PlatformAdminDashboard() {
 }
 
 // ==========================================
-// TENANT ADMIN COMPONENT (PREMIUM SAAS)
+// TENANT ADMIN COMPONENT (PREMIUM SAAS INSTANT CACHE)
 // ==========================================
+
+interface TenantDashboardOverviewResponse {
+  stats: {
+    totalStudents: number;
+    totalBatches: number;
+    totalExams: number;
+    totalBranches: number;
+    totalTutors: number;
+  };
+  recentAdmissions: Array<{
+    name: string;
+    course: string;
+    batch: string;
+    status: string;
+    statusColor: string;
+  }>;
+  todayClasses: Array<{
+    time: string;
+    subject: string;
+    topic: string;
+    color: string;
+  }>;
+  upcomingMockTests: Array<{
+    title: string;
+    time: string;
+    desc: string;
+  }>;
+}
 
 function TenantAdminDashboard() {
   const { user } = useAuth();
-  const [data, setData] = useState<{
-    stats: {
-      totalStudents: number;
-      totalBatches: number;
-      totalExams: number;
-      totalBranches: number;
-      totalTutors: number;
-    };
-    recentAdmissions: Array<{
-      name: string;
-      course: string;
-      batch: string;
-      status: string;
-      statusColor: string;
-    }>;
-    todayClasses: Array<{
-      time: string;
-      subject: string;
-      topic: string;
-      color: string;
-    }>;
-    upcomingMockTests: Array<{
-      title: string;
-      time: string;
-      desc: string;
-    }>;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const tenantId = user?.tenantId;
 
-  useEffect(() => {
-    async function fetchOverview() {
-      try {
-        const res = await api.get<any>('/tenant-dashboard/overview');
-        setData(res);
-      } catch (err) {
-        console.error('Failed to load tenant overview stats:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchOverview();
-  }, []);
+  const { data, isLoading: loading } = useQuery<TenantDashboardOverviewResponse>({
+    queryKey: queryKeys.dashboard.overview(tenantId),
+    queryFn: ({ signal }) => api.get<TenantDashboardOverviewResponse>('/tenant-dashboard/overview', { signal }),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+    enabled: !!user,
+  });
 
   const formattedDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -231,25 +219,25 @@ function TenantAdminDashboard() {
   const statsList = [
     {
       name: 'Students',
-      value: loading ? '...' : (data?.stats.totalStudents ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalStudents ?? 0).toString(),
       change: 'Active enrolled',
       icon: '👨‍🎓',
     },
     {
       name: 'Active Batches',
-      value: loading ? '...' : (data?.stats.totalBatches ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalBatches ?? 0).toString(),
       change: 'Running batches',
       icon: '🏫',
     },
     {
       name: 'Mock Tests',
-      value: loading ? '...' : (data?.stats.totalExams ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalExams ?? 0).toString(),
       change: 'Exams created',
       icon: '📝',
     },
     {
       name: 'Active Branches',
-      value: loading ? '...' : (data?.stats.totalBranches ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalBranches ?? 0).toString(),
       change: 'Campus locations',
       icon: '🏢',
     },
@@ -307,8 +295,6 @@ function TenantAdminDashboard() {
           </Card>
         ))}
       </div>
-
-
 
       {/* Main Grid: Responsive coordinates to stack correctly on mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -400,7 +386,7 @@ function TenantAdminDashboard() {
             <span className="text-xs text-slate-400 font-medium">Academic Year 2026-27</span>
           </div>
           <div className="space-y-4 pt-1">
-            {(!data?.stats.totalStudents || data.stats.totalStudents === 0) ? (
+            {(!data?.stats?.totalStudents || data.stats.totalStudents === 0) ? (
               <div className="py-6 text-center text-xs text-slate-400">
                 No fee structures or active student enrollments configured yet
               </div>
@@ -462,7 +448,7 @@ function TenantAdminDashboard() {
             <Sparkles className="w-4 h-4 text-violet-500" />
           </div>
           <div className="py-6 text-center text-xs text-slate-400">
-            {data?.stats.totalStudents === 0
+            {!data?.stats?.totalStudents || data.stats.totalStudents === 0
               ? 'AI Analytics will automatically activate once students complete exams and attendances'
               : 'Insights generating based on ongoing student performances...'}
           </div>
@@ -525,7 +511,7 @@ function TenantAdminDashboard() {
             </h2>
           </div>
           <div className="space-y-4 pt-1">
-            {(!data?.stats.totalStudents || data.stats.totalStudents === 0) ? (
+            {(!data?.stats?.totalStudents || data.stats.totalStudents === 0) ? (
               <div className="py-6 text-center text-xs text-slate-400">
                 No exam or attendance data recorded yet to compute overall tenant performance
               </div>
@@ -569,23 +555,6 @@ function DashboardContent() {
   }
 
   return <TenantAdminDashboard />;
-}
-
-function TutorRedirectContent() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.push('/dashboard/tutor');
-    router.refresh();
-  }, [router]);
-
-  return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
-        <LoadingSpinner size="lg" />
-      </div>
-    </DashboardLayout>
-  );
 }
 
 function DashboardPageContent() {

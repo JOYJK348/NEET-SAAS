@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -82,12 +82,19 @@ const features = [
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
+  // If user is already authenticated, redirect to callbackUrl immediately
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace(callbackUrl);
+    }
+  }, [isAuthenticated, isLoading, router, callbackUrl]);
 
   const {
     register,

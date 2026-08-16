@@ -93,6 +93,9 @@ export interface CreateSchedulePayload {
   meetingPassword?: string;
   notes?: string;
   bypassStudentConflict?: boolean;
+  recordingEnabled?: boolean;
+  whiteboardEnabled?: boolean;
+  chatEnabled?: boolean;
 }
 
 export interface CheckConflictsPayload extends CreateSchedulePayload {

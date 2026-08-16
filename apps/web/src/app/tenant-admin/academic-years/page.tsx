@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmActionModal } from '@/components/ui/confirm-modal';
 import {
   Plus,
   Search,
@@ -35,6 +36,10 @@ function AcademicYearsContent() {
   const [sortBy, setSortBy] = useState('displayOrder');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Confirmation Modal Targets
+  const [deleteTarget, setDeleteTarget] = useState<AcademicYear | null>(null);
+  const [setCurrentTarget, setSetCurrentTarget] = useState<AcademicYear | null>(null);
+
   const { data, isLoading, error } = useAcademicYears({
     page,
     limit: 10,
@@ -54,18 +59,18 @@ function AcademicYearsContent() {
     router.push(`/tenant-admin/academic-years/${year.id}`);
   };
 
-  const handleSetCurrent = async (id: string) => {
-    if (
-      confirm(
-        'Set this year as the current active year? Doing so resets the previous active current year flag.',
-      )
-    ) {
-      try {
-        await updateMutation.mutateAsync({ id, input: { isCurrent: true } });
-        toast.success('Academic Year set as current active session');
-      } catch (err) {
-        toast.error('Failed to update academic year status');
-      }
+  const handleRequestSetCurrent = (id: string) => {
+    const target = (data?.data || []).find((y) => y.id === id);
+    if (target) setSetCurrentTarget(target);
+  };
+
+  const handleConfirmSetCurrent = async () => {
+    if (!setCurrentTarget) return;
+    try {
+      await updateMutation.mutateAsync({ id: setCurrentTarget.id, input: { isCurrent: true } });
+      toast.success(`"${setCurrentTarget.name}" set as current active session`);
+    } catch (err) {
+      toast.error('Failed to update academic year status');
     }
   };
 
@@ -81,15 +86,19 @@ function AcademicYearsContent() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this academic year?')) {
-      try {
-        await deleteMutation.mutateAsync(id);
-        toast.success('Academic Year deleted successfully');
-      } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || 'Failed to delete academic year';
-        toast.error(errorMsg);
-      }
+  const handleRequestDelete = (id: string) => {
+    const target = (data?.data || []).find((y) => y.id === id);
+    if (target) setDeleteTarget(target);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success(`Academic Year "${deleteTarget.name}" deleted successfully`);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || 'Failed to delete academic year';
+      toast.error(errorMsg);
     }
   };
 
@@ -136,6 +145,7 @@ function AcademicYearsContent() {
 
           <Button
             onClick={handleCreate}
+            onMouseEnter={() => router.prefetch('/tenant-admin/academic-years/new')}
             className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-sm shrink-0 rounded-xl"
           >
             <Plus className="h-4 w-4 text-violet-600" /> Add Academic Year
@@ -255,8 +265,8 @@ function AcademicYearsContent() {
               sortOrder={sortOrder}
               onSort={handleSort}
               onView={handleView}
-              onDelete={handleDelete}
-              onSetCurrent={handleSetCurrent}
+              onDelete={handleRequestDelete}
+              onSetCurrent={handleRequestSetCurrent}
               onStatusToggle={handleStatusToggle}
             />
 
@@ -288,6 +298,45 @@ function AcademicYearsContent() {
             )}
           </div>
         )}
+
+        {/* ── Mobile-Friendly, Theme-Consistent Action Dialogs ── */}
+
+        {/* 1. Delete Confirmation Dialog */}
+        <ConfirmActionModal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+          title="Delete Academic Year?"
+          itemName={deleteTarget?.name}
+          variant="danger"
+          confirmText="Yes, Delete Session"
+          cancelText="Cancel"
+          description={
+            <div className="space-y-1">
+              <p>Are you sure you want to permanently delete this academic session?</p>
+              <p className="text-[11px] text-rose-600 font-bold mt-1">
+                ⚠️ Warning: This will un-assign any linked batches or courses associated with this session.
+              </p>
+            </div>
+          }
+        />
+
+        {/* 2. Set Current Active Session Confirmation Dialog */}
+        <ConfirmActionModal
+          isOpen={!!setCurrentTarget}
+          onClose={() => setSetCurrentTarget(null)}
+          onConfirm={handleConfirmSetCurrent}
+          title="Set Active Session?"
+          itemName={setCurrentTarget?.name}
+          variant="primary"
+          confirmText="Set as Active Session"
+          cancelText="Keep Current"
+          description={
+            <p>
+              Setting this year as the primary active session will automatically un-flag any previously selected active session across the platform.
+            </p>
+          }
+        />
       </div>
     </DashboardLayout>
   );

@@ -100,7 +100,11 @@ export const useAuthStore = create<AuthState>()(
         typeof window !== 'undefined' ? tabStorage : ({} as Storage),
       ),
       onRehydrateStorage: () => (state) => {
+        if (state?.accessToken && state?.user) {
+          state.isAuthenticated = true;
+        }
         state?.setHasHydrated(true);
+        state?.setLoading(false);
       },
       partialize: (state) => ({
         user: state.user,

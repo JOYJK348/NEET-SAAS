@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   ChevronLeft,
@@ -27,10 +27,12 @@ import {
   Video,
   FileText,
   Bookmark,
+  PlayCircle,
   Shield,
   Sliders,
   BarChart,
   Bell,
+  UserCheck,
   Volume2,
   FolderTree,
   ClipboardCheck,
@@ -82,6 +84,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
   });
 
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   const toggleCategory = (category: string) => {
@@ -108,173 +111,164 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     {
       name: 'My Timetable',
       href: '/dashboard/tutor/timetable',
-      icon: Clock,
-      iconColor: 'text-rose-500',
+      icon: Calendar,
+      iconColor: 'text-violet-500',
     },
     {
-      name: 'Attendance',
-      href: '/dashboard/tutor/timetable/attendance',
-      icon: ClipboardCheck,
-      iconColor: 'text-teal-500',
-    },
-    {
-      name: 'My Courses',
-      href: '/dashboard/tutor/courses',
+      name: 'My Classes',
+      href: '/dashboard/tutor/classes',
       icon: BookOpen,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-blue-500',
     },
     {
       name: 'My Batches',
       href: '/dashboard/tutor/batches',
       icon: Layers,
+      iconColor: 'text-indigo-500',
+    },
+    {
+      name: 'Exams & Evaluation',
+      href: '/dashboard/tutor/exams',
+      icon: FileText,
       iconColor: 'text-emerald-500',
     },
     {
-      name: 'Evaluate Exams',
-      href: '/dashboard/tutor/exams',
-      icon: Target,
-      iconColor: 'text-purple-500',
+      name: 'Recordings Library',
+      href: '/dashboard/tutor/recordings',
+      icon: Video,
+      iconColor: 'text-rose-500',
     },
   ];
 
   const studentNavigation = [
     {
-      name: 'Overview',
+      name: 'Dashboard Overview',
       href: '/dashboard/student',
       icon: LayoutDashboard,
-      iconColor: 'text-blue-500',
-    },
-    {
-      name: 'My Timetable',
-      href: '/dashboard/student/timetable',
-      icon: Clock,
-      iconColor: 'text-rose-500',
-    },
-    {
-      name: 'My Courses',
-      href: '/dashboard/student/courses',
-      icon: BookOpen,
       iconColor: 'text-violet-500',
     },
     {
-      name: 'My Batches',
-      href: '/dashboard/student/batches',
-      icon: Layers,
-      iconColor: 'text-emerald-500',
+      name: 'My Schedule',
+      href: '/dashboard/student/timetable',
+      icon: Clock,
+      iconColor: 'text-indigo-500',
     },
     {
-      name: 'Attendance',
-      href: '/dashboard/student/attendance',
-      icon: Target,
+      name: 'Enrolled Courses',
+      href: '/dashboard/student/courses',
+      icon: BookOpen,
+      iconColor: 'text-blue-500',
+    },
+    {
+      name: 'Exams & Mock Tests',
+      href: '/dashboard/student/exams',
+      icon: FileText,
       iconColor: 'text-amber-500',
     },
     {
-      name: 'Exams',
-      href: '/dashboard/student/exams',
-      icon: FileText,
-      iconColor: 'text-indigo-500',
+      name: 'Video Recordings',
+      href: '/dashboard/student/recordings',
+      icon: PlayCircle,
+      iconColor: 'text-rose-500',
+    },
+    {
+      name: 'My Fees & Receipts',
+      href: '/dashboard/student/fees',
+      icon: DollarSign,
+      iconColor: 'text-emerald-500',
     },
   ];
 
   const parentNavigation = [
     {
-      name: 'Academics',
+      name: 'Academic Progress',
       href: '/dashboard/parent/academics',
-      icon: BookOpen,
-      iconColor: 'text-violet-500',
-    },
-    {
-      name: 'Exams',
-      href: '/dashboard/parent/exams',
-      icon: FileText,
+      icon: GraduationCap,
       iconColor: 'text-indigo-500',
     },
     {
-      name: 'Attendance',
+      name: 'Student Attendance',
       href: '/dashboard/parent/attendance',
       icon: Calendar,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-violet-500',
     },
     {
-      name: 'Fees',
+      name: 'Exam Performance',
+      href: '/dashboard/parent/exams',
+      icon: FileText,
+      iconColor: 'text-emerald-500',
+    },
+    {
+      name: 'Enrolled Courses',
+      href: '/dashboard/parent/courses',
+      icon: BookOpen,
+      iconColor: 'text-blue-500',
+    },
+    {
+      name: 'Assigned Batches',
+      href: '/dashboard/parent/batches',
+      icon: Layers,
+      iconColor: 'text-cyan-500',
+    },
+    {
+      name: 'My Fee Account',
       href: '/dashboard/parent/fees',
       icon: DollarSign,
       iconColor: 'text-emerald-500',
     },
-    {
-      name: 'Notifications',
-      href: '/dashboard/parent/notifications',
-      icon: Bell,
-      iconColor: 'text-yellow-500',
-    },
-    {
-      name: 'Profile',
-      href: '/dashboard/parent/profile',
-      icon: Contact,
-      iconColor: 'text-slate-500',
-    },
   ];
 
   const platformNavigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'text-blue-500' },
-    {
-      name: 'Institutes',
-      href: '/dashboard/institutes',
-      icon: Building2,
-      iconColor: 'text-violet-500',
-    },
-    {
-      name: 'Tenant Admins',
-      href: '/dashboard/tenant-admins',
-      icon: Users,
-      iconColor: 'text-teal-500',
-    },
-    {
-      name: 'Subscriptions',
-      href: '/dashboard/subscriptions',
-      icon: DollarSign,
-      iconColor: 'text-amber-500',
-    },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings, iconColor: 'text-slate-500' },
+    { name: 'Platform Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Institutes / Tenants', href: '/dashboard/institutes', icon: Building2 },
+    { name: 'Platform Reports', href: '/dashboard/platform-reports', icon: BarChart },
   ];
 
-  const tenantNavigation: { category: string; items: NavItem[] }[] = [
+  const tenantNavigation = [
     {
-      category: '',
+      category: 'Organization',
       items: [
         {
           name: 'Dashboard',
           href: '/dashboard',
           icon: LayoutDashboard,
+          iconColor: 'text-violet-500',
+        },
+        {
+          name: 'Branches & Campuses',
+          href: '/tenant-admin/branches',
+          icon: Building2,
           iconColor: 'text-blue-500',
         },
-      ],
-    },
-    {
-      category: 'Organization',
-      items: [
         {
           name: 'Academic Years',
           href: '/tenant-admin/academic-years',
           icon: Calendar,
-          iconColor: 'text-pink-500',
+          iconColor: 'text-emerald-500',
         },
+
+      ],
+    },
+    {
+      category: 'People',
+      items: [
         {
-          name: 'Branches',
-          href: '/tenant-admin/branches',
-          icon: Building2,
+          name: 'Students & Admissions',
+          href: '/dashboard/students',
+          icon: GraduationCap,
           iconColor: 'text-indigo-500',
         },
         {
-          name: 'People',
-          href: '#',
+          name: 'Faculty / Tutors',
+          href: '/dashboard/tutors',
           icon: Users,
-          iconColor: 'text-violet-500',
-          children: [
-            { name: 'Students', href: '/dashboard/students', icon: GraduationCap },
-            { name: 'Parents', href: '/tenant-admin/parents', icon: Contact },
-            { name: 'Staff / Tutors', href: '/dashboard/tutors', icon: BookMarked },
-          ],
+          iconColor: 'text-cyan-500',
+        },
+        {
+          name: 'Parents Directory',
+          href: '/tenant-admin/parents',
+          icon: Contact,
+          iconColor: 'text-teal-500',
         },
       ],
     },
@@ -282,68 +276,114 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Academics',
       items: [
         {
-          name: 'Subjects Library',
+          name: 'Subjects Directory',
           href: '/tenant-admin/subjects',
-          icon: Bookmark,
-          iconColor: 'text-violet-500',
+          icon: BookOpen,
+          iconColor: 'text-blue-600',
         },
         {
-          name: 'Curriculum Mapping',
+          name: 'Courses & Programs',
+          href: '/tenant-admin/courses',
+          icon: BookMarked,
+          iconColor: 'text-purple-600',
+        },
+        {
+          name: 'Batches',
+          href: '/dashboard/batches',
+          icon: Layers,
+          iconColor: 'text-indigo-600',
+        },
+        {
+          name: 'Curriculum Builder',
           href: '/tenant-admin/curriculum',
           icon: FolderTree,
-          iconColor: 'text-emerald-500',
+          iconColor: 'text-emerald-600',
         },
-        { name: 'Batches', href: '/dashboard/batches', icon: Layers, iconColor: 'text-cyan-500' },
         {
-          name: 'Attendance',
-          href: '/dashboard/attendance',
-          icon: ClipboardCheck,
-          iconColor: 'text-teal-500',
+          name: 'Examinations',
+          href: '/dashboard/exams',
+          icon: Target,
+          iconColor: 'text-red-500',
         },
-        { name: 'Live Classes', href: '#', icon: Video, iconColor: 'text-indigo-500' },
-        { name: 'Recordings', href: '#', icon: FileText, iconColor: 'text-purple-500' },
-        { name: 'Examinations', href: '/dashboard/exams', icon: Target, iconColor: 'text-red-500' },
       ],
     },
     {
       category: 'Schedule',
       items: [
         {
-          name: 'Timetable',
+          name: 'Timetable Schedule',
           href: '/dashboard/timetable',
           icon: Clock,
-          iconColor: 'text-rose-500',
+          iconColor: 'text-amber-600',
         },
-        { name: 'Events', href: '#', icon: Target, iconColor: 'text-orange-500' },
-        { name: 'Google Calendar', href: '#', icon: Calendar, iconColor: 'text-sky-500' },
+        {
+          name: 'Google Calendar',
+          href: '#',
+          icon: Calendar,
+          iconColor: 'text-sky-500',
+        },
+      ],
+    },
+    {
+      category: 'Operations',
+      items: [
+        {
+          name: 'Attendance',
+          href: '/dashboard/attendance',
+          icon: ClipboardCheck,
+          iconColor: 'text-teal-500',
+        },
+        {
+          name: 'Recordings Library',
+          href: '/dashboard/recordings',
+          icon: FileText,
+          iconColor: 'text-purple-500',
+        },
       ],
     },
     {
       category: 'Finance',
       items: [
-        { name: 'Fees & Billing', href: '#', icon: DollarSign, iconColor: 'text-emerald-500' },
+        {
+          name: 'Fees & Billing',
+          href: '/tenant-admin/fees',
+          icon: DollarSign,
+          iconColor: 'text-emerald-500',
+        },
       ],
     },
-    {
-      category: 'Communication',
-      items: [
-        { name: 'Announcements', href: '#', icon: Volume2, iconColor: 'text-amber-500' },
-        { name: 'Notifications', href: '#', icon: Bell, iconColor: 'text-yellow-500' },
-      ],
-    },
-    {
-      category: 'Analytics',
-      items: [{ name: 'Analytics', href: '#', icon: BarChart, iconColor: 'text-fuchsia-500' }],
-    },
-    {
-      category: 'Settings',
-      items: [
-        { name: 'Roles & Permissions', href: '#', icon: Shield, iconColor: 'text-red-500' },
-        { name: 'Institute Settings', href: '#', icon: Building2, iconColor: 'text-blue-500' },
-        { name: 'System Configuration', href: '#', icon: Sliders, iconColor: 'text-slate-500' },
-      ],
-    },
+
+
+
   ];
+
+  // Auto prefetch all sidebar routes into Next.js router cache in background
+  useEffect(() => {
+    const handlePrefetch = (href?: string) => {
+      if (href && href !== '#' && !href.startsWith('http')) {
+        router.prefetch(href);
+      }
+    };
+
+    const prefetchList = (items: NavItem[]) => {
+      items.forEach((item) => {
+        handlePrefetch(item.href);
+        if (item.children) prefetchList(item.children);
+      });
+    };
+
+    prefetchList(platformNavigation);
+    prefetchList(tutorNavigation);
+    prefetchList(studentNavigation);
+    prefetchList(parentNavigation);
+    tenantNavigation.forEach((g) => prefetchList(g.items));
+  }, [router]);
+
+  const handleLinkHover = (href: string) => {
+    if (href && href !== '#' && !href.startsWith('http')) {
+      router.prefetch(href);
+    }
+  };
 
   // Helper component to render nested submenus recursively
   const renderNavItems = (items: NavItem[], depth = 0) => {
@@ -362,6 +402,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             <div className="flex items-center">
               <Link
                 href={item.href}
+                onMouseEnter={() => handleLinkHover(item.href)}
+                onFocus={() => handleLinkHover(item.href)}
                 className={cn(
                   'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                   isActive
@@ -415,6 +457,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         <Link
           key={item.name}
           href={item.href}
+          onMouseEnter={() => handleLinkHover(item.href)}
+          onFocus={() => handleLinkHover(item.href)}
           className={cn(
             'flex items-center transition-all duration-150',
             depth > 0
@@ -444,7 +488,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               <Icon
                 className={cn(
                   'h-5 w-5 flex-shrink-0 transition-colors',
-                  isActive ? 'text-inherit' : item.iconColor || 'text-slate-400',
+                  isActive ? 'text-primary-foreground' : item.iconColor || 'text-slate-400',
                 )}
                 aria-hidden="true"
               />
@@ -461,24 +505,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
-          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar - Always Fixed Fit Size w-64 */}
+      {/* Sidebar sidebar */}
       <aside
         className={cn(
-          'fixed left-0 top-0 z-50 h-screen w-64 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out',
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ease-in-out lg:translate-x-0',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
-        aria-label="Main navigation"
       >
-        {/* Logo Header */}
-        <div className="flex h-16 items-center px-5 border-b border-gray-200 dark:border-gray-700">
+        {/* Header */}
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
           <Link
             href="/dashboard"
+            onMouseEnter={() => handleLinkHover('/dashboard')}
             className="flex items-center gap-2.5 font-bold text-xl text-primary"
           >
             <span>NEET Platform</span>
@@ -504,6 +547,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       <Link
                         key={item.name}
                         href={item.href}
+                        onMouseEnter={() => handleLinkHover(item.href)}
+                        onFocus={() => handleLinkHover(item.href)}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                           isActive
@@ -535,6 +580,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       <Link
                         key={item.name}
                         href={item.href}
+                        onMouseEnter={() => handleLinkHover(item.href)}
+                        onFocus={() => handleLinkHover(item.href)}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
                           isActive
@@ -570,6 +617,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       <Link
                         key={item.name}
                         href={item.href}
+                        onMouseEnter={() => handleLinkHover(item.href)}
+                        onFocus={() => handleLinkHover(item.href)}
                         className={cn(
                           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
                           isActive
@@ -608,6 +657,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         <Link
                           key={item.name}
                           href={item.href}
+                          onMouseEnter={() => handleLinkHover(item.href)}
+                          onFocus={() => handleLinkHover(item.href)}
                           className={cn(
                             'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
                             isActive

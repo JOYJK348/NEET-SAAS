@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useChildSwitcher } from '@/features/parent-portal/context/child-switcher-context';
 import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
 import type { ParentAcademicsData } from '@/features/parent-portal/types/parent-portal';
 import { Card } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import {
   GraduationCap,
   Layers,
@@ -21,35 +22,21 @@ import {
 
 export default function ParentAcademicsPage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
-  const [data, setData] = useState<ParentAcademicsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!selectedChildId) {
-      if (!isSwitcherLoading) {
-        setIsLoading(false);
-      }
-      return;
-    }
-    let isMounted = true;
-    setIsLoading(true);
-    parentPortalService
-      .getAcademics(selectedChildId)
-      .then((res) => {
-        if (isMounted) {
-          setData(res);
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedChildId, isSwitcherLoading]);
+  const {
+    data,
+    isLoading: isAcademicsLoading,
+  } = useQuery<ParentAcademicsData>({
+    queryKey: ['parent', 'academics', selectedChildId],
+    queryFn: () => parentPortalService.getAcademics(selectedChildId!),
+    enabled: Boolean(selectedChildId),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
 
-  if (isLoading || isSwitcherLoading) {
+  const isLoading = (isAcademicsLoading && !data) || isSwitcherLoading;
+
+  if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#FAFAFA]">
         <LoadingSpinner size="lg" />
@@ -95,8 +82,8 @@ export default function ParentAcademicsPage() {
         </div>
       </div>
 
-      {/* KPI Metric Strip - Matching Tenant Admin Typography */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* KPI Metric Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
           <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 shrink-0">
             <Calendar className="h-5 w-5" />
@@ -135,20 +122,6 @@ export default function ParentAcademicsPage() {
             </p>
             <p className="text-2xl font-bold text-[#111827] mt-0.5">
               {academicSummary?.completedExams ?? 0}
-            </p>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Current Rank
-            </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">
-              {academicSummary?.currentRank && academicSummary.currentRank > 0 ? `#${academicSummary.currentRank}` : 'N/A'}
             </p>
           </div>
         </Card>
@@ -191,7 +164,7 @@ export default function ParentAcademicsPage() {
           </div>
         </Card>
 
-        {/* Recent Alerts - Matching Tenant Admin Style */}
+        {/* Recent Alerts */}
         <Card className="lg:col-span-1 p-5 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
             <div className="flex items-center gap-2">

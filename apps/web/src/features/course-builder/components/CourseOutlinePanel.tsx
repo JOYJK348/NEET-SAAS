@@ -921,22 +921,7 @@ export function CourseOutlinePanel({
                         ))}
                       </SortableContext>
                     </DndContext>
-                    <div className="flex items-center gap-1 py-1">
-                      <button
-                        onClick={() => handleAddChapter(subject.id)}
-                        className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all"
-                      >
-                        <Plus className="h-3 w-3" />
-                        Add Chapter
-                      </button>
-                      <button
-                        onClick={() => handleOpenBulkChapters(subject.id)}
-                        className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-all"
-                      >
-                        <Upload className="h-3 w-3 text-indigo-500" />
-                        Bulk Upload 📋
-                      </button>
-                    </div>
+
                   </div>
                 )}
               </div>

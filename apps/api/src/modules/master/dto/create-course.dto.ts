@@ -5,6 +5,7 @@ import {
   IsInt,
   MaxLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCourseDto {
@@ -35,11 +36,13 @@ export class CreateCourseDto {
 
   @ApiPropertyOptional({ example: 12 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   durationMonths?: number = 12;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   displayOrder?: number = 1;
 
@@ -57,4 +60,19 @@ export class CreateCourseDto {
   @IsOptional()
   @IsString()
   endDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  feeStructureId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  branchId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  academicYearId?: string;
 }

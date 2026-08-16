@@ -9,23 +9,12 @@ import {
   TimelineEvent,
 } from '@/features/students/types/student';
 import type { PaginatedResponse } from '@/types/api';
-import { studentMockService } from '@/features/students/mock/students.mock';
-
-/**
- * Student Service
- *
- * This service provides a clean API interface for student operations.
- * Currently uses mock data but is designed to be easily swapped with
- * a real API implementation (e.g., React Query + API calls).
- *
- * The interface matches what a real API would return, making it
- * API-ready for future integration.
- */
+import { api, AxiosRequestConfig } from '@/lib/api';
 
 export interface StudentService {
-  getStudents(filters?: StudentFilters): Promise<PaginatedResponse<StudentListItem>>;
-  getStudentById(id: string): Promise<Student | null>;
-  getStudentStats(): Promise<StudentStats>;
+  getStudents(filters?: StudentFilters, options?: AxiosRequestConfig): Promise<PaginatedResponse<StudentListItem>>;
+  getStudentById(id: string, options?: AxiosRequestConfig): Promise<Student | null>;
+  getStudentStats(options?: AxiosRequestConfig): Promise<StudentStats>;
   createStudent(input: CreateStudentInput): Promise<Student>;
   updateStudent(input: UpdateStudentInput): Promise<Student | null>;
   deleteStudent(id: string): Promise<boolean>;
@@ -35,16 +24,12 @@ export interface StudentService {
   ): Promise<{ success: number; failed: number }>;
   archiveStudent(id: string): Promise<boolean>;
   getTimelineEvents(studentId: string): Promise<TimelineEvent[]>;
-  getBatches(): Promise<{ id: string; name: string }[]>;
-  getCourses(): Promise<{ id: string; name: string }[]>;
+  getBatches(options?: AxiosRequestConfig): Promise<{ id: string; name: string }[]>;
+  getCourses(options?: AxiosRequestConfig): Promise<{ id: string; name: string }[]>;
 }
 
-// Restore mock implementation for Student Service to avoid breaking Student module views
-// where backend endpoints (like `/students/stats` or full fields) are not yet implemented.
-import { api } from '@/lib/api';
-
 export const studentService: StudentService = {
-  async getStudents(filters: StudentFilters = {}) {
+  async getStudents(filters: StudentFilters = {}, options?: AxiosRequestConfig) {
     const params: Record<string, unknown> = {
       page: filters.page,
       limit: filters.perPage || 10,
@@ -57,7 +42,7 @@ export const studentService: StudentService = {
     }
     const res = await api.get<PaginatedResponse<StudentListItem & { academicStatus?: string }>>(
       '/students',
-      { params },
+      { ...options, params },
     );
     return {
       data: res.data.map((s) => ({
@@ -86,16 +71,16 @@ export const studentService: StudentService = {
     };
   },
 
-  async getStudentById(id: string) {
-    const res = await api.get<Student & { academicStatus?: string }>(`/students/${id}`);
+  async getStudentById(id: string, options?: AxiosRequestConfig) {
+    const res = await api.get<Student & { academicStatus?: string }>(`/students/${id}`, options);
     return {
       ...res,
       status: (res.academicStatus || 'ACTIVE') as StudentStatus,
     };
   },
 
-  async getStudentStats() {
-    return api.get<StudentStats>('/students/stats');
+  async getStudentStats(options?: AxiosRequestConfig) {
+    return api.get<StudentStats>('/students/stats', options);
   },
 
   async createStudent(input: CreateStudentInput) {
@@ -115,7 +100,6 @@ export const studentService: StudentService = {
       if (mapping[bloodGroup]) {
         data.bloodGroup = mapping[bloodGroup];
       }
-      // If it is custom / 'Other', we omit it to avoid strict DB enum conflicts
     }
     return api.post<Student>('/students', data, { skipGlobalToast: true } as any);
   },
@@ -124,7 +108,6 @@ export const studentService: StudentService = {
     const { id, status, bloodGroup, ...rest } = input;
     const data: Record<string, unknown> = { ...rest };
     if (status !== undefined) {
-      // Frontend uses 'INACTIVE' but backend uses 'SUSPENDED'
       data.academicStatus = status === 'INACTIVE' ? 'SUSPENDED' : status;
     }
     if (bloodGroup) {
@@ -141,7 +124,6 @@ export const studentService: StudentService = {
       if (mapping[bloodGroup]) {
         data.bloodGroup = mapping[bloodGroup];
       } else {
-        // Remove invalid bloodGroup to avoid DB constraints on update
         data.bloodGroup = undefined;
       }
     } else if (bloodGroup === '') {
@@ -174,8 +156,9 @@ export const studentService: StudentService = {
     return [];
   },
 
-  async getBatches() {
+  async getBatches(options?: AxiosRequestConfig) {
     const res = await api.get<PaginatedResponse<any>>('/master/batches', {
+      ...options,
       params: { limit: 100 },
     });
     return (res.data || []).map((b: any) => ({
@@ -187,22 +170,19 @@ export const studentService: StudentService = {
     }));
   },
 
-  async getCourses() {
+  async getCourses(options?: AxiosRequestConfig) {
     const res = await api.get<PaginatedResponse<any>>('/master/courses', {
+      ...options,
       params: { limit: 100 },
     });
     return (res.data || []).map((c: any) => ({ id: c.id, name: c.name }));
   },
 };
 
-// Export a factory function for easy testing and future API swapping
 export function createStudentService(): StudentService {
-  // In production, this could return an API-based implementation
-  // e.g., return new ApiStudentService(apiClient);
   return studentService;
 }
 
-// Type-safe service getter for React Query integration
 export const studentServiceKeys = {
   all: ['students'] as const,
   lists: () => [...studentServiceKeys.all, 'list'] as const,

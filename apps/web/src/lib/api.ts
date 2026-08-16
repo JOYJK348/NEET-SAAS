@@ -13,15 +13,43 @@ declare module 'axios' {
   }
 }
 
+export function isCancellationError(error: unknown): boolean {
+  if (!error) return false;
+  if (axios.isCancel(error)) return true;
+  const err = error as any;
+  if (
+    err.name === 'CanceledError' ||
+    err.name === 'AbortError' ||
+    err.code === 'ERR_CANCELED' ||
+    err.code === 'ECONNABORTED'
+  ) {
+    return true;
+  }
+  const msg = (err.message || '').toString().toLowerCase();
+  if (
+    msg.includes('canceled') ||
+    msg.includes('cancelled') ||
+    msg.includes('aborted') ||
+    msg.includes('abort') ||
+    msg === 'canceled'
+  ) {
+    return true;
+  }
+  if (err.config?.signal?.aborted) {
+    return true;
+  }
+  return false;
+}
+
 function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    const hostname = window.location.hostname;
+    const hostname = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
     return `http://${hostname}:3000/api/v1`;
   }
-  return 'http://localhost:3000/api/v1';
+  return 'http://127.0.0.1:3000/api/v1';
 }
 
 class ApiClient {
@@ -38,7 +66,7 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
-      timeout: 30000,
+      timeout: 60000,
     });
 
     this.setupInterceptors();
@@ -77,6 +105,11 @@ class ApiClient {
         return response;
       },
       async (error: AxiosError) => {
+        // Ignore silent request cancellations (AbortSignal / fast typing / route changes / tab switches)
+        if (isCancellationError(error)) {
+          return Promise.reject(error);
+        }
+
         const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
         const isAuthRequest =
@@ -127,7 +160,7 @@ class ApiClient {
 
             return this.client(originalRequest);
           } catch (refreshError) {
-            const isCancel = axios.isCancel(refreshError);
+            const isCancel = isCancellationError(refreshError);
             const isAxiosErr = axios.isAxiosError(refreshError);
             const errorPayload = refreshError as AxiosError;
 
@@ -170,6 +203,11 @@ class ApiClient {
   }
 
   private handleGlobalError(error: AxiosError): void {
+    // Suppress toasts for intentional request cancellations (AbortSignal / fast typing / route changes / tab switches)
+    if (isCancellationError(error)) {
+      return;
+    }
+
     const status = error.response?.status;
     const message = (error.response?.data as { message?: string })?.message || error.message;
 

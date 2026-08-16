@@ -1,14 +1,14 @@
-import { api } from '@/lib/api';
+import { api, AxiosRequestConfig } from '@/lib/api';
 import type { PaginatedResponse, FilterParams } from '@/types/api';
 import type { Course, CreateCourseInput, UpdateCourseInput } from '../types';
 
 export const coursesApi = {
-  async getCourses(params?: FilterParams): Promise<PaginatedResponse<Course>> {
-    return api.get<PaginatedResponse<Course>>('/master/courses', { params });
+  async getCourses(params?: FilterParams, options?: AxiosRequestConfig): Promise<PaginatedResponse<Course>> {
+    return api.get<PaginatedResponse<Course>>('/master/courses', { ...options, params });
   },
 
-  async getCourseById(id: string): Promise<Course> {
-    return api.get<Course>(`/master/courses/${id}`);
+  async getCourseById(id: string, options?: AxiosRequestConfig): Promise<Course> {
+    return api.get<Course>(`/master/courses/${id}`, options);
   },
 
   async createCourse(input: CreateCourseInput): Promise<Course> {

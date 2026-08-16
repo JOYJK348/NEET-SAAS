@@ -31,40 +31,25 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/features/students/utils/student-utils';
 import { cn } from '@/lib/utils';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
 
 export default function ParentExamsPage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
-  const [data, setData] = useState<ParentExamsData | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (!selectedChildId) {
-      if (!isSwitcherLoading) {
-        setIsLoading(false);
-      }
-      return;
-    }
-    let isMounted = true;
-    setIsLoading(true);
-    parentPortalService
-      .getExams(selectedChildId)
-      .then((res) => {
-        if (isMounted) {
-          setData(res);
-          if (res?.completed && res.completed.length > 0) {
-            setSelectedExamId(res.completed[0].id);
-          }
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedChildId, isSwitcherLoading]);
+  const {
+    data,
+    isLoading: isExamsLoading,
+  } = useQuery<ParentExamsData>({
+    queryKey: ['parent', 'exams', selectedChildId],
+    queryFn: () => parentPortalService.getExams(selectedChildId!),
+    enabled: Boolean(selectedChildId),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+
+  const isLoading = (isExamsLoading && !data) || isSwitcherLoading;
 
   if (isLoading || isSwitcherLoading) {
     return (
