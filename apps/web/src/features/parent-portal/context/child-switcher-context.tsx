@@ -1,10 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { parentPortalService } from '../services/parent-portal-service';
 import type { LinkedStudent } from '../types/parent-portal';
-
 import { useAuth } from '@/providers/auth-provider';
+import { STALE_TIMES } from '@/lib/staleTimes';
 
 interface ChildSwitcherContextType {
   linkedStudents: LinkedStudent[];
@@ -19,38 +20,34 @@ const ChildSwitcherContext = createContext<ChildSwitcherContextType | null>(null
 
 export function ChildSwitcherProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
-  const [linkedStudents, setLinkedStudents] = useState<LinkedStudent[]>([]);
   const [selectedChildId, setSelectedChildIdState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchStudents = useCallback(async () => {
-    if (!isAuthenticated || user?.roleCode !== 'PARENT') {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const data = await parentPortalService.getLinkedStudents();
-      setLinkedStudents(data);
+  const isParent = isAuthenticated && (user?.roleCode === 'PARENT' || (user as any)?.role === 'PARENT');
+
+  const {
+    data: linkedStudents = [],
+    isLoading,
+    refetch: queryRefetch,
+  } = useQuery<LinkedStudent[]>({
+    queryKey: ['parent', 'linked-students'],
+    queryFn: () => parentPortalService.getLinkedStudents(),
+    enabled: isParent,
+    staleTime: STALE_TIMES.DEFAULT,
+  });
+
+  useEffect(() => {
+    if (linkedStudents.length > 0 && !selectedChildId) {
       const savedChildId =
         typeof window !== 'undefined'
           ? localStorage.getItem('parent_portal_selected_child_id')
           : null;
-      if (savedChildId && data.some((s) => s.id === savedChildId)) {
+      if (savedChildId && linkedStudents.some((s) => s.id === savedChildId)) {
         setSelectedChildIdState(savedChildId);
-      } else if (data.length > 0) {
-        setSelectedChildIdState(data[0].id);
+      } else {
+        setSelectedChildIdState(linkedStudents[0].id);
       }
-    } catch (err) {
-      console.error('Failed to load linked students:', err);
-    } finally {
-      setIsLoading(false);
     }
-  }, [user, isAuthenticated]);
-
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+  }, [linkedStudents, selectedChildId]);
 
   const setSelectedChildId = useCallback((id: string) => {
     setSelectedChildIdState(id);
@@ -58,6 +55,10 @@ export function ChildSwitcherProvider({ children }: { children: React.ReactNode 
       localStorage.setItem('parent_portal_selected_child_id', id);
     }
   }, []);
+
+  const refetch = useCallback(async () => {
+    await queryRefetch();
+  }, [queryRefetch]);
 
   const selectedChild =
     linkedStudents.find((s) => s.id === selectedChildId) || linkedStudents[0] || null;
@@ -70,7 +71,7 @@ export function ChildSwitcherProvider({ children }: { children: React.ReactNode 
         selectedChild,
         setSelectedChildId,
         isLoading,
-        refetch: fetchStudents,
+        refetch,
       }}
     >
       {children}

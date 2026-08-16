@@ -141,6 +141,7 @@ function CreateScheduleContent() {
 
   const [conflictResult, setConflictResult] = useState<ConflictResult | null>(null);
   const [conflictChecked, setConflictChecked] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
   // Fetch Dropdown master data
@@ -360,10 +361,19 @@ function CreateScheduleContent() {
   };
 
   const buildPayload = (bypassStudent = false): CreateSchedulePayload | null => {
-    if (!selectedBatch || !form.dayOfWeek) return null;
+    const branchId =
+      selectedBatch?.branchId ||
+      scheduleToEdit?.branchId ||
+      scheduleToEdit?.branch?.id;
+    const academicYearId =
+      selectedBatch?.academicYearId ||
+      scheduleToEdit?.academicYearId ||
+      scheduleToEdit?.academicYear?.id;
+
+    if (!form.batchId || !form.dayOfWeek || !branchId || !academicYearId) return null;
     return {
-      branchId: selectedBatch.branchId,
-      academicYearId: selectedBatch.academicYearId,
+      branchId,
+      academicYearId,
       batchId: form.batchId,
       subjectId: form.subjectId,
       staffProfileId: form.staffProfileId,
@@ -384,9 +394,15 @@ function CreateScheduleContent() {
   };
 
   const handleCheckConflicts = () => {
-    if (!validate()) return;
+    if (!validate()) {
+      toast.error('Please fill in all required fields marked with *');
+      return;
+    }
     const payload = buildPayload();
-    if (!payload) return;
+    if (!payload) {
+      toast.error('Please select valid batch and timing details');
+      return;
+    }
 
     runConflictCheck(payload, {
       onSuccess: (result) => {
@@ -402,14 +418,27 @@ function CreateScheduleContent() {
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (isSubmitting || creating) return;
+
+    if (!validate()) {
+      toast.error('Please fill in all required fields marked with *');
+      return;
+    }
 
     const hasHardConflict = conflictResult?.conflicts.some((c) => c.type !== 'STUDENT') ?? false;
-    if (hasHardConflict) return;
+    if (hasHardConflict) {
+      toast.error('Cannot save due to schedule conflicts. Please resolve conflicts first.');
+      return;
+    }
 
     const onlySoftConflict = conflictResult?.hasConflict && !hasHardConflict;
     const payload = buildPayload(onlySoftConflict);
-    if (!payload) return;
+    if (!payload) {
+      toast.error('Invalid schedule parameters. Please check batch & day selection.');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       if (editId) {
@@ -423,11 +452,14 @@ function CreateScheduleContent() {
           description: `Scheduled ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} (${form.startTime} - ${form.endTime}).`,
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      await queryClient.refetchQueries({ queryKey: ['schedules'] });
+      void queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      void queryClient.invalidateQueries({ queryKey: ['scheduling'] });
       router.push('/dashboard/timetable');
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || err?.message || 'Failed to save class schedule');
+      const msg = err?.response?.data?.message || err?.message || 'Failed to save class schedule';
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1079,6 +1111,7 @@ function CreateScheduleContent() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={
+                    isSubmitting ||
                     creating ||
                     (conflictChecked && (conflictResult?.hasConflict ?? false) && !onlySoftConflict)
                   }
@@ -1089,7 +1122,7 @@ function CreateScheduleContent() {
                       : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20',
                   )}
                 >
-                  {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {(isSubmitting || creating) && <Loader2 className="w-4 h-4 animate-spin" />}
                   {conflictChecked && conflictResult?.hasConflict ? (
                     onlySoftConflict ? (
                       <>

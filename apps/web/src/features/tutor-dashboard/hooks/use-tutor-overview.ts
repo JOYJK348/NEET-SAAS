@@ -16,9 +16,9 @@ export function useTutorOverview(): UseTutorOverviewReturn {
   const { data, isPending, error, refetch } = useQuery({
     queryKey: overviewKeys.detail(),
     queryFn: () => overviewService.getOverview(),
-    staleTime: 5 * 1000,
-    gcTime: GC_TIME,
-    refetchInterval: 10 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchInterval: 30 * 1000,
     retry: 2,
   });
 

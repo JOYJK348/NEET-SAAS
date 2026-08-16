@@ -32,6 +32,7 @@ import {
   Sliders,
   BarChart,
   Bell,
+  UserCheck,
   Volume2,
   FolderTree,
   ClipboardCheck,
@@ -114,6 +115,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-violet-500',
     },
     {
+      name: 'My Classes',
+      href: '/dashboard/tutor/classes',
+      icon: BookOpen,
+      iconColor: 'text-blue-500',
+    },
+    {
       name: 'My Batches',
       href: '/dashboard/tutor/batches',
       icon: Layers,
@@ -164,20 +171,26 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       icon: PlayCircle,
       iconColor: 'text-rose-500',
     },
+    {
+      name: 'My Fees & Receipts',
+      href: '/dashboard/student/fees',
+      icon: DollarSign,
+      iconColor: 'text-emerald-500',
+    },
   ];
 
   const parentNavigation = [
-    {
-      name: 'Overview',
-      href: '/dashboard/parent/overview',
-      icon: LayoutDashboard,
-      iconColor: 'text-violet-500',
-    },
     {
       name: 'Academic Progress',
       href: '/dashboard/parent/academics',
       icon: GraduationCap,
       iconColor: 'text-indigo-500',
+    },
+    {
+      name: 'Student Attendance',
+      href: '/dashboard/parent/attendance',
+      icon: Calendar,
+      iconColor: 'text-violet-500',
     },
     {
       name: 'Exam Performance',
@@ -186,10 +199,22 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-emerald-500',
     },
     {
-      name: 'Communication',
-      href: '/dashboard/parent/communication',
-      icon: Bell,
-      iconColor: 'text-amber-500',
+      name: 'Enrolled Courses',
+      href: '/dashboard/parent/courses',
+      icon: BookOpen,
+      iconColor: 'text-blue-500',
+    },
+    {
+      name: 'Assigned Batches',
+      href: '/dashboard/parent/batches',
+      icon: Layers,
+      iconColor: 'text-cyan-500',
+    },
+    {
+      name: 'My Fee Account',
+      href: '/dashboard/parent/fees',
+      icon: DollarSign,
+      iconColor: 'text-emerald-500',
     },
   ];
 
@@ -221,12 +246,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           icon: Calendar,
           iconColor: 'text-emerald-500',
         },
-        {
-          name: 'Delivery Modes',
-          href: '/tenant-admin/batch-delivery-types',
-          icon: Clock,
-          iconColor: 'text-amber-500',
-        },
+
       ],
     },
     {
@@ -269,7 +289,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         },
         {
           name: 'Batches',
-          href: '/dashboard/tutor/batches',
+          href: '/dashboard/batches',
           icon: Layers,
           iconColor: 'text-indigo-600',
         },
@@ -281,7 +301,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         },
         {
           name: 'Examinations',
-          href: '#',
+          href: '/dashboard/exams',
           icon: Target,
           iconColor: 'text-red-500',
         },
@@ -291,22 +311,10 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Schedule',
       items: [
         {
-          name: 'Master Timetable',
+          name: 'Timetable Schedule',
           href: '/dashboard/timetable',
           icon: Clock,
           iconColor: 'text-amber-600',
-        },
-        {
-          name: 'Live Studio Sessions',
-          href: '/dashboard/timetable/live-classes',
-          icon: Video,
-          iconColor: 'text-rose-500',
-        },
-        {
-          name: 'Events',
-          href: '#',
-          icon: Target,
-          iconColor: 'text-orange-500',
         },
         {
           name: 'Google Calendar',
@@ -321,19 +329,13 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       items: [
         {
           name: 'Attendance',
-          href: '/dashboard/tutor/batches/attendance',
+          href: '/dashboard/attendance',
           icon: ClipboardCheck,
           iconColor: 'text-teal-500',
         },
         {
-          name: 'Live Classes',
-          href: '/dashboard/timetable/live-classes',
-          icon: Video,
-          iconColor: 'text-indigo-500',
-        },
-        {
           name: 'Recordings Library',
-          href: '/dashboard/tutor/recordings',
+          href: '/dashboard/recordings',
           icon: FileText,
           iconColor: 'text-purple-500',
         },
@@ -344,63 +346,15 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       items: [
         {
           name: 'Fees & Billing',
-          href: '#',
+          href: '/tenant-admin/fees',
           icon: DollarSign,
           iconColor: 'text-emerald-500',
         },
       ],
     },
-    {
-      category: 'Communication',
-      items: [
-        {
-          name: 'Announcements',
-          href: '#',
-          icon: Volume2,
-          iconColor: 'text-amber-500',
-        },
-        {
-          name: 'Notifications',
-          href: '#',
-          icon: Bell,
-          iconColor: 'text-yellow-500',
-        },
-      ],
-    },
-    {
-      category: 'Analytics',
-      items: [
-        {
-          name: 'Analytics & Reports',
-          href: '#',
-          icon: BarChart,
-          iconColor: 'text-fuchsia-500',
-        },
-      ],
-    },
-    {
-      category: 'Settings',
-      items: [
-        {
-          name: 'Roles & Permissions',
-          href: '#',
-          icon: Shield,
-          iconColor: 'text-red-500',
-        },
-        {
-          name: 'Institute Settings',
-          href: '#',
-          icon: Building2,
-          iconColor: 'text-blue-500',
-        },
-        {
-          name: 'System Configuration',
-          href: '#',
-          icon: Sliders,
-          iconColor: 'text-slate-500',
-        },
-      ],
-    },
+
+
+
   ];
 
   // Auto prefetch all sidebar routes into Next.js router cache in background

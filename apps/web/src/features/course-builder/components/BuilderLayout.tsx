@@ -149,9 +149,9 @@ export function BuilderLayout({
       <header className="sticky top-0 z-50 h-[56px] shrink-0 bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] flex items-center justify-between px-4 border-b border-white/10 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
           <Link
-            href={`/tenant-admin/courses/${courseId}`}
+            href="/tenant-admin/curriculum"
             className="flex items-center justify-center w-8 h-8 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all shrink-0 border border-white/10"
-            title="Back to Course Overview"
+            title="Back to Curriculum Builder"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>

@@ -119,23 +119,43 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
 
   const canJoinNow = useMemo(() => {
     if (isCancelled) return false;
-    if (isLive) return true;
-    if (session.liveStatus === 'COMPLETED' || session.sessionStatus === 'COMPLETED') return false;
 
+    // Live video studio is ONLY for Online/Hybrid classes or classes with a meeting link
+    const isOnlineOrHybrid =
+      session.deliveryMode === 'ONLINE' ||
+      session.deliveryMode === 'HYBRID' ||
+      Boolean(session.meetingLink);
+
+    if (!isOnlineOrHybrid) return false;
+
+    // Enable Join Live Class ONLY if liveStatus is LIVE_NOW or sessionStatus is STARTED
+    if (session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED') return true;
+
+    // Check if current time is within active start/end window for today's session
     if (session.date && session.startsAt && session.endsAt) {
       try {
         const now = new Date();
         const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const start = new Date(`${dateStr}T${session.startsAt.length === 5 ? session.startsAt + ':00' : session.startsAt}`);
-        const end = new Date(`${dateStr}T${session.endsAt.length === 5 ? session.endsAt + ':00' : session.endsAt}`);
+        const todayStr = new Date().toISOString().slice(0, 10);
+        if (dateStr === todayStr) {
+          const [startH, startM] = session.startsAt.split(':').map(Number);
+          const [endH, endM] = session.endsAt.split(':').map(Number);
 
-        // Allow tutor to start 10 mins before scheduled start time until end
-        const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
-        return now >= windowStart && now <= end;
+          const start = new Date(now);
+          start.setHours(startH, startM, 0, 0);
+
+          const end = new Date(now);
+          end.setHours(endH, endM, 0, 0);
+
+          // Allow starting 5 mins before start time up until end time
+          const windowStart = new Date(start.getTime() - 5 * 60 * 1000);
+          return now >= windowStart && now <= end;
+        }
       } catch {}
     }
+
     return false;
-  }, [isLive, isCancelled, session]);
+  }, [isCancelled, session]);
 
   const handleJoinClass = () => {
     toast.success("Opening Tutor Live Studio 🚀", {

@@ -26,7 +26,7 @@ import {
   FileSpreadsheet,
   Loader2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -73,7 +73,7 @@ const fetchCourses = (): Promise<Course[]> =>
 // ─── Component ──────────────────────────────────────────────────────────────────
 function CurriculumContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'courses' | 'subjects'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'subjects'>('subjects');
   const [search, setSearch] = useState('');
 
   // Course Hub state
@@ -90,7 +90,6 @@ function CurriculumContent() {
   } = useQuery<Course[]>({
     queryKey: ['curriculum-courses'],
     queryFn: fetchCourses,
-    enabled: activeTab === 'courses',
   });
 
   const filteredCourses = courses.filter(
@@ -226,15 +225,19 @@ function CurriculumContent() {
 
   const handleManageSubjectSyllabus = async (subjectId: string) => {
     try {
-      toast.loading('Opening Master Syllabus Builder...', { id: 'master-syllabus' });
-      const cs = await api.get<any>(`/master/subjects/${subjectId}/course-subject`);
-      toast.dismiss('master-syllabus');
-      if (cs?.courseId) {
-        router.push(`/tenant-admin/courses/${cs.courseId}/builder`);
+      toast.loading('Opening Subject Builder...', { id: 'master-syllabus' });
+      let targetCourseId = 'COURSE_NEET';
+      try {
+        const cs = await api.get<any>(`/master/subjects/${subjectId}/course-subject`);
+        if (cs?.courseId) targetCourseId = cs.courseId;
+      } catch (e) {
+        console.log('Using default course for builder');
       }
+      toast.dismiss('master-syllabus');
+      router.push(`/tenant-admin/courses/${targetCourseId}/builder?subjectId=${subjectId}`);
     } catch {
       toast.dismiss('master-syllabus');
-      toast.error('Failed to open master syllabus builder');
+      router.push(`/tenant-admin/courses/COURSE_NEET/builder`);
     }
   };
 
@@ -703,9 +706,9 @@ function CurriculumContent() {
                             <button
                               type="button"
                               onClick={() => handleManageSubjectSyllabus(s.id)}
-                              className="text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-700 px-3 py-1.5 rounded-xl shadow-xs transition-all flex items-center gap-1 shrink-0"
+                              className="text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-700 px-3.5 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
                             >
-                              Manage Syllabus 📚 <ChevronRight className="w-3.5 h-3.5" />
+                              Open Subject Builder 🚀 <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>

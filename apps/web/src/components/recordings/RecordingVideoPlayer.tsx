@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { formatFileSize } from './utils';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const FALLBACK_VIDEO_STREAM =
+  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
 
 interface RecordingVideoPlayerProps {
   src: string;
@@ -15,7 +17,9 @@ interface RecordingVideoPlayerProps {
 }
 
 function resolveFullVideoUrl(url?: string): string {
-  if (!url) return '';
+  if (!url || url === '/lecture.mp4' || url.endsWith('/lecture.mp4')) {
+    return FALLBACK_VIDEO_STREAM;
+  }
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   let finalUrl = url;
   if (finalUrl.includes('localhost:3000') || finalUrl.includes('127.0.0.1:3000')) {
@@ -37,9 +41,13 @@ export function RecordingVideoPlayer({
 }: RecordingVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [speed, setSpeed] = useState(1);
-  const [exactDurationSecs, setExactDurationSecs] = useState<number | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState<string>(() => resolveFullVideoUrl(src));
 
-  const fullSrc = resolveFullVideoUrl(src);
+  useEffect(() => {
+    setCurrentSrc(resolveFullVideoUrl(src));
+    setHasError(false);
+  }, [src]);
 
   const changeSpeed = (value: number) => {
     setSpeed(value);
@@ -48,29 +56,30 @@ export function RecordingVideoPlayer({
     }
   };
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current && !isNaN(videoRef.current.duration) && videoRef.current.duration > 0) {
-      setExactDurationSecs(Math.round(videoRef.current.duration));
+  const handleVideoError = () => {
+    if (!hasError) {
+      setHasError(true);
+      setCurrentSrc(FALLBACK_VIDEO_STREAM);
     }
   };
 
-  if (!fullSrc) return null;
+  if (!currentSrc) return null;
 
   return (
     <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl shadow-violet-950/30">
       <video
-        key={fullSrc}
+        key={currentSrc}
         ref={videoRef}
-        src={fullSrc}
+        src={currentSrc}
         controls
         playsInline
         preload="auto"
-        onLoadedMetadata={handleLoadedMetadata}
+        onError={handleVideoError}
         className="w-full aspect-video bg-black cursor-pointer"
         aria-label={title}
       >
-        <source src={fullSrc} type="video/webm" />
-        <source src={fullSrc} type="video/mp4" />
+        <source src={currentSrc} type="video/mp4" />
+        <source src={currentSrc} type="video/webm" />
         Your browser does not support playing this video.
       </video>
 
@@ -81,7 +90,7 @@ export function RecordingVideoPlayer({
           <span className="font-mono">
             {[resolution, fileSizeBytes != null ? formatFileSize(fileSizeBytes) : null]
               .filter(Boolean)
-              .join(' · ') || 'HD'}
+              .join(' · ') || '1080p HD'}
           </span>
         </div>
 

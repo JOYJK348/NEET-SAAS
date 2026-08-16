@@ -200,65 +200,7 @@ export function RecordingWatchView({ recordingId, backHref }: RecordingWatchView
             </div>
           )}
 
-          {/* Class context card */}
-          <div className="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-6 space-y-4">
-            <h2 className="text-sm font-extrabold uppercase tracking-wider text-violet-400 flex items-center gap-2">
-              <BookOpen className="w-4 h-4" /> Live Session Details
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <BookOpen className="w-4 h-4 text-violet-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Course</p>
-                  <p className="font-bold text-slate-200 truncate">{display?.courseName || 'NEET Crash Course 2027'}</p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Batch</p>
-                  <p className="font-bold text-slate-200 truncate">{display?.batchName || 'Batch B - Head Office Sivakasi'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <FolderTree className="w-4 h-4 text-emerald-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Subject</p>
-                  <p className="font-bold text-emerald-300 truncate">{display?.subjectName || 'Physics'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <User className="w-4 h-4 text-sky-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Tutor / Instructor</p>
-                  <p className="font-bold text-slate-200 truncate">{display?.tutorName || 'Dr. Jay Kumar'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Session Start & End Time</p>
-                  <p className="font-bold text-amber-300 truncate">
-                    {timeRangeStr} <span className="text-slate-400 font-normal">({dateStr})</span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/80 border border-slate-800">
-                <Clock className="w-4 h-4 text-violet-400 shrink-0" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-500">Recorded Duration</p>
-                  <p className="font-bold text-violet-300 truncate font-mono">
-                    ⏱️ {formatDuration(recording?.durationSeconds)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

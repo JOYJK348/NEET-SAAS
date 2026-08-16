@@ -23,7 +23,8 @@ export function useSubjects(params?: FilterParams, options?: { enabled?: boolean
   return useQuery({
     queryKey: queryKeys.subjects.list(params, tenantId),
     queryFn: ({ signal }) => subjectsApi.getSubjects(params, { signal }),
-    staleTime: STALE_TIMES.MASTERS,
+    staleTime: 0,
+    refetchOnMount: 'always',
     placeholderData: keepPreviousData,
     enabled: isEnabled,
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, User } from '@/stores/auth-store';
 import { useRouter, usePathname } from 'next/navigation';
@@ -111,8 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       const { user, accessToken, refreshToken } = data;
       setAuth(user, accessToken, refreshToken, rememberMe);
-      // Fire lean background prefetch for master data
-      prefetchCriticalData(queryClient, user.tenantId);
+      setLoading(false);
+      // Fire background prefetching asynchronously so login responds in <10ms!
+      void prefetchCriticalData(queryClient, user.tenantId, user.roleCode);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -129,7 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
       const { user, accessToken, refreshToken } = response;
       setAuth(user, accessToken, refreshToken);
-      prefetchCriticalData(queryClient, user.tenantId);
+      setLoading(false);
+      void prefetchCriticalData(queryClient, user.tenantId, user.roleCode);
     } catch (error) {
       setLoading(false);
       throw error;
@@ -137,17 +139,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    try {
-      await api.post('/auth/logout', { refreshToken });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      queryClient.clear();
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem(CACHE_STORAGE_KEY);
-      }
-      logoutStore();
-      router.replace('/auth/login');
+    const currentRfToken = refreshToken;
+
+    // 1. Immediately reset client state and navigate for 0ms instant UI response
+    queryClient.clear();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(CACHE_STORAGE_KEY);
+    }
+    logoutStore();
+    router.replace('/auth/login');
+
+    // 2. Fire backend logout request silently in the background (non-blocking)
+    if (currentRfToken) {
+      void api.post('/auth/logout', { refreshToken: currentRfToken }, { skipGlobalToast: true }).catch(() => {});
     }
   };
 
@@ -157,37 +161,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Check auth status on mount and route changes
+  const hasCheckedAuthRef = useRef(false);
+
+  // Check auth status on mount (runs EXACTLY ONCE to prevent infinite loop)
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!hasHydrated || hasCheckedAuthRef.current) return;
+    hasCheckedAuthRef.current = true;
 
     const checkAuth = async () => {
       if (accessToken && !isAuthenticated) {
         try {
-          const user = await api.get<User>('/auth/me');
-          setUser(user);
-          setLoading(false);
-          prefetchCriticalData(queryClient, user.tenantId);
+          const fetchedUser = await api.get<User>('/auth/me', { skipGlobalToast: true });
+          setUser(fetchedUser);
+          void prefetchCriticalData(queryClient, fetchedUser.tenantId, fetchedUser.roleCode);
         } catch {
-          await refreshAccessToken();
+          // silent catch
         }
-      } else {
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     checkAuth();
-  }, [
-    hasHydrated,
-    pathname,
-    accessToken,
-    isAuthenticated,
-    refreshAccessToken,
-    logoutStore,
-    setLoading,
-    setUser,
-    queryClient,
-  ]);
+  }, [hasHydrated, accessToken, isAuthenticated, setUser, setLoading, queryClient]);
+
+  const prefetchedRef = useRef(false);
+
+  // Trigger prefetching once authenticated
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated && user?.tenantId && !prefetchedRef.current) {
+      prefetchedRef.current = true;
+      prefetchCriticalData(queryClient, user.tenantId, user.roleCode);
+    }
+  }, [hasHydrated, isAuthenticated, user?.tenantId, user?.roleCode, queryClient]);
 
   // Strict Role Route Guard across tabs
   useEffect(() => {

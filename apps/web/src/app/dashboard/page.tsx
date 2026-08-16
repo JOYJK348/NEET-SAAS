@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Download, Sparkles, Building2 } from 'lucide-react';
 
 import {
@@ -219,25 +219,25 @@ function TenantAdminDashboard() {
   const statsList = [
     {
       name: 'Students',
-      value: loading ? '...' : (data?.stats?.totalStudents ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalStudents ?? 0).toString(),
       change: 'Active enrolled',
       icon: '👨‍🎓',
     },
     {
       name: 'Active Batches',
-      value: loading ? '...' : (data?.stats?.totalBatches ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalBatches ?? 0).toString(),
       change: 'Running batches',
       icon: '🏫',
     },
     {
       name: 'Mock Tests',
-      value: loading ? '...' : (data?.stats?.totalExams ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalExams ?? 0).toString(),
       change: 'Exams created',
       icon: '📝',
     },
     {
       name: 'Active Branches',
-      value: loading ? '...' : (data?.stats?.totalBranches ?? 0).toString(),
+      value: loading && !data ? '...' : (data?.stats?.totalBranches ?? 0).toString(),
       change: 'Campus locations',
       icon: '🏢',
     },

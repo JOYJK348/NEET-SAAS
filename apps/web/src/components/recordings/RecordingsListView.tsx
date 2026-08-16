@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import type { Recording, RecordingListResponse } from './types';
 import { RecordingCard } from './RecordingCard';
 import {
@@ -17,7 +19,7 @@ import { HierarchicalRecordingsBrowse } from './HierarchicalRecordingsBrowse';
 import { useSubjects } from '@/features/master-data/hooks/use-subjects';
 import { useBatches } from '@/features/batches/hooks/use-batches';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 100;
 
 interface RecordingsListViewProps {
   /** Base of the role-specific watch route, e.g. `/dashboard/tutor/recordings`. */
@@ -28,19 +30,14 @@ interface RecordingsListViewProps {
 
 /**
  * Shared Recorded Classes list (filters + grid + pagination + optional delete).
- * Used by the Tenant Admin and Tutor list pages. The student page uses its own
- * Subject → Chapter → Topic browse instead.
+ * Upgraded with TanStack Query caching for instant 0ms pre-fetched rendering.
  */
 export function RecordingsListView({
   watchHrefBase,
   allowDelete = false,
 }: RecordingsListViewProps) {
-  const [items, setItems] = useState<Recording[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(0);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<RecordingFiltersState>(EMPTY_RECORDING_FILTERS);
   const [searchDraft, setSearchDraft] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -63,34 +60,32 @@ export function RecordingsListView({
     return () => clearTimeout(t);
   }, [searchDraft]);
 
-  const fetchRecordings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // TanStack Query for instant pre-fetched recordings & 0ms client cache hit
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    error: queryError,
+    refetch: fetchRecordings,
+  } = useQuery<RecordingListResponse>({
+    queryKey: ['recordings', 'list', filters, page],
+    queryFn: async ({ signal }) => {
       const params: Record<string, unknown> = { page, limit: PAGE_SIZE };
       if (filters.search) params.search = filters.search;
       if (filters.status !== 'ALL') params.status = filters.status.toLowerCase();
       if (filters.subjectId !== 'ALL') params.subjectId = filters.subjectId;
       if (filters.batchId !== 'ALL') params.batchId = filters.batchId;
 
-      const data = await api.get<RecordingListResponse>('/recordings', { params });
-      setItems(data.items);
-      setTotal(data.total);
-      setPages(data.pages);
-      if (data.pages > 0 && data.page > data.pages) {
-        setPage(data.pages);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load recordings');
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, page]);
+      return api.get<RecordingListResponse>('/recordings', { params, signal });
+    },
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchRecordings();
-  }, [fetchRecordings]);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const pages = data?.pages ?? 0;
+  const error = isError ? (queryError instanceof Error ? queryError.message : 'Failed to load recordings') : null;
 
   const patchFilters = useCallback((patch: Partial<RecordingFiltersState>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -102,6 +97,14 @@ export function RecordingsListView({
     setFilters(EMPTY_RECORDING_FILTERS);
     setPage(1);
   }, []);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/recordings/${id}`),
+    onSuccess: () => {
+      toast.success('Recording deleted');
+      queryClient.invalidateQueries({ queryKey: ['recordings'] });
+    },
+  });
 
   const handleDelete = useCallback(
     async (recording: Recording) => {
@@ -115,23 +118,15 @@ export function RecordingsListView({
       }
       setDeletingId(recording.id);
       try {
-        await api.delete(`/recordings/${recording.id}`);
-        toast.success('Recording deleted');
-        fetchRecordings();
+        await deleteMutation.mutateAsync(recording.id);
       } catch {
         // Error toast is surfaced by the global api client
       } finally {
         setDeletingId(null);
       }
     },
-    [fetchRecordings],
+    [deleteMutation],
   );
-
-  const hasFilters =
-    filters.search !== '' ||
-    filters.status !== 'ALL' ||
-    filters.subjectId !== 'ALL' ||
-    filters.batchId !== 'ALL';
 
   return (
     <div className="space-y-6">
@@ -143,7 +138,7 @@ export function RecordingsListView({
         batches={batches}
       />
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
         </div>
@@ -155,7 +150,7 @@ export function RecordingsListView({
           <h3 className="text-lg font-semibold text-slate-300">Failed to load recordings</h3>
           <p className="text-sm text-slate-400 max-w-md">{error}</p>
           <button
-            onClick={fetchRecordings}
+            onClick={() => fetchRecordings()}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
           >
             Retry

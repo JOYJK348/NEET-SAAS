@@ -3,11 +3,11 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 /**
  * SessionStorage Persister for TanStack Query Cache
  * 
- * Storage Key Versioning: 'neet-query-cache-v1'
+ * Storage Key Versioning: 'neet-query-cache-v2'
  * - Bumping version string (v1 → v2) automatically invalidates legacy cache entries on deployment.
  * - Restores memory cache synchronously before React components mount on F5 refresh.
  */
-export const CACHE_STORAGE_KEY = 'neet-query-cache-v1';
+export const CACHE_STORAGE_KEY = 'neet-query-cache-v2';
 
 export const sessionPersister = createSyncStoragePersister({
   storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,

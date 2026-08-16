@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
 import { sessionPersister } from '@/lib/queryPersister';
 import { STALE_TIMES } from '@/lib/staleTimes';
+import { isCancellationError } from '@/lib/api';
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -15,15 +16,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: STALE_TIMES.DEFAULT,
             gcTime: 30 * 60 * 1000, // Keep in memory for 30 min
-            refetchOnWindowFocus: 'always',
-            refetchOnMount: true,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
             retry: (failureCount, error: any) => {
-              // Never retry intentionally cancelled requests (AbortSignal)
-              if (
-                error?.name === 'CanceledError' ||
-                error?.message === 'canceled' ||
-                error?.code === 'ERR_CANCELED'
-              ) {
+              // Never retry intentionally cancelled requests (AbortSignal / tab switches)
+              if (isCancellationError(error)) {
                 return false;
               }
               return failureCount < 2;

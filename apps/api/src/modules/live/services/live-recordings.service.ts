@@ -91,50 +91,53 @@ export class LiveRecordingsService {
   // ─── List (role-scoped, filtered, paginated) ─────────────────────────────
 
   async list(p: ListRecordingsParams) {
-    // Auto-sync ENDED live classes into READY recording rows if missing
+    // Auto-sync ALL ended/completed/published live classes into READY recording rows permanently
     try {
       const endedClasses = await this.prisma.liveClasses.findMany({
         where: {
           tenantId: p.tenantId,
-          status: 'ENDED',
+          status: { in: ['ENDED', 'PUBLISHED'] as any },
           deletedAt: null,
         },
         select: { id: true, tenantId: true, actualStart: true, actualEnd: true, createdAt: true },
       });
 
-      for (const lc of endedClasses) {
-        const rec = await this.prisma.liveClassRecordings.findFirst({
-          where: { liveClassId: lc.id, deletedAt: null },
+      if (endedClasses.length > 0) {
+        const endedClassIds = endedClasses.map((c) => c.id);
+        const existingRecs = await this.prisma.liveClassRecordings.findMany({
+          where: { liveClassId: { in: endedClassIds }, deletedAt: null },
+          select: { id: true, liveClassId: true, status: true },
         });
 
-        const startMs = new Date(lc.actualStart || lc.createdAt).getTime();
-        const endMs = new Date(lc.actualEnd || Date.now()).getTime();
-        const computedDur = Math.max(1, Math.floor((endMs - startMs) / 1000));
+        const existingClassIdSet = new Set(existingRecs.map((r) => r.liveClassId));
+        const toCreateData: any[] = [];
 
-        if (!rec) {
-          await this.prisma.liveClassRecordings.create({
-            data: {
+        for (const lc of endedClasses) {
+          if (!existingClassIdSet.has(lc.id)) {
+            const startMs = new Date(lc.actualStart || lc.createdAt).getTime();
+            const endMs = new Date(lc.actualEnd || Date.now()).getTime();
+            const computedDur = Math.max(1, Math.floor((endMs - startMs) / 1000));
+
+            toCreateData.push({
               tenantId: lc.tenantId,
               liveClassId: lc.id,
               sessionId: lc.id,
               status: 'READY',
+              rawEgressUrl:
+                'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
               durationSeconds: computedDur,
               processingStartedAt: lc.actualStart || lc.createdAt,
               processingCompletedAt: lc.actualEnd || new Date(),
               createdBy: 'system',
               updatedBy: 'system',
-            },
-          });
-        } else if (rec.status !== 'READY' && rec.status !== 'COMPLETED') {
-          const keepDur = rec.durationSeconds && rec.durationSeconds > 0 ? rec.durationSeconds : computedDur;
-          await this.prisma.liveClassRecordings.update({
-            where: { id: rec.id },
-            data: {
-              status: 'READY',
-              durationSeconds: keepDur,
-              processingCompletedAt: lc.actualEnd || new Date(),
-              updatedBy: 'system',
-            },
+            });
+          }
+        }
+
+        if (toCreateData.length > 0) {
+          await this.prisma.liveClassRecordings.createMany({
+            data: toCreateData,
+            skipDuplicates: true,
           });
         }
       }

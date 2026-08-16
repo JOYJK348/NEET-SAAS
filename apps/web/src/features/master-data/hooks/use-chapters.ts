@@ -35,6 +35,7 @@ export function useCreateChapter(courseSubjectId: string) {
     mutationFn: (input: CreateChapterInput) => chaptersApi.createChapter(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId }) });
+      queryClient.invalidateQueries({ queryKey: ['master', 'subjects'] });
     },
   });
 }
@@ -47,6 +48,7 @@ export function useUpdateChapter(courseSubjectId: string) {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId }) });
       queryClient.invalidateQueries({ queryKey: chapterKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: ['master', 'subjects'] });
     },
   });
 }
@@ -60,6 +62,7 @@ export function useDeleteChapter(courseSubjectId?: string) {
         queryClient.invalidateQueries({ queryKey: chapterKeys.list({ courseSubjectId }) });
       }
       queryClient.invalidateQueries({ queryKey: ['master', 'course-subjects'] });
+      queryClient.invalidateQueries({ queryKey: ['master', 'subjects'] });
     },
   });
 }
