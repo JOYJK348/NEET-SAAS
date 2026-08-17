@@ -26,8 +26,11 @@ import { StorageModule } from './modules/storage/storage.module';
 import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboard.module';
 import { LiveModule } from './modules/live/live.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { PyqModule } from './modules/pyq/pyq.module';
+import { GoogleCalendarModule } from './modules/integrations/google-calendar/google-calendar.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
+// Loaded Google OAuth Credentials from .env
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -59,6 +62,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     TenantDashboardModule,
     LiveModule,
     BillingModule,
+    PyqModule,
+    GoogleCalendarModule,
     HealthModule,
   ],
   controllers: [],

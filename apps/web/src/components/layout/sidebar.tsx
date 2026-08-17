@@ -172,6 +172,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-rose-500',
     },
     {
+      name: 'Question Papers (PYQ)',
+      href: '/dashboard/student/pyq',
+      icon: FileText,
+      iconColor: 'text-amber-500',
+    },
+    {
       name: 'My Fees & Receipts',
       href: '/dashboard/student/fees',
       icon: DollarSign,
@@ -299,12 +305,18 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           icon: FolderTree,
           iconColor: 'text-emerald-600',
         },
-        {
-          name: 'Examinations',
-          href: '/dashboard/exams',
-          icon: Target,
-          iconColor: 'text-red-500',
-        },
+    {
+      name: 'Examinations',
+      href: '/dashboard/exams',
+      icon: Target,
+      iconColor: 'text-red-500',
+    },
+    {
+      name: 'Question Papers (PYQ)',
+      href: '/dashboard/pyq',
+      icon: FileText,
+      iconColor: 'text-amber-500',
+    },
       ],
     },
     {
@@ -315,12 +327,6 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           href: '/dashboard/timetable',
           icon: Clock,
           iconColor: 'text-amber-600',
-        },
-        {
-          name: 'Google Calendar',
-          href: '#',
-          icon: Calendar,
-          iconColor: 'text-sky-500',
         },
       ],
     },

@@ -6850,3 +6850,126 @@ model ExamSubmissionFiles {
   @@index([tenantId, fileType])
 }
 
+model PreviousYearQuestionPapers {
+  id           String         @id @default(uuid())
+  tenantId     String
+  title        String
+  year         Int
+  subjectId    String
+  subjectName  String
+  examType     String         @default("NEET")
+  paperUrl     String
+  solutionUrl  String?
+  price        Float          @default(0)
+  isPaid       Boolean        @default(false)
+  isActive     Boolean        @default(true)
+  description  String?
+  createdBy    String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  purchases    PyqPurchases[]
+
+  @@index([tenantId, subjectId])
+  @@index([tenantId, year])
+  @@index([tenantId, deletedAt])
+}
+
+model PyqPurchases {
+  id                 String                     @id @default(uuid())
+  tenantId           String
+  studentAdmissionId String
+  pyqId              String
+  razorpayOrderId    String
+  razorpayPaymentId  String?
+  razorpaySignature  String?
+  amount             Float
+  status             String                     @default("PENDING")
+  unlockedAt         DateTime?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  pyq                PreviousYearQuestionPapers @relation(fields: [pyqId], references: [id], onDelete: Cascade)
+
+  @@unique([studentAdmissionId, pyqId])
+  @@index([tenantId, studentAdmissionId])
+  @@index([tenantId, razorpayOrderId])
+}
+
+// ─── Google Calendar Integration Models ───────────────────────────────────────
+
+enum GoogleConnectionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  REAUTH_REQUIRED
+  DISCONNECTED
+}
+
+enum CalendarEntityTypeEnum {
+  LIVE_CLASS
+  ATTENDANCE_SESSION
+}
+
+enum CalendarSyncStatusEnum {
+  SYNCED
+  FAILED
+  CANCELLED
+}
+
+model GoogleCalendarConnections {
+  id                    String                   @id @default(uuid())
+  tenantId              String
+  userId                String                   @unique
+  googleAccountId       String?
+  email                 String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  tokenExpiresAt        DateTime
+  calendarId            String                   @default("primary")
+  scope                 String
+  autoSyncClasses       Boolean                  @default(true) // Student Opt-In setting
+  status                GoogleConnectionStatus   @default(ACTIVE)
+  lastSyncedAt          DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  eventSyncs            CalendarEventSyncs[]
+
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+}
+
+model GoogleOAuthStates {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  state     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([state, expiresAt])
+}
+
+model CalendarEventSyncs {
+  id                    String                   @id @default(uuid())
+  tenantId              String
+  userId                String
+  connectionId          String
+  entityType            CalendarEntityTypeEnum
+  entityId              String                   // liveClassId or attendanceSessionId
+  googleCalendarEventId String
+  calendarId            String                   @default("primary")
+  syncStatus            CalendarSyncStatusEnum   @default(SYNCED)
+  lastSyncedAt          DateTime                 @default(now())
+  lastError             String?
+
+  connection            GoogleCalendarConnections @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityType, entityId])
+  @@index([tenantId, userId])
+  @@index([entityType, entityId])
+}
+
+

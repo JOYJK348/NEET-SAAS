@@ -107,4 +107,12 @@ export class UpdateScheduleDto {
   @IsBoolean()
   @IsOptional()
   chatEnabled?: boolean;
+
+  @IsString()
+  @IsOptional()
+  studentAdmissionId?: string;
+
+  @IsString()
+  @IsOptional()
+  sessionType?: string;
 }

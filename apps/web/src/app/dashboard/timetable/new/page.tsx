@@ -473,8 +473,7 @@ function CreateScheduleContent() {
           description: `Scheduled ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} (${form.startTime} - ${form.endTime}).`,
         });
       }
-      void queryClient.invalidateQueries({ queryKey: ['schedules'] });
-      void queryClient.invalidateQueries({ queryKey: ['scheduling'] });
+      void queryClient.invalidateQueries();
       router.push('/dashboard/timetable');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to save class schedule';

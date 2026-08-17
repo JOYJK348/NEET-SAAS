@@ -219,12 +219,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pathname.startsWith('/dashboard/tutors/') ||
       pathname.startsWith('/tenant-admin');
 
+    const isGoogleCalendarSyncPath = pathname.startsWith('/dashboard/settings/integrations/google-calendar');
+
     if (isStudent) {
-      if (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student'))) {
+      if (!isGoogleCalendarSyncPath && (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/student')))) {
         router.replace('/dashboard/student');
       }
     } else if (isTutor) {
-      if (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/tutor'))) {
+      if (!isGoogleCalendarSyncPath && (isAdminOnlyPath || (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/tutor')))) {
         router.replace('/dashboard/tutor');
       }
     } else if (isParent) {

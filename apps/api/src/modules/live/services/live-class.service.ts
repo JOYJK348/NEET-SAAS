@@ -16,6 +16,8 @@ import { RequestContextService } from '../../../common/middleware/request-contex
 import { LiveKitService } from './livekit.service';
 import { createClient } from '@supabase/supabase-js';
 
+import { CalendarSyncService } from '../../integrations/google-calendar/calendar-sync.service';
+
 @Injectable()
 export class LiveClassService {
   private readonly logger = new Logger(LiveClassService.name);
@@ -33,6 +35,7 @@ export class LiveClassService {
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly livekitService: LiveKitService,
+    private readonly calendarSyncService: CalendarSyncService,
   ) {}
 
   // ─── Schedule ─────────────────────────────────────────────────────────────
@@ -101,6 +104,10 @@ export class LiveClassService {
     this.logger.log(
       `Live class scheduled: ${liveClass.id} by tenant ${tenantId}`,
     );
+
+    // Dispatch asynchronous Google Calendar sync
+    this.calendarSyncService.queueLiveClassSync(liveClass.id, 'CREATE');
+
     return liveClass;
   }
 
@@ -612,10 +619,10 @@ export class LiveClassService {
     if (dto.whiteboardEnabled !== undefined) data.whiteboardEnabled = dto.whiteboardEnabled;
     if (dto.chatEnabled !== undefined) data.chatEnabled = dto.chatEnabled;
 
-    return this.prisma.liveClasses.update({ where: { id }, data });
+    const updated = await this.prisma.liveClasses.update({ where: { id }, data });
+    this.calendarSyncService.queueLiveClassSync(id, 'UPDATE');
+    return updated;
   }
-
-
 
   // ─── Extend Class Duration ──────────────────────────────────────────────────
 
@@ -627,10 +634,12 @@ export class LiveClassService {
       const baseEnd = currentEnd > now ? currentEnd : now;
       const newEnd = new Date(baseEnd.getTime() + extendMinutes * 60 * 1000);
 
-      return this.prisma.liveClasses.update({
+      const res = await this.prisma.liveClasses.update({
         where: { id },
         data: { scheduledEnd: newEnd, updatedAt: now },
       });
+      this.calendarSyncService.queueLiveClassSync(id, 'UPDATE');
+      return res;
     }
 
     const session = await this.prisma.attendanceSessions.findFirst({
@@ -643,6 +652,7 @@ export class LiveClassService {
         where: { id },
         data: { endsAt: newEndsAt, sessionStatus: 'OPEN' },
       });
+      this.calendarSyncService.queueAttendanceSessionSync(id, 'UPDATE');
 
       if (session.scheduleId) {
         const sched = await this.prisma.schedules.findUnique({ where: { id: session.scheduleId } });
@@ -703,7 +713,7 @@ export class LiveClassService {
       );
     }
 
-    return this.prisma.liveClasses.update({
+    const cancelled = await this.prisma.liveClasses.update({
       where: { id },
       data: {
         status: LiveClassStatusEnum.CANCELLED,
@@ -713,6 +723,9 @@ export class LiveClassService {
         updatedBy: userId,
       },
     });
+
+    this.calendarSyncService.queueLiveClassSync(id, 'CANCEL');
+    return cancelled;
   }
 
   // ─── List upcoming ─────────────────────────────────────────────────────────

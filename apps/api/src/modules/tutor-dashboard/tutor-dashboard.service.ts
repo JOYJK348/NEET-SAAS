@@ -489,15 +489,9 @@ export class TutorDashboardService {
         }
       }
 
-      const enrolledStudents = batchStudentMap.get(s.batchId) || [];
-      if (!studentName && enrolledStudents.length > 0) {
-        studentName = enrolledStudents[0];
-      }
-      if (
-        sessionType !== 'ONE_TO_ONE' &&
-        (enrolledStudents.length > 0 || studentName)
-      ) {
-        sessionType = 'ONE_TO_ONE';
+      if (sessionType !== 'ONE_TO_ONE') {
+        sessionType = 'BATCH';
+        studentName = undefined;
       }
 
       const matchingLiveClass = activeLiveClasses.find(

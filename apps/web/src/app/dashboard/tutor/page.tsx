@@ -10,9 +10,9 @@ import type { TutorialSessionDto } from '@/features/tutor-dashboard/types/overvi
 import { StatsSkeleton } from '@/components/ui/loading';
 import { ErrorState } from '@/components/ui/error-state';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
 import {
   BookOpen,
   Calendar,
@@ -262,13 +262,13 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
         </div>
       )}
 
-      {/* Action Buttons: Disabled when Upcoming, Enabled ONLY when Live or exact time window */}
+      {/* Action Buttons & 1-Click Google Calendar Link */}
       {!isCancelled && (
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-slate-100">
           {canJoinNow ? (
             <button
               onClick={handleJoinClass}
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
             >
               <Video className="w-4 h-4 shrink-0" />
               <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
@@ -276,12 +276,31 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
           ) : (
             <button
               disabled
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-80"
+              className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-80"
             >
               <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
               <span>Class Starts at {formatTime(session.startsAt, session.endsAt).split('–')[0].trim()} (Upcoming)</span>
             </button>
           )}
+
+          <a
+            href={generateGoogleCalendarUrl({
+              title: `${subjectName} - ${session.batch?.name || 'NEET Class'}`,
+              description: `Faculty Class Session for ${session.batch?.name || 'Batch'}. Student: ${session.studentName || 'Class'}`,
+              startTime: session.startsAt,
+              endTime: session.endsAt,
+              dateStr: session.date || undefined,
+              joiningLink: session.meetingLink || undefined,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-extrabold text-xs border border-violet-200 shadow-2xs transition cursor-pointer shrink-0"
+            title="Add this class to Google Calendar with 15-min reminder alert"
+          >
+            <Calendar className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span>Add to Calendar 📅</span>
+          </a>
         </div>
       )}
     </div>

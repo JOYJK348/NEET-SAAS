@@ -531,24 +531,22 @@ export class StudentDashboardService {
           ? (scheduleMap.get(s.scheduleId) ?? null)
           : null;
 
-        let isOneOnOne = false;
-        let targetStudentAdmissionId: string | null = null;
-        let targetStudentName: string | null = null;
+        let sessionType = 'BATCH';
+        let studentName: string | undefined = undefined;
 
         if (sched?.notes) {
           try {
-            const meta = JSON.parse(sched.notes);
+            const meta = JSON.parse(sched.notes) as { sessionType?: string; studentName?: string };
             if (meta?.sessionType) sessionType = meta.sessionType;
             if (meta?.studentName) studentName = meta.studentName;
-          } catch {}
+          } catch {
+            /* empty */
+          }
         }
 
-        const enrolledStudents = batchStudentMap.get(s.batchId) || [];
-        if (!studentName && enrolledStudents.length > 0) {
-          studentName = enrolledStudents[0];
-        }
-        if (sessionType !== 'ONE_TO_ONE' && (enrolledStudents.length > 0 || studentName)) {
-          sessionType = 'ONE_TO_ONE';
+        if (sessionType !== 'ONE_TO_ONE') {
+          sessionType = 'BATCH';
+          studentName = undefined;
         }
 
         const matchingLiveClass = activeLiveClasses.find(

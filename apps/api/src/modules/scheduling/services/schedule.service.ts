@@ -17,6 +17,7 @@ import {
   AttendanceSessionStatusEnum,
   ScheduleStatusEnum,
 } from '@prisma/client';
+import { SessionGeneratorService } from './session-generator.service';
 
 // ─── Conflict result types ────────────────────────────────────────────────────
 
@@ -86,7 +87,11 @@ const SCHEDULE_SELECT = {
 @Injectable()
 export class ScheduleService {
   private readonly logger = new Logger(ScheduleService.name);
-  constructor(private readonly prisma: PrismaService) {}
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessionGenerator: SessionGeneratorService,
+  ) {}
 
   // ─── CONFLICT DETECTION ENGINE ─────────────────────────────────────────────
 
@@ -641,13 +646,47 @@ export class ScheduleService {
       recordingEnabled,
       whiteboardEnabled,
       chatEnabled,
+      studentAdmissionId,
+      sessionType,
       ...cleanData
     } = d;
+
+    let notesValue = cleanData.notes;
+    if (studentAdmissionId || sessionType === 'ONE_TO_ONE') {
+      let studentName = 'Student';
+      if (studentAdmissionId) {
+        try {
+          const studentAdmission = await this.prisma.studentAdmissions.findFirst({
+            where: { id: studentAdmissionId, tenantId },
+            select: {
+              studentProfileIstudent_profile: {
+                select: {
+                  userIdusers: {
+                    select: { firstName: true, lastName: true },
+                  },
+                },
+              },
+            },
+          });
+          const user = studentAdmission?.studentProfileIstudent_profile?.userIdusers;
+          if (user) {
+            studentName = `${user.firstName} ${user.lastName}`.trim();
+          }
+        } catch {}
+      }
+      notesValue = JSON.stringify({
+        notes: cleanData.notes || '',
+        sessionType: sessionType || 'ONE_TO_ONE',
+        studentAdmissionId: studentAdmissionId || null,
+        studentName,
+      });
+    }
 
     const updatedSchedule = await this.prisma.schedules.update({
       where: { id },
       data: {
         ...cleanData,
+        ...(notesValue !== undefined && { notes: notesValue }),
         ...(cleanData.effectiveFrom && { effectiveFrom: new Date(cleanData.effectiveFrom) }),
         ...(cleanData.effectiveUntil && { effectiveUntil: new Date(cleanData.effectiveUntil) }),
         updatedBy: userId,
@@ -656,51 +695,32 @@ export class ScheduleService {
       select: SCHEDULE_SELECT,
     });
 
-    // Sync any future scheduled attendance sessions linked to this schedule
+    // Sync future scheduled attendance sessions linked to this schedule
     try {
       if (
         cleanData.startTime ||
         cleanData.endTime ||
         cleanData.staffProfileId ||
         cleanData.subjectId ||
-        cleanData.batchId
+        cleanData.batchId ||
+        cleanData.dayOfWeek ||
+        cleanData.effectiveFrom ||
+        cleanData.effectiveUntil
       ) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const futureSessions = await this.prisma.attendanceSessions.findMany({
+        // Delete future UNTAKEN sessions (SCHEDULED status) generated under old schedule parameters
+        await this.prisma.attendanceSessions.deleteMany({
           where: {
             scheduleId: id,
-            sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
+            sessionStatus: AttendanceSessionStatusEnum.SCHEDULED,
             attendanceDate: { gte: today },
           },
         });
 
-        for (const session of futureSessions) {
-          const newStartStr = cleanData.startTime || updatedSchedule.startTime;
-          const newEndStr = cleanData.endTime || updatedSchedule.endTime;
-
-          const [sH, sM] = newStartStr.split(':').map(Number);
-          const [eH, eM] = newEndStr.split(':').map(Number);
-
-          const newStartsAt = new Date(session.attendanceDate);
-          newStartsAt.setHours(sH, sM, 0, 0);
-
-          const newEndsAt = new Date(session.attendanceDate);
-          newEndsAt.setHours(eH, eM, 0, 0);
-
-          await this.prisma.attendanceSessions.update({
-            where: { id: session.id },
-            data: {
-              startsAt: newStartsAt,
-              endsAt: newEndsAt,
-              ...(cleanData.staffProfileId && { staffProfileId: cleanData.staffProfileId }),
-              ...(cleanData.subjectId && { subjectId: cleanData.subjectId }),
-              ...(cleanData.batchId && { batchId: cleanData.batchId }),
-              updatedBy: userId,
-            },
-          });
-        }
+        // Re-generate fresh sessions for the updated schedule (30-day window)
+        await this.sessionGenerator.generateForSchedule(id, 30, userId);
       }
     } catch (e) {
       this.logger.warn(`Schedule ${id} session sync failed: ${(e as Error)?.message}`);

@@ -22,9 +22,11 @@ import {
   AlertCircle,
   Search,
   X,
+  Calendar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 function OverviewSkeleton() {
@@ -244,17 +246,17 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
         <DeliveryBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Action Button: Enabled ONLY for current/live sessions */}
+      {/* Action Button & 1-Click Google Calendar Link */}
       {!isCancelled && (
-        <div className="pt-1 border-t border-slate-100">
+        <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             onClick={handleJoin}
             disabled={!canJoinNow}
             className={cn(
-              'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[42px] shadow-2xs text-center',
+              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all duration-150 min-h-[38px] shadow-2xs text-center',
               canJoinNow
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
-                : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed'
+                : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed',
             )}
           >
             <Video className="w-4 h-4" />
@@ -262,6 +264,25 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
               {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
             </span>
           </button>
+
+          <a
+            href={generateGoogleCalendarUrl({
+              title: `${subjectName} - ${session.batch?.name || 'NEET Class'}`,
+              description: `Scheduled NEET Class with Tutor ${session.tutorName || 'Faculty'}.`,
+              startTime: session.startsAt,
+              endTime: session.endsAt,
+              dateStr: session.date || undefined,
+              joiningLink: (session as any).meetingUrl || (session as any).meetingLink || undefined,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-extrabold text-xs border border-violet-200 shadow-2xs transition cursor-pointer shrink-0"
+            title="Add this class to Google Calendar with 15-min reminder alert"
+          >
+            <Calendar className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <span>Add to Calendar 📅</span>
+          </a>
         </div>
       )}
     </div>

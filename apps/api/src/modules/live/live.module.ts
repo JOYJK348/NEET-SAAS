@@ -8,8 +8,11 @@ import { LiveKitService } from './services/livekit.service';
 import { LiveClassWebhookService } from './services/live-class-webhook.service';
 import { LiveRecordingsService } from './services/live-recordings.service';
 
+import { GoogleCalendarModule } from '../integrations/google-calendar/google-calendar.module';
+
 @Module({
   imports: [
+    GoogleCalendarModule,
     MulterModule.register({
       limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max video file upload
     }),

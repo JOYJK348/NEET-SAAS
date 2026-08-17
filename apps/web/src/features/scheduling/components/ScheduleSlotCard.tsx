@@ -11,9 +11,11 @@ import {
   History,
   MoreVertical,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { ScheduleDetail } from '../types/schedule.types';
 import type { SessionAction } from './SessionOverrideDrawer';
+import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
 
 // Rich subject color palettes
 const SUBJECT_COLORS: Record<
@@ -301,14 +303,30 @@ export function ScheduleSlotCard({
         </div>
       </div>
 
-      {/* Upcoming Date Footer */}
-      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 pt-0.5">
-        <span className="flex items-center gap-1">
+      {/* Upcoming Date & 1-Click Calendar Add Footer */}
+      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 pt-1 border-t border-slate-200/50">
+        <span className="flex items-center gap-1 text-slate-600">
           📅 {formatOccurrenceDate(schedule.dayOfWeek)}
         </span>
-        <span className="text-[10px] uppercase tracking-wider bg-white/60 px-2 py-0.5 rounded-md border border-slate-200/50">
-          {schedule.dayOfWeek}
-        </span>
+
+        <a
+          href={generateGoogleCalendarUrl({
+            title: `${subjectName || 'NEET Class'} - ${batchName || 'Scheduled Session'}`,
+            description: `Scheduled NEET Class for ${batchName || 'Batch'} with Tutor ${tutorName || 'Faculty'}.`,
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            dateStr: schedule.dayOfWeek,
+            joiningLink: schedule.meetingLink || undefined,
+          })}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="px-2.5 py-1 rounded-xl bg-white hover:bg-violet-50 text-violet-700 font-extrabold text-[10.5px] border border-violet-200 shadow-2xs hover:border-violet-300 transition-all flex items-center gap-1 cursor-pointer"
+          title="Add this class to Google Calendar with 15-min reminder alert"
+        >
+          <Calendar className="w-3 h-3 text-violet-600 shrink-0" />
+          <span>Add to Calendar 📅</span>
+        </a>
       </div>
     </div>
   );
