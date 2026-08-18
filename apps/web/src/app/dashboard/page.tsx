@@ -555,6 +555,70 @@ function TenantAdminDashboard() {
 // CONTAINER & EXPORT
 // ==========================================
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen animate-pulse text-[#111827]">
+      {/* 1. Welcome Banner Skeleton */}
+      <div className="bg-gradient-to-br from-violet-600/90 to-indigo-600/90 rounded-2xl p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Sparkles className="w-3.5 h-3.5 text-violet-200 opacity-60" />
+            <div className="h-3 w-32 bg-white/30 rounded-full" />
+          </div>
+          <div className="h-7 w-56 sm:w-72 bg-white/40 rounded-lg" />
+          <div className="h-3 w-48 bg-white/30 rounded-full" />
+        </div>
+        <div className="h-12 w-36 bg-white/20 rounded-xl border border-white/20 shrink-0" />
+      </div>
+
+      {/* 2. KPI Cards Skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="h-3 w-20 bg-slate-200 rounded-full" />
+              <div className="h-6 w-6 bg-slate-200 rounded-full" />
+            </div>
+            <div className="h-8 w-16 bg-slate-200 rounded-md" />
+            <div className="h-3 w-24 bg-slate-100 rounded-full" />
+          </Card>
+        ))}
+      </div>
+
+      {/* 3. Main Grid Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Classes Card Skeleton */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm space-y-4">
+          <div className="h-4 w-32 bg-slate-200 rounded-full pb-2 border-b border-[#E5E7EB]" />
+          <div className="space-y-3">
+            <div className="h-12 w-full bg-slate-100 rounded-xl" />
+            <div className="h-12 w-full bg-slate-100 rounded-xl" />
+          </div>
+        </Card>
+
+        {/* Recent Admissions Skeleton */}
+        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm lg:col-span-2 space-y-4">
+          <div className="h-4 w-40 bg-slate-200 rounded-full pb-2 border-b border-[#E5E7EB]" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-slate-200" />
+                  <div className="space-y-1.5">
+                    <div className="h-3.5 w-28 bg-slate-200 rounded-full" />
+                    <div className="h-2.5 w-36 bg-slate-100 rounded-full" />
+                  </div>
+                </div>
+                <div className="h-5 w-16 bg-slate-200 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const { user } = useAuth();
   const isPlatformAdmin = user?.roleCode === 'PLATFORM_ADMIN';
@@ -597,22 +661,18 @@ function DashboardPageContent() {
   if (isLoading || !isAuthenticated) {
     return (
       <DashboardLayout>
-        <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
-          <LoadingSpinner size="lg" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }
 
   if (!user) return null;
 
-  // TUTOR / STUDENT / PARENT users get redirected above; show loading while redirect is in progress
+  // TUTOR / STUDENT / PARENT users get redirected above; show loading skeleton while redirect is in progress
   if (user?.roleCode === 'TUTOR' || user?.roleCode === 'STUDENT' || user?.roleCode === 'PARENT') {
     return (
       <DashboardLayout>
-        <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
-          <LoadingSpinner size="lg" />
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }
@@ -629,9 +689,7 @@ export default function DashboardPage() {
     <Suspense
       fallback={
         <DashboardLayout>
-          <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[#FAFAFA]">
-            <LoadingSpinner size="lg" />
-          </div>
+          <DashboardSkeleton />
         </DashboardLayout>
       }
     >
@@ -639,3 +697,4 @@ export default function DashboardPage() {
     </Suspense>
   );
 }
+
