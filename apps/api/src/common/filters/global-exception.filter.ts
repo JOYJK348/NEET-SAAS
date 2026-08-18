@@ -104,6 +104,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             ? err.message.replace(/\n/g, ' ').trim()
             : 'Database operation failed';
         }
+      } else if (err?.message) {
+        message = err.message;
+      } else if (exception instanceof Error) {
+        message = exception.message;
       }
     }
 
