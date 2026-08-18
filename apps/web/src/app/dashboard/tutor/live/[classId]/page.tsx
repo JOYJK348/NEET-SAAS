@@ -358,56 +358,77 @@ function TeacherStudioInner({
 
   const requestStudioScreenShare = useCallback(async () => {
     try {
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        toast.info('📱 Mobile browser detected — Live streaming active, screen capture recording skipped on mobile.');
-        setIsScreenRecordingActive(false);
-        setDismissStudioModal(true);
-        return false;
-      }
+      let compositeStream: MediaStream | null = null;
 
-      let displayStream: MediaStream | null = null;
-      try {
-        displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            displaySurface: 'browser',
-            cursor: 'always',
-            frameRate: { ideal: 30, max: 60 },
-          } as any,
-          audio: false, // EXCLUDE system/tab audio
-        });
-      } catch (err) {
-        console.log('Screen capture prompt closed or cancelled');
-        setIsScreenRecordingActive(false);
-        setDismissStudioModal(true);
-        return false;
-      }
-
-      let userStream: MediaStream | null = null;
-      try {
-        userStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: { ideal: true },
-            noiseSuppression: { ideal: true },
-            autoGainControl: { ideal: true },
-          },
-        });
-      } catch {
+      // 1. Try Desktop Screen Capture (getDisplayMedia)
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
         try {
-          userStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch {}
+          const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              displaySurface: 'browser',
+              cursor: 'always',
+              frameRate: { ideal: 30, max: 60 },
+            } as any,
+            audio: false, // EXCLUDE system/tab audio
+          });
+          compositeStream = new MediaStream();
+          const vTrack = displayStream.getVideoTracks()[0];
+          if (vTrack) compositeStream.addTrack(vTrack);
+        } catch (err) {
+          console.log('Desktop screen capture prompt closed or not supported:', err);
+        }
       }
 
-      const composite = new MediaStream();
-      const videoTrack = displayStream.getVideoTracks()[0];
-      if (videoTrack) composite.addTrack(videoTrack);
+      // 2. Mobile & Fallback: Record Camera Video + Microphone Audio via getUserMedia
+      if (!compositeStream || compositeStream.getVideoTracks().length === 0) {
+        try {
+          const userMediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            audio: {
+              echoCancellation: { ideal: true },
+              noiseSuppression: { ideal: true },
+              autoGainControl: { ideal: true },
+            },
+          });
+          compositeStream = userMediaStream;
+        } catch {
+          // Audio-only fallback if camera is blocked
+          try {
+            const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            compositeStream = audioOnlyStream;
+          } catch {}
+        }
+      }
 
-      // Add ONLY tutor microphone audio track, dynamically muted/enabled by isMicOnRef
-      if (userStream) {
-        const audioTrack = userStream.getAudioTracks()[0];
+      if (!compositeStream || compositeStream.getTracks().length === 0) {
+        toast.error('⚠️ Could not access camera or microphone for class recording.');
+        setIsScreenRecordingActive(false);
+        setDismissStudioModal(true);
+        return false;
+      }
+
+      // 3. Ensure Tutor Microphone Track is attached
+      if (compositeStream.getAudioTracks().length === 0) {
+        try {
+          const userAudioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: { ideal: true },
+              noiseSuppression: { ideal: true },
+              autoGainControl: { ideal: true },
+            },
+          });
+          const audioTrack = userAudioStream.getAudioTracks()[0];
+          if (audioTrack) {
+            audioTrack.enabled = Boolean(isMicOnRef.current);
+            recordingAudioTrackRef.current = audioTrack;
+            compositeStream.addTrack(audioTrack);
+          }
+        } catch {}
+      } else {
+        const audioTrack = compositeStream.getAudioTracks()[0];
         if (audioTrack) {
           audioTrack.enabled = Boolean(isMicOnRef.current);
           recordingAudioTrackRef.current = audioTrack;
-          composite.addTrack(audioTrack);
         }
       }
 
@@ -421,12 +442,14 @@ function TeacherStudioInner({
         ? 'video/mp4'
         : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
         ? 'video/webm;codecs=vp8,opus'
-        : 'video/webm';
+        : MediaRecorder.isTypeSupported('video/webm')
+        ? 'video/webm'
+        : 'audio/webm';
 
       chosenMimeTypeRef.current = mimeType;
-      const recorder = new MediaRecorder(composite, { mimeType });
-      recordedChunksRef.current = []; // Wipe any previous chunks, record ONLY studio screen!
-      recordingStartTimeRef.current = Date.now(); // Track exact recording start timestamp!
+      const recorder = new MediaRecorder(compositeStream, { mimeType });
+      recordedChunksRef.current = [];
+      recordingStartTimeRef.current = Date.now();
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -437,18 +460,19 @@ function TeacherStudioInner({
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
       setIsScreenRecordingActive(true);
-      toast.success('🎥 Studio Screen Recording Active! All whiteboard drawings & actions are being recorded.');
+      setDismissStudioModal(true);
+      toast.success('🔴 Class Live Recording Active! Video & Audio are being recorded.');
       return true;
     } catch (e) {
       console.warn('requestStudioScreenShare error:', e);
       setIsScreenRecordingActive(false);
+      setDismissStudioModal(true);
       return false;
     }
   }, []);
 
   // ── Ensure class status is LIVE on backend & broadcast reopened signal ──
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     const reopenClass = async () => {
       try {
         const host = window.location.hostname;
