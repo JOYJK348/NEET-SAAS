@@ -292,12 +292,12 @@ function TenantAdminDashboard() {
               <span className="text-xl">{stat.icon}</span>
             </CardHeader>
           <CardContent className="p-0">
-              {loading && data?.stats === undefined ? (
+              {loading && !data ? (
                 <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md" />
               ) : (
-                <div className="text-2xl font-bold text-[#111827]">{
-                  stat.value !== null ? stat.value!.toString() : '0'
-                }</div>
+                <div className="text-2xl font-bold text-[#111827]">
+                  {stat.value !== null ? stat.value!.toString() : '0'}
+                </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
             </CardContent>
