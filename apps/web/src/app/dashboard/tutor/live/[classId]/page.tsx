@@ -354,9 +354,17 @@ function TeacherStudioInner({
   const recordingAudioTrackRef = useRef<MediaStreamTrack | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
   const [isScreenRecordingActive, setIsScreenRecordingActive] = useState(false);
+  const [dismissStudioModal, setDismissStudioModal] = useState(false);
 
   const requestStudioScreenShare = useCallback(async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        toast.info('📱 Mobile browser detected — Live streaming active, screen capture recording skipped on mobile.');
+        setIsScreenRecordingActive(false);
+        setDismissStudioModal(true);
+        return false;
+      }
+
       let displayStream: MediaStream | null = null;
       try {
         displayStream = await navigator.mediaDevices.getDisplayMedia({
@@ -370,6 +378,7 @@ function TeacherStudioInner({
       } catch (err) {
         console.log('Screen capture prompt closed or cancelled');
         setIsScreenRecordingActive(false);
+        setDismissStudioModal(true);
         return false;
       }
 
@@ -2775,9 +2784,17 @@ function TeacherStudioInner({
       )}
 
       {/* ── Studio Screen Recording Authorization Startup Modal ── */}
-      {!isScreenRecordingActive && !showEndModal && !showAutoEndModal && (
+      {!isScreenRecordingActive && !dismissStudioModal && !showEndModal && !showAutoEndModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[94%] sm:w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 sm:space-y-5">
+          <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[94%] sm:w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 sm:space-y-5 relative">
+            <button
+              onClick={() => setDismissStudioModal(true)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-violet-100 border border-violet-200 text-violet-600 flex items-center justify-center shadow-lg animate-bounce shrink-0">
               <Video className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
@@ -2791,13 +2808,22 @@ function TeacherStudioInner({
               </p>
             </div>
 
-            <button
-              onClick={requestStudioScreenShare}
-              className="w-full py-3.5 sm:py-4 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-violet-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Select Studio Window & Record Class 🚀</span>
-            </button>
+            <div className="w-full space-y-2.5">
+              <button
+                onClick={requestStudioScreenShare}
+                className="w-full py-3.5 sm:py-4 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-violet-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>Select Studio Window & Record Class 🚀</span>
+              </button>
+
+              <button
+                onClick={() => setDismissStudioModal(true)}
+                className="w-full py-2.5 px-4 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-bold transition text-center cursor-pointer"
+              >
+                Continue Without Recording ➡️
+              </button>
+            </div>
           </div>
         </div>
       )}
