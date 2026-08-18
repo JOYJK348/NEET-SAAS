@@ -88,6 +88,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const SAVED_REMEMBER_KEY = 'neet_remember_me_credentials';
 
   // If user is already authenticated, redirect to callbackUrl immediately
   useEffect(() => {
@@ -99,6 +100,7 @@ function LoginForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isValid },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -109,9 +111,40 @@ function LoginForm() {
     },
   });
 
+  // Auto fetch saved credentials from localStorage on mount if Remember Me was previously checked
+  useEffect(() => {
+    try {
+      const savedStr = localStorage.getItem(SAVED_REMEMBER_KEY);
+      if (savedStr) {
+        const saved = JSON.parse(savedStr);
+        if (saved && saved.email && saved.password) {
+          setValue('email', saved.email);
+          setValue('password', saved.password);
+          setValue('rememberMe', true);
+        }
+      }
+    } catch {
+      // Ignore JSON parse errors
+    }
+  }, [setValue]);
+
   const onSubmit = async (data: LoginFormData) => {
     setIsSubmitting(true);
     setError(null);
+
+    // Save or clear remembered credentials in local storage
+    try {
+      if (data.rememberMe) {
+        localStorage.setItem(
+          SAVED_REMEMBER_KEY,
+          JSON.stringify({ email: data.email, password: data.password }),
+        );
+      } else {
+        localStorage.removeItem(SAVED_REMEMBER_KEY);
+      }
+    } catch {
+      // Ignore local storage errors
+    }
 
     try {
       await login(data.email, data.password, data.rememberMe);

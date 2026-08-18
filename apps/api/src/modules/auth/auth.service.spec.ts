@@ -116,11 +116,16 @@ describe('AuthService', () => {
       getAccessTokenExpiresInSeconds: jest.fn().mockReturnValue(900),
     };
 
+    const mockMailService: any = {
+      sendPasswordResetEmail: jest.fn().mockResolvedValue(true),
+    };
+
     service = new AuthService(
       prismaService,
       passwordService,
       sessionService,
       tokenService,
+      mockMailService,
     );
     response.cookie.mockClear();
   });

@@ -93,11 +93,17 @@ describe('StudentsService', () => {
       uploadFile: jest.fn().mockResolvedValue({ id: 'file-1' }),
     };
 
+    const mockMailService: any = {
+      sendWelcomeCredentials: jest.fn().mockResolvedValue(true),
+      sendWelcomeCredentialsAsync: jest.fn(),
+    };
+
     service = new StudentsService(
       prismaService,
       tenantScoped,
       admissionNumberGenerator,
       storageService,
+      mockMailService,
     );
   });
 

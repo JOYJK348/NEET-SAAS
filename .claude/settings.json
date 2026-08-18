@@ -1,0 +1,7 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:20128",
+    "ANTHROPIC_API_KEY": "omniroute",
+    "ANTHROPIC_MODEL": "auto/coding:free"
+  }
+}

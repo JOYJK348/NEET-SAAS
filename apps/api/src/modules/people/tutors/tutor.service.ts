@@ -15,6 +15,8 @@ import { UpdateTutorDto } from './dto/update-tutor.dto';
 import { QueryTutorDto } from './dto/query-tutor.dto';
 import XLSX from 'xlsx';
 
+import { MailService } from '../../mail/mail.service';
+
 const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 const TUTOR_LOGIN_PASSWORD_PREFIX = 'Tut@';
@@ -34,6 +36,7 @@ export class TutorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantScoped: TenantScopedPrisma,
+    private readonly mailService: MailService,
   ) {}
 
   async create(dto: CreateTutorDto, tenantId: string, userId: string) {
@@ -61,7 +64,7 @@ export class TutorService {
 
     let rawPassword: string | null = null;
 
-    if (dto.createLogin) {
+    if (dto.createLogin !== false) {
       rawPassword = generatePasswordFromPhone(dto.phone);
     }
 
@@ -253,6 +256,15 @@ export class TutorService {
     );
 
     if (rawPassword) {
+      if (dto.email) {
+        this.mailService.sendWelcomeCredentialsAsync({
+          to: dto.email,
+          name: `${dto.firstName} ${dto.lastName}`.trim(),
+          role: 'TUTOR',
+          password: rawPassword,
+        });
+      }
+
       return {
         ...(result as Record<string, unknown>),
         generatedPassword: rawPassword,
@@ -818,7 +830,7 @@ export class TutorService {
   ): Promise<{
     importedCount: number;
     errors: string[];
-    loginCredentials?: Array<{ email: string; password: string }>;
+    loginCredentials?: Array<{ email: string; password: string; name?: string }>;
   }> {
     const wb = XLSX.read(fileBuffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
@@ -826,7 +838,7 @@ export class TutorService {
     const rows = XLSX.utils.sheet_to_json(ws) as Record<string, unknown>[];
 
     const errors: string[] = [];
-    const loginCredentials: Array<{ email: string; password: string }> = [];
+    const loginCredentials: Array<{ email: string; password: string; name?: string }> = [];
     let importedCount = 0;
 
     const defaultDeletedAt = new Date('2099-12-31T00:00:00.000Z');
@@ -999,7 +1011,11 @@ export class TutorService {
           });
 
           if (rowRawPassword) {
-            loginCredentials.push({ email, password: rowRawPassword });
+            loginCredentials.push({
+              email,
+              name: `${firstName} ${lastName}`.trim() || 'Faculty Member',
+              password: rowRawPassword,
+            });
           }
 
           // 2. Create Staff Profile
@@ -1126,6 +1142,16 @@ export class TutorService {
           `Row ${lineNum} [Tutor: ${identifier}]: ${err?.message || err}`,
         );
       }
+    }
+
+    if (loginCredentials.length > 0) {
+      const emailItems = loginCredentials.map((c) => ({
+        to: c.email,
+        name: c.name || 'Faculty Member',
+        role: 'TUTOR' as const,
+        password: c.password,
+      }));
+      this.mailService.sendBatchWelcomeCredentials(emailItems);
     }
 
     return {

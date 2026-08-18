@@ -29,6 +29,7 @@ import {
 import { AdmissionNumberGenerator } from '../admissions/utils/admission-number-generator';
 import { hashSync, genSaltSync } from 'bcrypt';
 import * as XLSX from 'xlsx';
+import { MailService } from '../mail/mail.service';
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 const STUDENT_SEARCH_FIELDS = [
@@ -58,6 +59,7 @@ export class StudentsService {
     private readonly admissionNumberGenerator: AdmissionNumberGenerator,
     @Inject(STORAGE_SERVICE_TOKEN)
     private readonly storageService: IStorageService,
+    private readonly mailService: MailService,
   ) {}
 
   async uploadAvatar(
@@ -329,7 +331,7 @@ export class StudentsService {
         message?: string;
       } | null = null;
 
-      if (dto.isParentPortalEnabled && dto.parentEmail && dto.parentEmail.trim()) {
+      if ((dto.isParentPortalEnabled || dto.parentEmail) && dto.parentEmail && dto.parentEmail.trim()) {
         const pEmail = dto.parentEmail.trim().toLowerCase();
         const relationshipType = (dto.parentRelationshipType as any) || 'FATHER';
 
@@ -529,6 +531,31 @@ export class StudentsService {
     });
 
     const response = await this.toResponseAsync(profile.studentProfile);
+
+    // Send Welcome Credentials Emails asynchronously (non-blocking)
+    if (email) {
+      this.mailService.sendWelcomeCredentialsAsync({
+        to: email,
+        name: `${dto.firstName} ${dto.lastName}`.trim(),
+        role: 'STUDENT',
+        password: rawPassword,
+      });
+    }
+
+    if (
+      profile.parentPortalInfo &&
+      !profile.parentPortalInfo.existingAccount &&
+      profile.parentPortalInfo.email &&
+      profile.parentPortalInfo.generatedPassword
+    ) {
+      this.mailService.sendWelcomeCredentialsAsync({
+        to: profile.parentPortalInfo.email,
+        name: dto.parentName || 'Parent',
+        role: 'PARENT',
+        password: profile.parentPortalInfo.generatedPassword,
+      });
+    }
+
     return {
       ...response,
       generatedPassword: rawPassword,
@@ -1184,6 +1211,13 @@ export class StudentsService {
     const coursesById = new Map(courses.map((c) => [c.id, c]));
     const batchesById = new Map(batches.map((b) => [b.id, b]));
 
+    const bulkEmailItems: Array<{
+      to: string;
+      name: string;
+      role: 'STUDENT' | 'PARENT';
+      password?: string;
+    }> = [];
+
     // Run each import cleanly
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -1484,6 +1518,13 @@ export class StudentsService {
                     updatedBy: userId,
                   },
                 });
+
+                bulkEmailItems.push({
+                  to: pEmail,
+                  name: pName,
+                  role: 'PARENT',
+                  password: rawParentPassword,
+                });
               }
 
               let parentProfile = await tx.parentProfiles.findFirst({
@@ -1603,12 +1644,22 @@ export class StudentsService {
         });
 
         loginCredentials.push({ email, password: rawPassword });
+        bulkEmailItems.push({
+          to: email,
+          name: `${firstName} ${lastName}`.trim(),
+          role: 'STUDENT',
+          password: rawPassword,
+        });
         importedCount++;
       } catch (err: any) {
         errors.push(
           `Row ${lineNum}: DB Import failed — ${err?.message || err}`,
         );
       }
+    }
+
+    if (bulkEmailItems.length > 0) {
+      this.mailService.sendBatchWelcomeCredentials(bulkEmailItems);
     }
 
     /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument */

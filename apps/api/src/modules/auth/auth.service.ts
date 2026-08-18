@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -6,11 +7,15 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { PasswordService } from './password.service';
 import { SessionService } from './session.service';
 import { TokenService } from './token.service';
+import { MailService } from '../mail/mail.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import type {
   LoginRequestContext,
   LoginResponse,
@@ -32,6 +37,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly sessionService: SessionService,
     private readonly tokenService: TokenService,
+    private readonly mailService: MailService,
   ) {}
 
   async login(
@@ -538,5 +544,125 @@ export class AuthService {
     }
 
     return [...tenantOptions.values()];
+  }
+
+  /**
+   * Enterprise Forgot Password Workflow with Anti-Enumeration & SHA-256 Hashed Tokens
+   */
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const email = dto.email.trim().toLowerCase();
+    const genericResponse = {
+      message:
+        'If the email is registered, you will receive a password reset link.',
+    };
+
+    try {
+      const user = await this.prismaService.users.findFirst({
+        where: { email, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      if (!user) {
+        return genericResponse;
+      }
+
+      // Generate 32-byte crypto-random token
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const hashedToken = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins expiry
+
+      // Save token hash in PasswordResetTokens table
+      await this.prismaService.passwordResetTokens.create({
+        data: {
+          tenantId: user.tenantId,
+          userId: user.id,
+          email: user.email,
+          hashedToken,
+          expiresAt,
+        },
+      });
+
+      const frontendAppUrl =
+        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+      const resetLink = `${frontendAppUrl}/auth/reset-password?token=${rawToken}`;
+      const fullName = `${user.firstName} ${user.lastName}`.trim() || 'User';
+
+      // Send email asynchronously (non-blocking)
+      setImmediate(() => {
+        this.mailService
+          .sendPasswordResetEmail(user.email, fullName, resetLink)
+          .catch(() => {});
+      });
+    } catch {
+      // Catch any unexpected DB error and still return generic anti-enumeration response
+    }
+
+    return genericResponse;
+  }
+
+  /**
+   * Enterprise Reset Password Workflow with Session Invalidation & Token Usage
+   */
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const { token, newPassword } = dto;
+
+    if (!token || token.trim().length === 0) {
+      throw new BadRequestException('Reset token is required');
+    }
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token.trim())
+      .digest('hex');
+
+    const resetRecord = await this.prismaService.passwordResetTokens.findFirst({
+      where: {
+        hashedToken,
+        usedAt: null,
+        expiresAt: { gte: new Date() },
+      },
+    });
+
+    if (!resetRecord) {
+      throw new BadRequestException('Invalid or expired password reset link');
+    }
+
+    const newPasswordHash = await this.passwordService.hashPassword(
+      newPassword,
+    );
+
+    await this.prismaService.$transaction(async (tx) => {
+      // 1. Update user password
+      await tx.users.update({
+        where: { id: resetRecord.userId },
+        data: {
+          passwordHash: newPasswordHash,
+          passwordChangedAt: new Date(),
+          forcePasswordChange: false,
+          failedAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+
+      // 2. Mark reset token as USED
+      await tx.passwordResetTokens.update({
+        where: { id: resetRecord.id },
+        data: {
+          usedAt: new Date(),
+        },
+      });
+    });
+
+    // 3. Invalidate ALL existing active user sessions for zero-trust security
+    await this.sessionService.revokeAllSessions(resetRecord.userId);
+
+    return {
+      message:
+        'Password reset successfully. Please sign in with your new password.',
+    };
   }
 }

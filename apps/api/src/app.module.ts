@@ -27,10 +27,9 @@ import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboa
 import { LiveModule } from './modules/live/live.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PyqModule } from './modules/pyq/pyq.module';
-import { GoogleCalendarModule } from './modules/integrations/google-calendar/google-calendar.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MailModule } from './modules/mail/mail.module';
 
-// Loaded Google OAuth Credentials from .env
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -46,6 +45,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     LoggerModule,
     PrismaModule,
     RedisModule,
+    MailModule,
     AuthModule,
     PeopleModule,
     StudentsModule,
@@ -63,7 +63,6 @@ import { ScheduleModule } from '@nestjs/schedule';
     LiveModule,
     BillingModule,
     PyqModule,
-    GoogleCalendarModule,
     HealthModule,
   ],
   controllers: [],

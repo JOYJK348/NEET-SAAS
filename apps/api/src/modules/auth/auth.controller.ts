@@ -15,9 +15,12 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginDto } from './dto/login.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import {
   AuthSessionResponseDto,
   AuthSuccessResponseDto,
@@ -265,6 +268,49 @@ export class AuthController {
   })
   me(@CurrentUser() currentUser: AuthenticatedRequestUser) {
     return this.authService.me(currentUser);
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('forgot-password')
+  @ApiOperation({
+    summary: 'Request password reset email',
+    description:
+      'Triggers a password reset email if the user account exists. ' +
+      'Always returns a generic anti-enumeration success message.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Generic success message returned for anti-enumeration security',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests — rate limit exceeded',
+  })
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('reset-password')
+  @ApiOperation({
+    summary: 'Reset password using raw token',
+    description:
+      'Verifies SHA-256 hashed token from DB, updates password, marks token as used, and revokes all user sessions.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successful — user sessions revoked',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid, expired, or used reset token',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many requests — rate limit exceeded',
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   private getIpAddress(request: Request): string {

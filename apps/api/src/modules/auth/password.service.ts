@@ -9,4 +9,8 @@ export class PasswordService {
   ): Promise<boolean> {
     return bcrypt.compare(plainText, passwordHash);
   }
+
+  async hashPassword(plainText: string): Promise<string> {
+    return bcrypt.hash(plainText, 10);
+  }
 }
