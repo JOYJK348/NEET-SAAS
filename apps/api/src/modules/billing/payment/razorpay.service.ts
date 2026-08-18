@@ -194,9 +194,14 @@ export class RazorpayService {
     const lockKey = `razorpay_webhook_lock_${razorpayPaymentId}`;
     let acquired = false;
 
-    if (this.redis.client) {
-      const lockRes = await this.redis.client.set(lockKey, 'LOCKED', 'EX', 60, 'NX');
-      acquired = lockRes === 'OK';
+    if (this.redis.isAvailable() && this.redis.client) {
+      try {
+        const lockRes = await this.redis.client.set(lockKey, 'LOCKED', 'EX', 60, 'NX');
+        acquired = lockRes === 'OK';
+      } catch (err: any) {
+        this.logger.warn(`Redis lock acquisition error for ${razorpayPaymentId}: ${err?.message || err}`);
+        acquired = true; // Fallback to DB-level idempotency
+      }
     } else {
       acquired = true;
     }
@@ -365,8 +370,12 @@ export class RazorpayService {
         receiptNumber: result.receipt.receiptNumber,
       };
     } finally {
-      // Always release Redis lock
-      await this.redis.del(lockKey);
+      // Safely release Redis lock without throwing exception if Redis is down
+      try {
+        await this.redis.del(lockKey);
+      } catch {
+        // Ignore lock release failures during disconnects
+      }
     }
   }
 

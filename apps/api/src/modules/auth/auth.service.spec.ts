@@ -139,6 +139,7 @@ describe('AuthService', () => {
 
     expect(result).toEqual({
       accessToken: 'access-token',
+      refreshToken: 'refresh-token',
       tokenType: 'Bearer',
       expiresIn: 900,
       user: {
@@ -248,7 +249,7 @@ describe('AuthService', () => {
       tenantId: 'tenant-1',
       isRevoked: false,
       status: 'ACTIVE',
-      expiresAt: new Date('2026-07-21T00:00:00.000Z'),
+      expiresAt: new Date(Date.now() + 86400000),
       userIdusers: user,
     };
     sessionService.validateRefreshToken = jest.fn().mockResolvedValue(session);
