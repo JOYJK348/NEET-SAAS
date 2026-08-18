@@ -353,11 +353,17 @@ function TeacherStudioInner({
   const chosenMimeTypeRef = useRef<string>('video/mp4');
   const recordingAudioTrackRef = useRef<MediaStreamTrack | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
+  const studioCanvasAnimRef = useRef<any>(null);
   const [isScreenRecordingActive, setIsScreenRecordingActive] = useState(false);
   const [dismissStudioModal, setDismissStudioModal] = useState(false);
 
   const requestStudioScreenShare = useCallback(async () => {
     try {
+      if (studioCanvasAnimRef.current) {
+        clearInterval(studioCanvasAnimRef.current);
+        studioCanvasAnimRef.current = null;
+      }
+
       let compositeStream: MediaStream | null = null;
 
       // 1. Try Desktop Screen Capture (getDisplayMedia)
@@ -379,24 +385,105 @@ function TeacherStudioInner({
         }
       }
 
-      // 2. Mobile & Fallback: Record Camera Video + Microphone Audio via getUserMedia
+      // 2. Mobile & Fallback: Composite Studio Canvas (Whiteboard + Camera PIP + Audio)
       if (!compositeStream || compositeStream.getVideoTracks().length === 0) {
         try {
           const userMediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
             audio: {
               echoCancellation: { ideal: true },
               noiseSuppression: { ideal: true },
               autoGainControl: { ideal: true },
             },
-          });
-          compositeStream = userMediaStream;
-        } catch {
-          // Audio-only fallback if camera is blocked
+          }).catch(() => null);
+
+          // Find Excalidraw / Studio Whiteboard HTML5 Canvas
+          const canvases = Array.from(document.querySelectorAll('canvas'));
+          const stageCanvas = canvases.find((c) => c.width > 50 && c.height > 50) || canvases[0];
+
+          const compCanvas = document.createElement('canvas');
+          compCanvas.width = 1280;
+          compCanvas.height = 720;
+          const ctx = compCanvas.getContext('2d', { alpha: false });
+
+          let pipVideo: HTMLVideoElement | null = null;
+          if (userMediaStream && userMediaStream.getVideoTracks().length > 0) {
+            pipVideo = document.createElement('video');
+            pipVideo.srcObject = userMediaStream;
+            pipVideo.muted = true;
+            pipVideo.playsInline = true;
+            pipVideo.play().catch(() => {});
+          }
+
+          const drawComposite = () => {
+            if (!ctx) return;
+            // Background fill
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
+
+            // Draw Studio Whiteboard Stage
+            if (stageCanvas) {
+              try {
+                ctx.drawImage(stageCanvas, 0, 0, compCanvas.width, compCanvas.height);
+              } catch {}
+            }
+
+            // Draw Tutor Camera PIP Avatar in bottom-right corner
+            if (pipVideo && pipVideo.readyState >= 2) {
+              const pipW = 260;
+              const pipH = 195;
+              const pipX = compCanvas.width - pipW - 20;
+              const pipY = compCanvas.height - pipH - 20;
+
+              ctx.save();
+              ctx.beginPath();
+              if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(pipX, pipY, pipW, pipH, 16);
+              } else {
+                ctx.rect(pipX, pipY, pipW, pipH);
+              }
+              ctx.clip();
+              ctx.drawImage(pipVideo, pipX, pipY, pipW, pipH);
+              ctx.restore();
+
+              ctx.strokeStyle = '#8b5cf6';
+              ctx.lineWidth = 4;
+              ctx.beginPath();
+              if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(pipX, pipY, pipW, pipH, 16);
+              } else {
+                ctx.rect(pipX, pipY, pipW, pipH);
+              }
+              ctx.stroke();
+            }
+          };
+
+          const animInterval = setInterval(drawComposite, 33); // ~30 FPS
+          studioCanvasAnimRef.current = animInterval;
+
+          if (typeof compCanvas.captureStream === 'function') {
+            compositeStream = compCanvas.captureStream(30);
+          }
+
+          if (userMediaStream && userMediaStream.getAudioTracks().length > 0 && compositeStream) {
+            compositeStream.addTrack(userMediaStream.getAudioTracks()[0]);
+          }
+        } catch (err) {
+          console.warn('Studio canvas stream composite error:', err);
+        }
+
+        // Direct camera stream fallback if composite canvas capture fails
+        if (!compositeStream || compositeStream.getTracks().length === 0) {
           try {
-            const audioOnlyStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            compositeStream = audioOnlyStream;
-          } catch {}
+            compositeStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+              audio: true,
+            });
+          } catch {
+            try {
+              compositeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch {}
+          }
         }
       }
 
@@ -507,6 +594,10 @@ function TeacherStudioInner({
 
     return () => {
       clearTimeout(timer);
+      if (studioCanvasAnimRef.current) {
+        clearInterval(studioCanvasAnimRef.current);
+        studioCanvasAnimRef.current = null;
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try { mediaRecorderRef.current.stop(); } catch {}
       }
