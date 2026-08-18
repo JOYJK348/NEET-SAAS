@@ -101,7 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string, rememberMe?: boolean) => {
     setLoading(true);
-    queryClient.clear();
+    // Mark all cached data as stale (NOT cleared) so the dashboard can show
+    // last-known values INSTANTLY while fresh data revalidates in background.
+    // We only fully wipe cache on logout (different user scenario).
+    await queryClient.invalidateQueries();
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
     try {
       const data = await api.post<{ user: User; accessToken: string; refreshToken: string }>(
@@ -110,9 +113,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId ? { headers: { 'x-tenant-id': tenantId } } : undefined,
       );
       const { user, accessToken, refreshToken } = data;
+      // 1. Set auth state immediately — unblocks the router.replace() in login page
       setAuth(user, accessToken, refreshToken, rememberMe);
       setLoading(false);
-      // Fire background prefetching asynchronously so login responds in <10ms!
+      // 2. Fire prefetch IN PARALLEL with navigation — dashboard data is already
+      //    loading by the time the page renders. This is the key to instant UI.
       void prefetchCriticalData(queryClient, user.tenantId, user.roleCode);
     } catch (error) {
       setLoading(false);
@@ -141,10 +146,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     const currentRfToken = refreshToken;
 
-    // 1. Immediately reset client state and navigate for 0ms instant UI response
+    // 1. Wipe ENTIRE cache on logout (security: different user may log in next)
     queryClient.clear();
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(CACHE_STORAGE_KEY);
+      localStorage.removeItem(CACHE_STORAGE_KEY);
     }
     logoutStore();
     router.replace('/auth/login');

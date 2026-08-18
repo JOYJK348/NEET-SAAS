@@ -219,25 +219,25 @@ function TenantAdminDashboard() {
   const statsList = [
     {
       name: 'Students',
-      value: loading && !data ? '...' : (data?.stats?.totalStudents ?? 0).toString(),
+      value: data?.stats?.totalStudents ?? null,
       change: 'Active enrolled',
       icon: '👨‍🎓',
     },
     {
       name: 'Active Batches',
-      value: loading && !data ? '...' : (data?.stats?.totalBatches ?? 0).toString(),
+      value: data?.stats?.totalBatches ?? null,
       change: 'Running batches',
       icon: '🏫',
     },
     {
       name: 'Mock Tests',
-      value: loading && !data ? '...' : (data?.stats?.totalExams ?? 0).toString(),
+      value: data?.stats?.totalExams ?? null,
       change: 'Exams created',
       icon: '📝',
     },
     {
       name: 'Active Branches',
-      value: loading && !data ? '...' : (data?.stats?.totalBranches ?? 0).toString(),
+      value: data?.stats?.totalBranches ?? null,
       change: 'Campus locations',
       icon: '🏢',
     },
@@ -291,8 +291,14 @@ function TenantAdminDashboard() {
               </span>
               <span className="text-xl">{stat.icon}</span>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-bold text-[#111827]">{stat.value}</div>
+          <CardContent className="p-0">
+              {loading && data?.stats === undefined ? (
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md" />
+              ) : (
+                <div className="text-2xl font-bold text-[#111827]">{
+                  stat.value !== null ? stat.value!.toString() : '0'
+                }</div>
+              )}
               <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
             </CardContent>
           </Card>
