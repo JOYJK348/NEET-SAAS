@@ -52,6 +52,9 @@ export class SupabaseStorageService implements IStorageService {
         persistSession: false,
         autoRefreshToken: false,
       },
+      realtime: {
+        transport: null as any,
+      },
     });
   }
 
