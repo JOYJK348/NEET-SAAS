@@ -10,11 +10,14 @@ import { TokenService } from '../token.service';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(tokenService: TokenService) {
+    const key = tokenService.getPublicKey();
+    const isAsymmetric = key.includes('BEGIN');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      algorithms: ['RS256'],
-      secretOrKey: tokenService.getPublicKey(),
+      algorithms: isAsymmetric ? ['RS256'] : ['HS256', 'RS256'],
+      secretOrKey: key,
     });
   }
 

@@ -23,9 +23,13 @@ export class TokenService {
   ) {}
 
   async generateAccessToken(payload: AccessTokenPayload): Promise<string> {
+    const key = this.getPrivateKey();
+    const isAsymmetric = key.includes('BEGIN');
+
     return this.jwtService.signAsync(payload, {
-      algorithm: 'RS256',
-      privateKey: this.getPrivateKey(),
+      algorithm: isAsymmetric ? 'RS256' : 'HS256',
+      secret: isAsymmetric ? undefined : key,
+      privateKey: isAsymmetric ? key : undefined,
       expiresIn: this.getAccessTokenExpiresIn(),
     });
   }
@@ -52,9 +56,13 @@ export class TokenService {
 
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     try {
+      const key = this.getPublicKey();
+      const isAsymmetric = key.includes('BEGIN');
+
       return await this.jwtService.verifyAsync<AccessTokenPayload>(token, {
-        algorithms: ['RS256'],
-        publicKey: this.getPublicKey(),
+        algorithms: isAsymmetric ? ['RS256'] : ['HS256', 'RS256'],
+        secret: isAsymmetric ? undefined : key,
+        publicKey: isAsymmetric ? key : undefined,
       });
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
@@ -101,10 +109,10 @@ export class TokenService {
   getPublicKey(): string {
     const key = this.configService.get<string>('jwt.publicKey');
     const decoded = this.decodeBase64Pem(key);
-    if (!decoded || !decoded.includes('BEGIN')) {
-      return fallbackKeys.publicKey;
+    if (decoded && decoded.includes('BEGIN')) {
+      return decoded;
     }
-    return decoded;
+    return key || process.env.JWT_SECRET || 'neet_platform_super_secret_jwt_key_2026_production';
   }
 
   getAccessTokenExpiresInSeconds(): number {
@@ -128,10 +136,10 @@ export class TokenService {
   private getPrivateKey(): string {
     const key = this.configService.get<string>('jwt.privateKey');
     const decoded = this.decodeBase64Pem(key);
-    if (!decoded || !decoded.includes('BEGIN')) {
-      return fallbackKeys.privateKey;
+    if (decoded && decoded.includes('BEGIN')) {
+      return decoded;
     }
-    return decoded;
+    return key || process.env.JWT_SECRET || 'neet_platform_super_secret_jwt_key_2026_production';
   }
 
   private getAccessTokenExpiresIn(): number {
