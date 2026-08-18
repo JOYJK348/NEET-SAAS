@@ -148,7 +148,8 @@ function LoginForm() {
 
     try {
       await login(data.email, data.password, data.rememberMe);
-      toast.success('Welcome back!', { description: 'You have been signed in successfully.' });
+      // Navigate immediately after auth completes — feels instant because
+      // prefetchCriticalData fires async in auth-provider
       router.replace(callbackUrl);
     } catch (err: unknown) {
       let errorMessage = 'Invalid email or password. Please try again.';
