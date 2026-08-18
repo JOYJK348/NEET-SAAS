@@ -391,7 +391,11 @@ export class LiveClassService {
     if (!liveClass) {
       try { liveClass = await this.findOneOrThrow(id); } catch {}
     }
-    const targetTenantId = liveClass?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d';
+    const targetTenantId =
+      liveClass?.tenantId ||
+      this.ctx?.tenantId ||
+      process.env.NEXT_PUBLIC_TENANT_ID ||
+      'fa3a02b9-d8d5-4429-b43d-91522878246d';
 
     // 2. Upload to Supabase live-class-recordings bucket
     let storageObjectId: string | null = null;

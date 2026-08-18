@@ -245,9 +245,15 @@ export class LiveRecordingsService {
     }
 
     const recordingWhere: Prisma.LiveClassRecordingsWhereInput = {
-      tenantId: p.tenantId,
       deletedAt: null,
     };
+    if (p.tenantId) {
+      recordingWhere.OR = [
+        { tenantId: p.tenantId },
+        { tenantId: 'fa3a02b9-d8d5-4429-b43d-91522878246d' },
+        { tenantId: 'default-tenant' },
+      ];
+    }
     if (classIds && classIds.length > 0) {
       recordingWhere.liveClassId = { in: classIds };
     }

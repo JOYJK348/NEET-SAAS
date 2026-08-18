@@ -568,21 +568,34 @@ function TeacherStudioInner({
         formData.append('video', blob, `${classId}${ext}`);
 
         const encodedTopic = encodeURIComponent(topicCovered || '');
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+          ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+          : typeof window !== 'undefined' && window.location?.hostname
+          ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:3000/api/v1`
+          : 'http://127.0.0.1:3000/api/v1';
+
+        const token = typeof window !== 'undefined'
+          ? (localStorage.getItem('accessToken') || localStorage.getItem('token') || '')
+          : '';
+        const headers: Record<string, string> = {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+
         const uploadEndpoints = [
-          `http://${host}:3000/api/v1/live-classes/${classId}/upload-recording?durationSeconds=${exactDurationSecs}&topicCovered=${encodedTopic}`,
-          `http://${host}:3000/v1/live-classes/${classId}/upload-recording?durationSeconds=${exactDurationSecs}&topicCovered=${encodedTopic}`,
+          `${apiBaseUrl}/live-classes/${classId}/upload-recording?durationSeconds=${exactDurationSecs}&topicCovered=${encodedTopic}`,
           `/api/v1/live-classes/${classId}/upload-recording?durationSeconds=${exactDurationSecs}&topicCovered=${encodedTopic}`,
-          `/v1/live-classes/${classId}/upload-recording?durationSeconds=${exactDurationSecs}&topicCovered=${encodedTopic}`,
         ];
 
         for (const url of uploadEndpoints) {
           try {
-            const res = await fetch(url, { method: 'POST', body: formData });
+            const res = await fetch(url, { method: 'POST', body: formData, headers });
             if (res.ok) {
               console.log('Recorded class video uploaded successfully to:', url);
               break;
             }
-          } catch {}
+          } catch (err) {
+            console.warn(`Upload attempt to ${url} failed:`, err);
+          }
         }
       } catch (uploadErr) {
         console.warn('Upload recorded class failed:', uploadErr);
@@ -590,7 +603,16 @@ function TeacherStudioInner({
     }
 
     try {
-      await fetch(`http://${host}:3000/v1/live-classes/${classId}/end`, { method: 'POST' });
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+        ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+        : 'http://127.0.0.1:3000/api/v1';
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('accessToken') || localStorage.getItem('token') || '')
+        : '';
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      await fetch(`${apiBaseUrl}/live-classes/${classId}/end`, { method: 'POST', headers });
     } catch {}
 
     stopMediaTracksRef.current?.();
