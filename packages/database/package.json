@@ -17,14 +17,14 @@
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
-    "bcrypt": "^6.0.0"
+    "bcrypt": "^6.0.0",
+    "prisma": "^6.5.0"
   },
   "devDependencies": {
     "@jest/globals": "^30.4.1",
     "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "jest": "^30.0.0",
-    "prisma": "^6.5.0",
     "ts-jest": "^29.2.5",
     "tsx": "^4.19.0"
   }
