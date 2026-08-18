@@ -25,7 +25,7 @@ function AttendanceOverviewContent() {
   const router = useRouter();
   const { data, isLoading, error, refetch } = useAttendanceOverview();
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <div className="p-4 sm:p-6 flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner />
@@ -46,7 +46,7 @@ function AttendanceOverviewContent() {
     );
   }
 
-  const { overview, batches } = data!;
+  const { overview, batches } = data;
 
   return (
     <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
