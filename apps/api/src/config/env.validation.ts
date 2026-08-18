@@ -4,18 +4,18 @@ export const EnvSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
-  PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().catch(3000).default(3000),
   DATABASE_URL: z.string().url(),
   REDIS_HOST: z.string().default('localhost'),
-  REDIS_PORT: z.coerce.number().default(6379),
+  REDIS_PORT: z.coerce.number().catch(6379).default(6379),
   REDIS_PASSWORD: z.string().optional().default(''),
   JWT_PRIVATE_KEY_BASE64: z.string().optional().default(''),
   JWT_PUBLIC_KEY_BASE64: z.string().optional().default(''),
   JWT_ACCESS_TOKEN_EXPIRES_IN_SECONDS: z.coerce
     .number()
-    .optional()
+    .catch(900)
     .default(900),
-  JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().optional().default(7),
+  JWT_REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().catch(7).default(7),
   JWT_REFRESH_COOKIE_NAME: z.string().optional().default('refresh_token'),
   RESEND_API_KEY: z.string().optional().default(''),
   R2_ACCESS_KEY_ID: z.string().optional().default(''),
