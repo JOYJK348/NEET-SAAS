@@ -5,9 +5,15 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual, generateKeyPairSync } from 'crypto';
 import type { Response } from 'express';
 import type { AccessTokenPayload, AuthTokenPair } from './auth.types';
+
+const fallbackKeys = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+});
 
 @Injectable()
 export class TokenService {
@@ -93,9 +99,11 @@ export class TokenService {
   }
 
   getPublicKey(): string {
-    return this.decodeBase64Pem(
-      this.configService.get<string>('jwt.publicKey'),
-    );
+    const key = this.configService.get<string>('jwt.publicKey');
+    if (!key || key.trim() === '') {
+      return fallbackKeys.publicKey;
+    }
+    return this.decodeBase64Pem(key);
   }
 
   getAccessTokenExpiresInSeconds(): number {
@@ -117,9 +125,11 @@ export class TokenService {
   }
 
   private getPrivateKey(): string {
-    return this.decodeBase64Pem(
-      this.configService.get<string>('jwt.privateKey'),
-    );
+    const key = this.configService.get<string>('jwt.privateKey');
+    if (!key || key.trim() === '') {
+      return fallbackKeys.privateKey;
+    }
+    return this.decodeBase64Pem(key);
   }
 
   private getAccessTokenExpiresIn(): number {
@@ -133,7 +143,7 @@ export class TokenService {
   }
 
   private decodeBase64Pem(value: string | undefined): string {
-    if (!value) {
+    if (!value || value.trim() === '') {
       throw new InternalServerErrorException('JWT key is not configured');
     }
 
