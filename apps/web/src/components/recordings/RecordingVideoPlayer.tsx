@@ -20,17 +20,36 @@ function resolveFullVideoUrl(url?: string): string {
   if (!url || url === '/lecture.mp4' || url.endsWith('/lecture.mp4')) {
     return FALLBACK_VIDEO_STREAM;
   }
-  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+
+  // 1. If already a full HTTPS URL (e.g. Supabase signed URL or Google Cloud stream), return directly
+  if (url.startsWith('https://')) return url;
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL
+    ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+    : typeof window !== 'undefined' && window.location?.hostname
+    ? `http://${window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}:3000/api/v1`
+    : 'http://127.0.0.1:3000/api/v1';
+
+  // 2. Replace legacy localhost:3000 with actual API Base
   let finalUrl = url;
   if (finalUrl.includes('localhost:3000') || finalUrl.includes('127.0.0.1:3000')) {
-    finalUrl = finalUrl.replace(/(localhost|127\.0\.0\.1):3000/g, `${host}:3000`);
+    const rawPath = finalUrl.replace(/^https?:\/\/[^/]+/, '');
+    finalUrl = rawPath;
   }
+
   if (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) return finalUrl;
-  if (finalUrl.startsWith('/v1/') || finalUrl.startsWith('/api/')) {
-    return `http://${host}:3000${finalUrl}`;
+
+  const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+
+  // Prevent duplicate prefix (/api/v1/api/v1)
+  if (cleanPath.startsWith('/api/v1/') && apiBase.endsWith('/api/v1')) {
+    return `${apiBase.replace(/\/api\/v1$/, '')}${cleanPath}`;
   }
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
-  return `${origin}${finalUrl.startsWith('/') ? '' : '/'}${finalUrl}`;
+  if (cleanPath.startsWith('/v1/') && apiBase.endsWith('/v1')) {
+    return `${apiBase.replace(/\/v1$/, '')}${cleanPath}`;
+  }
+
+  return `${apiBase}${cleanPath}`;
 }
 
 export function RecordingVideoPlayer({

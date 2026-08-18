@@ -301,50 +301,36 @@ export class LiveRecordingsService {
 
     let playbackUrl: string | null = null;
 
-    // 1. Check local disk for uploaded recording files (supports byte-range 206 streaming)
-    try {
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'recordings');
-      const liveClassIdForFile = rec.liveClassId || id;
-      const webmPath = path.join(uploadsDir, `${liveClassIdForFile}.webm`);
-      const mp4Path = path.join(uploadsDir, `${liveClassIdForFile}.mp4`);
-
-      if (fs.existsSync(webmPath) || fs.existsSync(mp4Path)) {
-        playbackUrl = `http://localhost:3000/v1/live-classes/${liveClassIdForFile}/video`;
-        this.logger.log(`Serving recording from local API video stream for ${liveClassIdForFile}`);
-      }
-    } catch (fsErr) {
-      this.logger.warn(`Filesystem check for recording failed: ${fsErr}`);
-    }
-
-    // 2. Try Supabase signed URL if no local file on disk
-    if (!playbackUrl && rec.storageObjectId && this.isReady(rec.status)) {
+    // 1. Try Supabase signed URL first if storage object exists (direct HTTPS cloud stream, fastest playback on mobile & web)
+    if (rec.storageObjectId) {
       try {
         playbackUrl = await Promise.race([
           this.storage.createBucketSignedUrl({
             bucketName: this.recordingsBucket,
             path: rec.storageObjectId,
-            expiresInSeconds: 3600,
+            expiresInSeconds: 7200,
           }),
           new Promise<null>((_, reject) =>
-            setTimeout(() => reject(new Error('Storage timeout')), 3000),
+            setTimeout(() => reject(new Error('Storage timeout')), 4000),
           ),
         ]);
-        this.logger.log(`Supabase signed URL generated for ${id}: ${playbackUrl?.substring(0, 80)}...`);
+        if (playbackUrl) {
+          this.logger.log(`Supabase signed URL generated for ${id}: ${playbackUrl.substring(0, 80)}...`);
+        }
       } catch (err) {
         this.logger.warn(`Supabase signed URL failed for ${id}: ${err}`);
       }
     }
 
-    // 3. Use rawEgressUrl if it's a full Supabase signed URL or API path
-    if (!playbackUrl && rec.rawEgressUrl) {
-      playbackUrl = rec.rawEgressUrl.startsWith('http')
-        ? rec.rawEgressUrl
-        : `http://localhost:3000${rec.rawEgressUrl.startsWith('/') ? '' : '/'}${rec.rawEgressUrl}`;
+    // 2. Use rawEgressUrl if it's a full HTTPS URL
+    if (!playbackUrl && rec.rawEgressUrl && rec.rawEgressUrl.startsWith('http')) {
+      playbackUrl = rec.rawEgressUrl;
     }
 
-    // 4. Final fallback: local API streaming
-    if (!playbackUrl && rec.liveClassId) {
-      playbackUrl = `http://localhost:3000/v1/live-classes/${rec.liveClassId}/video`;
+    // 3. Fallback: API streaming endpoint relative path (resolved by frontend against API URL)
+    if (!playbackUrl) {
+      const classIdForStream = rec.liveClassId || id;
+      playbackUrl = `/v1/live-classes/${classIdForStream}/video`;
     }
 
     const display = liveClass
