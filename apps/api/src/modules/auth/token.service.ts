@@ -100,10 +100,11 @@ export class TokenService {
 
   getPublicKey(): string {
     const key = this.configService.get<string>('jwt.publicKey');
-    if (!key || key.trim() === '') {
+    const decoded = this.decodeBase64Pem(key);
+    if (!decoded || !decoded.includes('BEGIN')) {
       return fallbackKeys.publicKey;
     }
-    return this.decodeBase64Pem(key);
+    return decoded;
   }
 
   getAccessTokenExpiresInSeconds(): number {
@@ -126,10 +127,11 @@ export class TokenService {
 
   private getPrivateKey(): string {
     const key = this.configService.get<string>('jwt.privateKey');
-    if (!key || key.trim() === '') {
+    const decoded = this.decodeBase64Pem(key);
+    if (!decoded || !decoded.includes('BEGIN')) {
       return fallbackKeys.privateKey;
     }
-    return this.decodeBase64Pem(key);
+    return decoded;
   }
 
   private getAccessTokenExpiresIn(): number {
@@ -144,9 +146,20 @@ export class TokenService {
 
   private decodeBase64Pem(value: string | undefined): string {
     if (!value || value.trim() === '') {
-      throw new InternalServerErrorException('JWT key is not configured');
+      return '';
     }
 
-    return Buffer.from(value, 'base64').toString('utf8');
+    try {
+      if (value.includes('BEGIN') && value.includes('KEY')) {
+        return value;
+      }
+      const decoded = Buffer.from(value, 'base64').toString('utf8');
+      if (decoded.includes('BEGIN') && decoded.includes('KEY')) {
+        return decoded;
+      }
+      return decoded;
+    } catch {
+      return '';
+    }
   }
 }

@@ -26,10 +26,6 @@ function decodeBase64Pem(value: string | undefined): string {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        privateKey: decodeBase64Pem(
-          configService.get<string>('jwt.privateKey'),
-        ),
-        publicKey: decodeBase64Pem(configService.get<string>('jwt.publicKey')),
         signOptions: {
           algorithm: 'RS256',
           expiresIn:
