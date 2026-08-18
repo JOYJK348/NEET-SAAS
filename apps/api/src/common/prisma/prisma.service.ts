@@ -46,8 +46,23 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
-    this.logger.log('Successfully connected to database');
+    const maxRetries = 5;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.$connect();
+        this.logger.log('Successfully connected to database');
+        return;
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `Database connection attempt ${attempt}/${maxRetries} failed: ${errMsg}`,
+        );
+        if (attempt === maxRetries) {
+          throw err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
