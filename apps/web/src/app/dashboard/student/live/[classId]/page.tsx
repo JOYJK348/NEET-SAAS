@@ -137,16 +137,11 @@ export default function StudentClassroomPage() {
   useEffect(() => {
     const checkStatusOnMount = async () => {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:3000/v1/live-classes/${classId}`);
-        if (res.ok) {
-          const json = await res.json();
-          const data = json?.data ?? json;
-          if (data?.status === 'CANCELLED') {
-            toast.error('This class has been cancelled.');
-            if (typeof window !== 'undefined') {
-              window.location.href = '/dashboard/student';
-            }
+        const data = await api.get<any>(`/live-classes/${classId}`, { skipGlobalToast: true });
+        if (data?.status === 'CANCELLED') {
+          toast.error('This class has been cancelled.');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard/student';
           }
         }
       } catch {}
@@ -161,6 +156,31 @@ export default function StudentClassroomPage() {
     const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : localStorage.getItem('user_display_name') || 'Student';
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    // Register join request via API (cross-device DB-backed)
+    api.post(`/live-classes/${classId}/join-request`, { studentId, studentName }, { skipGlobalToast: true }).catch(() => {});
+
+    // Poll approval status via API every 1.5s
+    const pollStatus = async () => {
+      try {
+        const res = await api.get<{ approved?: boolean; denied?: boolean }>(
+          `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
+          { skipGlobalToast: true }
+        );
+        if (res?.approved) {
+          try {
+            sessionStorage.setItem(`class_${classId}_approved`, 'true');
+            sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
+            sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
+          } catch {}
+          setAdmissionState('admitted');
+        } else if (res?.denied) {
+          setAdmissionState('denied');
+        }
+      } catch {}
+    };
+    pollStatus();
+    const pollInterval = setInterval(pollStatus, 1500);
+
     const joinChannel = new BroadcastChannel('neet-live-join-requests');
 
     const sendReq = () => {
@@ -169,7 +189,7 @@ export default function StudentClassroomPage() {
       } catch {}
     };
     sendReq();
-    const interval = setInterval(sendReq, 500);
+    const interval = setInterval(sendReq, 1000);
 
     joinChannel.onmessage = (e) => {
       const d = e.data;
@@ -185,9 +205,9 @@ export default function StudentClassroomPage() {
       } else if (d.type === 'join-approved' && (!d.classId || d.classId === classId) &&
         (!d.studentId || d.studentId === studentId || d.studentId === 'all')) {
         try {
-          localStorage.setItem(`class_${classId}_approved`, 'true');
-          localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-          localStorage.setItem(`class_${classId}_approved_global`, 'true');
+          sessionStorage.setItem(`class_${classId}_approved`, 'true');
+          sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
+          sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
         } catch {}
         setAdmissionState('admitted');
       } else if (d.type === 'join-denied' && (!d.classId || d.classId === classId) &&
@@ -196,7 +216,7 @@ export default function StudentClassroomPage() {
       }
     };
 
-    // localStorage fallback for cross-tab sync
+    // sessionStorage fallback for cross-tab sync
     const handleStorage = (e: StorageEvent) => {
       if (e.key === `class_${classId}_approved_${studentId}` || e.key === `class_${classId}_approved_global`) {
         setAdmissionState('admitted');
@@ -209,6 +229,7 @@ export default function StudentClassroomPage() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(pollInterval);
       joinChannel.close();
       window.removeEventListener('storage', handleStorage);
     };

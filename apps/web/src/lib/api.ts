@@ -46,10 +46,13 @@ function getApiBaseUrl(): string {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    const hostname = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
-    return `http://${hostname}:3000/api/v1`;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.');
+    if (isLocal) {
+      return `http://${window.location.hostname}:3000/api/v1`;
+    }
+    return 'https://neet-saas.onrender.com/api/v1';
   }
-  return 'http://127.0.0.1:3000/api/v1';
+  return 'https://neet-saas.onrender.com/api/v1';
 }
 
 class ApiClient {
