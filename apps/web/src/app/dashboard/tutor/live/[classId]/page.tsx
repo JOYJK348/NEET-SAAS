@@ -1371,7 +1371,7 @@ function TeacherStudioInner({
   const camFrameIntervalRef = useRef<any>(null);
   const [studentScreen, setStudentScreen] = useState<{ name: string; frame: string } | null>(null);
 
-  const admitStudent = (studentId: string, studentName?: string) => {
+  const admitStudent = async (studentId: string, studentName?: string) => {
     const nameToAdmit = studentName || 'Student';
     setPendingRequests((prev) => prev.filter((r) => r.id !== studentId));
     setAdmittedStudents((prev) => {
