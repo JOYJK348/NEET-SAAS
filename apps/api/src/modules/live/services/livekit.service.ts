@@ -28,15 +28,15 @@ export class LiveKitService {
     this.apiKey =
       this.configService.get<string>('livekit.apiKey') ||
       process.env.LIVEKIT_API_KEY ||
-      '';
+      'APIkxqs4LtzdvXf';
     this.apiSecret =
       this.configService.get<string>('livekit.apiSecret') ||
       process.env.LIVEKIT_API_SECRET ||
-      '';
+      'P2CeY2WD1ZlAtHdalufTLDdSE5ebBR1F8AkSksARZMQA';
     this.wsUrl =
       this.configService.get<string>('livekit.wsUrl') ||
       process.env.LIVEKIT_URL ||
-      '';
+      'wss://neet-n80sqwyo.livekit.cloud';
 
     this.recordingsBucket =
       this.configService.get<string>('livekit.recordingsBucket') ||
@@ -104,8 +104,8 @@ export class LiveKitService {
   }): Promise<string> {
     const { roomName, identity, name, isTeacher } = params;
 
-    const apiKey = this.apiKey || 'devkey';
-    const apiSecret = this.apiSecret || 'secretsecretsecretsecretsecretsecretsecret';
+    const apiKey = this.apiKey || 'APIkxqs4LtzdvXf';
+    const apiSecret = this.apiSecret || 'P2CeY2WD1ZlAtHdalufTLDdSE5ebBR1F8AkSksARZMQA';
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,

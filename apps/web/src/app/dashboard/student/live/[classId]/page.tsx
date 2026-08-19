@@ -1147,85 +1147,7 @@ function StudentClassroomInner({
     };
   }, []);
 
-  // ── Student Webcam & Mic Media Setup & Frame Broadcast
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-    const setupMedia = async () => {
-      if (studentCamFrameIntervalRef.current) {
-        clearInterval(studentCamFrameIntervalRef.current);
-        studentCamFrameIntervalRef.current = null;
-      }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((t) => t.stop());
-        mediaStreamRef.current = null;
-      }
 
-      const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Anand Kumar (Student)';
-      const studentId = localParticipant.sid || 'student-1';
-
-      if (!isCamOn && !isMicOn) {
-        studentCamBroadcastRef.current?.postMessage({ type: 'student-cam-off', id: studentId });
-        return;
-      }
-
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: isCamOn ? { width: 320, height: 240 } : false,
-          audio: isMicOn
-            ? {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: 48000,
-              }
-            : false,
-        });
-        mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-
-        if (isCamOn) {
-          const hiddenVideo = document.createElement('video');
-          hiddenVideo.srcObject = stream;
-          hiddenVideo.muted = true;
-          hiddenVideo.playsInline = true;
-          hiddenVideo.play().catch(() => {});
-
-          const canvas = document.createElement('canvas');
-          canvas.width = 320;
-          canvas.height = 240;
-          const ctx = canvas.getContext('2d');
-
-          studentCamFrameIntervalRef.current = setInterval(() => {
-            if (ctx && hiddenVideo.readyState >= 2) {
-              ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
-              const frame = canvas.toDataURL('image/jpeg', 0.6);
-              setLocalCamFrame(frame);
-              studentCamBroadcastRef.current?.postMessage({
-                type: 'student-cam',
-                id: studentId,
-                name: studentName,
-                frame,
-              });
-            }
-          }, 60); // ~16 FPS
-        } else {
-          setLocalCamFrame(null);
-          studentCamBroadcastRef.current?.postMessage({ type: 'student-cam-off', id: studentId });
-        }
-      } catch (err) {
-        console.warn('Student webcam/mic access:', err);
-      }
-    };
-
-    setupMedia();
-
-    return () => {
-      if (studentCamFrameIntervalRef.current) clearInterval(studentCamFrameIntervalRef.current);
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-    };
-  }, [isCamOn, isMicOn, user]);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenBroadcastRef = useRef<BroadcastChannel | null>(null);
   const screenFrameIntervalRef = useRef<any>(null);
@@ -1456,28 +1378,24 @@ function StudentClassroomInner({
   const toggleMic = async () => {
     const next = !isMicOn;
     setIsMicOn(next);
-    if (connectionState === ConnectionState.Connected) {
-      try {
-        await localParticipant.setMicrophoneEnabled(next, {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        });
-      } catch (err) {
-        console.warn('LiveKit mic publish bypassed (standalone stream mode):', err);
-      }
+    try {
+      await localParticipant.setMicrophoneEnabled(next, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      });
+    } catch (err) {
+      console.warn('LiveKit mic publish:', err);
     }
   };
 
   const toggleCam = async () => {
     const next = !isCamOn;
     setIsCamOn(next);
-    if (connectionState === ConnectionState.Connected) {
-      try {
-        await localParticipant.setCameraEnabled(next);
-      } catch (err) {
-        console.warn('LiveKit camera publish bypassed (standalone stream mode):', err);
-      }
+    try {
+      await localParticipant.setCameraEnabled(next);
+    } catch (err) {
+      console.warn('LiveKit camera publish:', err);
     }
   };
 
@@ -1662,7 +1580,7 @@ function StudentClassroomInner({
                     {(() => {
                       const teacherRP = remoteParticipants.find(
                         (p) => p.identity.startsWith('host-') || (p.name && p.name.toLowerCase().includes('teacher')) || (p.name && p.name.toLowerCase().includes('host'))
-                      );
+                      ) || remoteParticipants[0];
                       const camPub = teacherRP?.getTrackPublication(Track.Source.Camera);
                       const hasCamTrack = camPub && !camPub.isMuted && camPub.track;
 
