@@ -576,12 +576,22 @@ function StudentClassroomInner({
   const sendDataRef = useRef<((data: Uint8Array, options?: any) => Promise<void>) | null>(null);
   const [isApproved, setIsApproved] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem(`class_${classId}_approved_${studentId}`) === 'true' ||
-             localStorage.getItem(`class_${classId}_approved_global`) === 'true';
+      // sessionStorage only — resets on page refresh so each class session requires fresh tutor approval
+      return sessionStorage.getItem(`class_${classId}_approved_${studentId}`) === 'true' ||
+             sessionStorage.getItem(`class_${classId}_approved_global`) === 'true';
     }
     return false;
   });
   const [isDenied, setIsDenied] = useState(false);
+
+  // Clear stale localStorage approval keys on mount so the student is never silently auto-admitted
+  useEffect(() => {
+    try {
+      localStorage.removeItem(`class_${classId}_approved_${studentId}`);
+      localStorage.removeItem(`class_${classId}_approved_global`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isApproved && !isDenied) {
@@ -624,8 +634,9 @@ function StudentClassroomInner({
           setIsApproved(true);
           setIsDenied(false);
           if (typeof window !== 'undefined') {
-            localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-            localStorage.setItem(`class_${classId}_approved_global`, 'true');
+            // Save to sessionStorage only — approval resets when student closes/refreshes page
+            sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
+            sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
           }
         } else if (data.type === 'join-denied') {
           setIsDenied(true);
@@ -634,8 +645,10 @@ function StudentClassroomInner({
 
       const handleStorage = (e: StorageEvent) => {
         if (e.key === `class_${classId}_approved_${studentId}` || e.key === `class_${classId}_approved_global`) {
-          setIsApproved(true);
-          setIsDenied(false);
+          if (e.storageArea === sessionStorage) {
+            setIsApproved(true);
+            setIsDenied(false);
+          }
         }
       };
       window.addEventListener('storage', handleStorage);

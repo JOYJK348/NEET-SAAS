@@ -956,16 +956,26 @@ function TeacherStudioInner({
     return () => clearInterval(interval);
   }, [classId]);
 
-  // ── Admitted local state tracking for immediate UI render
+  // ── Admitted local state tracking — SESSION ONLY (cleared every page load to force fresh admission)
   const [admittedStudents, setAdmittedStudents] = useState<Array<{ id: string; name: string }>>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem(`tutor_admitted_students_${classId}`);
+        // Use sessionStorage so admissions reset on each page load/refresh
+        const saved = sessionStorage.getItem(`tutor_admitted_students_${classId}`);
         if (saved) return JSON.parse(saved);
       } catch {}
     }
     return [];
   });
+
+  // On mount: clear any stale localStorage admission data so returning students
+  // are never accidentally skipped from the pending requests queue
+  useEffect(() => {
+    try {
+      localStorage.removeItem(`tutor_admitted_students_${classId}`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Automatically Detect Remote Participants in Waiting Room
   useEffect(() => {
@@ -1329,7 +1339,8 @@ function TeacherStudioInner({
         updated = [...prev, { id: studentId, name: nameToAdmit }];
       }
       try {
-        localStorage.setItem(`tutor_admitted_students_${classId}`, JSON.stringify(updated));
+        // sessionStorage only — resets on page refresh so fresh admission is always required
+        sessionStorage.setItem(`tutor_admitted_students_${classId}`, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -1359,7 +1370,7 @@ function TeacherStudioInner({
         }
       });
       try {
-        localStorage.setItem(`tutor_admitted_students_${classId}`, JSON.stringify(next));
+        sessionStorage.setItem(`tutor_admitted_students_${classId}`, JSON.stringify(next));
       } catch {}
       return next;
     });
