@@ -1566,6 +1566,7 @@ function TeacherStudioInner({
               ctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
               const frame = canvas.toDataURL('image/jpeg', 0.6);
               setTutorCamFrame(frame);
+              safeSend({ type: 'tutor-cam-frame', frame });
               try {
                 camBroadcastRef.current?.postMessage({ type: 'cam-frame', frame });
               } catch {}
@@ -1576,6 +1577,7 @@ function TeacherStudioInner({
             camBroadcastRef.current?.postMessage({ type: 'cam-off' });
           } catch {}
           setTutorCamFrame(null);
+          safeSend({ type: 'tutor-cam-frame', frame: null });
         }
       } catch (err) {
         console.warn('Webcam/Mic access:', err);
@@ -1588,7 +1590,33 @@ function TeacherStudioInner({
       if (camFrameIntervalRef.current) clearInterval(camFrameIntervalRef.current);
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [isCamOn, isMicOn]);
+  }, [isCamOn, isMicOn, safeSend]);
+
+  // ── Whiteboard Frame Broadcast to Connected Students
+  const handleWhiteboardFrame = useCallback((frame: string) => {
+    whiteboardFrameRef.current = frame;
+    safeSend({ type: 'whiteboard-frame', frame });
+    try {
+      const bc = new BroadcastChannel('neet-live-whiteboard-sync');
+      bc.postMessage({ type: 'whiteboard-frame', frame, classId });
+      bc.close();
+    } catch {}
+  }, [safeSend, classId]);
+
+  // ── Periodic heartbeat sync so any student entering or refreshing gets current mode & frames
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      safeSend({
+        type: 'mode-sync',
+        mode: modeRef.current,
+        doc: activePdfDocRef.current,
+        pdfPage: pdfPageRef.current,
+        whiteboardFrame: whiteboardFrameRef.current,
+        isMicOn: isMicOnRef.current,
+      });
+    }, 1500);
+    return () => clearInterval(syncInterval);
+  }, [safeSend]);
 
   // ── Broadcast Mode Change to Students
   const changeMode = (newMode: Mode) => {
@@ -1677,6 +1705,7 @@ function TeacherStudioInner({
       if (audioCtx) audioCtx.close().catch(() => {});
     };
   }, [isMicOn, tutorName]);
+
   const toggleMic = async () => {
     const next = !isMicOn;
     setIsMicOn(next);
@@ -1791,6 +1820,7 @@ function TeacherStudioInner({
           ctx.drawImage(hiddenVideo, 0, 0, w, h);
           const frame = canvas.toDataURL('image/jpeg', 0.55); // Optimized quality for ultra-fast ms transfer
           screenFrameRef.current = frame;
+          safeSend({ type: 'screen-frame', frame });
           try {
             broadcastRef.current?.postMessage({ type: 'frame', frame });
           } catch {}

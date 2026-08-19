@@ -726,6 +726,7 @@ function StudentClassroomInner({
     return null;
   });
   const [remoteTutorCamFrame, setRemoteTutorCamFrame] = useState<string | null>(null);
+  const [remoteWhiteboardFrame, setRemoteWhiteboardFrame] = useState<string | null>(null);
   const [isTutorMicOn, setIsTutorMicOn] = useState<boolean>(true);
 
   // Active speaking states for audio visualizer ripples & popups
@@ -733,75 +734,105 @@ function StudentClassroomInner({
   const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
   const [isTutorSpeaking, setIsTutorSpeaking] = useState(false);
 
-  // BroadcastChannel listener for local tab screen share stream & tutor cam
+  // ── WebRTC LiveKit DataChannel for Real-Time Cross-Device Sync (Global Internet)
+  const { send: studentDataSend } = useDataChannel((msg) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(msg.payload));
+      if (data.type === 'mode-change' || data.type === 'mode-sync') {
+        if (data.mode) {
+          setTeacherMode(data.mode);
+          if (data.mode === 'whiteboard') setStudentViewMode('whiteboard');
+          else if (data.mode === 'pdf') setStudentViewMode('pdf');
+          else if (data.mode === 'idle') setStudentViewMode('idle');
+        }
+        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.page || data.pdfPage) setTeacherPdfPage(data.page || data.pdfPage);
+        if (data.whiteboardFrame) setRemoteWhiteboardFrame(data.whiteboardFrame);
+        if (typeof data.isMicOn === 'boolean') setIsTutorMicOn(data.isMicOn);
+      } else if (data.type === 'pdf-page-change') {
+        if (data.page) setTeacherPdfPage(data.page);
+        if (data.doc) setTeacherPdfDoc(data.doc);
+      } else if (data.type === 'pdf-doc-change') {
+        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.page) setTeacherPdfPage(data.page);
+      } else if (data.type === 'whiteboard-frame') {
+        setRemoteWhiteboardFrame(data.frame);
+      } else if (data.type === 'screen-frame') {
+        setRemoteScreenFrame(data.frame);
+        if (data.frame) setTeacherMode('screen');
+      } else if (data.type === 'tutor-cam-frame') {
+        setRemoteTutorCamFrame(data.frame);
+      } else if (data.type === 'tutor-mic-state' || data.type === 'tutor-mic') {
+        setIsTutorMicOn(Boolean(data.isMicOn));
+      } else if (data.type === 'chat') {
+        setChatMessages((prev) => [...prev, { sender: data.sender, text: data.text, time: data.time }]);
+      } else if (data.type === 'class-ended') {
+        toast.info('The tutor ended the live session.');
+        router.push('/dashboard/student');
+      }
+    } catch {}
+  });
+
+  const safeSend = useCallback((payload: any) => {
+    if (connectionState !== ConnectionState.Connected) return;
+    try {
+      const encoder = new TextEncoder();
+      const promise = studentDataSend(encoder.encode(JSON.stringify(payload)), { reliable: true });
+      if (promise && typeof (promise as any).catch === 'function') {
+        (promise as any).catch(() => {});
+      }
+    } catch {}
+  }, [connectionState, studentDataSend]);
+
+  useEffect(() => {
+    sendDataRef.current = (data, opts) => {
+      try { studentDataSend(data, opts); } catch {}
+      return Promise.resolve();
+    };
+  }, [studentDataSend]);
+
+  // BroadcastChannel fallback listener for same-device cross-tab testing
   useEffect(() => {
     const channel = new BroadcastChannel('neet-live-screen');
     channel.onmessage = (e) => {
       if (e.data.type === 'frame') {
         setRemoteScreenFrame(e.data.frame);
         setTeacherMode('screen');
-        try {
-          sessionStorage.setItem(`student_class_${classId}_screen_frame`, e.data.frame);
-        } catch {}
       } else if (e.data.type === 'stop') {
         setRemoteScreenFrame(null);
         setTeacherMode('whiteboard');
-        try {
-          sessionStorage.removeItem(`student_class_${classId}_screen_frame`);
-        } catch {}
       }
     };
 
     const modeSyncChannel = new BroadcastChannel('neet-live-mode-sync');
     modeSyncChannel.onmessage = (e) => {
       if ((e.data.type === 'current-mode' || e.data.type === 'mode-change') && (e.data.classId === classId || !e.data.classId)) {
-        setTeacherMode((prev) => (prev === e.data.mode ? prev : e.data.mode));
-        if (e.data.mode === 'whiteboard') {
-          setStudentViewMode((prev) => (prev === 'whiteboard' ? prev : 'whiteboard'));
-        } else if (e.data.mode === 'pdf') {
-          setStudentViewMode((prev) => (prev === 'pdf' ? prev : 'pdf'));
-        } else if (e.data.mode === 'idle') {
-          setStudentViewMode((prev) => (prev === 'idle' ? prev : 'idle'));
-        }
-        if (e.data.pdfPage) {
-          setTeacherPdfPage((prev) => (prev === e.data.pdfPage ? prev : e.data.pdfPage));
-        }
-        if (e.data.doc) {
-          setTeacherPdfDoc((prev) => {
-            if (prev?.id === e.data.doc.id && prev?.url === e.data.doc.url) return prev;
-            return e.data.doc;
-          });
-        }
+        setTeacherMode(e.data.mode);
+        if (e.data.mode === 'whiteboard') setStudentViewMode('whiteboard');
+        else if (e.data.mode === 'pdf') setStudentViewMode('pdf');
+        else if (e.data.mode === 'idle') setStudentViewMode('idle');
+        if (e.data.pdfPage) setTeacherPdfPage(e.data.pdfPage);
+        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
       }
     };
 
     const pdfSyncChannel = new BroadcastChannel('neet-live-pdf-sync');
     pdfSyncChannel.onmessage = (e) => {
       if (e.data.type === 'pdf-sync' && (e.data.classId === classId || !e.data.classId)) {
-        if (e.data.page) {
-          setTeacherPdfPage((prev) => (prev === e.data.page ? prev : e.data.page));
-        }
-        if (e.data.doc) {
-          setTeacherPdfDoc((prev) => {
-            if (prev?.id === e.data.doc.id && prev?.url === e.data.doc.url) return prev;
-            return e.data.doc;
-          });
-        }
+        if (e.data.page) setTeacherPdfPage(e.data.page);
+        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
       }
     };
 
-    // Initial handshake sync request
-    try {
-      modeSyncChannel.postMessage({ type: 'request-sync', classId });
-    } catch {}
-    const fallbackSyncTimer = setTimeout(() => {
-      try {
-        modeSyncChannel.postMessage({ type: 'request-sync', classId });
-      } catch {}
-    }, 500);
+    const wbSyncChannel = new BroadcastChannel('neet-live-whiteboard-sync');
+    wbSyncChannel.onmessage = (e) => {
+      if (e.data.type === 'whiteboard-frame' && (e.data.classId === classId || !e.data.classId)) {
+        if (e.data.frame) setRemoteWhiteboardFrame(e.data.frame);
+      }
+    };
 
-    const camChannel = new BroadcastChannel('neet-live-tutor-cam');
-    camChannel.onmessage = (e) => {
+    const tutorCamChannel = new BroadcastChannel('neet-live-tutor-cam');
+    tutorCamChannel.onmessage = (e) => {
       if (e.data.type === 'cam-frame') {
         setRemoteTutorCamFrame(e.data.frame);
       } else if (e.data.type === 'cam-off') {
@@ -809,20 +840,20 @@ function StudentClassroomInner({
       }
     };
 
-    const micChannel = new BroadcastChannel('neet-live-tutor-mic');
-    micChannel.onmessage = (e) => {
+    const tutorMicChannel = new BroadcastChannel('neet-live-tutor-mic');
+    tutorMicChannel.onmessage = (e) => {
       if (e.data.type === 'tutor-mic-state') {
-        setIsTutorMicOn(!!e.data.isMicOn);
+        setIsTutorMicOn(Boolean(e.data.isMicOn));
       }
     };
 
     return () => {
-      clearTimeout(fallbackSyncTimer);
       channel.close();
-      camChannel.close();
-      micChannel.close();
+      tutorCamChannel.close();
+      tutorMicChannel.close();
       modeSyncChannel.close();
       pdfSyncChannel.close();
+      wbSyncChannel.close();
     };
   }, [classId]);
 
@@ -1726,61 +1757,76 @@ function StudentClassroomInner({
                   /* Standard 3x3 Box Grid */
                   <div className="w-full h-full p-1.5 sm:p-2.5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto content-start">
                     {/* Host Teacher Tile */}
-                    <div className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
-                      isTutorSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-700'
-                    }`}>
-                      {remoteScreenFrame ? (
-                        <img src={remoteScreenFrame} className="w-full h-full object-contain" alt="Teacher Screen Share Stream" />
-                      ) : remoteTutorCamFrame ? (
-                        <img src={remoteTutorCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Teacher Camera" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
-                          <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                            isTutorSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
-                          }`}>
-                            T
+                    {(() => {
+                      const teacherRP = remoteParticipants.find(
+                        (p) => p.identity.startsWith('host-') || (p.name && p.name.toLowerCase().includes('teacher')) || (p.name && p.name.toLowerCase().includes('host'))
+                      );
+                      const camPub = teacherRP?.getTrackPublication(Track.Source.Camera);
+                      const hasCamTrack = camPub && !camPub.isMuted && camPub.track;
+
+                      return (
+                        <div className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
+                          isTutorSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-700'
+                        }`}>
+                          {hasCamTrack && teacherRP ? (
+                            <VideoTrack
+                              trackRef={{ participant: teacherRP, source: Track.Source.Camera, publication: camPub }}
+                              className="w-full h-full object-cover scale-x-[-1]"
+                            />
+                          ) : remoteScreenFrame ? (
+                            <img src={remoteScreenFrame} className="w-full h-full object-contain" alt="Teacher Screen Share Stream" />
+                          ) : remoteTutorCamFrame ? (
+                            <img src={remoteTutorCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Teacher Camera" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
+                              <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                                isTutorSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
+                              }`}>
+                                T
+                              </div>
+                              <span className="text-xs font-semibold text-slate-300">Teacher (Host)</span>
+                            </div>
+                          )}
+
+                          {/* Spotlight Pin Button */}
+                          <button
+                            onClick={() => setPinnedParticipant({ id: 'teacher', name: 'Teacher (Host)', isTeacher: true })}
+                            className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
+                            title="Spotlight Full Screen"
+                          >
+                            <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                          </button>
+
+                          {/* Name Tag Pill */}
+                          <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
+                            Teacher (Host)
                           </div>
-                          <span className="text-xs font-semibold text-slate-300">Teacher (Host)</span>
-                        </div>
-                      )}
 
-                      {/* Spotlight Pin Button */}
-                      <button
-                        onClick={() => setPinnedParticipant({ id: 'teacher', name: 'Teacher (Host)', isTeacher: true })}
-                        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
-                        title="Spotlight Full Screen"
-                      >
-                        <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                      </button>
-
-                      {/* Name Tag Pill */}
-                      <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
-                        Teacher (Host)
-                      </div>
-
-                      {/* Status Badges & Speaking Wave Indicator */}
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
-                        {isTutorMicOn ? (
-                          <div className="flex items-center gap-1">
-                            <Mic className={`w-3.5 h-3.5 ${isTutorSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`} />
-                            {isTutorSpeaking && (
-                              <span className="flex gap-0.5 items-end h-3">
-                                <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
-                                <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
-                                <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
-                              </span>
+                          {/* Status Badges & Speaking Wave Indicator */}
+                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
+                            {isTutorMicOn ? (
+                              <div className="flex items-center gap-1">
+                                <Mic className={`w-3.5 h-3.5 ${isTutorSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`} />
+                                {isTutorSpeaking && (
+                                  <span className="flex gap-0.5 items-end h-3">
+                                    <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
+                                    <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
+                                    <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                            )}
+                            {hasCamTrack || remoteTutorCamFrame ? (
+                              <Video className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <VideoOff className="w-3.5 h-3.5 text-rose-400" />
                             )}
                           </div>
-                        ) : (
-                          <MicOff className="w-3.5 h-3.5 text-rose-400" />
-                        )}
-                        {remoteTutorCamFrame ? (
-                          <Video className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <VideoOff className="w-3.5 h-3.5 text-rose-400" />
-                        )}
-                      </div>
-                    </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Combined Students Tiles */}
                     {combinedStudentList.map((st, idx) => {
