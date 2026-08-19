@@ -365,9 +365,13 @@ function TeacherStudioInner({
       }
 
       let compositeStream: MediaStream | null = null;
+      const isMobile =
+        typeof navigator !== 'undefined' &&
+        (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+          (typeof window !== 'undefined' && window.innerWidth < 768));
 
-      // 1. Try Desktop Screen Capture (getDisplayMedia)
-      if (typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
+      // 1. On Desktop: Try Display Capture (getDisplayMedia)
+      if (!isMobile && typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
         try {
           const displayStream = await navigator.mediaDevices.getDisplayMedia({
             video: {
@@ -381,102 +385,114 @@ function TeacherStudioInner({
           const vTrack = displayStream.getVideoTracks()[0];
           if (vTrack) compositeStream.addTrack(vTrack);
         } catch (err) {
-          console.log('Desktop screen capture prompt closed or not supported:', err);
+          console.log('Desktop screen capture prompt closed or skipped:', err);
         }
       }
 
-      // 2. Mobile & Fallback: Composite Studio Canvas (Whiteboard + Camera PIP + Audio)
+      // 2. Mobile (Android / iOS) & Desktop Fallback: Studio Canvas or Direct UserMedia Stream
       if (!compositeStream || compositeStream.getVideoTracks().length === 0) {
         try {
-          const userMediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-            audio: {
-              echoCancellation: { ideal: true },
-              noiseSuppression: { ideal: true },
-              autoGainControl: { ideal: true },
-            },
-          }).catch(() => null);
+          // Get Tutor Camera + Audio stream
+          const userMediaStream = await navigator.mediaDevices
+            .getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+              audio: {
+                echoCancellation: { ideal: true },
+                noiseSuppression: { ideal: true },
+                autoGainControl: { ideal: true },
+              },
+            })
+            .catch(async () => {
+              return await navigator.mediaDevices
+                .getUserMedia({ video: true, audio: true })
+                .catch(async () => {
+                  return await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+                });
+            });
 
-          // Find Excalidraw / Studio Whiteboard HTML5 Canvas
-          const canvases = Array.from(document.querySelectorAll('canvas'));
-          const stageCanvas = canvases.find((c) => c.width > 50 && c.height > 50) || canvases[0];
-
+          // Check if HTML5 Canvas captureStream is supported (Android Chrome / Desktop)
           const compCanvas = document.createElement('canvas');
           compCanvas.width = 1280;
           compCanvas.height = 720;
-          const ctx = compCanvas.getContext('2d', { alpha: false });
+          const hasCanvasCapture = typeof (compCanvas as any).captureStream === 'function';
 
-          let pipVideo: HTMLVideoElement | null = null;
-          if (userMediaStream && userMediaStream.getVideoTracks().length > 0) {
-            pipVideo = document.createElement('video');
-            pipVideo.srcObject = userMediaStream;
-            pipVideo.muted = true;
-            pipVideo.playsInline = true;
-            pipVideo.play().catch(() => {});
-          }
+          if (hasCanvasCapture) {
+            const ctx = compCanvas.getContext('2d', { alpha: false });
+            const canvases = Array.from(document.querySelectorAll('canvas'));
+            const stageCanvas = canvases.find((c) => c !== compCanvas && c.width > 50 && c.height > 50) || canvases[0];
 
-          const drawComposite = () => {
-            if (!ctx) return;
-            // Background fill
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
-
-            // Draw Studio Whiteboard Stage
-            if (stageCanvas) {
-              try {
-                ctx.drawImage(stageCanvas, 0, 0, compCanvas.width, compCanvas.height);
-              } catch {}
+            let pipVideo: HTMLVideoElement | null = null;
+            if (userMediaStream && userMediaStream.getVideoTracks().length > 0) {
+              pipVideo = document.createElement('video');
+              pipVideo.srcObject = userMediaStream;
+              pipVideo.muted = true;
+              pipVideo.playsInline = true;
+              pipVideo.play().catch(() => {});
             }
 
-            // Draw Tutor Camera PIP Avatar in bottom-right corner
-            if (pipVideo && pipVideo.readyState >= 2) {
-              const pipW = 260;
-              const pipH = 195;
-              const pipX = compCanvas.width - pipW - 20;
-              const pipY = compCanvas.height - pipH - 20;
+            const drawComposite = () => {
+              if (!ctx) return;
+              // Background fill
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
 
-              ctx.save();
-              ctx.beginPath();
-              if (typeof ctx.roundRect === 'function') {
-                ctx.roundRect(pipX, pipY, pipW, pipH, 16);
-              } else {
-                ctx.rect(pipX, pipY, pipW, pipH);
+              // Draw Studio Whiteboard Stage
+              if (stageCanvas) {
+                try {
+                  ctx.drawImage(stageCanvas, 0, 0, compCanvas.width, compCanvas.height);
+                } catch {}
               }
-              ctx.clip();
-              ctx.drawImage(pipVideo, pipX, pipY, pipW, pipH);
-              ctx.restore();
 
-              ctx.strokeStyle = '#8b5cf6';
-              ctx.lineWidth = 4;
-              ctx.beginPath();
-              if (typeof ctx.roundRect === 'function') {
-                ctx.roundRect(pipX, pipY, pipW, pipH, 16);
-              } else {
-                ctx.rect(pipX, pipY, pipW, pipH);
+              // Draw Tutor Camera PIP in bottom-right corner
+              if (pipVideo && pipVideo.readyState >= 2) {
+                const pipW = 260;
+                const pipH = 195;
+                const pipX = compCanvas.width - pipW - 20;
+                const pipY = compCanvas.height - pipH - 20;
+
+                ctx.save();
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                  ctx.roundRect(pipX, pipY, pipW, pipH, 16);
+                } else {
+                  ctx.rect(pipX, pipY, pipW, pipH);
+                }
+                ctx.clip();
+                ctx.drawImage(pipVideo, pipX, pipY, pipW, pipH);
+                ctx.restore();
+
+                ctx.strokeStyle = '#8b5cf6';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                if (typeof ctx.roundRect === 'function') {
+                  ctx.roundRect(pipX, pipY, pipW, pipH, 16);
+                } else {
+                  ctx.rect(pipX, pipY, pipW, pipH);
+                }
+                ctx.stroke();
               }
-              ctx.stroke();
+            };
+
+            const animInterval = setInterval(drawComposite, 33); // ~30 FPS
+            studioCanvasAnimRef.current = animInterval;
+
+            compositeStream = (compCanvas as any).captureStream(30);
+            if (userMediaStream && userMediaStream.getAudioTracks().length > 0 && compositeStream) {
+              compositeStream.addTrack(userMediaStream.getAudioTracks()[0]);
             }
-          };
-
-          const animInterval = setInterval(drawComposite, 33); // ~30 FPS
-          studioCanvasAnimRef.current = animInterval;
-
-          if (typeof compCanvas.captureStream === 'function') {
-            compositeStream = compCanvas.captureStream(30);
-          }
-
-          if (userMediaStream && userMediaStream.getAudioTracks().length > 0 && compositeStream) {
-            compositeStream.addTrack(userMediaStream.getAudioTracks()[0]);
+          } else if (userMediaStream) {
+            // iOS Safari fallback: Use userMediaStream directly (video + mic)
+            compositeStream = userMediaStream;
           }
         } catch (err) {
-          console.warn('Studio canvas stream composite error:', err);
+          console.warn('Studio recording stream initialization error:', err);
         }
 
-        // Direct camera stream fallback if composite canvas capture fails
+        // Final direct camera stream fallback
         if (!compositeStream || compositeStream.getTracks().length === 0) {
           try {
             compositeStream = await navigator.mediaDevices.getUserMedia({
-              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+              video: { facingMode: 'user' },
               audio: true,
             });
           } catch {
@@ -488,13 +504,13 @@ function TeacherStudioInner({
       }
 
       if (!compositeStream || compositeStream.getTracks().length === 0) {
-        toast.error('⚠️ Could not access camera or microphone for class recording.');
+        toast.error('⚠️ Please allow Camera/Microphone access to enable class recording.');
         setIsScreenRecordingActive(false);
         setDismissStudioModal(true);
         return false;
       }
 
-      // 3. Ensure Tutor Microphone Track is attached
+      // 3. Ensure Tutor Microphone Track is attached & active
       if (compositeStream.getAudioTracks().length === 0) {
         try {
           const userAudioStream = await navigator.mediaDevices.getUserMedia({
@@ -523,15 +539,25 @@ function TeacherStudioInner({
         try { mediaRecorderRef.current.stop(); } catch {}
       }
 
-      const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')
-        ? 'video/mp4;codecs=avc1,mp4a.40.2'
-        : MediaRecorder.isTypeSupported('video/mp4')
-        ? 'video/mp4'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-        ? 'video/webm;codecs=vp8,opus'
-        : MediaRecorder.isTypeSupported('video/webm')
-        ? 'video/webm'
-        : 'audio/webm';
+      const mimeCandidates = [
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/webm;codecs=vp8,opus',
+        'video/webm;codecs=vp9,opus',
+        'video/webm',
+        'audio/mp4',
+        'audio/webm',
+      ];
+      let mimeType = 'video/mp4';
+      if (typeof MediaRecorder !== 'undefined') {
+        for (const cand of mimeCandidates) {
+          if (MediaRecorder.isTypeSupported(cand)) {
+            mimeType = cand;
+            break;
+          }
+        }
+      }
 
       chosenMimeTypeRef.current = mimeType;
       const recorder = new MediaRecorder(compositeStream, { mimeType });
@@ -1760,19 +1786,19 @@ function TeacherStudioInner({
               <Video className="w-2.5 h-2.5" /> REC
             </div>
           )}
-          {/* Screen Record button — desktop only */}
+          {/* Screen Record button — desktop and mobile */}
           <button
             onClick={requestStudioScreenShare}
             type="button"
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition-all shadow-sm cursor-pointer shrink-0 ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-xl text-[10px] sm:text-xs font-black transition-all shadow-sm cursor-pointer shrink-0 ${
               isScreenRecordingActive
                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                 : 'bg-violet-600 hover:bg-violet-700 text-white animate-pulse'
             }`}
-            title="Click to record entire studio screen & whiteboard"
+            title="Click to record class, whiteboard & camera"
           >
-            <Video className="w-3.5 h-3.5" />
-            <span>{isScreenRecordingActive ? '✅ Rec Active' : '🖥 Record Screen'}</span>
+            <Video className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>{isScreenRecordingActive ? '🔴 Rec Active' : '🔴 Record Class'}</span>
           </button>
           {autoEndCountdown && (
             <div className="hidden md:flex items-center gap-1.5">
@@ -2941,7 +2967,7 @@ function TeacherStudioInner({
                 🎥 Start Live Class Recording
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                To record your full class (whiteboard drawings, student admissions, screen share, mouse pointer & audio), please authorize studio screen capture below.
+                Record your full class with whiteboard drawings, student interactions, screen sharing & mic audio. Recordings are automatically saved to the library!
               </p>
             </div>
 
@@ -2951,7 +2977,7 @@ function TeacherStudioInner({
                 className="w-full py-3.5 sm:py-4 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-violet-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>Select Studio Window & Record Class 🚀</span>
+                <span>Start Class Recording 🚀</span>
               </button>
 
               <button
