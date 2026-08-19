@@ -49,6 +49,37 @@ import StudioWhiteboard from '@/components/live/studio-whiteboard';
 
 type Mode = 'idle' | 'whiteboard' | 'screen';
 
+/** Safely capture display stream across Android/iOS mobile and desktop browsers */
+async function getScreenMediaStream(): Promise<MediaStream | null> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+    return null;
+  }
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        cursor: 'always',
+      } as any,
+      audio: false,
+    });
+  } catch (err1) {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+    } catch (err2) {
+      try {
+        return await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+        });
+      } catch (err3) {
+        console.log('Screen share prompt closed or unsupported on this device:', err3);
+        return null;
+      }
+    }
+  }
+}
+
 /** Decode JWT payload and check it has at least 30 seconds remaining */
 function isTokenFresh(token: string): boolean {
   try {
@@ -1090,14 +1121,12 @@ function StudentClassroomInner({
     }
 
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          frameRate: { ideal: 60, max: 60 },
-          width: { max: 1920 },
-          height: { max: 1080 },
-        },
-        audio: false,
-      });
+      const stream = await getScreenMediaStream();
+      if (!stream) {
+        toast.info('Screen share prompt closed or not permitted.');
+        setIsScreenSharing(false);
+        return;
+      }
       screenStreamRef.current = stream;
       setIsScreenSharing(true);
 
@@ -1301,58 +1330,58 @@ function StudentClassroomInner({
   };
 
   return (
-    <div className="h-[100dvh] w-screen bg-slate-100 text-slate-900 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* ── Top Header Bar ── */}
-      <header className="h-12 sm:h-14 bg-white border-b border-slate-200 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-sm">
+      <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-md">
         {/* Left: Brand + Live badge */}
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
             <Video className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <h1 className="text-sm sm:text-lg font-extrabold text-slate-900 tracking-tight">Connect Meet</h1>
-          <span className="hidden sm:block text-xs text-slate-500 font-medium truncate max-w-[140px]">({classTitle})</span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+          <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">Connect Meet</h1>
+          <span className="hidden sm:block text-xs text-slate-400 font-medium truncate max-w-[140px]">({classTitle})</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
             <Radio className="w-2.5 h-2.5" /> LIVE
           </div>
           {autoEndCountdown && (
             <div
               className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition ${
                 isNearAutoEnd
-                  ? 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
-                  : 'bg-amber-500/10 text-amber-600 border-amber-300/50'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
               }`}
               title="Class will automatically end 15 minutes after scheduled end time"
             >
-              <Clock className="w-3 h-3 text-amber-500" />
+              <Clock className="w-3 h-3 text-amber-400" />
               <span>Auto-ends in {autoEndCountdown}</span>
             </div>
           )}
         </div>
 
         {/* Centre: Mode Title */}
-        <div className="flex items-center bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 gap-1.5 text-xs font-bold text-slate-700">
-          <Grid className="w-3.5 h-3.5 text-blue-600" />
+        <div className="flex items-center bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 gap-1.5 text-xs font-bold text-slate-200">
+          <Grid className="w-3.5 h-3.5 text-blue-400" />
           <span>Classroom Stream</span>
         </div>
 
         {/* Right: Avatar + settings */}
         <div className="flex items-center gap-2">
-          <button className="p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition">
+          <button className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
             <Settings className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition">
+          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 transition">
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-sm">
               {studentSelfName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[80px] truncate">{studentSelfName}</span>
+            <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[80px] truncate">{studentSelfName}</span>
           </div>
         </div>
       </header>
 
       {/* ── Main Layout ── */}
-      <div className="flex-1 flex overflow-hidden relative p-2 sm:p-3 lg:p-4 gap-0 lg:gap-4 bg-slate-100">
+      <div className="flex-1 flex overflow-hidden relative p-2 sm:p-3 lg:p-4 gap-0 lg:gap-4 bg-slate-950">
         {/* Left Main Stage Container */}
-        <div className="flex-1 h-full bg-[#bfd4e7] border border-blue-200/80 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
+        <div className="flex-1 h-full bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
           {/* Main Display Box (Grid / Whiteboard / Screen Share) */}
           <div className="flex-1 w-full h-full relative overflow-hidden rounded-xl bg-slate-900 flex items-center justify-center shadow-md">
             {/* Student's Own Screen Share Presentation View */}

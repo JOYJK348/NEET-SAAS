@@ -57,6 +57,37 @@ import StudioWhiteboard from '@/components/live/studio-whiteboard';
 
 type Mode = 'idle' | 'whiteboard' | 'screen';
 
+/** Safely capture display stream across Android/iOS mobile and desktop browsers */
+async function getScreenMediaStream(): Promise<MediaStream | null> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+    return null;
+  }
+  try {
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        cursor: 'always',
+      } as any,
+      audio: false,
+    });
+  } catch (err1) {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+    } catch (err2) {
+      try {
+        return await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+        });
+      } catch (err3) {
+        console.log('Screen share prompt closed or unsupported on this device:', err3);
+        return null;
+      }
+    }
+  }
+}
+
 /** Decode JWT payload and check it has at least 30 seconds remaining */
 function isTokenFresh(token: string): boolean {
   try {
@@ -365,31 +396,20 @@ function TeacherStudioInner({
       }
 
       let compositeStream: MediaStream | null = null;
-      const isMobile =
-        typeof navigator !== 'undefined' &&
-        (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-          (typeof window !== 'undefined' && window.innerWidth < 768));
 
-      // 1. On Desktop: Try Display Capture (getDisplayMedia)
-      if (!isMobile && typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
-        try {
-          const displayStream = await navigator.mediaDevices.getDisplayMedia({
-            video: {
-              displaySurface: 'browser',
-              cursor: 'always',
-              frameRate: { ideal: 30, max: 60 },
-            } as any,
-            audio: false, // EXCLUDE system/tab audio
-          });
+      // 1. Try Screen / Window Display Capture (getDisplayMedia) on BOTH Mobile and Desktop!
+      try {
+        const displayStream = await getScreenMediaStream();
+        if (displayStream && displayStream.getVideoTracks().length > 0) {
           compositeStream = new MediaStream();
           const vTrack = displayStream.getVideoTracks()[0];
           if (vTrack) compositeStream.addTrack(vTrack);
-        } catch (err) {
-          console.log('Desktop screen capture prompt closed or skipped:', err);
         }
+      } catch (err) {
+        console.log('Screen capture prompt skipped or cancelled:', err);
       }
 
-      // 2. Mobile (Android / iOS) & Desktop Fallback: Studio Canvas or Direct UserMedia Stream
+      // 2. Mobile & Desktop Fallback: Studio Canvas or Direct UserMedia Stream
       if (!compositeStream || compositeStream.getVideoTracks().length === 0) {
         try {
           // Get Tutor Camera + Audio stream
@@ -432,8 +452,8 @@ function TeacherStudioInner({
 
             const drawComposite = () => {
               if (!ctx) return;
-              // Background fill
-              ctx.fillStyle = '#ffffff';
+              // Dark background fill
+              ctx.fillStyle = '#0f172a';
               ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
 
               // Draw Studio Whiteboard Stage
@@ -1622,14 +1642,12 @@ function TeacherStudioInner({
         clearInterval(frameIntervalRef.current);
       }
 
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          frameRate: { ideal: 60, max: 60 },
-          width: { max: 1920 },
-          height: { max: 1080 },
-        },
-        audio: false,
-      });
+      const stream = await getScreenMediaStream();
+      if (!stream) {
+        toast.info('Screen share prompt closed or not permitted.');
+        stopScreenShare();
+        return;
+      }
 
       screenStreamRef.current = stream;
       setIsScreenSharing(true);
@@ -1765,17 +1783,17 @@ function TeacherStudioInner({
   };
 
   return (
-    <div className="h-[100dvh] w-screen bg-slate-100 text-slate-900 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* ── Top Header Bar ── */}
-      <header className="h-12 sm:h-14 bg-white border-b border-slate-200 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 shadow-sm gap-2">
+      <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 shadow-md gap-2">
         {/* Left: Brand + Live badge */}
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink-0">
           <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
             <Video className="w-4 h-4" />
           </div>
-          <h1 className="text-sm font-extrabold text-slate-900 tracking-tight hidden xs:block">Connect Meet</h1>
-          <span className="hidden lg:block text-xs text-slate-500 font-medium truncate max-w-[120px]">({classTitle})</span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[10px] font-bold uppercase tracking-wider animate-pulse shrink-0">
+          <h1 className="text-sm font-extrabold text-white tracking-tight hidden xs:block">Connect Meet</h1>
+          <span className="hidden lg:block text-xs text-slate-400 font-medium truncate max-w-[120px]">({classTitle})</span>
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse shrink-0">
             <Radio className="w-2.5 h-2.5" /> LIVE
           </div>
           {recordingEnabled && (
@@ -1825,33 +1843,33 @@ function TeacherStudioInner({
         </div>
 
         {/* Centre: Mode switcher pills */}
-        <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200 gap-0.5 sm:gap-1 text-[11px] sm:text-xs shrink-0">
-          <button onClick={() => changeMode('idle')} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition ${ mode === 'idle' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' }`}>
+        <div className="flex items-center bg-slate-800 p-0.5 sm:p-1 rounded-xl border border-slate-700 gap-0.5 sm:gap-1 text-[11px] sm:text-xs shrink-0">
+          <button onClick={() => changeMode('idle')} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition ${ mode === 'idle' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-slate-700' }`}>
             <Grid className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Grid</span>
           </button>
-          <button onClick={() => changeMode('whiteboard')} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition ${ mode === 'whiteboard' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' }`}>
+          <button onClick={() => changeMode('whiteboard')} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition ${ mode === 'whiteboard' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-slate-700' }`}>
             <PenTool className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Board</span>
           </button>
         </div>
 
         {/* Right: Avatar */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <button className="hidden sm:flex p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition">
+          <button className="hidden sm:flex p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
             <Settings className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-100 border border-slate-200 cursor-pointer hover:bg-slate-200 transition">
+          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 transition">
             <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
               {tutorName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[80px] truncate">{tutorName}</span>
+            <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[80px] truncate">{tutorName}</span>
           </div>
         </div>
       </header>
 
       {/* ── Main Layout ── */}
-      <div className="flex-1 flex overflow-hidden relative p-2 sm:p-3 lg:p-4 gap-0 lg:gap-4 bg-slate-100">
+      <div className="flex-1 flex overflow-hidden relative p-2 sm:p-3 lg:p-4 gap-0 lg:gap-4 bg-slate-950">
         {/* Left Main Stage Container */}
-        <div className="flex-1 h-full bg-[#bfd4e7] border border-blue-200/80 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
+        <div className="flex-1 h-full bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
 
 
           {/* Grid View Mode */}
@@ -2948,25 +2966,25 @@ function TeacherStudioInner({
 
       {/* ── Studio Screen Recording Authorization Startup Modal ── */}
       {!isScreenRecordingActive && !dismissStudioModal && !showEndModal && !showAutoEndModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[94%] sm:w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center space-y-4 sm:space-y-5 relative">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 rounded-3xl p-5 sm:p-8 max-w-md w-[94%] sm:w-full shadow-2xl border border-slate-800 flex flex-col items-center text-center space-y-4 sm:space-y-5 relative">
             <button
               onClick={() => setDismissStudioModal(true)}
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
               title="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-violet-100 border border-violet-200 text-violet-600 flex items-center justify-center shadow-lg animate-bounce shrink-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-violet-500/20 border border-violet-500/30 text-violet-400 flex items-center justify-center shadow-lg animate-bounce shrink-0">
               <Video className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
 
             <div className="space-y-1.5 sm:space-y-2">
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
                 🎥 Start Live Class Recording
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
                 Record your full class with whiteboard drawings, student interactions, screen sharing & mic audio. Recordings are automatically saved to the library!
               </p>
             </div>
@@ -2982,7 +3000,7 @@ function TeacherStudioInner({
 
               <button
                 onClick={() => setDismissStudioModal(true)}
-                className="w-full py-2.5 px-4 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-bold transition text-center cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl text-slate-400 hover:text-slate-200 text-xs font-bold transition text-center cursor-pointer"
               >
                 Continue Without Recording ➡️
               </button>
