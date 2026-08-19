@@ -1,5 +1,6 @@
 'use client';
 
+// NEET Studio Live Class Presentation Engine v1.2.0
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FileText,
