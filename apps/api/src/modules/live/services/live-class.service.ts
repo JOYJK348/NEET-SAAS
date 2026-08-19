@@ -37,6 +37,13 @@ export class LiveClassService {
    */
   private readonly _memJoinRequests = new Map<string, Map<string, { id: string; name: string; time: string; ts: number }>>();
 
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ctx: RequestContextService,
+    private readonly livekitService: LiveKitService,
+    private readonly calendarSyncService: CalendarSyncService,
+  ) {}
+
   private async _getActiveSession(classId: string) {
     try {
       return await this.prisma.liveClassSessions.findFirst({
