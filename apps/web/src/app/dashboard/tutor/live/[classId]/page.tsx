@@ -35,6 +35,7 @@ import {
   Clock,
   BookOpen,
   ClipboardList,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -1250,6 +1251,11 @@ function TeacherStudioInner({
           ...prev,
           [data.id]: { name: data.name, isMicOn: data.isMicOn },
         }));
+      } else if (data.type === 'join-request') {
+        setPendingRequests((prev) => {
+          if (prev.some((req) => req.id === data.id)) return prev;
+          return [...prev, { id: data.id, name: data.name, time: data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }];
+        });
       }
     } catch {}
   });
@@ -1287,6 +1293,7 @@ function TeacherStudioInner({
       return updated;
     });
     try {
+      safeSend({ type: 'join-approved', studentId, classId });
       // localStorage signal for cross-tab sync
       localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
       localStorage.setItem(`class_${classId}_approved_global`, 'true');
@@ -1316,6 +1323,7 @@ function TeacherStudioInner({
       return next;
     });
     try {
+      safeSend({ type: 'join-approved', studentId: 'all', classId });
       localStorage.setItem(`class_${classId}_approved_global`, 'true');
       const ch = new BroadcastChannel('neet-live-join-requests');
       ch.postMessage({ type: 'join-approved', studentId: 'all', classId });
@@ -1330,6 +1338,7 @@ function TeacherStudioInner({
   const denyStudent = (studentId: string, studentName?: string) => {
     setPendingRequests((prev) => prev.filter((r) => r.id !== studentId));
     try {
+      safeSend({ type: 'join-denied', studentId, classId });
       // localStorage signal for cross-tab sync
       localStorage.setItem(`class_${classId}_denied_${studentId}`, 'true');
       const ch = new BroadcastChannel('neet-live-join-requests');
@@ -1948,6 +1957,57 @@ function TeacherStudioInner({
         {/* Left Main Stage Container */}
         <div className="flex-1 h-full bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
 
+          {/* ── Prominent Floating Join Request Alert Banner (Mobile & Desktop) ── */}
+          {pendingRequests.length > 0 && (
+            <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 bg-slate-900/98 border-2 border-amber-500/80 shadow-2xl rounded-2xl p-3 backdrop-blur-xl animate-in fade-in slide-in-from-top-3 text-left">
+              <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-black text-amber-300 truncate">
+                    Waiting to Join ({pendingRequests.length})
+                  </span>
+                </div>
+                {pendingRequests.length > 1 && (
+                  <button
+                    onClick={() => admitAllStudents(pendingRequests)}
+                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-lg text-[10px] font-black transition cursor-pointer shadow-xs"
+                  >
+                    Admit All
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-2 space-y-1.5 max-h-44 overflow-y-auto pr-0.5">
+                {pendingRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="flex items-center justify-between bg-slate-800/90 p-2 rounded-xl border border-slate-700/80 gap-2 shadow-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{req.name}</p>
+                      <span className="text-[10px] text-slate-400 font-medium">{req.time}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => admitStudent(req.id, req.name)}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-lg text-xs font-black transition shadow-xs cursor-pointer flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" /> Admit
+                      </button>
+                      <button
+                        onClick={() => denyStudent(req.id, req.name)}
+                        className="px-2 py-1.5 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Grid View Mode */}
           {mode === 'idle' && (
@@ -2468,13 +2528,18 @@ function TeacherStudioInner({
                   }
                 }}
                 title="Participants"
-                className={`w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center shadow-sm transition shrink-0 ${
+                className={`relative w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center shadow-sm transition shrink-0 ${
                   activeTab === 'participants' && (showSidebar || showMobileDrawer)
                     ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <Users className="w-4 h-4" />
+                {pendingRequests.length > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 min-w-4.5 h-4.5 rounded-full bg-amber-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce shadow-md">
+                    {pendingRequests.length}
+                  </span>
+                )}
               </button>
 
               {/* Attendance Sheet Drawer Toggle */}
@@ -2855,7 +2920,55 @@ function TeacherStudioInner({
             </div>
             <div className="flex-1 overflow-hidden flex flex-col p-4">
               {activeTab === 'participants' && (
-                <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="flex-1 overflow-y-auto space-y-3">
+                  {/* Mobile Pending Requests Section */}
+                  {pendingRequests.length > 0 && (
+                    <div className="p-3 bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5" />
+                          Waiting to Join ({pendingRequests.length})
+                        </span>
+                        {pendingRequests.length > 1 && (
+                          <button
+                            onClick={() => admitAllStudents(pendingRequests)}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black transition cursor-pointer"
+                          >
+                            Admit All
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {pendingRequests.map((req) => (
+                          <div
+                            key={req.id}
+                            className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 gap-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-200 truncate">{req.name}</p>
+                              <span className="text-[10px] text-slate-400">{req.time}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => admitStudent(req.id, req.name)}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer"
+                              >
+                                <Check className="w-3 h-3" /> Admit
+                              </button>
+                              <button
+                                onClick={() => denyStudent(req.id, req.name)}
+                                className="px-2 py-1 bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 rounded-lg text-xs font-bold transition cursor-pointer"
+                              >
+                                Deny
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">{tutorName.charAt(0).toUpperCase()}</div>
