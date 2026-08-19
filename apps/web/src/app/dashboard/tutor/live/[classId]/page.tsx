@@ -1583,16 +1583,6 @@ function TeacherStudioInner({
     } catch {}
   };
 
-  const handleWhiteboardFrame = (frame: string) => {
-    whiteboardFrameRef.current = frame;
-    safeSend({ type: 'whiteboard-frame', frame });
-    try {
-      const wbBc = new BroadcastChannel('neet-live-whiteboard');
-      wbBc.postMessage({ type: 'whiteboard-frame', frame, classId });
-      wbBc.close();
-    } catch {}
-  };
-
   // ── Ultra-Low Latency Web Audio API Microphone Volume Detection
   useEffect(() => {
     if (!isMicOn) {
@@ -1860,10 +1850,11 @@ function TeacherStudioInner({
   const cameraTracks = useTracks([Track.Source.Camera]);
 
   const handleWhiteboardFrame = (frame: string) => {
+    whiteboardFrameRef.current = frame;
     safeSend({ type: 'whiteboard-frame', frame });
     try {
       const wbChannel = new BroadcastChannel('neet-live-whiteboard');
-      wbChannel.postMessage({ type: 'whiteboard-frame', frame });
+      wbChannel.postMessage({ type: 'whiteboard-frame', frame, classId });
       wbChannel.close();
     } catch {}
   };
