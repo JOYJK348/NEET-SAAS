@@ -749,7 +749,15 @@ function TeacherStudioInner({
       } catch (uploadErr) {
         console.warn('Upload recorded class failed:', uploadErr);
       }
-    }
+    try {
+      safeSendRef.current?.({ type: 'class-ended', classId });
+      const statusBc = new BroadcastChannel('neet-live-class-status');
+      statusBc.postMessage({ type: 'class-ended', classId });
+      statusBc.close();
+      const joinChannel = new BroadcastChannel('neet-live-join-requests');
+      joinChannel.postMessage({ type: 'class-ended', classId });
+      joinChannel.close();
+    } catch {}
 
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL

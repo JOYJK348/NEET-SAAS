@@ -573,12 +573,18 @@ function StudentClassroomInner({
   const [pinnedParticipant, setPinnedParticipant] = useState<{ id: string; name: string; isTeacher: boolean } | null>(null);
 
   const studentId = user ? user.id : 'student-1';
-  const [isApproved, setIsApproved] = useState<boolean>(true);
+  const [isApproved, setIsApproved] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(`class_${classId}_approved_${studentId}`) === 'true' ||
+             localStorage.getItem(`class_${classId}_approved_global`) === 'true';
+    }
+    return false;
+  });
   const [isDenied, setIsDenied] = useState(false);
 
   useEffect(() => {
     if (!isApproved && !isDenied) {
-      const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
+      const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : localStorage.getItem('user_display_name') || 'Student';
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const joinChannel = new BroadcastChannel('neet-live-join-requests');
 
@@ -592,9 +598,20 @@ function StudentClassroomInner({
             time,
           });
         } catch {}
+
+        try {
+          const encoder = new TextEncoder();
+          send(encoder.encode(JSON.stringify({
+            type: 'join-request',
+            classId,
+            id: studentId,
+            name: studentName,
+            time,
+          })), { reliable: true });
+        } catch {}
       };
       sendReq();
-      const interval = setInterval(sendReq, 200);
+      const interval = setInterval(sendReq, 1500);
 
       joinChannel.onmessage = (e) => {
         const data = e.data;
@@ -628,7 +645,7 @@ function StudentClassroomInner({
         window.removeEventListener('storage', handleStorage);
       };
     }
-  }, [isApproved, isDenied, classId, studentId, user]);
+  }, [isApproved, isDenied, classId, studentId, user, send]);
 
   const [remoteScreenFrame, setRemoteScreenFrame] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -834,8 +851,36 @@ function StudentClassroomInner({
         setIsTutorMicOn(!!data.isMicOn);
       } else if (data.type === 'chat') {
         setChatMessages((prev) => [...prev, { sender: data.sender, text: data.text, time: data.time }]);
+      } else if (data.type === 'join-approved') {
+        if (!data.studentId || data.studentId === studentId || data.studentId === 'all' || data.studentId.includes(studentId) || studentId.includes(data.studentId)) {
+          setIsApproved(true);
+          setIsDenied(false);
+          try {
+            localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
+            localStorage.setItem(`class_${classId}_approved_global`, 'true');
+          } catch {}
+          toast.success('🎉 You have been admitted to the live class!');
+        }
+      } else if (data.type === 'join-denied') {
+        if (!data.studentId || data.studentId === studentId || data.studentId === 'all' || data.studentId.includes(studentId) || studentId.includes(data.studentId)) {
+          setIsDenied(true);
+          setIsApproved(false);
+        }
       } else if (data.type === 'class-ended') {
         setIsClassEnded(true);
+        try {
+          localStorage.removeItem(`class_${classId}_approved_${studentId}`);
+          localStorage.removeItem(`class_${classId}_approved`);
+          localStorage.removeItem(`class_${classId}_approved_global`);
+          localStorage.removeItem(`student_token_${classId}`);
+          localStorage.removeItem(`student_wsUrl_${classId}`);
+        } catch {}
+        toast.info('⏱ The tutor has ended the live session. Redirecting to dashboard...');
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard/student';
+          }
+        }, 1200);
       } else if (data.type === 'whiteboard-frame') {
         setRemoteWhiteboardFrame(data.frame);
       }
@@ -2174,6 +2219,37 @@ function StudentClassroomInner({
               >
                 <PhoneOff className="w-4 h-4" />
                 Yes, Leave Classroom
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Waiting for Tutor Admission Full-Screen Overlay ── */}
+      {!isApproved && !isDenied && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-4 font-sans select-none">
+          <div className="flex flex-col items-center gap-5 text-center max-w-sm w-full bg-slate-900/95 border border-slate-800 p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="w-20 h-20 rounded-3xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-xl">
+              <Loader2 className="w-10 h-10 animate-spin" />
+            </div>
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-wider">
+                WAITING FOR ADMISSION
+              </span>
+              <h2 className="text-xl font-black text-white">Asking to Join...</h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Your admission request has been sent to the tutor. Please wait while the tutor admits you into the live session.
+              </p>
+            </div>
+            <div className="w-full pt-2">
+              <button
+                onClick={() => {
+                  stopAllMediaTracks();
+                  router.push('/dashboard/student');
+                }}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Cancel & Return to Dashboard
               </button>
             </div>
           </div>
