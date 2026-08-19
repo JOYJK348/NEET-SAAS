@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node -e \"const { networkInterfaces } = require('os'); const nets = networkInterfaces(); Object.keys(nets).forEach(name => nets[name].forEach(net => { if ((net.family === 'IPv4' || net.family === 4) && !net.internal) console.log('\\n\\x1b[36m\\x1b[1m📱 MOBILE NETWORK URL: http://' + net.address + ':3001\\x1b[0m\\n'); }));\" && next dev -H 0.0.0.0",
+    "dev:https": "node -e \"const { networkInterfaces } = require('os'); const nets = networkInterfaces(); Object.keys(nets).forEach(name => nets[name].forEach(net => { if ((net.family === 'IPv4' || net.family === 4) && !net.internal) console.log('\\n\\x1b[36m\\x1b[1m📱 MOBILE NETWORK URL (HTTPS - camera/mic/audio work): https://' + net.address + ':3001\\x1b[0m\\n'); }));\" && next dev -H 0.0.0.0 --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -1159,6 +1159,75 @@ function TeacherStudioInner({
   const activePdfDocRef = useRef(activePdfDoc);
   const pdfPageRef = useRef(pdfPage);
   const whiteboardFrameRef = useRef<string | null>(null);
+  const sentPdfChunksForRef = useRef<{ docId: string; url: string } | null>(null);
+  const pdfChunkBusyRef = useRef(false);
+  const pdfDocSeqRef = useRef(0);
+  const pdfRequestPendingRef = useRef(false);
+
+  const pdfDocPayload = (doc: PdfDocumentInfo | null | undefined) => {
+    if (!doc) return null;
+    if (doc.url && doc.url.startsWith('data:')) {
+      return { id: doc.id, name: doc.name, url: '' };
+    }
+    return doc;
+  };
+
+  // Stream an uploaded (data-URL) PDF to every student over the LiveKit DataChannel in chunks
+  const sendPdfDoc = (doc: PdfDocumentInfo | null | undefined, page: number, force = false) => {
+    if (!doc) {
+      safeSend({ type: 'pdf-doc-change', doc: null, page });
+      return;
+    }
+    if (!doc.url || !doc.url.startsWith('data:')) {
+      safeSend({ type: 'pdf-doc-change', doc, page });
+      return;
+    }
+    const alreadySent =
+      !force &&
+      sentPdfChunksForRef.current &&
+      sentPdfChunksForRef.current.docId === doc.id &&
+      sentPdfChunksForRef.current.url === doc.url;
+    if (alreadySent) {
+      safeSend({ type: 'pdf-doc-ready', docId: doc.id, name: doc.name, page });
+      return;
+    }
+    if (pdfChunkBusyRef.current) {
+      pdfRequestPendingRef.current = true;
+      return;
+    }
+    const CHUNK = 24 * 1024;
+    const mySeq = ++pdfDocSeqRef.current;
+    pdfChunkBusyRef.current = true;
+    sentPdfChunksForRef.current = { docId: doc.id, url: doc.url };
+    const data = doc.url;
+    const total = Math.ceil(data.length / CHUNK);
+    let index = 0;
+    const sendChunk = () => {
+      try {
+        safeSend({
+          type: 'pdf-chunk',
+          docId: doc.id,
+          name: doc.name,
+          index,
+          total,
+          chunk: data.slice(index * CHUNK, (index + 1) * CHUNK),
+        });
+      } catch {}
+      index += 1;
+      if (index < total) {
+        if (mySeq !== pdfDocSeqRef.current) return; // a newer stream superseded this one
+        window.setTimeout(sendChunk, 25);
+      } else {
+        safeSend({ type: 'pdf-doc-ready', docId: doc.id, name: doc.name, page });
+        pdfChunkBusyRef.current = false;
+        if (pdfRequestPendingRef.current) {
+          pdfRequestPendingRef.current = false;
+          window.setTimeout(() => sendPdfDoc(doc, page, true), 50);
+        }
+      }
+    };
+    sendChunk();
+  };
 
   useEffect(() => {
     modeRef.current = mode;
@@ -1441,6 +1510,12 @@ function TeacherStudioInner({
             },
           ];
         });
+      } else if (data.type === 'pdf-request') {
+        const doc = activePdfDocRef.current;
+        if (doc && doc.id === data.docId) {
+          if (pdfChunkBusyRef.current) pdfRequestPendingRef.current = true;
+          else sendPdfDoc(doc, pdfPageRef.current, true);
+        }
       }
     } catch {}
   });
@@ -1719,7 +1794,7 @@ function TeacherStudioInner({
       safeSend({
         type: 'mode-sync',
         mode: modeRef.current,
-        doc: activePdfDocRef.current,
+        doc: pdfDocPayload(activePdfDocRef.current),
         pdfPage: pdfPageRef.current,
         whiteboardFrame: whiteboardFrameRef.current,
         isMicOn: isMicOnRef.current,
@@ -1734,7 +1809,10 @@ function TeacherStudioInner({
     if (newMode === 'screen' && !isScreenSharing) {
       startScreenShare();
     }
-    safeSend({ type: 'mode-change', mode: newMode, pdfPage, doc: activePdfDoc });
+    safeSend({ type: 'mode-change', mode: newMode, pdfPage, doc: pdfDocPayload(activePdfDoc) });
+    if (newMode === 'pdf' && activePdfDoc) {
+      sendPdfDoc(activePdfDoc, pdfPage);
+    }
     try {
       const modeBc = new BroadcastChannel('neet-live-mode-sync');
       modeBc.postMessage({
@@ -1750,7 +1828,8 @@ function TeacherStudioInner({
 
   const handlePdfPageChange = (page: number) => {
     setPdfPage(page);
-    safeSend({ type: 'pdf-page-change', page, doc: activePdfDoc });
+    pdfPageRef.current = page;
+    safeSend({ type: 'pdf-page-change', page, doc: pdfDocPayload(activePdfDoc) });
     try {
       const bc = new BroadcastChannel('neet-live-pdf-sync');
       bc.postMessage({ type: 'pdf-sync', page, doc: activePdfDoc, classId });
@@ -1761,7 +1840,9 @@ function TeacherStudioInner({
   const handlePdfDocChange = (doc: PdfDocumentInfo) => {
     setActivePdfDoc(doc);
     setPdfPage(1);
-    safeSend({ type: 'pdf-doc-change', doc, page: 1 });
+    pdfPageRef.current = 1;
+    sentPdfChunksForRef.current = null; // force re-send of uploaded PDF bytes
+    sendPdfDoc(doc, 1);
     try {
       const bc = new BroadcastChannel('neet-live-pdf-sync');
       bc.postMessage({ type: 'pdf-sync', page: 1, doc, classId });

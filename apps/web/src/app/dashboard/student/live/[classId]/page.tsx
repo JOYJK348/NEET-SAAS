@@ -129,6 +129,14 @@ async function getScreenMediaStream(): Promise<{
   }
 }
 
+/** Fallback: treat localhost + secure contexts as media-ready */
+function isSecureMediaContext(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.isSecureContext) return true;
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
 /** Decode JWT payload and check it has at least 30 seconds remaining */
 function isTokenFresh(token: string): boolean {
   try {
@@ -648,9 +656,11 @@ function StudentClassroomInner({
     return list;
   }, [remoteParticipants, dbParticipants, studentSelfName]);
   const screenTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
-  const activeScreenTrack = screenTracks.find(
-    (t) => t.publication || (t as any).track || t.source === Track.Source.ScreenShare,
-  );
+  const activeScreenTrack =
+    screenTracks.find((t) => (t as any).track) ||
+    screenTracks.find((t) => t.publication) ||
+    screenTracks[0];
+  const hasLiveScreenTrack = Boolean((activeScreenTrack as any)?.track);
 
   // ── Sync Mode State from Teacher DataChannel: 'whiteboard' | 'pdf' | 'screen'
   const [teacherMode, setTeacherMode] = useState<Mode>(() => {
@@ -860,6 +870,76 @@ function StudentClassroomInner({
   }, []);
 
   // ── WebRTC LiveKit DataChannel for Real-Time Cross-Device Sync (Global Internet)
+  // ── Uploaded PDF transfer reassembly (LiveKit DataChannel chunks)
+  const pdfChunksRef = useRef<Record<string, Record<number, string>>>({});
+  const pdfChunkTotalRef = useRef<Record<string, number>>({});
+  const pdfChunkTitleRef = useRef<Record<string, string>>({});
+  const receivedPdfUrlsRef = useRef<Set<string>>(new Set());
+  const pdfRequestedRef = useRef<Set<string>>(new Set());
+  const pdfRequestSendRef = useRef<((payload: any) => void) | null>(null);
+
+  const maybeRequestPdf = (docId: string | undefined) => {
+    if (!docId) return;
+    if (receivedPdfUrlsRef.current.has(docId)) return;
+    if (pdfRequestedRef.current.has(docId)) return;
+    pdfRequestedRef.current.add(docId);
+    pdfRequestSendRef.current?.({ type: 'pdf-request', docId });
+  };
+
+  const dataUrlToBlob = (dataUrl: string): Blob | null => {
+    const commaIdx = dataUrl.indexOf(',');
+    if (commaIdx < 0) return null;
+    const meta = dataUrl.slice(0, commaIdx);
+    const base64 = dataUrl.slice(commaIdx + 1);
+    const mime = (meta.match(/^data:([^;]+)/) || [])[1] || 'application/pdf';
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      return new Blob([bytes], { type: mime });
+    } catch {
+      return null;
+    }
+  };
+
+  const assemblePdfDoc = (docId: string): boolean => {
+    const chunks = pdfChunksRef.current[docId];
+    const total = pdfChunkTotalRef.current[docId];
+    if (!chunks || !total) return false;
+    let dataUrl = '';
+    for (let i = 0; i < total; i += 1) {
+      const c = chunks[i];
+      if (typeof c !== 'string') return false;
+      dataUrl += c;
+    }
+    try {
+      const blob = dataUrlToBlob(dataUrl);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        setTeacherPdfDoc((prev) => {
+          const base =
+            prev && prev.id === docId
+              ? prev
+              : ({
+                  id: docId,
+                  name: pdfChunkTitleRef.current[docId] || 'Uploaded Document.pdf',
+                  url: '',
+                  category: 'Live',
+                  totalPages: 1,
+                } as PdfDocumentInfo);
+          return { ...base, url };
+        });
+        receivedPdfUrlsRef.current.add(docId);
+        pdfRequestedRef.current.delete(docId);
+        setTeacherMode('pdf');
+        setStudentViewMode('pdf');
+      }
+    } catch {}
+    delete pdfChunksRef.current[docId];
+    delete pdfChunkTotalRef.current[docId];
+    return true;
+  };
+
   const { send: studentDataSend } = useDataChannel((msg) => {
     try {
       const data = JSON.parse(new TextDecoder().decode(msg.payload));
@@ -870,15 +950,33 @@ function StudentClassroomInner({
           else if (data.mode === 'pdf') setStudentViewMode('pdf');
           else if (data.mode === 'idle') setStudentViewMode('idle');
         }
-        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
+        else maybeRequestPdf(data.doc?.id);
         if (data.page || data.pdfPage) setTeacherPdfPage(data.page || data.pdfPage);
         if (data.whiteboardFrame) setRemoteWhiteboardFrame(data.whiteboardFrame);
         if (typeof data.isMicOn === 'boolean') setIsTutorMicOn(data.isMicOn);
       } else if (data.type === 'pdf-page-change') {
         if (data.page) setTeacherPdfPage(data.page);
-        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
       } else if (data.type === 'pdf-doc-change') {
-        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
+        else maybeRequestPdf(data.doc?.id);
+        if (data.page) setTeacherPdfPage(data.page);
+      } else if (data.type === 'pdf-chunk') {
+        if (!receivedPdfUrlsRef.current.has(data.docId)) {
+          if (!pdfChunksRef.current[data.docId]) pdfChunksRef.current[data.docId] = {};
+          pdfChunksRef.current[data.docId][data.index] = data.chunk;
+          pdfChunkTotalRef.current[data.docId] = data.total;
+          if (data.name) pdfChunkTitleRef.current[data.docId] = data.name;
+          assemblePdfDoc(data.docId);
+        }
+      } else if (data.type === 'pdf-doc-ready') {
+        if (!receivedPdfUrlsRef.current.has(data.docId)) {
+          if (data.name) pdfChunkTitleRef.current[data.docId] = data.name;
+          assemblePdfDoc(data.docId);
+        } else {
+          maybeRequestPdf(data.docId);
+        }
         if (data.page) setTeacherPdfPage(data.page);
       } else if (data.type === 'whiteboard-frame') {
         setRemoteWhiteboardFrame(data.frame);
@@ -900,6 +998,18 @@ function StudentClassroomInner({
       }
     } catch {}
   });
+
+  pdfRequestSendRef.current = (payload: any) => {
+    try {
+      const encoder = new TextEncoder();
+      const promise = studentDataSend(encoder.encode(JSON.stringify(payload)), {
+        reliable: true,
+      });
+      if (promise && typeof (promise as any).catch === 'function') {
+        (promise as any).catch(() => {});
+      }
+    } catch {}
+  };
 
   const safeSend = useCallback(
     (payload: any) => {
@@ -1410,7 +1520,9 @@ function StudentClassroomInner({
 
       if (connectionState === ConnectionState.Connected) {
         try {
-          await localParticipant.setScreenShareEnabled(true);
+          const vTrack = stream.getVideoTracks()[0];
+          if (vTrack)
+            await localParticipant.publishTrack(vTrack, { source: Track.Source.ScreenShare });
         } catch {}
       }
 
@@ -1619,6 +1731,12 @@ function StudentClassroomInner({
   // ── Toggle Mic/Cam — capture locally, publish to LiveKit, and mirror via frames
   const toggleMic = async () => {
     const next = !isMicOn;
+    if (next && !isSecureMediaContext()) {
+      toast.error(
+        'Microphone requires a secure HTTPS connection. Open this class over https:// (or localhost) on every device.',
+      );
+      return;
+    }
     setIsMicOn(next);
     try {
       if (next) {
@@ -1656,6 +1774,12 @@ function StudentClassroomInner({
 
   const toggleCam = async () => {
     const next = !isCamOn;
+    if (next && !isSecureMediaContext()) {
+      toast.error(
+        'Camera requires a secure HTTPS connection. Open this class over https:// (or localhost) on every device.',
+      );
+      return;
+    }
     setIsCamOn(next);
     try {
       if (next) {
@@ -2202,7 +2326,16 @@ function StudentClassroomInner({
             {/* Screen Share Mode */}
             {!isScreenSharing && teacherMode === 'screen' && (
               <div className="w-full h-full relative flex items-center justify-center bg-black group overflow-hidden">
-                {remoteScreenFrame ? (
+                {hasLiveScreenTrack && activeScreenTrack ? (
+                  <VideoTrack
+                    trackRef={{
+                      participant: activeScreenTrack.participant,
+                      source: Track.Source.ScreenShare,
+                      publication: activeScreenTrack.publication,
+                    }}
+                    className="w-full h-full object-contain max-h-[85vh]"
+                  />
+                ) : remoteScreenFrame ? (
                   <>
                     <img
                       src={remoteScreenFrame}
