@@ -57,33 +57,83 @@ import StudioWhiteboard from '@/components/live/studio-whiteboard';
 
 type Mode = 'idle' | 'whiteboard' | 'screen';
 
-/** Safely capture display stream across Android/iOS mobile and desktop browsers */
-async function getScreenMediaStream(): Promise<MediaStream | null> {
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+/** Safely capture display stream across Android/iOS mobile and desktop browsers without gesture loss */
+async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+    return { stream: null, isUnsupported: true, error: 'Media devices not available on this browser.' };
+  }
+
+  const ua = navigator.userAgent || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(ua);
+
+  if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+    return {
+      stream: null,
+      isUnsupported: true,
+      error: 'Direct screen capture is not supported by this browser. Use Document Camera or Whiteboard mode.',
+    };
+  }
+
+  try {
+    let stream: MediaStream;
+    if (isMobile) {
+      // Mobile Chrome / Android 10+ requires clean { video: true } constraint without desktop cursor property
+      // directly in the user gesture callstack.
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
+    } else {
+      // Desktop supports cursor constraints
+      try {
+        stream = await (navigator.mediaDevices as any).getDisplayMedia({
+          video: { cursor: 'always' },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+        });
+      }
+    }
+    return { stream };
+  } catch (err: any) {
+    if (
+      err?.name === 'NotAllowedError' ||
+      err?.name === 'AbortError' ||
+      err?.message?.includes('Permission denied') ||
+      err?.message?.includes('canceled') ||
+      err?.message?.includes('cancelled')
+    ) {
+      return { stream: null, isCancelled: true, error: 'Screen sharing was cancelled.' };
+    }
+    if (err?.name === 'NotSupportedError' || err?.name === 'TypeError') {
+      return { stream: null, isUnsupported: true, error: 'Screen sharing not supported on this device/browser.' };
+    }
+    return { stream: null, error: err?.message || 'Unable to start screen share.' };
+  }
+}
+
+/** Document / Back-Camera stream for mobile note/textbook sharing */
+async function getDocumentCameraStream(): Promise<MediaStream | null> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
     return null;
   }
   try {
-    return await navigator.mediaDevices.getDisplayMedia({
+    return await navigator.mediaDevices.getUserMedia({
       video: {
-        cursor: 'always',
-      } as any,
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
       audio: false,
     });
-  } catch (err1) {
+  } catch {
     try {
-      return await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: false,
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
       });
-    } catch (err2) {
-      try {
-        return await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-        });
-      } catch (err3) {
-        console.log('Screen share prompt closed or unsupported on this device:', err3);
-        return null;
-      }
+    } catch {
+      return null;
     }
   }
 }
@@ -397,22 +447,9 @@ function TeacherStudioInner({
 
       let compositeStream: MediaStream | null = null;
 
-      // 1. Try Screen / Window Display Capture (getDisplayMedia) on BOTH Mobile and Desktop!
+      // Studio Whiteboard Canvas + Tutor Camera / Mic Composite Recording Stream
       try {
-        const displayStream = await getScreenMediaStream();
-        if (displayStream && displayStream.getVideoTracks().length > 0) {
-          compositeStream = new MediaStream();
-          const vTrack = displayStream.getVideoTracks()[0];
-          if (vTrack) compositeStream.addTrack(vTrack);
-        }
-      } catch (err) {
-        console.log('Screen capture prompt skipped or cancelled:', err);
-      }
-
-      // 2. Mobile & Desktop Fallback: Studio Canvas or Direct UserMedia Stream
-      if (!compositeStream || compositeStream.getVideoTracks().length === 0) {
-        try {
-          // Get Tutor Camera + Audio stream
+        // Get Tutor Camera + Audio stream
           const userMediaStream = await navigator.mediaDevices
             .getUserMedia({
               video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
@@ -521,7 +558,6 @@ function TeacherStudioInner({
             } catch {}
           }
         }
-      }
 
       if (!compositeStream || compositeStream.getTracks().length === 0) {
         toast.error('⚠️ Please allow Camera/Microphone access to enable class recording.');
@@ -1631,6 +1667,9 @@ function TeacherStudioInner({
     };
   }, []);
 
+  const [isDocCamera, setIsDocCamera] = useState(false);
+  const docCameraStreamRef = useRef<MediaStream | null>(null);
+
   // ── Screen Share Toggle via MediaStream & Frame Broadcast
   const startScreenShare = async () => {
     try {
@@ -1638,21 +1677,35 @@ function TeacherStudioInner({
         screenStreamRef.current.getTracks().forEach((t) => t.stop());
         screenStreamRef.current = null;
       }
+      if (docCameraStreamRef.current) {
+        docCameraStreamRef.current.getTracks().forEach((t) => t.stop());
+        docCameraStreamRef.current = null;
+      }
       if (frameIntervalRef.current) {
         clearInterval(frameIntervalRef.current);
       }
 
-      const stream = await getScreenMediaStream();
-      if (!stream) {
-        toast.info('Screen share prompt closed or not permitted.');
+      const res = await getScreenMediaStream();
+      if (!res.stream) {
+        if (res.isCancelled) {
+          toast.info('Screen share was cancelled.');
+        } else if (res.isUnsupported) {
+          toast.error(res.error || 'Screen capture not supported on this browser.');
+          toast('Tip: Tap Document Camera to stream notes/textbook using your rear camera!');
+        } else {
+          toast.error(res.error || 'Screen share could not be started.');
+        }
         stopScreenShare();
         return;
       }
 
+      const stream = res.stream;
       screenStreamRef.current = stream;
       setIsScreenSharing(true);
+      setIsDocCamera(false);
       setMode('screen');
       safeSend({ type: 'mode-change', mode: 'screen', pdfPage });
+      toast.success('📱 Screen Sharing Active! You can switch to any app on your phone.');
 
       const hiddenVideo = document.createElement('video');
       hiddenVideo.srcObject = stream;
@@ -1700,6 +1753,68 @@ function TeacherStudioInner({
     }
   };
 
+  const startDocCameraShare = async () => {
+    try {
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach((t) => t.stop());
+        screenStreamRef.current = null;
+      }
+      if (docCameraStreamRef.current) {
+        docCameraStreamRef.current.getTracks().forEach((t) => t.stop());
+        docCameraStreamRef.current = null;
+      }
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current);
+      }
+
+      const stream = await getDocumentCameraStream();
+      if (!stream) {
+        toast.error('Could not access rear document camera.');
+        return;
+      }
+
+      docCameraStreamRef.current = stream;
+      screenStreamRef.current = stream;
+      setIsScreenSharing(true);
+      setIsDocCamera(true);
+      setMode('screen');
+      safeSend({ type: 'mode-change', mode: 'screen', pdfPage });
+      toast.success('📷 Document Camera Active! Aim at your notes / textbook.');
+
+      const hiddenVideo = document.createElement('video');
+      hiddenVideo.srcObject = stream;
+      hiddenVideo.muted = true;
+      hiddenVideo.playsInline = true;
+      hiddenVideo.play().catch(() => {});
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+
+      frameIntervalRef.current = setInterval(() => {
+        if (ctx && hiddenVideo.readyState >= 2) {
+          const w = hiddenVideo.videoWidth || 1280;
+          const h = hiddenVideo.videoHeight || 720;
+          if (canvas.width !== w) canvas.width = w;
+          if (canvas.height !== h) canvas.height = h;
+
+          ctx.drawImage(hiddenVideo, 0, 0, w, h);
+          const frame = canvas.toDataURL('image/jpeg', 0.6);
+          screenFrameRef.current = frame;
+          try {
+            broadcastRef.current?.postMessage({ type: 'frame', frame });
+          } catch {}
+        }
+      }, 33);
+
+      stream.getVideoTracks()[0].onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.warn('Doc camera failed:', err);
+      stopScreenShare();
+    }
+  };
+
   const stopScreenShare = () => {
     if (frameIntervalRef.current) {
       clearInterval(frameIntervalRef.current);
@@ -1709,7 +1824,12 @@ function TeacherStudioInner({
       screenStreamRef.current.getTracks().forEach((t) => t.stop());
       screenStreamRef.current = null;
     }
+    if (docCameraStreamRef.current) {
+      docCameraStreamRef.current.getTracks().forEach((t) => t.stop());
+      docCameraStreamRef.current = null;
+    }
     setIsScreenSharing(false);
+    setIsDocCamera(false);
     setScreenFrame(null);
     setMode('idle');
     broadcastRef.current?.postMessage({ type: 'stop' });
@@ -2103,22 +2223,49 @@ function TeacherStudioInner({
           )}
 
           {/* Mode 3: Screen Share */}
+          {/* Mode 3: Screen Share */}
           {mode === 'screen' && (
             <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center relative p-2 sm:p-4">
               {/* Top Banner Control Bar for Stop Screen Sharing */}
               {(isScreenSharing || screenFrame || screenStreamRef.current) && (
-                <div className="absolute top-4 left-4 right-4 z-40 flex items-center justify-between bg-slate-900/90 border border-slate-700/80 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-2xl">
+                <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 flex flex-col sm:flex-row items-center justify-between gap-2 bg-slate-900/95 border border-slate-700/80 backdrop-blur-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl">
                   <div className="flex items-center gap-2 text-rose-400">
-                    <Monitor className="w-4 h-4 animate-pulse" />
-                    <span className="text-xs font-extrabold text-white tracking-wide">Screen Share Active</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <Monitor className="w-4 h-4 animate-pulse text-rose-400" />
+                        <span className="text-xs font-black text-white tracking-wide">
+                          {isDocCamera ? '📷 Document Camera Sharing Live' : '📱 Screen Sharing Live (WhatsApp Style)'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                        {isDocCamera ? 'Rear camera is streaming textbook/notes to students.' : 'You can switch to any app/PDF on your device; students see your live screen.'}
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    onClick={stopScreenShare}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs shadow-lg transition-all cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                    <span>Stop Screen Share 🛑</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (isDocCamera) {
+                          startScreenShare();
+                        } else {
+                          startDocCameraShare();
+                        }
+                      }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition shadow-sm cursor-pointer"
+                      title={isDocCamera ? 'Switch to Screen Share' : 'Switch to Document Camera'}
+                    >
+                      {isDocCamera ? <Monitor className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
+                      <span>{isDocCamera ? 'Share Screen' : 'Doc Camera'}</span>
+                    </button>
+                    <button
+                      onClick={stopScreenShare}
+                      className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs shadow-lg transition-all cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Stop Sharing 🛑</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2132,12 +2279,12 @@ function TeacherStudioInner({
                       el.srcObject = screenStreamRef.current;
                     }
                   }}
-                  className="w-full h-full object-contain rounded-xl border border-slate-800 shadow-2xl"
+                  className="w-full h-full object-contain rounded-xl border border-slate-800 shadow-2xl max-h-[85vh]"
                 />
               ) : screenFrame ? (
                 <img
                   src={screenFrame}
-                  className="w-full h-full object-contain rounded-xl border border-slate-800 shadow-2xl"
+                  className="w-full h-full object-contain rounded-xl border border-slate-800 shadow-2xl max-h-[85vh]"
                   alt="Screen Share"
                 />
               ) : screenTracks.length > 0 ? (
@@ -2146,15 +2293,30 @@ function TeacherStudioInner({
                   className="w-full h-full object-contain rounded-xl border border-slate-800"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center gap-3 text-slate-500">
-                  <Monitor className="w-12 h-12 text-violet-500 animate-pulse" />
-                  <p className="text-sm font-semibold text-slate-300">Screen Sharing Ready</p>
-                  <button
-                    onClick={startScreenShare}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-bold"
-                  >
-                    Start Screen Share Now
-                  </button>
+                <div className="flex flex-col items-center justify-center gap-4 text-slate-500 p-6 text-center max-w-sm">
+                  <div className="w-16 h-16 rounded-3xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-xl">
+                    <Monitor className="w-8 h-8 animate-pulse text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-base font-extrabold text-slate-200 mb-1">Mobile & Desktop Screen Share</p>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Share your entire phone screen (WhatsApp style) or point your rear camera at physical notes.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <button
+                      onClick={startScreenShare}
+                      className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Monitor className="w-4 h-4" /> Share Phone Screen
+                    </button>
+                    <button
+                      onClick={startDocCameraShare}
+                      className="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Video className="w-4 h-4" /> Doc / Rear Camera
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -2261,8 +2423,8 @@ function TeacherStudioInner({
               {/* Screen Share / Stop Sharing Button */}
               <button
                 onClick={() => { if (isScreenSharing || mode === 'screen') stopScreenShare(); else startScreenShare(); }}
-                title={isScreenSharing || mode === 'screen' ? 'Stop Screen Share' : 'Share Screen'}
-                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 ${
+                title={isScreenSharing || mode === 'screen' ? 'Stop Screen Share' : 'Share Phone / Desktop Screen'}
+                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   isScreenSharing || mode === 'screen'
                     ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
@@ -2270,6 +2432,26 @@ function TeacherStudioInner({
               >
                 <Monitor className="w-4 h-4" />
                 <span className="hidden sm:inline">{isScreenSharing || mode === 'screen' ? 'Stop Share' : 'Share'}</span>
+              </button>
+
+              {/* Document / Back Camera for Mobile Notes */}
+              <button
+                onClick={() => {
+                  if (isScreenSharing && isDocCamera) {
+                    stopScreenShare();
+                  } else {
+                    startDocCameraShare();
+                  }
+                }}
+                title={isScreenSharing && isDocCamera ? 'Stop Document Camera' : 'Document Camera (Rear / Notes)'}
+                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  isScreenSharing && isDocCamera
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-500/20'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <Video className="w-4 h-4 text-emerald-600" />
+                <span className="hidden md:inline">Doc Camera</span>
               </button>
 
               {/* Whiteboard */}
