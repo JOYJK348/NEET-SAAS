@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Mic,
@@ -29,7 +29,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import dynamic from 'next/dynamic';
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -39,8 +38,10 @@ import {
   useDataChannel,
   useConnectionState,
   useTracks,
+  useRoomContext,
+  TrackReference,
 } from '@livekit/components-react';
-import { ConnectionState, Track } from 'livekit-client';
+import { ConnectionState, Track, RoomEvent } from 'livekit-client';
 import { useAuth } from '@/providers/auth-provider';
 import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
@@ -50,10 +51,11 @@ import StudioPdfPresenter, {
   PdfDocumentInfo,
   SAMPLE_NEET_DOCUMENTS,
 } from '@/components/live/studio-pdf-presenter';
+import LivekitDebugPanel from '@/components/live/livekit-debug-panel';
 
 type Mode = 'idle' | 'whiteboard' | 'screen' | 'pdf';
 
-/** Safely capture display stream using runtime capability detection and granular error handling */
+/** Safely capture display stream using runtime capability detection */
 async function getScreenMediaStream(): Promise<{
   stream: MediaStream | null;
   error?: string;
@@ -68,7 +70,7 @@ async function getScreenMediaStream(): Promise<{
     return {
       stream: null,
       isUnsupported: true,
-      error: 'Screen sharing is not supported on this browser. Please use Whiteboard mode.',
+      error: 'Screen sharing is not supported on this browser.',
     };
   }
 
@@ -81,7 +83,6 @@ async function getScreenMediaStream(): Promise<{
   }
 
   try {
-    // Direct invocation preserves user gesture activation
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
       audio: false,
@@ -114,36 +115,8 @@ async function getScreenMediaStream(): Promise<{
           'Could not access screen. System permission or another application may be blocking capture.',
       };
     }
-    if (name === 'NotSupportedError' || name === 'TypeError') {
-      return {
-        stream: null,
-        isUnsupported: true,
-        error: 'Screen sharing is not supported by this browser version.',
-      };
-    }
-    if (name === 'OverconstrainedError') {
-      return { stream: null, error: 'Screen capture constraints could not be satisfied.' };
-    }
 
     return { stream: null, error: msg || 'Unable to start screen share.' };
-  }
-}
-
-/** Fallback: treat localhost + secure contexts as media-ready */
-function isSecureMediaContext(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (window.isSecureContext) return true;
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
-}
-
-/** Decode JWT payload and check it has at least 30 seconds remaining */
-function isTokenFresh(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now() + 30_000;
-  } catch {
-    return false;
   }
 }
 
@@ -153,17 +126,16 @@ export default function StudentClassroomPage() {
   const classId = params.classId as string;
   const { user, hasHydrated } = useAuthStore();
 
-  // ── Admission state — ALWAYS starts in waiting room until tutor approves
   const studentId =
     user?.id ||
     (typeof window !== 'undefined'
       ? localStorage.getItem('studentId') || 'student-1'
       : 'student-1');
+
   const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>(
     'waiting',
   );
 
-  // Clear all cached approvals on mount so every fresh page load requires tutor admission
   useEffect(() => {
     try {
       localStorage.removeItem(`class_${classId}_approved`);
@@ -173,10 +145,8 @@ export default function StudentClassroomPage() {
       sessionStorage.removeItem(`class_${classId}_approved_${studentId}`);
       sessionStorage.removeItem(`class_${classId}_approved_global`);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId, studentId]);
 
-  // ── LiveKit config — populated AFTER tutor approval
   const [liveKitConfig, setLiveKitConfig] = useState<{
     token: string;
     wsUrl: string;
@@ -185,16 +155,15 @@ export default function StudentClassroomPage() {
   } | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0); // incremented to trigger retry
-  // Ref guard — prevents the token-fetch effect from re-running on every render
-  const tokenFetchedRef = useRef(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // ── Top-Level Class Status Checker — Forces instant redirect if class is ENDED
+  // Top-Level Class Status Checker
   useEffect(() => {
     const checkStatusOnMount = async () => {
       try {
         const data = await api.get<any>(`/live-classes/${classId}`, { skipGlobalToast: true });
-        if (data?.status === 'CANCELLED') {
+        const classObj = data?.data ?? data;
+        if (classObj?.status === 'CANCELLED') {
           toast.error('This class has been cancelled.');
           if (typeof window !== 'undefined') {
             window.location.href = '/dashboard/student';
@@ -205,16 +174,15 @@ export default function StudentClassroomPage() {
     checkStatusOnMount();
   }, [classId]);
 
-  // ── Step 1: Waiting room — send join-request & listen for admit/deny
+  // Step 1: Waiting Room — Register request and poll admission status
   useEffect(() => {
     if (admissionState !== 'waiting') return;
 
     const studentName = user
       ? `${user.firstName} ${user.lastName || ''}`.trim()
       : localStorage.getItem('user_display_name') || 'Student';
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Register join request via API (cross-device DB-backed)
+    // Register join request via API
     api
       .post(
         `/live-classes/${classId}/join-request`,
@@ -223,7 +191,7 @@ export default function StudentClassroomPage() {
       )
       .catch(() => {});
 
-    // Poll approval status via API every 1.5s
+    // Poll approval status every 1.5s
     const pollStatus = async () => {
       try {
         const res = await api.get<{ approved?: boolean; denied?: boolean }>(
@@ -240,74 +208,16 @@ export default function StudentClassroomPage() {
         }
       } catch {}
     };
+
     pollStatus();
     const pollInterval = setInterval(pollStatus, 1500);
 
-    const joinChannel = new BroadcastChannel('neet-live-join-requests');
-
-    const sendReq = () => {
-      try {
-        joinChannel.postMessage({
-          type: 'join-request',
-          classId,
-          id: studentId,
-          name: studentName,
-          time,
-        });
-      } catch {}
-    };
-    sendReq();
-    const interval = setInterval(sendReq, 1000);
-
-    joinChannel.onmessage = (e) => {
-      const d = e.data;
-      if (d.type === 'class-ended' && (!d.classId || d.classId === classId)) {
-        setAdmissionState('waiting');
-        setLiveKitConfig(null);
-        tokenFetchedRef.current = false;
-        toast.info('The tutor ended the live session.');
-      } else if (d.type === 'class-reopened' && (!d.classId || d.classId === classId)) {
-        setAdmissionState('waiting');
-        setLiveKitConfig(null);
-        tokenFetchedRef.current = false;
-      } else if (
-        d.type === 'join-approved' &&
-        (!d.classId || d.classId === classId) &&
-        (!d.studentId || d.studentId === studentId || d.studentId === 'all')
-      ) {
-        try {
-          sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-        } catch {}
-        setAdmissionState('admitted');
-      } else if (
-        d.type === 'join-denied' &&
-        (!d.classId || d.classId === classId) &&
-        (!d.studentId || d.studentId === studentId || d.studentId === 'all')
-      ) {
-        setAdmissionState('denied');
-      }
-    };
-
-    // sessionStorage fallback for same-browser cross-tab sync
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === `class_${classId}_approved_${studentId}`) {
-        setAdmissionState('admitted');
-      }
-      if (e.key === `class_${classId}_denied_${studentId}`) {
-        setAdmissionState('denied');
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
     return () => {
-      clearInterval(interval);
       clearInterval(pollInterval);
-      joinChannel.close();
-      window.removeEventListener('storage', handleStorage);
     };
   }, [admissionState, classId, studentId, user]);
 
-  // ── Step 2: Once admitted, fetch real LiveKit join token
+  // Step 2: Once admitted, fetch real LiveKit token for the class room
   useEffect(() => {
     if (admissionState !== 'admitted') return;
     if (!hasHydrated) return;
@@ -318,93 +228,36 @@ export default function StudentClassroomPage() {
       setTokenLoading(true);
       setTokenError(false);
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         const nameFromUser = user ? `${user.firstName} ${user.lastName || ''}`.trim() : '';
         const studentName = nameFromUser || localStorage.getItem('user_display_name') || 'Student';
-        if (nameFromUser) localStorage.setItem('user_display_name', nameFromUser);
-
-        const accessToken =
-          localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        };
         const encodedName = encodeURIComponent(studentName);
 
-        try {
-          const data = await api.get<any>(
-            `/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-            { skipGlobalToast: true },
-          );
-          if (data && data.token && isMounted) {
-            const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
-            setLiveKitConfig({
-              token: data.token,
-              wsUrl,
-              classTitle: data.classTitle || 'NEET Live Interactive Session',
-              scheduledEnd: data.scheduledEnd,
-            });
-            localStorage.setItem(`student_token_${classId}`, data.token);
-            localStorage.setItem(`student_wsUrl_${classId}`, wsUrl);
-            setTokenLoading(false);
-            return;
-          }
-        } catch {}
+        const data = await api.get<any>(
+          `/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
+          { skipGlobalToast: true },
+        );
 
-        const endpoints = [
-          `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-          `http://${host}:3000/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-          `http://${host}:3000/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-          `/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-          `/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
-        ];
-
-        for (const url of endpoints) {
-          try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 8000);
-            const res = await fetch(url, { headers, signal: controller.signal });
-            clearTimeout(timer);
-            if (res.ok) {
-              const data = await res.json();
-              if (data.token && isMounted) {
-                const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
-                setLiveKitConfig({
-                  token: data.token,
-                  wsUrl,
-                  classTitle: data.classTitle || 'NEET Live Interactive Session',
-                  scheduledEnd: data.scheduledEnd,
-                });
-                localStorage.setItem(`student_token_${classId}`, data.token);
-                localStorage.setItem(`student_wsUrl_${classId}`, wsUrl);
-                setTokenLoading(false);
-                return;
-              }
-            }
-          } catch {}
+        if (data && data.token && isMounted) {
+          const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
+          setLiveKitConfig({
+            token: data.token,
+            wsUrl,
+            classTitle: data.classTitle || 'NEET Live Interactive Session',
+            scheduledEnd: data.scheduledEnd,
+          });
+          localStorage.setItem(`student_token_${classId}`, data.token);
+          localStorage.setItem(`student_wsUrl_${classId}`, wsUrl);
+          setTokenLoading(false);
+          return;
         }
 
-        // Direct fallback token so student enters room immediately
         if (isMounted) {
-          const fallbackToken =
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-          const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-          setLiveKitConfig({
-            token: fallbackToken,
-            wsUrl: fallbackWs,
-            classTitle: 'NEET Live Interactive Session',
-          });
+          setTokenError(true);
         }
-      } catch {
+      } catch (err) {
+        console.error('[LiveKit Student] Failed to fetch join token:', err);
         if (isMounted) {
-          const fallbackToken =
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-          const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-          setLiveKitConfig({
-            token: fallbackToken,
-            wsUrl: fallbackWs,
-            classTitle: 'NEET Live Interactive Session',
-          });
+          setTokenError(true);
         }
       } finally {
         if (isMounted) {
@@ -419,11 +272,9 @@ export default function StudentClassroomPage() {
     };
   }, [admissionState, classId, user, hasHydrated, retryCount]);
 
-  // ── Show waiting room (Seamless Dark Meeting Theme)
   if (admissionState === 'waiting') {
     return (
       <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
-        {/* Header Bar */}
         <header className="h-12 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-30 shadow-md">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
@@ -436,7 +287,6 @@ export default function StudentClassroomPage() {
           </div>
         </header>
 
-        {/* Dark Waiting Room */}
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="flex flex-col items-center gap-5 text-center max-w-xs w-full">
             <div className="w-20 h-20 rounded-3xl bg-blue-600/20 border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-xl">
@@ -459,22 +309,21 @@ export default function StudentClassroomPage() {
     );
   }
 
-  // ── Show denied screen
   if (admissionState === 'denied') {
     return (
-      <div className="h-screen w-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans">
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-300">
-          <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto text-3xl">
+      <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-slate-100">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto text-3xl">
             🚫
           </div>
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[11px] font-black uppercase tracking-wider">
               ADMISSION DECLINED
             </span>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-xl font-black text-white tracking-tight">
               Teacher Declined Entry
             </h2>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+            <p className="text-xs text-slate-400 font-medium leading-relaxed">
               The tutor has declined your admission request at this time. You may try again or
               return to the dashboard.
             </p>
@@ -488,7 +337,7 @@ export default function StudentClassroomPage() {
             </button>
             <button
               onClick={() => router.push('/dashboard/student')}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer"
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-2xl transition cursor-pointer"
             >
               Return to Dashboard
             </button>
@@ -498,11 +347,9 @@ export default function StudentClassroomPage() {
     );
   }
 
-  // ── Admitted — show token loading (Seamless Dark Meeting Theme)
   if (tokenLoading) {
     return (
       <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
-        {/* Header Bar */}
         <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-md">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
@@ -516,41 +363,33 @@ export default function StudentClassroomPage() {
             </div>
           </div>
         </header>
-        {/* Dark Classroom Placeholder */}
         <div className="flex-1 bg-slate-950 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="text-xs font-semibold tracking-wide">Connecting live stream...</span>
+            <span className="text-xs font-semibold tracking-wide">
+              Connecting LiveKit session...
+            </span>
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Token error — class not ready
   if (tokenError || !liveKitConfig?.token) {
     return (
-      <div className="h-screen w-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
-        <div className="bg-white border border-slate-200/90 shadow-xl rounded-3xl p-8 max-w-md w-full text-center space-y-5 animate-in fade-in zoom-in duration-300">
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+      <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-center p-6 font-sans text-slate-100">
+        <div className="bg-slate-900 border border-slate-800 shadow-xl rounded-3xl p-8 max-w-md w-full text-center space-y-5 animate-in fade-in zoom-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
             <AlertTriangle className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">
-              Class Not Started Yet
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
-              You have been admitted but the tutor has not started the live room yet. Please wait
-              and try again.
+            <h3 className="text-lg font-black text-white tracking-tight">Class Not Started Yet</h3>
+            <p className="text-xs text-slate-400 mt-1 font-medium leading-relaxed">
+              You have been admitted, but the room session could not be established. Please retry.
             </p>
           </div>
           <button
-            onClick={() => {
-              tokenFetchedRef.current = false;
-              setTokenError(false);
-              setTokenLoading(false);
-              setRetryCount((c) => c + 1); // triggers the fetch useEffect
-            }}
+            onClick={() => setRetryCount((c) => c + 1)}
             className="w-full py-3 px-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-2xl text-xs font-black transition-all shadow-md cursor-pointer"
           >
             Try Joining Again 🔄
@@ -568,8 +407,22 @@ export default function StudentClassroomPage() {
       serverUrl={wsUrl.startsWith('ws') ? wsUrl : 'wss://neet-n80sqwyo.livekit.cloud'}
       token={token}
       connect={true}
+      options={{
+        adaptiveStream: true,
+        dynacast: true,
+        publishDefaults: {
+          simulcast: true,
+          stopMicTrackOnMute: true,
+        },
+      }}
       data-lk-theme="default"
       className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden font-sans select-none"
+      onConnected={() => {
+        console.log('[LiveKit Student] Connected to room:', classId);
+      }}
+      onDisconnected={(reason) => {
+        console.log('[LiveKit Student] Disconnected from room:', reason);
+      }}
     >
       <StudentClassroomInner
         classId={classId}
@@ -592,7 +445,9 @@ function StudentClassroomInner({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { localParticipant } = useLocalParticipant();
+  const room = useRoomContext();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } =
+    useLocalParticipant();
   const remoteParticipants = useRemoteParticipants();
   const connectionState = useConnectionState();
 
@@ -601,22 +456,90 @@ function StudentClassroomInner({
     Array<{ id: string; name: string; role?: string; admissionNumber?: string }>
   >([]);
 
+  // ── Audio Autoplay Policy Recovery
+  const [audioBlocked, setAudioBlocked] = useState(false);
+
+  useEffect(() => {
+    if (!room) return;
+    const updateAudioStatus = () => {
+      setAudioBlocked(!room.canPlaybackAudio);
+    };
+    updateAudioStatus();
+    room.on(RoomEvent.AudioPlaybackStatusChanged, updateAudioStatus);
+    return () => {
+      room.off(RoomEvent.AudioPlaybackStatusChanged, updateAudioStatus);
+    };
+  }, [room]);
+
+  const handleUnlockAudio = async () => {
+    try {
+      if (room) {
+        await room.startAudio();
+        setAudioBlocked(false);
+        toast.success('Audio playback unlocked!');
+      }
+    } catch (e) {
+      console.error('[LiveKit Student] Failed to unlock audio:', e);
+    }
+  };
+
+  // ── Observability & Structured WebRTC Logging
+  useEffect(() => {
+    if (!room) return;
+
+    const onTrackSubscribed = (track: any, pub: any, participant: any) => {
+      console.log(
+        `[LiveKit Student] TrackSubscribed: kind=${track.kind} source=${pub.source} from participant=${participant.identity} (${participant.name || 'Unknown'})`,
+      );
+    };
+    const onTrackUnsubscribed = (track: any, pub: any, participant: any) => {
+      console.log(
+        `[LiveKit Student] TrackUnsubscribed: kind=${track.kind} source=${pub.source} from participant=${participant.identity}`,
+      );
+    };
+    const onLocalTrackPublished = (pub: any) => {
+      console.log(
+        `[LiveKit Student] LocalTrackPublished: kind=${pub.kind} source=${pub.source} trackSid=${pub.trackSid}`,
+      );
+    };
+    const onReconnecting = () => {
+      console.log('[LiveKit Student] Reconnecting to live room...');
+      toast.warning('Reconnecting...');
+    };
+    const onReconnected = () => {
+      console.log('[LiveKit Student] Successfully reconnected to live room!');
+      toast.success('Reconnected to live room!');
+    };
+
+    room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
+    room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+    room.on(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
+    room.on(RoomEvent.Reconnecting, onReconnecting);
+    room.on(RoomEvent.Reconnected, onReconnected);
+
+    return () => {
+      room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
+      room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+      room.off(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
+      room.off(RoomEvent.Reconnecting, onReconnecting);
+      room.off(RoomEvent.Reconnected, onReconnected);
+    };
+  }, [room]);
+
   useEffect(() => {
     const fetchDbParticipants = async () => {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:3000/v1/live-classes/${classId}/participants`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setDbParticipants(data);
-          }
+        const data = await api.get<any>(`/live-classes/${classId}/participants`, {
+          skipGlobalToast: true,
+        });
+        if (Array.isArray(data) && data.length > 0) {
+          setDbParticipants(data);
         }
       } catch {}
     };
 
     fetchDbParticipants();
-    const interval = setInterval(fetchDbParticipants, 10000);
+    const interval = setInterval(fetchDbParticipants, 15000);
     return () => clearInterval(interval);
   }, [classId]);
 
@@ -628,10 +551,8 @@ function StudentClassroomInner({
     const list: Array<{ id: string; name: string; admissionNumber?: string; isSelf?: boolean }> =
       [];
 
-    // Add self
     list.push({ id: 'self-student', name: studentSelfName, isSelf: true });
 
-    // Add LiveKit remote participants (students only)
     remoteParticipants.forEach((p) => {
       const isTeacher =
         p.identity.startsWith('host-') ||
@@ -646,7 +567,6 @@ function StudentClassroomInner({
       }
     });
 
-    // Add DB participants
     dbParticipants.forEach((dbP) => {
       if (!list.some((item) => item.name.toLowerCase() === dbP.name.toLowerCase())) {
         list.push({ id: dbP.id, name: dbP.name, admissionNumber: dbP.admissionNumber });
@@ -655,51 +575,41 @@ function StudentClassroomInner({
 
     return list;
   }, [remoteParticipants, dbParticipants, studentSelfName]);
-  const screenTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
-  const activeScreenTrack =
-    screenTracks.find((t) => (t as any).track) ||
-    screenTracks.find((t) => t.publication) ||
-    screenTracks[0];
-  const hasLiveScreenTrack = Boolean((activeScreenTrack as any)?.track);
 
-  // ── Sync Mode State from Teacher DataChannel: 'whiteboard' | 'pdf' | 'screen'
-  const [teacherMode, setTeacherMode] = useState<Mode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem(`student_class_${classId}_tmode`);
-      if (saved) return saved as Mode;
-    }
-    return 'idle';
-  });
-  const [studentViewMode, setStudentViewMode] = useState<'idle' | 'whiteboard' | 'pdf'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem(`student_class_${classId}_vmode`);
-      if (saved) return saved as 'idle' | 'whiteboard' | 'pdf';
-    }
-    return 'idle';
-  });
+  // ── Authoritative LiveKit Track Collections
+  const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
+  const screenTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
+
+  const tutorRP =
+    remoteParticipants.find(
+      (p) =>
+        p.identity.startsWith('host-') ||
+        p.identity.startsWith('tutor-') ||
+        p.name?.toLowerCase().includes('teacher') ||
+        p.name?.toLowerCase().includes('host') ||
+        p.name?.toLowerCase().includes('tutor'),
+    ) || remoteParticipants[0];
+
+  const tutorCameraTrack =
+    cameraTracks.find(
+      (t) =>
+        !t.participant.isLocal &&
+        (t.participant.identity.startsWith('host-') ||
+          t.participant.identity.startsWith('tutor-') ||
+          t.participant.name?.toLowerCase().includes('teacher') ||
+          t.participant.name?.toLowerCase().includes('host') ||
+          t.participant.name?.toLowerCase().includes('tutor') ||
+          t.participant.sid === tutorRP?.sid),
+    ) || cameraTracks.find((t) => !t.participant.isLocal);
+  const activeScreenTrack = screenTracks[0];
+  const selfCameraTrack = cameraTracks.find((t) => t.participant.isLocal);
+
+  const [teacherMode, setTeacherMode] = useState<Mode>('idle');
   const [teacherPdfDoc, setTeacherPdfDoc] = useState<PdfDocumentInfo | null>(null);
   const [teacherPdfPage, setTeacherPdfPage] = useState(1);
-
-  // ── Local Media Stream (Student Webcam / Mic)
-  const [isMicOn, setIsMicOn] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`student_class_${classId}_mic`) === 'true';
-    }
-    return false;
-  });
-  const [isCamOn, setIsCamOn] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`student_class_${classId}_cam`) === 'true';
-    }
-    return false;
-  });
+  const [remoteWhiteboardFrame, setRemoteWhiteboardFrame] = useState<string | null>(null);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [localStudentScreenFrame, setLocalStudentScreenFrame] = useState<string | null>(null);
-  const studentScreenFrameRef = useRef<string | null>(null);
-  const [localCamFrame, setLocalCamFrame] = useState<string | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
-  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
   const [pinnedParticipant, setPinnedParticipant] = useState<{
     id: string;
@@ -707,286 +617,35 @@ function StudentClassroomInner({
     isTeacher: boolean;
   } | null>(null);
 
-  const studentId = user ? user.id : 'student-1';
-  const sendDataRef = useRef<((data: Uint8Array, options?: any) => Promise<void>) | null>(null);
-  const [isApproved, setIsApproved] = useState<boolean>(true);
-  const [isDenied, setIsDenied] = useState(false);
+  // ── Chat State
+  const [chatMessages, setChatMessages] = useState<
+    Array<{ sender: string; text: string; time: string }>
+  >([
+    {
+      sender: 'System',
+      text: 'Connected to Live Class Studio.',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
+  const [inputMsg, setInputMsg] = useState('');
 
-  // Clear stale localStorage approval keys on mount so the student is never silently auto-admitted
-  useEffect(() => {
-    try {
-      localStorage.removeItem(`class_${classId}_approved_${studentId}`);
-      localStorage.removeItem(`class_${classId}_approved_global`);
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!isApproved && !isDenied) {
-      const studentName = user
-        ? `${user.firstName} ${user.lastName || ''}`.trim()
-        : localStorage.getItem('user_display_name') || 'Student';
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const joinChannel = new BroadcastChannel('neet-live-join-requests');
-
-      // ── API-based join request (cross-device reliable) ──
-      const registerViaApi = async () => {
-        try {
-          await api.post(
-            `/live-classes/${classId}/join-request`,
-            { studentId, studentName },
-            { skipGlobalToast: true },
-          );
-        } catch {}
-      };
-      registerViaApi();
-
-      // ── API-based approval status polling (cross-device 100% reliable) ──
-      const pollApprovalStatus = async () => {
-        try {
-          const res = await api.get<{ approved?: boolean; denied?: boolean }>(
-            `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
-            { skipGlobalToast: true },
-          );
-          if (res?.approved) {
-            setIsApproved(true);
-            setIsDenied(false);
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-              sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
-            }
-          } else if (res?.denied) {
-            setIsDenied(true);
-          }
-        } catch {}
-      };
-      pollApprovalStatus();
-      const statusPollInterval = setInterval(pollApprovalStatus, 1500);
-
-      const sendReq = () => {
-        try {
-          joinChannel.postMessage({
-            type: 'join-request',
-            classId,
-            id: studentId,
-            name: studentName,
-            time,
-          });
-        } catch {}
-
-        try {
-          const encoder = new TextEncoder();
-          sendDataRef.current?.(
-            encoder.encode(
-              JSON.stringify({
-                type: 'join-request',
-                classId,
-                id: studentId,
-                name: studentName,
-                time,
-              }),
-            ),
-            { reliable: true },
-          );
-        } catch {}
-      };
-      sendReq();
-      const interval = setInterval(sendReq, 1500);
-
-      joinChannel.onmessage = (e) => {
-        const data = e.data;
-        if (
-          data.type === 'join-approved' &&
-          (!data.classId || data.classId === classId) &&
-          (!data.studentId ||
-            data.studentId === studentId ||
-            data.studentId === 'all' ||
-            data.studentId.includes(studentId) ||
-            studentId.includes(data.studentId))
-        ) {
-          setIsApproved(true);
-          setIsDenied(false);
-          if (typeof window !== 'undefined') {
-            // Save to sessionStorage only — approval resets when student closes/refreshes page
-            sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-            sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
-          }
-        } else if (data.type === 'join-denied') {
-          setIsDenied(true);
-        }
-      };
-
-      const handleStorage = (e: StorageEvent) => {
-        if (
-          e.key === `class_${classId}_approved_${studentId}` ||
-          e.key === `class_${classId}_approved_global`
-        ) {
-          if (e.storageArea === sessionStorage) {
-            setIsApproved(true);
-            setIsDenied(false);
-          }
-        }
-      };
-      window.addEventListener('storage', handleStorage);
-
-      return () => {
-        clearInterval(interval);
-        clearInterval(statusPollInterval);
-        joinChannel.close();
-        window.removeEventListener('storage', handleStorage);
-      };
-    }
-  }, [isApproved, isDenied, classId, studentId, user]);
-
-  const [remoteScreenFrame, setRemoteScreenFrame] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`student_class_${classId}_screen_frame`);
-    }
-    return null;
-  });
-  const [remoteTutorCamFrame, setRemoteTutorCamFrame] = useState<string | null>(null);
-  const [remoteWhiteboardFrame, setRemoteWhiteboardFrame] = useState<string | null>(null);
-  const [isTutorMicOn, setIsTutorMicOn] = useState<boolean>(true);
-
-  // Active speaking states for audio visualizer ripples & popups
-  const [speakingUser, setSpeakingUser] = useState<string | null>(null);
-  const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
-  const [isTutorSpeaking, setIsTutorSpeaking] = useState(false);
-
-  // Auto-unlock audio elements for iOS and Mobile Android autoplay policy
-  useEffect(() => {
-    const unlockAudio = () => {
-      const audioElements = document.querySelectorAll('audio');
-      audioElements.forEach((el) => {
-        el.play().catch(() => {});
-      });
-    };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-    return () => {
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, []);
-
-  // ── WebRTC LiveKit DataChannel for Real-Time Cross-Device Sync (Global Internet)
-  // ── Uploaded PDF transfer reassembly (LiveKit DataChannel chunks)
-  const pdfChunksRef = useRef<Record<string, Record<number, string>>>({});
-  const pdfChunkTotalRef = useRef<Record<string, number>>({});
-  const pdfChunkTitleRef = useRef<Record<string, string>>({});
-  const receivedPdfUrlsRef = useRef<Set<string>>(new Set());
-  const pdfRequestedRef = useRef<Set<string>>(new Set());
-  const pdfRequestSendRef = useRef<((payload: any) => void) | null>(null);
-
-  const maybeRequestPdf = (docId: string | undefined) => {
-    if (!docId) return;
-    if (receivedPdfUrlsRef.current.has(docId)) return;
-    if (pdfRequestedRef.current.has(docId)) return;
-    pdfRequestedRef.current.add(docId);
-    pdfRequestSendRef.current?.({ type: 'pdf-request', docId });
-  };
-
-  const dataUrlToBlob = (dataUrl: string): Blob | null => {
-    const commaIdx = dataUrl.indexOf(',');
-    if (commaIdx < 0) return null;
-    const meta = dataUrl.slice(0, commaIdx);
-    const base64 = dataUrl.slice(commaIdx + 1);
-    const mime = (meta.match(/^data:([^;]+)/) || [])[1] || 'application/pdf';
-    try {
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-      return new Blob([bytes], { type: mime });
-    } catch {
-      return null;
-    }
-  };
-
-  const assemblePdfDoc = (docId: string): boolean => {
-    const chunks = pdfChunksRef.current[docId];
-    const total = pdfChunkTotalRef.current[docId];
-    if (!chunks || !total) return false;
-    let dataUrl = '';
-    for (let i = 0; i < total; i += 1) {
-      const c = chunks[i];
-      if (typeof c !== 'string') return false;
-      dataUrl += c;
-    }
-    try {
-      const blob = dataUrlToBlob(dataUrl);
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        setTeacherPdfDoc((prev) => {
-          const base =
-            prev && prev.id === docId
-              ? prev
-              : ({
-                  id: docId,
-                  name: pdfChunkTitleRef.current[docId] || 'Uploaded Document.pdf',
-                  url: '',
-                  category: 'Live',
-                  totalPages: 1,
-                } as PdfDocumentInfo);
-          return { ...base, url };
-        });
-        receivedPdfUrlsRef.current.add(docId);
-        pdfRequestedRef.current.delete(docId);
-        setTeacherMode('pdf');
-        setStudentViewMode('pdf');
-      }
-    } catch {}
-    delete pdfChunksRef.current[docId];
-    delete pdfChunkTotalRef.current[docId];
-    return true;
-  };
-
+  // ── DataChannel Handler for Real-Time Synchronization
   const { send: studentDataSend } = useDataChannel((msg) => {
     try {
       const data = JSON.parse(new TextDecoder().decode(msg.payload));
       if (data.type === 'mode-change' || data.type === 'mode-sync') {
-        if (data.mode) {
-          setTeacherMode(data.mode);
-          if (data.mode === 'whiteboard') setStudentViewMode('whiteboard');
-          else if (data.mode === 'pdf') setStudentViewMode('pdf');
-          else if (data.mode === 'idle') setStudentViewMode('idle');
-        }
-        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
-        else maybeRequestPdf(data.doc?.id);
-        if (data.page || data.pdfPage) setTeacherPdfPage(data.page || data.pdfPage);
+        if (data.mode) setTeacherMode(data.mode);
+        if (data.pdfPage) setTeacherPdfPage(data.pdfPage);
+        if (data.doc) setTeacherPdfDoc(data.doc);
         if (data.whiteboardFrame) setRemoteWhiteboardFrame(data.whiteboardFrame);
-        if (typeof data.isMicOn === 'boolean') setIsTutorMicOn(data.isMicOn);
       } else if (data.type === 'pdf-page-change') {
         if (data.page) setTeacherPdfPage(data.page);
-        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
+        if (data.doc) setTeacherPdfDoc(data.doc);
       } else if (data.type === 'pdf-doc-change') {
-        if (data.doc?.url) setTeacherPdfDoc(data.doc as PdfDocumentInfo);
-        else maybeRequestPdf(data.doc?.id);
-        if (data.page) setTeacherPdfPage(data.page);
-      } else if (data.type === 'pdf-chunk') {
-        if (!receivedPdfUrlsRef.current.has(data.docId)) {
-          if (!pdfChunksRef.current[data.docId]) pdfChunksRef.current[data.docId] = {};
-          pdfChunksRef.current[data.docId][data.index] = data.chunk;
-          pdfChunkTotalRef.current[data.docId] = data.total;
-          if (data.name) pdfChunkTitleRef.current[data.docId] = data.name;
-          assemblePdfDoc(data.docId);
-        }
-      } else if (data.type === 'pdf-doc-ready') {
-        if (!receivedPdfUrlsRef.current.has(data.docId)) {
-          if (data.name) pdfChunkTitleRef.current[data.docId] = data.name;
-          assemblePdfDoc(data.docId);
-        } else {
-          maybeRequestPdf(data.docId);
-        }
+        if (data.doc) setTeacherPdfDoc(data.doc);
         if (data.page) setTeacherPdfPage(data.page);
       } else if (data.type === 'whiteboard-frame') {
         setRemoteWhiteboardFrame(data.frame);
-      } else if (data.type === 'screen-frame') {
-        setRemoteScreenFrame(data.frame);
-        if (data.frame) setTeacherMode('screen');
-      } else if (data.type === 'tutor-cam-frame') {
-        setRemoteTutorCamFrame(data.frame);
-      } else if (data.type === 'tutor-mic-state' || data.type === 'tutor-mic') {
-        setIsTutorMicOn(Boolean(data.isMicOn));
       } else if (data.type === 'chat') {
         setChatMessages((prev) => [
           ...prev,
@@ -998,18 +657,6 @@ function StudentClassroomInner({
       }
     } catch {}
   });
-
-  pdfRequestSendRef.current = (payload: any) => {
-    try {
-      const encoder = new TextEncoder();
-      const promise = studentDataSend(encoder.encode(JSON.stringify(payload)), {
-        reliable: true,
-      });
-      if (promise && typeof (promise as any).catch === 'function') {
-        (promise as any).catch(() => {});
-      }
-    } catch {}
-  };
 
   const safeSend = useCallback(
     (payload: any) => {
@@ -1027,890 +674,126 @@ function StudentClassroomInner({
     [connectionState, studentDataSend],
   );
 
-  useEffect(() => {
-    sendDataRef.current = (data, opts) => {
-      try {
-        studentDataSend(data, opts);
-      } catch {}
-      return Promise.resolve();
-    };
-  }, [studentDataSend]);
-
-  // BroadcastChannel fallback listener for same-device cross-tab testing
-  useEffect(() => {
-    const channel = new BroadcastChannel('neet-live-screen');
-    channel.onmessage = (e) => {
-      if (e.data.type === 'frame') {
-        setRemoteScreenFrame(e.data.frame);
-        setTeacherMode('screen');
-      } else if (e.data.type === 'stop') {
-        setRemoteScreenFrame(null);
-        setTeacherMode('whiteboard');
-      }
-    };
-
-    const modeSyncChannel = new BroadcastChannel('neet-live-mode-sync');
-    modeSyncChannel.onmessage = (e) => {
-      if (
-        (e.data.type === 'current-mode' || e.data.type === 'mode-change') &&
-        (e.data.classId === classId || !e.data.classId)
-      ) {
-        setTeacherMode(e.data.mode);
-        if (e.data.mode === 'whiteboard') setStudentViewMode('whiteboard');
-        else if (e.data.mode === 'pdf') setStudentViewMode('pdf');
-        else if (e.data.mode === 'idle') setStudentViewMode('idle');
-        if (e.data.pdfPage) setTeacherPdfPage(e.data.pdfPage);
-        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
-      }
-    };
-
-    const pdfSyncChannel = new BroadcastChannel('neet-live-pdf-sync');
-    pdfSyncChannel.onmessage = (e) => {
-      if (e.data.type === 'pdf-sync' && (e.data.classId === classId || !e.data.classId)) {
-        if (e.data.page) setTeacherPdfPage(e.data.page);
-        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
-      }
-    };
-
-    const wbSyncChannel = new BroadcastChannel('neet-live-whiteboard-sync');
-    wbSyncChannel.onmessage = (e) => {
-      if (e.data.type === 'whiteboard-frame' && (e.data.classId === classId || !e.data.classId)) {
-        if (e.data.frame) setRemoteWhiteboardFrame(e.data.frame);
-      }
-    };
-
-    const tutorCamChannel = new BroadcastChannel('neet-live-tutor-cam');
-    tutorCamChannel.onmessage = (e) => {
-      if (e.data.type === 'cam-frame') {
-        setRemoteTutorCamFrame(e.data.frame);
-      } else if (e.data.type === 'cam-off') {
-        setRemoteTutorCamFrame(null);
-      }
-    };
-
-    const tutorMicChannel = new BroadcastChannel('neet-live-tutor-mic');
-    tutorMicChannel.onmessage = (e) => {
-      if (e.data.type === 'tutor-mic-state') {
-        setIsTutorMicOn(Boolean(e.data.isMicOn));
-      }
-    };
-
-    return () => {
-      channel.close();
-      tutorCamChannel.close();
-      tutorMicChannel.close();
-      modeSyncChannel.close();
-      pdfSyncChannel.close();
-      wbSyncChannel.close();
-    };
-  }, [classId]);
-
-  // Save student session states to sessionStorage
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(`student_class_${classId}_tmode`, teacherMode);
-      sessionStorage.setItem(`student_class_${classId}_vmode`, studentViewMode);
-      sessionStorage.setItem(`student_class_${classId}_mic`, String(isMicOn));
-      sessionStorage.setItem(`student_class_${classId}_cam`, String(isCamOn));
-    } catch {}
-
-    try {
-      const micCh = new BroadcastChannel('neet-live-student-mic');
-      micCh.postMessage({
-        type: 'student-mic',
-        id: localParticipant.sid || studentId,
-        name: studentSelfName,
-        isMicOn,
-      });
-      micCh.close();
-    } catch {}
-
-    safeSend({
-      type: 'student-mic',
-      id: localParticipant.sid || studentId,
-      name: studentSelfName,
-      isMicOn,
-    });
-  }, [
-    teacherMode,
-    studentViewMode,
-    isMicOn,
-    isCamOn,
-    classId,
-    localParticipant,
-    studentId,
-    studentSelfName,
-  ]);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
-  const localCamVideoRef = useRef<HTMLVideoElement | null>(null);
-  const localCamCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const localCamCaptureIntervalRef = useRef<any>(null);
-
-  // ── Chat State
-  const [chatMessages, setChatMessages] = useState<
-    Array<{ sender: string; text: string; time: string }>
-  >([
-    {
-      sender: 'System',
-      text: 'Connected to Live Class Studio.',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
-  const [inputMsg, setInputMsg] = useState('');
-
-  const [isClassEnded, setIsClassEnded] = useState(false);
-
-  const stopAllMediaTracks = useCallback(() => {
-    if (screenFrameIntervalRef.current) {
-      clearInterval(screenFrameIntervalRef.current);
-      screenFrameIntervalRef.current = null;
-    }
-    if (studentCamFrameIntervalRef.current) {
-      clearInterval(studentCamFrameIntervalRef.current);
-      studentCamFrameIntervalRef.current = null;
-    }
-    if (localCamCaptureIntervalRef.current) {
-      clearInterval(localCamCaptureIntervalRef.current);
-      localCamCaptureIntervalRef.current = null;
-    }
-    if (localCamVideoRef.current) localCamVideoRef.current.srcObject = null;
-    try {
-      const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
-      if (camTrack) localParticipant.unpublishTrack(camTrack as any).catch(() => {});
-      const micTrack = micStreamRef.current?.getAudioTracks()[0];
-      if (micTrack) localParticipant.unpublishTrack(micTrack as any).catch(() => {});
-    } catch {}
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach((t) => {
-        t.stop();
-        t.enabled = false;
-      });
-      screenStreamRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((t) => {
-        t.stop();
-        t.enabled = false;
-      });
-      mediaStreamRef.current = null;
-    }
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach((t) => {
-        t.stop();
-        t.enabled = false;
-      });
-      micStreamRef.current = null;
-    }
-    try {
-      localParticipant.setScreenShareEnabled(false);
-    } catch {}
-    try {
-      screenBroadcastRef.current?.postMessage({
-        type: 'student-screen-stop',
-        id: localParticipant.sid,
-      });
-      studentCamBroadcastRef.current?.postMessage({
-        type: 'student-cam-off',
-        id: localParticipant.sid,
-      });
-    } catch {}
-    setLocalStudentScreenFrame(null);
-    setLocalCamFrame(null);
-    setIsScreenSharing(false);
-    setIsCamOn(false);
-    setIsMicOn(false);
-  }, [localParticipant]);
-
-  const [autoEndCountdown, setAutoEndCountdown] = useState<string | null>(null);
-  const [isNearAutoEnd, setIsNearAutoEnd] = useState(false);
-  const [endedReason, setEndedReason] = useState<string>(
-    "The teacher has ended today's live session.",
-  );
-  const [redirectCount, setRedirectCount] = useState(5);
-  const autoEndingRef = useRef(false);
-
-  const handleTriggerClassEnded = useCallback(
-    (reason?: string) => {
-      if (autoEndingRef.current) return;
-      autoEndingRef.current = true;
-      try {
-        localStorage.removeItem(`class_${classId}_approved_${studentId}`);
-        localStorage.removeItem(`class_${classId}_approved`);
-        localStorage.removeItem(`class_${classId}_approved_global`);
-        localStorage.removeItem(`student_token_${classId}`);
-        localStorage.removeItem(`student_wsUrl_${classId}`);
-      } catch {}
-      if (reason) toast.info(`⏱ ${reason}`);
-      stopAllMediaTracks();
-      setIsClassEnded(true);
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.location.href = '/dashboard/student';
-        }
-      }, 500);
-    },
-    [classId, studentId, stopAllMediaTracks],
-  );
-
-  // ── Auto-End Timer & Polling Hook
-  const parseEndMs = (endVal: any): number | null => {
-    if (!endVal) return null;
-    if (typeof endVal === 'string' && endVal.length === 5 && endVal.includes(':')) {
-      const [h, m] = endVal.split(':').map(Number);
-      const d = new Date();
-      d.setHours(h, m, 0, 0);
-      return d.getTime();
-    }
-    const parsed = new Date(endVal).getTime();
-    return !isNaN(parsed) ? parsed : null;
-  };
-
-  const targetCutoffMsRef = useRef<number | null>(
-    parseEndMs(scheduledEnd) ? parseEndMs(scheduledEnd)! + 15 * 60 * 1000 : null,
-  );
-
-  // 1. Fetch class details & update targetCutoffMsRef (5s interval)
-  useEffect(() => {
-    const fetchClassInfo = async () => {
-      if (autoEndingRef.current) return;
-      try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const endpoints = [
-          `http://${host}:3000/v1/live-classes/${classId}`,
-          `/v1/live-classes/${classId}`,
-          `/api/v1/live-classes/${classId}`,
-        ];
-
-        for (const url of endpoints) {
-          try {
-            const res = await fetch(url);
-            if (res.ok) {
-              const json = await res.json();
-              const data = json?.data ?? json; // unwrap {success, data: {...}} wrapper
-              if (
-                data.status === 'LIVE' ||
-                data.status === 'SCHEDULED' ||
-                data.status === 'WAITING'
-              ) {
-                autoEndingRef.current = false;
-                setIsClassEnded(false);
-              } else if (data.status === 'CANCELLED') {
-                handleTriggerClassEnded('The live class has been cancelled.');
-                return;
-              }
-
-              const endVal = data?.scheduledEnd || scheduledEnd;
-              const endMs = parseEndMs(endVal);
-              if (endMs) {
-                const cutoff = endMs + 15 * 60 * 1000;
-                targetCutoffMsRef.current = cutoff;
-                if (cutoff <= Date.now() && !autoEndingRef.current) {
-                  autoEndingRef.current = true;
-                  handleTriggerClassEnded(
-                    'Scheduled class duration + 15 minutes grace period completed.',
-                  );
-                  return;
-                }
-              }
-              return;
-            }
-          } catch {}
-        }
-      } catch {}
-    };
-
-    fetchClassInfo();
-    const interval = setInterval(fetchClassInfo, 5000);
-
-    let statusChannel: BroadcastChannel | null = null;
-    try {
-      statusChannel = new BroadcastChannel('neet-live-class-status');
-      statusChannel.onmessage = (evt) => {
-        if (evt.data?.classId === classId) {
-          if (evt.data?.type === 'class-ended') {
-            handleTriggerClassEnded("The teacher has ended today's live session.");
-          } else if (evt.data?.type === 'class-reopened') {
-            autoEndingRef.current = false;
-            setIsClassEnded(false);
-          } else if (evt.data?.type === 'class-extended') {
-            if (evt.data?.scheduledEnd) {
-              const endMs = parseEndMs(evt.data.scheduledEnd);
-              if (endMs) targetCutoffMsRef.current = endMs + 15 * 60 * 1000;
-            } else {
-              const currentCutoff = targetCutoffMsRef.current || Date.now();
-              targetCutoffMsRef.current = Math.max(currentCutoff, Date.now()) + 15 * 60 * 1000;
-            }
-          }
-        }
-      };
-    } catch {}
-
-    return () => {
-      clearInterval(interval);
-      try {
-        statusChannel?.close();
-      } catch {}
-    };
-  }, [classId, scheduledEnd, handleTriggerClassEnded]);
-
-  // 2. 1-second countdown tick that updates autoEndCountdown smoothly
-  useEffect(() => {
-    const tick = () => {
-      if (!targetCutoffMsRef.current) {
-        return;
-      }
-
-      const remainingMs = targetCutoffMsRef.current - Date.now();
-      if (remainingMs <= 0) {
-        setAutoEndCountdown('0m 00s');
-        setIsNearAutoEnd(true);
-        if (!autoEndingRef.current) {
-          autoEndingRef.current = true;
-          handleTriggerClassEnded('Scheduled class duration + 15 minutes grace period completed.');
-        }
-        return;
-      }
-
-      const totalSecs = Math.floor(remainingMs / 1000);
-      const mins = Math.floor(totalSecs / 60);
-      const secs = totalSecs % 60;
-      setAutoEndCountdown(`${mins}m ${secs < 10 ? '0' : ''}${secs}s`);
-      setIsNearAutoEnd(remainingMs <= 5 * 60 * 1000);
-    };
-
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [handleTriggerClassEnded]);
-
-  // Auto-redirect timer when class is ended
-  useEffect(() => {
-    if (!isClassEnded) return;
-    const timer = setInterval(() => {
-      setRedirectCount((c) => {
-        if (c <= 1) {
-          clearInterval(timer);
-          stopAllMediaTracks();
-          router.push('/dashboard/student');
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [isClassEnded, router, stopAllMediaTracks]);
-
-  useEffect(() => {
-    if (isClassEnded) {
-      stopAllMediaTracks();
-    }
-  }, [isClassEnded, stopAllMediaTracks]);
-
-  useEffect(() => {
-    const statusChannel = new BroadcastChannel('neet-live-class-status');
-    statusChannel.onmessage = (e) => {
-      if (e.data.type === 'class-ended') {
-        handleTriggerClassEnded('The teacher has ended this live meeting.');
-      } else if (e.data.type === 'class-extended') {
-        toast.success('⏱ Class duration extended by teacher! 🚀');
-      }
-    };
-    return () => {
-      statusChannel.close();
-      stopAllMediaTracks();
-    };
-  }, [stopAllMediaTracks, handleTriggerClassEnded]);
-
-  const studentCamBroadcastRef = useRef<BroadcastChannel | null>(null);
-  const studentCamFrameIntervalRef = useRef<any>(null);
-
-  useEffect(() => {
-    studentCamBroadcastRef.current = new BroadcastChannel('neet-live-student-cam');
-    return () => {
-      studentCamBroadcastRef.current?.close();
-    };
-  }, []);
-
-  const screenStreamRef = useRef<MediaStream | null>(null);
-  const screenBroadcastRef = useRef<BroadcastChannel | null>(null);
-  const screenFrameIntervalRef = useRef<any>(null);
-
-  // Runtime Screen Sharing Capability Detection (Progressive Enhancement)
-  const [canScreenShare, setCanScreenShare] = useState<boolean>(true);
-  const [screenShareReason, setScreenShareReason] = useState<string>('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
-    const hasGetDisplayMedia = !!(
-      navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function'
-    );
-    const isSecure = window.isSecureContext ?? true;
-
-    if (!isSecure) {
-      setCanScreenShare(false);
-      setScreenShareReason('Screen sharing requires a secure HTTPS connection.');
-    } else if (!hasGetDisplayMedia) {
-      setCanScreenShare(false);
-      setScreenShareReason('Screen sharing is not supported by this browser. Use Whiteboard mode.');
-    } else {
-      setCanScreenShare(true);
-      setScreenShareReason('');
-    }
-  }, []);
-
-  useEffect(() => {
-    screenBroadcastRef.current = new BroadcastChannel('neet-live-student-screen');
-    return () => {
-      screenBroadcastRef.current?.close();
-    };
-  }, []);
-
-  const stopStudentSharing = () => {
-    if (screenFrameIntervalRef.current) {
-      clearInterval(screenFrameIntervalRef.current);
-      screenFrameIntervalRef.current = null;
-    }
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach((t) => t.stop());
-      screenStreamRef.current = null;
-    }
-    if (connectionState === ConnectionState.Connected) {
-      try {
-        localParticipant.setScreenShareEnabled(false);
-      } catch {}
-    }
-    try {
-      screenBroadcastRef.current?.postMessage({
-        type: 'student-screen-stop',
-        id: localParticipant.sid,
-      });
-    } catch {}
-    setLocalStudentScreenFrame(null);
-    studentScreenFrameRef.current = null;
-    setIsScreenSharing(false);
-  };
-
-  const toggleScreenShare = async () => {
-    if (isScreenSharing) {
-      stopStudentSharing();
-      return;
-    }
-
-    try {
-      const res = await getScreenMediaStream();
-      if (!res.stream) {
-        if (res.isCancelled) {
-          toast.info('Screen share was cancelled.');
-        } else if (res.isUnsupported) {
-          toast.error(res.error || 'Screen capture not supported on this browser/connection.');
-        } else {
-          toast.error(res.error || 'Screen share could not be started.');
-        }
-        stopStudentSharing();
-        return;
-      }
-
-      const stream = res.stream;
-      screenStreamRef.current = stream;
-      setIsScreenSharing(true);
-      toast.success('📱 Screen Sharing Active! Switch to any app on your phone.');
-
-      if (connectionState === ConnectionState.Connected) {
-        try {
-          const vTrack = stream.getVideoTracks()[0];
-          if (vTrack)
-            await localParticipant.publishTrack(vTrack, { source: Track.Source.ScreenShare });
-        } catch {}
-      }
-
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        track.onended = () => {
-          stopStudentSharing();
-        };
-      }
-
-      const hiddenVideo = document.createElement('video');
-      hiddenVideo.srcObject = stream;
-      hiddenVideo.muted = true;
-      hiddenVideo.playsInline = true;
-      hiddenVideo.play().catch(() => {});
-
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext('2d', { alpha: false });
-
-      screenFrameIntervalRef.current = setInterval(() => {
-        if (ctx) {
-          const w = hiddenVideo.videoWidth || 1280;
-          const h = hiddenVideo.videoHeight || 720;
-          if (canvas.width !== w) canvas.width = w;
-          if (canvas.height !== h) canvas.height = h;
-
-          try {
-            ctx.drawImage(hiddenVideo, 0, 0, w, h);
-            const frame = canvas.toDataURL('image/jpeg', 0.5);
-            studentScreenFrameRef.current = frame;
-            const studentName = user
-              ? `${user.firstName} ${user.lastName || ''}`.trim()
-              : 'Student';
-            screenBroadcastRef.current?.postMessage({
-              type: 'student-screen-frame',
-              id: localParticipant.sid,
-              name: studentName,
-              frame,
-            });
-          } catch {}
-        }
-      }, 40);
-    } catch (err) {
-      console.warn('Screen share cancelled:', err);
-      stopStudentSharing();
-    }
-  };
-
-  const raiseHandBroadcastRef = useRef<BroadcastChannel | null>(null);
-
-  useEffect(() => {
-    raiseHandBroadcastRef.current = new BroadcastChannel('neet-live-raise-hand');
-    return () => {
-      raiseHandBroadcastRef.current?.close();
-    };
-  }, []);
-
-  // ── Toggle Raise Hand (Instant DataChannel Event & Broadcast)
-  const toggleRaiseHand = () => {
-    const next = !isHandRaised;
-    setIsHandRaised(next);
-    const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const payload = {
-      type: next ? 'raise-hand' : 'lower-hand',
-      id: localParticipant.sid || 'student-1',
-      name: studentName,
-      time,
-    };
-
-    safeSend(payload);
-    raiseHandBroadcastRef.current?.postMessage(payload);
-  };
-
-  // ── Ultra-Low Latency Web Audio API Microphone Volume Detection
-  useEffect(() => {
-    if (!isMicOn) {
-      setIsSelfSpeaking(false);
-      return;
-    }
-    let audioCtx: AudioContext | null = null;
-    let analyser: AnalyserNode | null = null;
-    let microphone: MediaStreamAudioSourceNode | null = null;
-    let animId: number;
-
-    const ensureMicStream = (): Promise<MediaStream> => {
-      if (micStreamRef.current) return Promise.resolve(micStreamRef.current);
-      return navigator.mediaDevices
-        .getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        })
-        .then((s) => {
-          micStreamRef.current = s;
-          return s;
-        });
-    };
-
-    ensureMicStream()
-      .then((stream) => {
-        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64; // Ultra-fast FFT buffer window
-        analyser.smoothingTimeConstant = 0.1; // Instant response with minimal lag
-        microphone = audioCtx.createMediaStreamSource(stream);
-        microphone.connect(analyser);
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const checkVolume = () => {
-          if (!analyser) return;
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / dataArray.length;
-          const isSpeaking = average > 8; // Ultra-sensitive low threshold
-          setIsSelfSpeaking(isSpeaking);
-          if (isSpeaking) {
-            setSpeakingUser(studentSelfName);
-          }
-          animId = requestAnimationFrame(checkVolume);
-        };
-        checkVolume();
-      })
-      .catch(() => {});
-
-    return () => {
-      if (animId) cancelAnimationFrame(animId);
-      if (audioCtx) audioCtx.close().catch(() => {});
-    };
-  }, [isMicOn, studentSelfName]);
-
-  // Real-Time Tutor Audio Activity detector when tutor mic is ON
-  useEffect(() => {
-    if (!isTutorMicOn) {
-      setIsTutorSpeaking(false);
-      setSpeakingUser((prev) => (prev === 'Teacher (Host)' ? null : prev));
-      return;
-    }
-    const interval = setInterval(() => {
-      if (isTutorMicOn) {
-        setIsTutorSpeaking(true);
-      } else {
-        setIsTutorSpeaking(false);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isTutorMicOn]);
-
-  // ── Local Camera Capture Loop — powers the local preview tile + cross-device cam frames
-  const stopLocalCamFrameLoop = useCallback(() => {
-    if (localCamCaptureIntervalRef.current) {
-      clearInterval(localCamCaptureIntervalRef.current);
-      localCamCaptureIntervalRef.current = null;
-    }
-    if (localCamVideoRef.current) localCamVideoRef.current.srcObject = null;
-  }, []);
-
-  const startLocalCamFrameLoop = useCallback(() => {
-    stopLocalCamFrameLoop();
-    const stream = mediaStreamRef.current;
-    if (!stream || stream.getVideoTracks().length === 0) return;
-    const hiddenVideo = localCamVideoRef.current || document.createElement('video');
-    localCamVideoRef.current = hiddenVideo;
-    hiddenVideo.srcObject = stream;
-    hiddenVideo.muted = true;
-    hiddenVideo.playsInline = true;
-    hiddenVideo.setAttribute('playsinline', 'true');
-    hiddenVideo.load();
-    hiddenVideo.play().catch(() => {});
-    const canvas = localCamCanvasRef.current || document.createElement('canvas');
-    localCamCanvasRef.current = canvas;
-    const ctx = canvas.getContext('2d', { alpha: false });
-    const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
-    const selfId = localParticipant.sid || studentId;
-
-    localCamCaptureIntervalRef.current = setInterval(() => {
-      try {
-        if (!ctx) return;
-        const w = hiddenVideo.videoWidth || 640;
-        const h = hiddenVideo.videoHeight || 480;
-        if (canvas.width !== w) canvas.width = w;
-        if (canvas.height !== h) canvas.height = h;
-        ctx.drawImage(hiddenVideo, 0, 0, w, h);
-        const frame = canvas.toDataURL('image/jpeg', 0.45);
-        setLocalCamFrame(frame);
-        try {
-          studentCamBroadcastRef.current?.postMessage({
-            type: 'student-cam',
-            id: selfId,
-            name: studentName,
-            frame,
-          });
-        } catch {}
-        safeSend({ type: 'student-cam', id: selfId, name: studentName, frame });
-      } catch {}
-    }, 120); // ~8fps is plenty for a small camera preview tile
-  }, [stopLocalCamFrameLoop, localParticipant, studentId, user, safeSend]);
-
-  // ── Toggle Mic/Cam — capture locally, publish to LiveKit, and mirror via frames
+  // ── Native LiveKit Track Toggles (Microphone, Camera, Screen Share)
   const toggleMic = async () => {
-    const next = !isMicOn;
-    if (next && !isSecureMediaContext()) {
-      toast.error(
-        'Microphone requires a secure HTTPS connection. Open this class over https:// (or localhost) on every device.',
-      );
-      return;
-    }
-    setIsMicOn(next);
     try {
-      if (next) {
-        if (!micStreamRef.current) {
-          micStreamRef.current = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-          });
-        }
-        const micTrack = micStreamRef.current.getAudioTracks()[0];
-        if (micTrack) micTrack.enabled = true;
-        if (connectionState === ConnectionState.Connected) {
-          try {
-            await localParticipant.publishTrack(micTrack, { source: Track.Source.Microphone });
-          } catch {}
-        }
-      } else {
-        const micTrack = micStreamRef.current?.getAudioTracks()[0];
-        if (micTrack && connectionState === ConnectionState.Connected) {
-          try {
-            await localParticipant.unpublishTrack(micTrack, true);
-          } catch {}
-        }
-        micStreamRef.current?.getTracks().forEach((t) => t.stop());
-        micStreamRef.current = null;
-      }
-    } catch (err) {
-      console.warn('LiveKit mic publish:', err);
-      if (next) toast.error('Microphone could not be started. Please check permissions.');
+      const next = !isMicrophoneEnabled;
+      await localParticipant.setMicrophoneEnabled(next, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      });
+      console.log('[LiveKit Student] Microphone toggled:', next);
+    } catch (err: any) {
+      console.error('[LiveKit Student] Mic error:', err);
+      toast.error('Could not access microphone. Please check permissions.');
     }
   };
 
   const toggleCam = async () => {
-    const next = !isCamOn;
-    if (next && !isSecureMediaContext()) {
-      toast.error(
-        'Camera requires a secure HTTPS connection. Open this class over https:// (or localhost) on every device.',
-      );
-      return;
-    }
-    setIsCamOn(next);
     try {
-      if (next) {
-        if (!mediaStreamRef.current) {
-          mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false,
-          });
-        }
-        const camTrack = mediaStreamRef.current.getVideoTracks()[0];
-        if (camTrack) camTrack.enabled = true;
-        startLocalCamFrameLoop();
-        if (connectionState === ConnectionState.Connected) {
-          try {
-            await localParticipant.publishTrack(camTrack, { source: Track.Source.Camera });
-          } catch {}
-        }
-      } else {
-        stopLocalCamFrameLoop();
-        const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
-        if (camTrack && connectionState === ConnectionState.Connected) {
-          try {
-            await localParticipant.unpublishTrack(camTrack, true);
-          } catch {}
-        }
-        mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
-        mediaStreamRef.current = null;
-        setLocalCamFrame(null);
-        try {
-          studentCamBroadcastRef.current?.postMessage({
-            type: 'student-cam-off',
-            id: localParticipant.sid || studentId,
-          });
-        } catch {}
-        safeSend({
-          type: 'student-cam-off',
-          id: localParticipant.sid || studentId,
-          name: studentSelfName,
-        });
-      }
-    } catch (err) {
-      console.warn('LiveKit camera publish:', err);
-      if (next) toast.error('Camera could not be started. Please check permissions.');
+      const next = !isCameraEnabled;
+      await localParticipant.setCameraEnabled(next, {
+        resolution: { width: 640, height: 360, frameRate: 24 },
+        facingMode: 'user',
+      });
+      console.log('[LiveKit Student] Camera toggled:', next);
+    } catch (err: any) {
+      console.error('[LiveKit Student] Cam error:', err);
+      toast.error('Could not access camera. Please check permissions.');
     }
   };
 
-  // Re-publish pending local media once the room finishes connecting
-  useEffect(() => {
-    if (connectionState !== ConnectionState.Connected) return;
+  const toggleScreenShare = async () => {
     try {
-      const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
-      if (
-        isCamOn &&
-        camTrack &&
-        !localParticipant.getTrackPublications().some((p) => p.track?.mediaStreamTrack === camTrack)
-      ) {
-        localParticipant.publishTrack(camTrack, { source: Track.Source.Camera }).catch(() => {});
+      const next = !isScreenShareEnabled;
+      if (next) {
+        const res = await getScreenMediaStream();
+        if (!res.stream) {
+          if (res.isCancelled) toast.info('Screen share was cancelled.');
+          else toast.error(res.error || 'Screen capture not supported.');
+          return;
+        }
+        res.stream.getTracks().forEach((t) => t.stop());
+        await localParticipant.setScreenShareEnabled(true, { audio: false });
+        console.log('[LiveKit Student] Screen share started');
+        toast.success('📱 Screen Sharing Active!');
+      } else {
+        await localParticipant.setScreenShareEnabled(false);
+        console.log('[LiveKit Student] Screen share stopped');
       }
-      const micTrack = micStreamRef.current?.getAudioTracks()[0];
-      if (
-        isMicOn &&
-        micTrack &&
-        !localParticipant.getTrackPublications().some((p) => p.track?.mediaStreamTrack === micTrack)
-      ) {
-        localParticipant
-          .publishTrack(micTrack, { source: Track.Source.Microphone })
-          .catch(() => {});
-      }
-    } catch {}
-  }, [connectionState, isCamOn, isMicOn, localParticipant]);
+    } catch (err) {
+      console.warn('[LiveKit Student] Screen share error:', err);
+    }
+  };
 
-  // ── Send Chat Message
+  const toggleRaiseHand = () => {
+    const next = !isHandRaised;
+    setIsHandRaised(next);
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const payload = {
+      type: next ? 'raise-hand' : 'lower-hand',
+      id: localParticipant.sid || 'student-1',
+      name: studentSelfName,
+      time,
+    };
+    safeSend(payload);
+  };
+
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMsg.trim()) return;
 
-    const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const msgObj = { type: 'chat', sender: studentName, text: inputMsg, time };
+    const msgObj = { type: 'chat', sender: studentSelfName, text: inputMsg, time };
 
     safeSend(msgObj);
-    setChatMessages((prev) => [...prev, { sender: `${studentName} (You)`, text: inputMsg, time }]);
+    setChatMessages((prev) => [...prev, msgObj]);
     setInputMsg('');
   };
 
   return (
     <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
+      {/* ── Audio Autoplay Unlock Floating Pill ── */}
+      {audioBlocked && (
+        <button
+          onClick={handleUnlockAudio}
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-full shadow-2xl flex items-center gap-2 animate-bounce cursor-pointer border-2 border-white"
+        >
+          <Volume2 className="w-4 h-4" />
+          <span>Tap to Enable Audio 🔊</span>
+        </button>
+      )}
+
       {/* ── Top Header Bar ── */}
-      <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-6 flex items-center justify-between shrink-0 z-30 shadow-md">
-        {/* Left: Brand + Live badge */}
+      <header className="h-12 sm:h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 shadow-md gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
-            <Video className="w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+            <Video className="w-4 h-4" />
           </div>
-          <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">
-            Connect Meet
-          </h1>
-          <span className="hidden sm:block text-xs text-slate-400 font-medium truncate max-w-[140px]">
+          <h1 className="text-sm font-extrabold text-white tracking-tight">Connect Meet</h1>
+          <span className="hidden sm:block text-xs text-slate-400 font-medium truncate max-w-[160px]">
             ({classTitle})
           </span>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse shrink-0">
             <Radio className="w-2.5 h-2.5" /> LIVE
           </div>
-          {autoEndCountdown && (
-            <div
-              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition ${
-                isNearAutoEnd
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              }`}
-              title="Class will automatically end 15 minutes after scheduled end time"
-            >
-              <Clock className="w-3 h-3 text-amber-400" />
-              <span>Auto-ends in {autoEndCountdown}</span>
-            </div>
-          )}
         </div>
 
-        {/* Centre: Mode Title */}
-        <div className="flex items-center bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 gap-1.5 text-xs font-bold text-slate-200">
-          <Grid className="w-3.5 h-3.5 text-blue-400" />
-          <span>Classroom Stream</span>
-        </div>
-
-        {/* Right: Avatar + settings */}
-        <div className="flex items-center gap-2">
-          <button className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition">
-            <Settings className="w-4 h-4" />
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleRaiseHand}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition cursor-pointer ${
+              isHandRaised
+                ? 'bg-amber-500 text-slate-950 shadow-md animate-bounce'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <Hand className="w-3.5 h-3.5" />
+            <span>{isHandRaised ? 'Hand Raised ✋' : 'Raise Hand'}</span>
           </button>
-          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-800 border border-slate-700 cursor-pointer hover:bg-slate-700 transition">
-            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-sm">
+          <div className="flex items-center gap-1.5 p-1 pr-2.5 rounded-full bg-slate-800 border border-slate-700">
+            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">
               {studentSelfName.charAt(0).toUpperCase()}
             </div>
             <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[80px] truncate">
@@ -1920,400 +803,253 @@ function StudentClassroomInner({
         </div>
       </header>
 
-      {/* ── Main Layout ── */}
+      {/* ── Main Stage ── */}
       <div className="flex-1 flex overflow-hidden relative p-2 sm:p-3 lg:p-4 gap-0 lg:gap-4 bg-slate-950">
-        {/* Left Main Stage Container */}
         <div className="flex-1 h-full bg-slate-900 border border-slate-800 rounded-2xl p-2 sm:p-3 flex flex-col relative overflow-hidden shadow-inner min-w-0">
-          {/* Main Display Box (Grid / Whiteboard / Screen Share) */}
-          <div className="flex-1 w-full h-full relative overflow-hidden rounded-xl bg-slate-900 flex items-center justify-center shadow-md">
-            {/* Student's Own Screen Share Presentation View */}
-            {isScreenSharing && (
-              <div className="w-full h-full bg-slate-950 flex flex-col items-center justify-center relative p-2 sm:p-4 z-10">
-                {/* Top Banner Control Bar for Stop Screen Sharing */}
-                <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 flex items-center justify-between bg-slate-900/95 border border-slate-700/80 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-2xl">
-                  <div className="flex items-center gap-2 text-rose-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping shrink-0" />
-                    <div className="flex items-center gap-1.5">
-                      <Monitor className="w-4 h-4 animate-pulse text-rose-400" />
-                      <span className="text-xs font-black text-white tracking-wide">
-                        Your Screen is Live
+          {/* Main Content Area */}
+          <div className="flex-1 relative rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center min-h-0">
+            {/* Spotlight Mode */}
+            {pinnedParticipant ? (
+              <div className="w-full h-full relative rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center">
+                {pinnedParticipant.isTeacher ? (
+                  tutorCameraTrack &&
+                  tutorCameraTrack.publication?.track &&
+                  !tutorCameraTrack.publication.isMuted ? (
+                    <VideoTrack
+                      trackRef={tutorCameraTrack}
+                      className="w-full h-full object-contain scale-x-[-1]"
+                    />
+                  ) : activeScreenTrack && activeScreenTrack.publication?.track ? (
+                    <VideoTrack
+                      trackRef={activeScreenTrack}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
+                      <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
+                        T
+                      </div>
+                      <span className="text-base font-bold text-slate-200">Teacher (Host)</span>
+                    </div>
+                  )
+                ) : (() => {
+                  const studentTrack = cameraTracks.find(
+                    (t) =>
+                      t.participant.sid === pinnedParticipant.id &&
+                      t.publication?.track &&
+                      !t.publication.isMuted,
+                  );
+                  if (studentTrack) {
+                    return (
+                      <VideoTrack
+                        trackRef={studentTrack}
+                        className="w-full h-full object-contain scale-x-[-1]"
+                      />
+                    );
+                  }
+                  return (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
+                      <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
+                        {pinnedParticipant.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-base font-bold text-slate-200">
+                        {pinnedParticipant.name}
                       </span>
                     </div>
-                  </div>
+                  );
+                })()}
+
+                <button
+                  onClick={() => setPinnedParticipant(null)}
+                  className="absolute top-3 right-3 bg-black/75 hover:bg-black text-white p-2 rounded-xl backdrop-blur-md border border-slate-700 transition flex items-center gap-1.5 text-xs font-bold shadow-lg z-20 cursor-pointer"
+                  title="Exit Spotlight"
+                >
+                  <Minimize2 className="w-4 h-4 text-blue-400" />
+                  <span>Exit Grid View</span>
+                </button>
+              </div>
+            ) : teacherMode === 'idle' ? (
+              /* Multi-Party Video Grid */
+              <div className="w-full h-full p-1.5 sm:p-2.5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto content-start">
+                {/* 1. Host Teacher Tile */}
+                <div
+                  className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
+                    (tutorRP?.isSpeaking || tutorCameraTrack?.participant?.isSpeaking)
+                      ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
+                      : 'border-slate-800'
+                  }`}
+                >
+                  {tutorCameraTrack &&
+                  tutorCameraTrack.publication?.track &&
+                  !tutorCameraTrack.publication.isMuted ? (
+                    <VideoTrack
+                      trackRef={tutorCameraTrack}
+                      className="w-full h-full object-cover scale-x-[-1]"
+                    />
+                  ) : activeScreenTrack && activeScreenTrack.publication?.track ? (
+                    <VideoTrack
+                      trackRef={activeScreenTrack}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
+                      <div
+                        className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                          (tutorRP?.isSpeaking || tutorCameraTrack?.participant?.isSpeaking)
+                            ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
+                            : 'bg-blue-600/20 border border-blue-500/40'
+                        }`}
+                      >
+                        T
+                      </div>
+                      <span className="text-xs font-semibold text-slate-300">Teacher (Host)</span>
+                    </div>
+                  )}
+
+                  {/* Spotlight Pin Button */}
                   <button
-                    onClick={stopStudentSharing}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs shadow-lg transition-all cursor-pointer"
+                    onClick={() =>
+                      setPinnedParticipant({
+                        id: 'teacher',
+                        name: 'Teacher (Host)',
+                        isTeacher: true,
+                      })
+                    }
+                    className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md cursor-pointer z-10"
+                    title="Spotlight Full Screen"
                   >
-                    <X className="w-4 h-4" />
-                    <span>Stop Screen Share 🛑</span>
+                    <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
                   </button>
+
+                  <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
+                    Teacher (Host)
+                  </div>
+
+                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
+                    {(tutorRP?.isMicrophoneEnabled ?? tutorCameraTrack?.participant?.isMicrophoneEnabled) ? (
+                      <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                    )}
+                    {tutorCameraTrack &&
+                    tutorCameraTrack.publication?.track &&
+                    !tutorCameraTrack.publication.isMuted ? (
+                      <Video className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <VideoOff className="w-3.5 h-3.5 text-rose-400" />
+                    )}
+                  </div>
                 </div>
 
-                {screenStreamRef.current ? (
-                  <video
-                    autoPlay
-                    playsInline
-                    muted
-                    ref={(el) => {
-                      if (
-                        el &&
-                        screenStreamRef.current &&
-                        el.srcObject !== screenStreamRef.current
-                      ) {
-                        el.srcObject = screenStreamRef.current;
-                      }
-                    }}
-                    className="w-full h-full object-contain rounded-xl border border-emerald-500/40 shadow-2xl max-h-[85vh]"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 text-slate-500">
-                    <Monitor className="w-12 h-12 text-emerald-400 animate-pulse" />
-                    <p className="text-sm font-semibold text-slate-200">Your Screen Share Active</p>
-                    <p className="text-xs text-emerald-400 font-mono">
-                      Broadcasting live presentation to live studio...
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                {/* 2. Combined Students Tiles */}
+                {combinedStudentList.map((st, idx) => {
+                  const isSelf = st.isSelf;
+                  const rp = !isSelf
+                    ? remoteParticipants.find(
+                        (r) => r.sid === st.id || r.name?.toLowerCase() === st.name.toLowerCase(),
+                      )
+                    : localParticipant;
 
-            {/* Grid View Mode */}
-            {!isScreenSharing &&
-              teacherMode !== 'screen' &&
-              teacherMode !== 'whiteboard' &&
-              teacherMode !== 'pdf' &&
-              studentViewMode === 'idle' && (
-                <>
-                  {pinnedParticipant ? (
-                    /* Focused Spotlight View */
-                    <div className="w-full h-full relative rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shadow-md flex items-center justify-center">
-                      {pinnedParticipant.isTeacher ? (
-                        remoteTutorCamFrame ? (
-                          <img
-                            src={remoteTutorCamFrame}
-                            className="w-full h-full object-contain scale-x-[-1]"
-                            alt="Teacher Camera"
+                  const studentTrack = cameraTracks.find(
+                    (t) =>
+                      t.participant.sid === rp?.sid &&
+                      t.publication?.track &&
+                      !t.publication.isMuted,
+                  );
+                  const isSpeaking = rp?.isSpeaking ?? false;
+
+                  return (
+                    <div
+                      key={st.id || idx}
+                      className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
+                        isSpeaking
+                          ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
+                          : 'border-slate-800'
+                      }`}
+                    >
+                      {isSelf ? (
+                        isCameraEnabled &&
+                        selfCameraTrack &&
+                        selfCameraTrack.publication?.track &&
+                        !selfCameraTrack.publication.isMuted ? (
+                          <VideoTrack
+                            trackRef={selfCameraTrack}
+                            className="w-full h-full object-cover scale-x-[-1]"
                           />
                         ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
-                            <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
-                              T
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
+                            <div
+                              className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                                localParticipant.isSpeaking
+                                  ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
+                                  : 'bg-blue-600/20 border border-blue-500/40'
+                              }`}
+                            >
+                              {st.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="text-base font-bold text-slate-200">
-                              Teacher (Host)
+                            <span className="text-xs font-semibold text-slate-300">
+                              {st.name} (You)
                             </span>
                           </div>
                         )
-                      ) : (pinnedParticipant.id === studentId ||
-                          pinnedParticipant.name.includes('(You)')) &&
-                        isCamOn ? (
-                        localCamFrame ? (
-                          <img
-                            src={localCamFrame}
-                            className="w-full h-full object-contain scale-x-[-1]"
-                            alt="Your Camera"
-                          />
-                        ) : (
-                          <video
-                            autoPlay
-                            playsInline
-                            muted
-                            ref={(el) => {
-                              if (
-                                el &&
-                                mediaStreamRef.current &&
-                                el.srcObject !== mediaStreamRef.current
-                              ) {
-                                el.srcObject = mediaStreamRef.current;
-                              }
-                            }}
-                            className="w-full h-full object-contain scale-x-[-1]"
-                          />
-                        )
+                      ) : studentTrack ? (
+                        <VideoTrack
+                          trackRef={studentTrack}
+                          className="w-full h-full object-cover scale-x-[-1]"
+                        />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
-                          <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
-                            {pinnedParticipant.name.charAt(0).toUpperCase()}
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
+                          <div className="w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base bg-blue-600/20 border border-blue-500/40">
+                            {st.name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-base font-bold text-slate-200">
-                            {pinnedParticipant.name}
+                          <span className="text-xs font-semibold text-slate-300 truncate max-w-[130px]">
+                            {st.name}
                           </span>
                         </div>
                       )}
 
-                      {/* Name Pill */}
-                      <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>{pinnedParticipant.name} (Spotlight)</span>
+                      {/* Spotlight Pin Button */}
+                      <button
+                        onClick={() =>
+                          setPinnedParticipant({
+                            id: st.id || `student-${idx}`,
+                            name: st.name,
+                            isTeacher: false,
+                          })
+                        }
+                        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md cursor-pointer z-10"
+                        title="Spotlight Full Screen"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                      </button>
+
+                      <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm truncate max-w-[80%]">
+                        {st.name} {isSelf ? '(You)' : ''}
                       </div>
 
-                      {/* Unpin Button */}
-                      <button
-                        onClick={() => setPinnedParticipant(null)}
-                        className="absolute top-3 right-3 bg-black/75 hover:bg-black text-white p-2 rounded-xl backdrop-blur-md border border-slate-700 transition flex items-center gap-1.5 text-xs font-bold shadow-lg"
-                        title="Exit Spotlight"
-                      >
-                        <Minimize2 className="w-4 h-4 text-blue-400" />
-                        <span>Exit Grid View</span>
-                      </button>
+                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
+                        {rp?.isMicrophoneEnabled ? (
+                          <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                        )}
+                        {studentTrack || (isSelf && isCameraEnabled) ? (
+                          <Video className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <VideoOff className="w-3.5 h-3.5 text-slate-400" />
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    /* Standard 3x3 Box Grid */
-                    <div className="w-full h-full p-1.5 sm:p-2.5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto content-start">
-                      {/* Host Teacher Tile */}
-                      {(() => {
-                        const teacherRP =
-                          remoteParticipants.find(
-                            (p) =>
-                              p.identity.startsWith('host-') ||
-                              (p.name && p.name.toLowerCase().includes('teacher')) ||
-                              (p.name && p.name.toLowerCase().includes('host')),
-                          ) || remoteParticipants[0];
-                        const camPub = teacherRP?.getTrackPublication(Track.Source.Camera);
-                        const hasCamTrack = camPub && !camPub.isMuted && camPub.track;
-
-                        return (
-                          <div
-                            className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
-                              isTutorSpeaking
-                                ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
-                                : 'border-slate-700'
-                            }`}
-                          >
-                            {hasCamTrack && teacherRP ? (
-                              <VideoTrack
-                                trackRef={{
-                                  participant: teacherRP,
-                                  source: Track.Source.Camera,
-                                  publication: camPub,
-                                }}
-                                className="w-full h-full object-cover scale-x-[-1]"
-                              />
-                            ) : remoteScreenFrame ? (
-                              <img
-                                src={remoteScreenFrame}
-                                className="w-full h-full object-contain"
-                                alt="Teacher Screen Share Stream"
-                              />
-                            ) : remoteTutorCamFrame ? (
-                              <img
-                                src={remoteTutorCamFrame}
-                                className="w-full h-full object-cover scale-x-[-1]"
-                                alt="Teacher Camera"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
-                                <div
-                                  className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                                    isTutorSpeaking
-                                      ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
-                                      : 'bg-blue-600/20 border border-blue-500/40'
-                                  }`}
-                                >
-                                  T
-                                </div>
-                                <span className="text-xs font-semibold text-slate-300">
-                                  Teacher (Host)
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Spotlight Pin Button */}
-                            <button
-                              onClick={() =>
-                                setPinnedParticipant({
-                                  id: 'teacher',
-                                  name: 'Teacher (Host)',
-                                  isTeacher: true,
-                                })
-                              }
-                              className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
-                              title="Spotlight Full Screen"
-                            >
-                              <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                            </button>
-
-                            {/* Name Tag Pill */}
-                            <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
-                              Teacher (Host)
-                            </div>
-
-                            {/* Status Badges & Speaking Wave Indicator */}
-                            <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
-                              {isTutorMicOn ? (
-                                <div className="flex items-center gap-1">
-                                  <Mic
-                                    className={`w-3.5 h-3.5 ${isTutorSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`}
-                                  />
-                                  {isTutorSpeaking && (
-                                    <span className="flex gap-0.5 items-end h-3">
-                                      <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
-                                      <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
-                                      <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <MicOff className="w-3.5 h-3.5 text-rose-400" />
-                              )}
-                              {hasCamTrack || remoteTutorCamFrame ? (
-                                <Video className="w-3.5 h-3.5 text-emerald-400" />
-                              ) : (
-                                <VideoOff className="w-3.5 h-3.5 text-rose-400" />
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Combined Students Tiles */}
-                      {combinedStudentList.map((st, idx) => {
-                        const isSpeaking = st.isSelf && isSelfSpeaking;
-                        const selfCamPub = localParticipant.getTrackPublication(
-                          Track.Source.Camera,
-                        );
-                        const hasSelfCam =
-                          isCamOn && selfCamPub && !selfCamPub.isMuted && selfCamPub.track;
-
-                        const otherRP = !st.isSelf
-                          ? remoteParticipants.find((r) => r.sid === st.id || r.name === st.name)
-                          : null;
-                        const otherCamPub = otherRP?.getTrackPublication(Track.Source.Camera);
-                        const hasOtherCam =
-                          otherCamPub && !otherCamPub.isMuted && otherCamPub.track;
-
-                        return (
-                          <div
-                            key={st.id || idx}
-                            className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
-                              isSpeaking
-                                ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
-                                : 'border-slate-700'
-                            }`}
-                          >
-                            {st.isSelf ? (
-                              hasSelfCam ? (
-                                <VideoTrack
-                                  trackRef={{
-                                    participant: localParticipant,
-                                    source: Track.Source.Camera,
-                                    publication: selfCamPub,
-                                  }}
-                                  className="w-full h-full object-cover scale-x-[-1]"
-                                />
-                              ) : localCamFrame ? (
-                                <img
-                                  src={localCamFrame}
-                                  className="w-full h-full object-cover scale-x-[-1]"
-                                  alt="Your Camera"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
-                                  <div
-                                    className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                                      isSpeaking
-                                        ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
-                                        : 'bg-blue-600/20 border border-blue-500/40'
-                                    }`}
-                                  >
-                                    {st.name.charAt(0).toUpperCase()}
-                                  </div>
-                                  <span className="text-xs font-semibold text-slate-300">
-                                    {st.name} (You)
-                                  </span>
-                                </div>
-                              )
-                            ) : hasOtherCam && otherRP ? (
-                              <VideoTrack
-                                trackRef={{
-                                  participant: otherRP,
-                                  source: Track.Source.Camera,
-                                  publication: otherCamPub,
-                                }}
-                                className="w-full h-full object-cover scale-x-[-1]"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
-                                <div className="w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base bg-blue-600/20 border border-blue-500/40">
-                                  {st.name.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="text-xs font-semibold text-slate-300">
-                                  {st.name}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Spotlight Pin Button */}
-                            <button
-                              onClick={() =>
-                                setPinnedParticipant({
-                                  id: st.id || `student-${idx}`,
-                                  name: st.name,
-                                  isTeacher: false,
-                                })
-                              }
-                              className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
-                              title="Spotlight Full Screen"
-                            >
-                              <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                            </button>
-
-                            {/* Name Tag Pill */}
-                            <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm truncate max-w-[80%]">
-                              {st.name} {st.isSelf ? '(You)' : ''}
-                            </div>
-
-                            {/* Status Badges & Speaking Waves */}
-                            <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
-                              {st.isSelf ? (
-                                <>
-                                  {isMicOn ? (
-                                    <div className="flex items-center gap-1">
-                                      <Mic
-                                        className={`w-3.5 h-3.5 ${isSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`}
-                                      />
-                                      {isSpeaking && (
-                                        <span className="flex gap-0.5 items-end h-3">
-                                          <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
-                                          <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
-                                          <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
-                                        </span>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <MicOff className="w-3.5 h-3.5 text-rose-400" />
-                                  )}
-                                  {isCamOn ? (
-                                    <Video className="w-3.5 h-3.5 text-emerald-400" />
-                                  ) : (
-                                    <VideoOff className="w-3.5 h-3.5 text-rose-400" />
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <Mic className="w-3.5 h-3.5 text-emerald-400" />
-                                  <Video className="w-3.5 h-3.5 text-emerald-400" />
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-
-            {/* Whiteboard Mode (Teacher Broadcast or Student Whiteboard) */}
-            {!isScreenSharing &&
-              (teacherMode === 'whiteboard' || studentViewMode === 'whiteboard') && (
-                <div className="w-full h-full relative bg-slate-900">
-                  <StudioWhiteboard isTeacher={false} remoteFrame={remoteWhiteboardFrame} />
-                </div>
-              )}
-
-            {/* PDF Presentation Mode (Teacher Sync) */}
-            {!isScreenSharing && (teacherMode === 'pdf' || studentViewMode === 'pdf') && (
+                  );
+                })}
+              </div>
+            ) : teacherMode === 'whiteboard' ? (
+              /* Whiteboard Presentation Mode */
+              <div className="w-full h-full relative bg-slate-900">
+                <StudioWhiteboard isTeacher={false} remoteFrame={remoteWhiteboardFrame} />
+              </div>
+            ) : teacherMode === 'pdf' ? (
+              /* PDF Presentation Mode */
               <div className="w-full h-full relative bg-slate-950">
                 <StudioPdfPresenter
                   isTeacher={false}
@@ -2321,32 +1057,14 @@ function StudentClassroomInner({
                   currentPage={teacherPdfPage}
                 />
               </div>
-            )}
-
-            {/* Screen Share Mode */}
-            {!isScreenSharing && teacherMode === 'screen' && (
+            ) : teacherMode === 'screen' ? (
+              /* Screen Share Mode */
               <div className="w-full h-full relative flex items-center justify-center bg-black group overflow-hidden">
-                {hasLiveScreenTrack && activeScreenTrack ? (
+                {activeScreenTrack && activeScreenTrack.publication?.track ? (
                   <VideoTrack
-                    trackRef={{
-                      participant: activeScreenTrack.participant,
-                      source: Track.Source.ScreenShare,
-                      publication: activeScreenTrack.publication,
-                    }}
+                    trackRef={activeScreenTrack}
                     className="w-full h-full object-contain max-h-[85vh]"
                   />
-                ) : remoteScreenFrame ? (
-                  <>
-                    <img
-                      src={remoteScreenFrame}
-                      className="w-full h-full object-contain max-h-[85vh] transition-transform duration-200"
-                      alt="Teacher Screen Share"
-                    />
-                    <div className="absolute top-3 left-3 bg-slate-900/90 border border-slate-700 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold text-blue-400 flex items-center gap-2 shadow-lg">
-                      <Monitor className="w-4 h-4 text-blue-400 animate-pulse" />
-                      <span>Teacher Screen Live</span>
-                    </div>
-                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
                     <Monitor className="w-12 h-12 text-blue-500 animate-pulse" />
@@ -2356,7 +1074,7 @@ function StudentClassroomInner({
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Floating Bottom Control Dock Bar */}
@@ -2365,148 +1083,116 @@ function StudentClassroomInner({
               {/* Mic */}
               <button
                 onClick={toggleMic}
-                title={isMicOn ? 'Mute' : 'Unmute'}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 ${
-                  isMicOn ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                title={isMicrophoneEnabled ? 'Mute' : 'Unmute'}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 cursor-pointer ${
+                  isMicrophoneEnabled ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
                 }`}
               >
-                {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+                {isMicrophoneEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               </button>
 
               {/* Camera */}
               <button
                 onClick={toggleCam}
-                title={isCamOn ? 'Stop Video' : 'Start Video'}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 ${
-                  isCamOn ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                title={isCameraEnabled ? 'Stop Video' : 'Start Video'}
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 cursor-pointer ${
+                  isCameraEnabled ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
                 }`}
               >
-                {isCamOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+                {isCameraEnabled ? (
+                  <Video className="w-4 h-4" />
+                ) : (
+                  <VideoOff className="w-4 h-4" />
+                )}
               </button>
 
-              {/* Screen Share / Stop Sharing Button (Desktop Only) */}
+              {/* Screen Share Button */}
               <button
                 onClick={toggleScreenShare}
-                title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen (Desktop / Laptop)'}
+                title={isScreenShareEnabled ? 'Stop Screen Share' : 'Share Screen'}
                 className={`hidden md:flex px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm items-center gap-1.5 shrink-0 cursor-pointer ${
-                  isScreenSharing
+                  isScreenShareEnabled
                     ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
                 <span className="hidden sm:inline">
-                  {isScreenSharing ? 'Stop Share' : 'Share Screen'}
+                  {isScreenShareEnabled ? 'Stop Share' : 'Share Screen'}
                 </span>
               </button>
 
-              {/* Touch Whiteboard (Mobile & Desktop) */}
-              <button
-                onClick={() =>
-                  setStudentViewMode(studentViewMode === 'whiteboard' ? 'idle' : 'whiteboard')
-                }
-                title={
-                  studentViewMode === 'whiteboard' ? 'Close Whiteboard' : 'Open Touch Whiteboard'
-                }
-                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                  studentViewMode === 'whiteboard' || teacherMode === 'whiteboard'
-                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
-                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <PenTool className="w-4 h-4" />
-                <span className="hidden sm:inline">Whiteboard</span>
-              </button>
-
-              {/* Raise Hand */}
-              <button
-                onClick={toggleRaiseHand}
-                title="Raise Hand"
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center shadow-sm transition shrink-0 ${
-                  isHandRaised
-                    ? 'bg-amber-100 text-amber-600 border-amber-400 animate-bounce'
-                    : 'bg-white text-slate-700 border-slate-300'
-                }`}
-              >
-                <Hand className="w-4 h-4 text-amber-500" />
-              </button>
-
-              {/* Chat */}
+              {/* Chat Toggle */}
               <button
                 onClick={() => {
-                  if (activeTab === 'chat' && (showSidebar || showMobileDrawer)) {
+                  if (activeTab === 'chat' && showSidebar) {
                     setShowSidebar(false);
-                    setShowMobileDrawer(false);
                   } else {
                     setActiveTab('chat');
                     setShowSidebar(true);
-                    setShowMobileDrawer(true);
                   }
                 }}
                 title="Chat"
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-300 flex items-center justify-center shadow-sm transition shrink-0 ${
-                  activeTab === 'chat' && (showSidebar || showMobileDrawer)
+                className={`w-9 h-9 rounded-full border flex items-center justify-center shadow-sm transition shrink-0 cursor-pointer ${
+                  activeTab === 'chat' && showSidebar
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-700 hover:bg-slate-50'
+                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <MessageSquare className="w-4 h-4" />
               </button>
 
-              {/* Participants */}
+              {/* Participants Toggle */}
               <button
                 onClick={() => {
-                  if (activeTab === 'participants' && (showSidebar || showMobileDrawer)) {
+                  if (activeTab === 'participants' && showSidebar) {
                     setShowSidebar(false);
-                    setShowMobileDrawer(false);
                   } else {
                     setActiveTab('participants');
                     setShowSidebar(true);
-                    setShowMobileDrawer(true);
                   }
                 }}
                 title="Participants"
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-slate-300 flex items-center justify-center shadow-sm transition shrink-0 ${
-                  activeTab === 'participants' && (showSidebar || showMobileDrawer)
+                className={`w-9 h-9 rounded-full border flex items-center justify-center shadow-sm transition shrink-0 cursor-pointer ${
+                  activeTab === 'participants' && showSidebar
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-700 hover:bg-slate-50'
+                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 <Users className="w-4 h-4" />
               </button>
 
-              {/* End Call */}
+              {/* Leave Call */}
               <button
                 onClick={() => setShowLeaveModal(true)}
-                className="px-3 sm:px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1 shrink-0"
+                className="px-3 sm:px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1 shrink-0 cursor-pointer"
               >
-                <span className="hidden sm:inline">End </span>Call
+                Leave
               </button>
             </div>
           </div>
         </div>
 
-        {/* ── Right Sidebar Panel — hidden on mobile, visible lg+ when toggled ── */}
+        {/* ── Right Sidebar Panel ── */}
         {showSidebar && (
           <div className="hidden lg:flex w-80 xl:w-96 bg-white border border-slate-200 rounded-2xl flex-col shrink-0 overflow-hidden shadow-sm">
-            {/* Tabs (Participants & Chat) + Close Button */}
             <div className="flex items-center border-b border-slate-200 text-xs font-bold shrink-0 bg-slate-50/50 pr-2">
               <button
                 onClick={() => setActiveTab('participants')}
                 className={`flex-1 py-3.5 text-center transition border-b-2 ${
                   activeTab === 'participants'
-                    ? 'border-blue-600 text-blue-600 bg-white'
+                    ? 'border-blue-600 text-blue-600 bg-white font-extrabold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Participants
+                Participants ({combinedStudentList.length + 1})
               </button>
               <button
                 onClick={() => setActiveTab('chat')}
                 className={`flex-1 py-3.5 text-center transition border-b-2 ${
                   activeTab === 'chat'
-                    ? 'border-blue-600 text-blue-600 bg-white'
-                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                    ? 'border-blue-600 text-blue-600 bg-white font-extrabold'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 font-semibold'
                 }`}
               >
                 Chat
@@ -2514,18 +1200,16 @@ function StudentClassroomInner({
               <button
                 onClick={() => setShowSidebar(false)}
                 title="Close Sidebar"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition ml-1"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition ml-1 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Tab Content */}
             <div className="flex-1 flex flex-col overflow-hidden p-4 gap-3 bg-white">
-              {/* Participants Tab */}
               {activeTab === 'participants' && (
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                  {/* Host Row */}
+                  {/* Teacher Row */}
                   <div className="flex items-center justify-between py-2 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-slate-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
@@ -2533,55 +1217,68 @@ function StudentClassroomInner({
                       </div>
                       <div>
                         <p className="text-xs font-bold text-slate-800">Teacher (Host)</p>
-                        <p className="text-[10px] text-blue-600 font-semibold">Host / Presenter</p>
+                        <p className="text-[10px] text-blue-600 font-semibold">Host / Tutor</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {isTutorMicOn ? (
+                      {tutorCameraTrack?.participant?.isMicrophoneEnabled ? (
                         <Mic className="w-4 h-4 text-emerald-500" />
                       ) : (
                         <MicOff className="w-4 h-4 text-rose-500" />
                       )}
-                      {remoteTutorCamFrame ? (
+                      {tutorCameraTrack ? (
                         <Video className="w-4 h-4 text-emerald-500" />
                       ) : (
-                        <VideoOff className="w-4 h-4 text-rose-500" />
+                        <VideoOff className="w-4 h-4 text-slate-400" />
                       )}
                     </div>
                   </div>
 
-                  {/* Combined Student List */}
-                  {combinedStudentList.map((p, idx) => {
-                    const isMicActive = p.isSelf ? isMicOn : false;
-                    const isCamActive = p.isSelf ? isCamOn : false;
+                  {/* Student List */}
+                  {combinedStudentList.map((st, idx) => {
+                    const isSelf = st.isSelf;
+                    const rp = !isSelf
+                      ? remoteParticipants.find(
+                          (r) =>
+                            r.sid === st.id || r.name?.toLowerCase() === st.name.toLowerCase(),
+                        )
+                      : localParticipant;
+
+                    const isOnline = isSelf || Boolean(rp);
+
                     return (
                       <div
-                        key={p.id || idx}
-                        className="flex items-center justify-between py-2 border-b border-slate-100"
+                        key={st.id || idx}
+                        className="flex items-center justify-between py-2 border-b border-slate-100/60"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">
-                            {p.name.charAt(0).toUpperCase()}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                              isSelf ? 'bg-violet-600 text-white' : isOnline ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {st.name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-800">
-                              {p.name} {p.isSelf ? '(You)' : ''}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-800 truncate">
+                              {st.name} {isSelf ? '(You)' : ''}
                             </p>
-                            <p className="text-[10px] text-slate-400">
-                              {p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}
+                            <p className="text-[10px] text-slate-400 truncate">
+                              {st.admissionNumber ? `#${st.admissionNumber}` : 'Student'} •{' '}
+                              {isOnline ? 'Active' : 'Offline'}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {isMicActive ? (
-                            <Mic className="w-4 h-4 text-emerald-500" />
+                        <div className="flex items-center gap-2 shrink-0">
+                          {rp?.isMicrophoneEnabled ? (
+                            <Mic className="w-3.5 h-3.5 text-emerald-500" />
                           ) : (
-                            <MicOff className="w-4 h-4 text-rose-500" />
+                            <MicOff className="w-3.5 h-3.5 text-rose-400" />
                           )}
-                          {isCamActive ? (
-                            <Video className="w-4 h-4 text-emerald-500" />
+                          {rp?.isCameraEnabled ? (
+                            <Video className="w-3.5 h-3.5 text-emerald-500" />
                           ) : (
-                            <VideoOff className="w-4 h-4 text-rose-400" />
+                            <VideoOff className="w-3.5 h-3.5 text-slate-400" />
                           )}
                         </div>
                       </div>
@@ -2590,345 +1287,80 @@ function StudentClassroomInner({
                 </div>
               )}
 
-              {/* Chat Tab */}
               {activeTab === 'chat' && (
-                <>
-                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1">
                     {chatMessages.map((msg, idx) => (
-                      <div key={idx} className="flex flex-col space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400">{msg.sender}</span>
-                        <div className="p-3 rounded-2xl bg-blue-50 text-slate-800 border border-blue-100 text-xs leading-relaxed max-w-[90%]">
-                          {msg.text}
+                      <div
+                        key={idx}
+                        className={`p-2.5 rounded-xl text-xs ${
+                          msg.sender === 'System'
+                            ? 'bg-slate-100 text-slate-500 text-center font-medium'
+                            : msg.sender === studentSelfName
+                              ? 'bg-blue-50 text-blue-900 ml-4'
+                              : 'bg-slate-100 text-slate-800 mr-4'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-[11px]">{msg.sender}</span>
+                          <span className="text-[9px] text-slate-400">{msg.time}</span>
                         </div>
+                        <p className="leading-relaxed">{msg.text}</p>
                       </div>
                     ))}
                   </div>
 
-                  {/* Message Input Box (Connect Meet Style Input) */}
-                  <form
-                    onSubmit={handleSendChat}
-                    className="flex items-center gap-2 pt-3 border-t border-slate-200 shrink-0"
-                  >
+                  <form onSubmit={handleSendChat} className="mt-3 flex gap-2 shrink-0">
                     <input
                       type="text"
-                      placeholder="Type a message..."
                       value={inputMsg}
                       onChange={(e) => setInputMsg(e.target.value)}
-                      className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                      placeholder="Type a message..."
+                      className="flex-1 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
                       type="submit"
-                      className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shrink-0"
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer"
                     >
-                      <ArrowUp className="w-4 h-4" />
+                      <Send className="w-4 h-4" />
                     </button>
                   </form>
-                </>
+                </div>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Mobile Slide-Up Sheet (Chat & Participants) ── */}
-      {showMobileDrawer && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setShowMobileDrawer(false)}
-            className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-          />
-          {/* Sheet */}
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[75vh]">
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-slate-300" />
-            </div>
-            {/* Tabs */}
-            <div className="flex border-b border-slate-200 text-xs font-bold shrink-0 px-4">
-              <button
-                onClick={() => setActiveTab('participants')}
-                className={`flex-1 py-3 text-center border-b-2 transition ${
-                  activeTab === 'participants'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500'
-                }`}
-              >
-                <Users className="w-4 h-4 inline mr-1" />
-                Participants
-              </button>
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`flex-1 py-3 text-center border-b-2 transition ${
-                  activeTab === 'chat'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4 inline mr-1" />
-                Chat
-              </button>
-              <button
-                onClick={() => setShowMobileDrawer(false)}
-                className="p-2 text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            {/* Content */}
-            <div className="flex-1 overflow-hidden flex flex-col p-4">
-              {activeTab === 'participants' && (
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
-                        T
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">Teacher (Host)</p>
-                        <p className="text-[10px] text-blue-600 font-semibold">Host / Presenter</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {isTutorMicOn ? (
-                        <Mic className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <MicOff className="w-4 h-4 text-rose-500" />
-                      )}
-                      {remoteTutorCamFrame ? (
-                        <Video className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <VideoOff className="w-4 h-4 text-rose-500" />
-                      )}
-                    </div>
-                  </div>
-                  {combinedStudentList.map((p, idx) => {
-                    const isMicActive = p.isSelf ? isMicOn : false;
-                    const isCamActive = p.isSelf ? isCamOn : false;
-                    return (
-                      <div
-                        key={p.id || idx}
-                        className="flex items-center justify-between py-2.5 border-b border-slate-100"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">
-                            {p.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-800">
-                              {p.name}
-                              {p.isSelf ? ' (You)' : ''}
-                            </p>
-                            <p className="text-[10px] text-slate-400">
-                              {p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5">
-                          {isMicActive ? (
-                            <Mic className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <MicOff className="w-4 h-4 text-rose-500" />
-                          )}
-                          {isCamActive ? (
-                            <Video className="w-4 h-4 text-emerald-500" />
-                          ) : (
-                            <VideoOff className="w-4 h-4 text-rose-400" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {activeTab === 'chat' && (
-                <>
-                  <div className="flex-1 overflow-y-auto space-y-3 mb-3">
-                    {chatMessages.map((msg, idx) => (
-                      <div key={idx} className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold text-slate-400">{msg.sender}</span>
-                        <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 text-xs text-slate-800 leading-relaxed max-w-[85%]">
-                          {msg.text}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <form onSubmit={handleSendChat} className="flex gap-2 shrink-0">
-                    <input
-                      type="text"
-                      placeholder="Type a message..."
-                      value={inputMsg}
-                      onChange={(e) => setInputMsg(e.target.value)}
-                      className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      type="submit"
-                      className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0"
-                    >
-                      <ArrowUp className="w-4 h-4" />
-                    </button>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Professional Leave Class Confirmation Modal ── */}
+      {/* ── Leave Class Modal ── */}
       {showLeaveModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-100">Leave Live Classroom?</h3>
-                <p className="text-xs text-slate-400">Class ID: {classId}</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-4 rounded-2xl border border-slate-800/80">
-              Are you sure you want to disconnect from this live class? You can rejoin anytime while
-              the teacher session is active.
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 text-center">
+            <h3 className="text-base font-black text-white">Leave Live Class?</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Are you sure you want to leave the live interactive session? You can rejoin anytime
+              while the class is active.
             </p>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setShowLeaveModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
               >
-                Cancel
+                Stay in Class
               </button>
-
               <button
-                onClick={() => {
-                  stopAllMediaTracks();
-                  router.push('/dashboard/student');
-                }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition"
+                onClick={() => router.push('/dashboard/student')}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-black transition shadow-md cursor-pointer"
               >
-                <PhoneOff className="w-4 h-4" />
-                Yes, Leave Classroom
+                Leave Now
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Waiting for Tutor Admission Full-Screen Overlay ── */}
-      {!isApproved && !isDenied && (
-        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-4 font-sans select-none">
-          <div className="flex flex-col items-center gap-5 text-center max-w-sm w-full bg-slate-900/95 border border-slate-800 p-8 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="w-20 h-20 rounded-3xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-xl">
-              <Loader2 className="w-10 h-10 animate-spin" />
-            </div>
-            <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-wider">
-                WAITING FOR ADMISSION
-              </span>
-              <h2 className="text-xl font-black text-white">Asking to Join...</h2>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Your admission request has been sent to the tutor. Please wait while the tutor
-                admits you into the live session.
-              </p>
-            </div>
-            <div className="w-full pt-2">
-              <button
-                onClick={() => {
-                  stopAllMediaTracks();
-                  router.push('/dashboard/student');
-                }}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
-              >
-                Cancel & Return to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Admission Request Declined Modal ── */}
-      {isDenied && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200/90 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto text-3xl font-bold shadow-2xs">
-              🚫
-            </div>
-
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black uppercase tracking-wider">
-                ADMISSION DECLINED
-              </span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                Teacher Declined Entry
-              </h2>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                The tutor has declined or ignored your admission request at this time. You may retry
-                requesting entry or return to dashboard.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <button
-                onClick={() => {
-                  setIsDenied(false);
-                }}
-                className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs rounded-2xl shadow-md shadow-violet-500/20 active:scale-98 transition cursor-pointer"
-              >
-                Request Entry Again 🔄
-              </button>
-
-              <button
-                onClick={() => {
-                  stopAllMediaTracks();
-                  router.push('/dashboard/student');
-                }}
-                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer"
-              >
-                Return to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Teacher / Auto Ended Class Modal ── */}
-      {isClassEnded && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 font-sans animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-5 animate-in zoom-in duration-200">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto text-3xl sm:text-4xl shadow-inner">
-              🎓
-            </div>
-
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
-                Live Session Completed
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Class Has Ended 🎉
-              </h2>
-              <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                {endedReason}
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                stopAllMediaTracks();
-                router.push('/dashboard/student');
-              }}
-              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 active:scale-95 text-white font-black text-sm rounded-2xl shadow-lg shadow-violet-500/25 transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Return to Dashboard</span>
-              <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px] font-mono font-bold">
-                {redirectCount}s
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── Real-time Development Diagnostic HUD ── */}
+      <LivekitDebugPanel classId={classId} role="student" />
     </div>
   );
 }

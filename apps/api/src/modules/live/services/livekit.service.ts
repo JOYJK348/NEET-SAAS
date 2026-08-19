@@ -28,15 +28,19 @@ export class LiveKitService {
     this.apiKey =
       this.configService.get<string>('livekit.apiKey') ||
       process.env.LIVEKIT_API_KEY ||
-      'APIkxqs4LtzdvXf';
+      '';
     this.apiSecret =
       this.configService.get<string>('livekit.apiSecret') ||
       process.env.LIVEKIT_API_SECRET ||
-      'P2CeY2WD1ZlAtHdalufTLDdSE5ebBR1F8AkSksARZMQA';
+      '';
     this.wsUrl =
       this.configService.get<string>('livekit.wsUrl') ||
       process.env.LIVEKIT_URL ||
       'wss://neet-n80sqwyo.livekit.cloud';
+
+    if (!this.apiKey || !this.apiSecret) {
+      this.logger.warn('LIVEKIT_API_KEY or LIVEKIT_API_SECRET is missing from environment variables.');
+    }
 
     this.recordingsBucket =
       this.configService.get<string>('livekit.recordingsBucket') ||
@@ -104,8 +108,13 @@ export class LiveKitService {
   }): Promise<string> {
     const { roomName, identity, name, isTeacher } = params;
 
-    const apiKey = this.apiKey || 'APIkxqs4LtzdvXf';
-    const apiSecret = this.apiSecret || 'P2CeY2WD1ZlAtHdalufTLDdSE5ebBR1F8AkSksARZMQA';
+    const apiKey = this.apiKey;
+    const apiSecret = this.apiSecret;
+
+    if (!apiKey || !apiSecret) {
+      this.logger.error('Cannot generate LiveKit token: LIVEKIT_API_KEY or LIVEKIT_API_SECRET is missing.');
+      throw new InternalServerErrorException('LiveKit server configuration is incomplete.');
+    }
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
@@ -116,11 +125,15 @@ export class LiveKitService {
     at.addGrant({
       room: roomName,
       roomJoin: true,
-      canPublish: true, // both teacher and student can publish mic/cam (or teacher controls mic)
+      canPublish: true, // both teacher and student can publish mic/cam
       canSubscribe: true,
       canPublishData: true, // chat & whiteboard sync
       roomAdmin: isTeacher, // teacher is room admin
     });
+
+    this.logger.log(
+      `[LiveKit Token] Generated for participant=${identity}, room=${roomName}, host=${this.wsUrl}, role=${isTeacher ? 'host' : 'student'}, ttl=4h`,
+    );
 
     return await at.toJwt();
   }
@@ -236,5 +249,28 @@ export class LiveKitService {
         `Failed to stop egress ${egressId} (may already be finalized): ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
+  }
+
+  /**
+   * Safe runtime diagnostic info — NEVER exposes secrets or tokens
+   */
+  getSafeDiagnosticInfo() {
+    const key = this.apiKey || '';
+    const maskedKey =
+      key.length > 6
+        ? `${key.slice(0, 4)}...${key.slice(-3)} (length: ${key.length})`
+        : 'NOT CONFIGURED / MISSING';
+    const hasSecret = Boolean(this.apiSecret && this.apiSecret.length > 10);
+    const secretLength = this.apiSecret ? this.apiSecret.length : 0;
+
+    return {
+      livekitUrl: this.wsUrl,
+      projectSubdomain: this.wsUrl.replace('wss://', '').replace('.livekit.cloud', ''),
+      apiKeyMasked: maskedKey,
+      hasSecretConfigured: hasSecret,
+      secretCharacterCount: secretLength,
+      nodeEnv: process.env.NODE_ENV || 'development',
+      serverUtcTime: new Date().toISOString(),
+    };
   }
 }

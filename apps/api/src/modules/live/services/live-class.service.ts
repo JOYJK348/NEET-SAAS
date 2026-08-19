@@ -1593,4 +1593,8 @@ export class LiveClassService {
       message: 'Attendance successfully marked and synced across all portals (Admin, Student, Parent).',
     };
   }
+
+  getDiagnosticInfo() {
+    return this.livekitService.getSafeDiagnosticInfo();
+  }
 }

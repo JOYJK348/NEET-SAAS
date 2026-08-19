@@ -53,6 +53,15 @@ export class LiveClassController {
     );
   }
 
+  // ─── Safe LiveKit Runtime Config Diagnostics (Zero secrets exposed) ─────────
+
+  @Public()
+  @Get('debug-config')
+  @ApiOperation({ summary: 'Non-secret runtime diagnostic of loaded LiveKit configuration' })
+  async getDebugConfig() {
+    return this.liveClassService.getDiagnosticInfo();
+  }
+
   // ─── Start Class (Teacher) ──────────────────────────────────────────────────
 
   @Public()

@@ -42,17 +42,26 @@ export function isCancellationError(error: unknown): boolean {
 }
 
 function getApiBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.');
+    const host = window.location.hostname;
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^[\d.]+$/.test(host);
+
     if (isLocal) {
-      return `http://${window.location.hostname}:3000/api/v1`;
+      return `http://${host}:3000/api/v1`;
     }
-    return 'https://neet-saas.onrender.com/api/v1';
   }
-  return 'https://neet-saas.onrender.com/api/v1';
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+  return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'https://neet-saas.onrender.com/api/v1';
 }
 
 class ApiClient {
