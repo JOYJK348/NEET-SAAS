@@ -54,8 +54,9 @@ import { useAuth } from '@/providers/auth-provider';
 import { api } from '@/lib/api';
 
 import StudioWhiteboard from '@/components/live/studio-whiteboard';
+import StudioPdfPresenter, { PdfDocumentInfo, SAMPLE_NEET_DOCUMENTS } from '@/components/live/studio-pdf-presenter';
 
-type Mode = 'idle' | 'whiteboard' | 'screen';
+type Mode = 'idle' | 'whiteboard' | 'screen' | 'pdf';
 
 /** Safely capture display stream using runtime capability detection and granular error handling */
 async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
@@ -999,8 +1000,8 @@ function TeacherStudioInner({
   const [studentMics, setStudentMics] = useState<Record<string, { name: string; isMicOn: boolean }>>({});
 
   // ── PDF State
-  const [pdfPage, setPdfPage] = useState(1);
-  const totalPdfPages = 12;
+  const [activePdfDoc, setActivePdfDoc] = useState<PdfDocumentInfo>(SAMPLE_NEET_DOCUMENTS[0]);
+  const [pdfPage, setPdfPage] = useState<number>(1);
 
   // ── Local Media Stream (Webcam / Mic / Screen Share)
   const [isMicOn, setIsMicOn] = useState<boolean>(() => {
@@ -1537,13 +1538,33 @@ function TeacherStudioInner({
     if (newMode === 'screen' && !isScreenSharing) {
       startScreenShare();
     }
-    safeSend({ type: 'mode-change', mode: newMode, pdfPage });
+    safeSend({ type: 'mode-change', mode: newMode, pdfPage, doc: activePdfDoc });
+    try {
+      const modeBc = new BroadcastChannel('neet-live-mode-sync');
+      modeBc.postMessage({ type: 'mode-change', mode: newMode, classId, pdfPage, doc: activePdfDoc });
+      modeBc.close();
+    } catch {}
   };
 
-  const changePdfPage = (newPage: number) => {
-    if (newPage < 1 || newPage > totalPdfPages) return;
-    setPdfPage(newPage);
-    safeSend({ type: 'pdf-page', page: newPage });
+  const handlePdfPageChange = (page: number) => {
+    setPdfPage(page);
+    safeSend({ type: 'pdf-page-change', page, doc: activePdfDoc });
+    try {
+      const bc = new BroadcastChannel('neet-live-pdf-sync');
+      bc.postMessage({ type: 'pdf-sync', page, doc: activePdfDoc, classId });
+      bc.close();
+    } catch {}
+  };
+
+  const handlePdfDocChange = (doc: PdfDocumentInfo) => {
+    setActivePdfDoc(doc);
+    setPdfPage(1);
+    safeSend({ type: 'pdf-doc-change', doc, page: 1 });
+    try {
+      const bc = new BroadcastChannel('neet-live-pdf-sync');
+      bc.postMessage({ type: 'pdf-sync', page: 1, doc, classId });
+      bc.close();
+    } catch {}
   };
 
   // ── Ultra-Low Latency Web Audio API Microphone Volume Detection
@@ -2141,6 +2162,20 @@ function TeacherStudioInner({
             </div>
           )}
 
+          {/* Mode 2: PDF Presentation */}
+          {mode === 'pdf' && (
+            <div className="w-full h-full relative bg-slate-950">
+              <StudioPdfPresenter
+                isTeacher={true}
+                activeDoc={activePdfDoc}
+                currentPage={pdfPage}
+                onPageChange={handlePdfPageChange}
+                onDocChange={handlePdfDocChange}
+                onClose={() => changeMode('idle')}
+              />
+            </div>
+          )}
+
           {/* Mode 3: Screen Share */}
           {/* Mode 3: Screen Share */}
           {mode === 'screen' && (
@@ -2331,7 +2366,7 @@ function TeacherStudioInner({
                 {isCamOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
               </button>
 
-              {/* Screen Share / Stop Sharing Button */}
+              {/* Screen Share / Stop Sharing Button (Desktop Only) */}
               <button
                 onClick={() => {
                   if (isScreenSharing || mode === 'screen') {
@@ -2340,8 +2375,8 @@ function TeacherStudioInner({
                     startScreenShare();
                   }
                 }}
-                title={isScreenSharing || mode === 'screen' ? 'Stop Screen Share' : 'Share Screen'}
-                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                title={isScreenSharing || mode === 'screen' ? 'Stop Screen Share' : 'Share Screen (Desktop / Laptop)'}
+                className={`hidden md:flex px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm items-center gap-1.5 shrink-0 cursor-pointer ${
                   isScreenSharing || mode === 'screen'
                     ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
@@ -2353,14 +2388,32 @@ function TeacherStudioInner({
                 </span>
               </button>
 
-
-
-              {/* Whiteboard */}
-              <button onClick={() => changeMode(mode === 'whiteboard' ? 'idle' : 'whiteboard')} title="Toggle Whiteboard"
-                className={`w-9 h-9 rounded-full border flex items-center justify-center shadow-sm transition shrink-0 ${
-                  mode === 'whiteboard' ? 'bg-blue-100 text-blue-600 border-blue-400' : 'bg-white text-slate-700 border-slate-300'
-                }`}>
+              {/* Touch Whiteboard (Mobile & Desktop) */}
+              <button
+                onClick={() => changeMode(mode === 'whiteboard' ? 'idle' : 'whiteboard')}
+                title={mode === 'whiteboard' ? 'Close Whiteboard' : 'Open Touch Whiteboard'}
+                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  mode === 'whiteboard'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
                 <PenTool className="w-4 h-4" />
+                <span className="hidden sm:inline">Whiteboard</span>
+              </button>
+
+              {/* PDF Presentation (Mobile & Desktop) */}
+              <button
+                onClick={() => changeMode(mode === 'pdf' ? 'idle' : 'pdf')}
+                title={mode === 'pdf' ? 'Close PDF Presentation' : 'Present PDF / NEET Notes'}
+                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  mode === 'pdf'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-indigo-500/20'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Present PDF</span>
               </button>
 
               {/* Chat Drawer Toggle */}

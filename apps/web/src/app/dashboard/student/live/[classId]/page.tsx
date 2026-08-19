@@ -46,8 +46,9 @@ import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 
 import StudioWhiteboard from '@/components/live/studio-whiteboard';
+import StudioPdfPresenter, { PdfDocumentInfo, SAMPLE_NEET_DOCUMENTS } from '@/components/live/studio-pdf-presenter';
 
-type Mode = 'idle' | 'whiteboard' | 'screen';
+type Mode = 'idle' | 'whiteboard' | 'screen' | 'pdf';
 
 /** Safely capture display stream using runtime capability detection and granular error handling */
 async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
@@ -538,15 +539,15 @@ function StudentClassroomInner({
     }
     return 'idle';
   });
-  const [studentViewMode, setStudentViewMode] = useState<'idle' | 'whiteboard'>(() => {
+  const [studentViewMode, setStudentViewMode] = useState<'idle' | 'whiteboard' | 'pdf'>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`student_class_${classId}_vmode`);
-      if (saved) return saved as ('idle' | 'whiteboard');
+      if (saved) return saved as ('idle' | 'whiteboard' | 'pdf');
     }
     return 'idle';
   });
-  const [pdfPage, setPdfPage] = useState(1);
-  const totalPdfPages = 12;
+  const [teacherPdfDoc, setTeacherPdfDoc] = useState<PdfDocumentInfo>(SAMPLE_NEET_DOCUMENTS[0]);
+  const [teacherPdfPage, setTeacherPdfPage] = useState(1);
 
   // ── Local Media Stream (Student Webcam / Mic)
   const [isMicOn, setIsMicOn] = useState<boolean>(() => {
@@ -664,8 +665,25 @@ function StudentClassroomInner({
 
     const modeSyncChannel = new BroadcastChannel('neet-live-mode-sync');
     modeSyncChannel.onmessage = (e) => {
-      if (e.data.type === 'current-mode' && (e.data.classId === classId || !e.data.classId)) {
+      if ((e.data.type === 'current-mode' || e.data.type === 'mode-change') && (e.data.classId === classId || !e.data.classId)) {
         setTeacherMode(e.data.mode);
+        if (e.data.mode === 'whiteboard') {
+          setStudentViewMode('whiteboard');
+        } else if (e.data.mode === 'pdf') {
+          setStudentViewMode('pdf');
+        } else if (e.data.mode === 'idle') {
+          setStudentViewMode('idle');
+        }
+        if (e.data.pdfPage) setTeacherPdfPage(e.data.pdfPage);
+        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
+      }
+    };
+
+    const pdfSyncChannel = new BroadcastChannel('neet-live-pdf-sync');
+    pdfSyncChannel.onmessage = (e) => {
+      if (e.data.type === 'pdf-sync' && (e.data.classId === classId || !e.data.classId)) {
+        if (e.data.page) setTeacherPdfPage(e.data.page);
+        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
       }
     };
 
@@ -700,6 +718,7 @@ function StudentClassroomInner({
       camChannel.close();
       micChannel.close();
       modeSyncChannel.close();
+      pdfSyncChannel.close();
     };
   }, [classId]);
 
@@ -762,12 +781,19 @@ function StudentClassroomInner({
         setTeacherMode(data.mode);
         if (data.mode === 'whiteboard') {
           setStudentViewMode('whiteboard');
+        } else if (data.mode === 'pdf') {
+          setStudentViewMode('pdf');
         } else if (data.mode === 'idle') {
           setStudentViewMode('idle');
         }
-        if (data.pdfPage) setPdfPage(data.pdfPage);
-      } else if (data.type === 'pdf-page') {
-        setPdfPage(data.page);
+        if (data.pdfPage) setTeacherPdfPage(data.pdfPage);
+        if (data.doc) setTeacherPdfDoc(data.doc);
+      } else if (data.type === 'pdf-page-change' || data.type === 'pdf-page') {
+        setTeacherPdfPage(data.page);
+        if (data.doc) setTeacherPdfDoc(data.doc);
+      } else if (data.type === 'pdf-doc-change') {
+        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.page) setTeacherPdfPage(data.page);
       } else if (data.type === 'tutor-mic-state') {
         setIsTutorMicOn(!!data.isMicOn);
       } else if (data.type === 'chat') {
@@ -1480,7 +1506,7 @@ function StudentClassroomInner({
             )}
 
             {/* Grid View Mode */}
-            {!isScreenSharing && teacherMode !== 'screen' && studentViewMode === 'idle' && (
+            {!isScreenSharing && teacherMode !== 'screen' && teacherMode !== 'whiteboard' && teacherMode !== 'pdf' && studentViewMode === 'idle' && (
               <>
                 {pinnedParticipant ? (
                   /* Focused Spotlight View */
@@ -1685,7 +1711,23 @@ function StudentClassroomInner({
               </>
             )}
 
+            {/* Whiteboard Mode (Teacher Broadcast or Student Whiteboard) */}
+            {!isScreenSharing && (teacherMode === 'whiteboard' || studentViewMode === 'whiteboard') && (
+              <div className="w-full h-full relative bg-slate-900">
+                <StudioWhiteboard isTeacher={false} remoteFrame={remoteWhiteboardFrame} />
+              </div>
+            )}
 
+            {/* PDF Presentation Mode (Teacher Sync) */}
+            {!isScreenSharing && (teacherMode === 'pdf' || studentViewMode === 'pdf') && (
+              <div className="w-full h-full relative bg-slate-950">
+                <StudioPdfPresenter
+                  isTeacher={false}
+                  activeDoc={teacherPdfDoc}
+                  currentPage={teacherPdfPage}
+                />
+              </div>
+            )}
 
             {/* Screen Share Mode */}
             {!isScreenSharing && teacherMode === 'screen' && (
@@ -1731,11 +1773,11 @@ function StudentClassroomInner({
                 {isCamOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
               </button>
 
-              {/* Screen Share / Stop Sharing Button */}
+              {/* Screen Share / Stop Sharing Button (Desktop Only) */}
               <button
                 onClick={toggleScreenShare}
-                title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
-                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen (Desktop / Laptop)'}
+                className={`hidden md:flex px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm items-center gap-1.5 shrink-0 cursor-pointer ${
                   isScreenSharing
                     ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
@@ -1743,6 +1785,20 @@ function StudentClassroomInner({
               >
                 <Monitor className="w-4 h-4" />
                 <span className="hidden sm:inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+              </button>
+
+              {/* Touch Whiteboard (Mobile & Desktop) */}
+              <button
+                onClick={() => setStudentViewMode(studentViewMode === 'whiteboard' ? 'idle' : 'whiteboard')}
+                title={studentViewMode === 'whiteboard' ? 'Close Whiteboard' : 'Open Touch Whiteboard'}
+                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                  studentViewMode === 'whiteboard' || teacherMode === 'whiteboard'
+                    ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <PenTool className="w-4 h-4" />
+                <span className="hidden sm:inline">Whiteboard</span>
               </button>
 
 
