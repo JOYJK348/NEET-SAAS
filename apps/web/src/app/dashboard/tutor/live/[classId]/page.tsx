@@ -233,7 +233,6 @@ export default function TeacherStudioPage() {
         } catch {}
 
         // Fallback 2: Direct Render backend and local endpoints
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
         const endpoints = [
           `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/start`,
           `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
