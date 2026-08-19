@@ -57,81 +57,58 @@ import StudioWhiteboard from '@/components/live/studio-whiteboard';
 
 type Mode = 'idle' | 'whiteboard' | 'screen';
 
-/** Safely capture display stream across Android/iOS mobile and desktop browsers */
+/** Safely capture display stream using runtime capability detection and granular error handling */
 async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
-    return { stream: null, isUnsupported: true, error: 'Media devices are not available on this browser.' };
-  }
-
-  const ua = navigator.userAgent || '';
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(ua);
-  const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line|MicroMessenger|Snapchat/i.test(ua) || (isMobile && !/Chrome|CriOS|Firefox|Edg/i.test(ua));
-
-  if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
-    if (isInApp) {
-      return {
-        stream: null,
-        isUnsupported: true,
-        error: '📱 You are inside WhatsApp/In-App browser. Tap ⋮ (top right) and choose "Open in Chrome" to share your screen!',
-      };
-    }
-    if (isIOS) {
-      return {
-        stream: null,
-        isUnsupported: true,
-        error: 'Apple iOS restricts full screen sharing in web browsers. Please use Whiteboard mode or join from a laptop / Android Chrome.',
-      };
-    }
-    if (typeof window !== 'undefined' && !window.isSecureContext) {
-      return {
-        stream: null,
-        isUnsupported: true,
-        error: 'Screen sharing requires a secure HTTPS connection.',
-      };
-    }
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
     return {
       stream: null,
       isUnsupported: true,
-      error: 'Screen sharing is not supported in this mobile browser. Please open in Google Chrome app on your phone.',
+      error: 'Screen sharing is not supported on this browser. Please use Whiteboard or PDF presentation.',
+    };
+  }
+
+  if (typeof window !== 'undefined' && window.isSecureContext === false) {
+    return {
+      stream: null,
+      isUnsupported: true,
+      error: 'Screen sharing requires a secure HTTPS connection.',
     };
   }
 
   try {
-    let stream: MediaStream;
-    if (isMobile) {
-      // Mobile Chrome / Android 10+ captures entire phone screen (WhatsApp style)
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      });
-    } else {
-      // Desktop: Entire screen / Window / Tab with cursor
-      try {
-        stream = await (navigator.mediaDevices as any).getDisplayMedia({
-          video: { cursor: 'always' },
-          audio: false,
-        });
-      } catch {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-        });
-      }
-    }
+    // Direct invocation preserves user gesture activation
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
     return { stream };
   } catch (err: any) {
+    const name = err?.name || '';
+    const msg = err?.message || '';
+
     if (
-      err?.name === 'NotAllowedError' ||
-      err?.name === 'AbortError' ||
-      err?.message?.includes('Permission denied') ||
-      err?.message?.includes('canceled') ||
-      err?.message?.includes('cancelled')
+      name === 'NotAllowedError' ||
+      name === 'AbortError' ||
+      msg.includes('Permission denied') ||
+      msg.includes('cancel') ||
+      msg.includes('dismiss')
     ) {
-      return { stream: null, isCancelled: true, error: 'Screen sharing was cancelled.' };
+      return { stream: null, isCancelled: true, error: 'Screen sharing permission was cancelled or dismissed.' };
     }
-    if (err?.name === 'NotSupportedError' || err?.name === 'TypeError') {
-      return { stream: null, isUnsupported: true, error: 'Screen sharing is not supported on this browser.' };
+    if (name === 'NotFoundError') {
+      return { stream: null, error: 'No display or screen source found.' };
     }
-    return { stream: null, error: err?.message || 'Unable to start screen share.' };
+    if (name === 'NotReadableError') {
+      return { stream: null, error: 'Could not access screen. System permission or another application may be blocking capture.' };
+    }
+    if (name === 'NotSupportedError' || name === 'TypeError') {
+      return { stream: null, isUnsupported: true, error: 'Screen sharing is not supported by this browser version.' };
+    }
+    if (name === 'OverconstrainedError') {
+      return { stream: null, error: 'Screen capture constraints could not be satisfied.' };
+    }
+
+    return { stream: null, error: msg || 'Unable to start screen share.' };
   }
 }
 
@@ -1656,6 +1633,27 @@ function TeacherStudioInner({
   const screenFrameRef = useRef<string | null>(null);
   const tutorCamFrameRef = useRef<string | null>(null);
 
+  // Runtime Screen Sharing Capability Detection (Progressive Enhancement)
+  const [canScreenShare, setCanScreenShare] = useState<boolean>(true);
+  const [screenShareReason, setScreenShareReason] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+    const hasGetDisplayMedia = !!(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
+    const isSecure = window.isSecureContext ?? true;
+
+    if (!isSecure) {
+      setCanScreenShare(false);
+      setScreenShareReason('Screen sharing requires a secure HTTPS connection.');
+    } else if (!hasGetDisplayMedia) {
+      setCanScreenShare(false);
+      setScreenShareReason('Screen sharing is not supported by this browser. Use Whiteboard or PDF presentation.');
+    } else {
+      setCanScreenShare(true);
+      setScreenShareReason('');
+    }
+  }, []);
+
   // Initialize BroadcastChannel
   useEffect(() => {
     broadcastRef.current = new BroadcastChannel('neet-live-screen');
@@ -1680,7 +1678,7 @@ function TeacherStudioInner({
         if (res.isCancelled) {
           toast.info('Screen share was cancelled.');
         } else if (res.isUnsupported) {
-          toast.error(res.error || 'Screen capture not supported on this connection. Please use HTTPS/production.');
+          toast.error(res.error || 'Screen capture not supported on this connection.');
         } else {
           toast.error(res.error || 'Screen share could not be started.');
         }
@@ -2198,17 +2196,38 @@ function TeacherStudioInner({
                     <Monitor className="w-8 h-8 animate-pulse text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-base font-extrabold text-slate-200 mb-1">Screen Share Ready</p>
+                    <p className="text-base font-extrabold text-slate-200 mb-1">
+                      {canScreenShare ? 'Screen Share Ready' : 'Screen Share Not Available'}
+                    </p>
                     <p className="text-xs text-slate-400 leading-relaxed">
-                      Share your entire screen, window, or tab live with all participants.
+                      {canScreenShare
+                        ? 'Share your entire screen, window, or tab live with all participants.'
+                        : (screenShareReason || 'Screen sharing is not supported by this browser. Use Live Whiteboard or PDF presentation.')}
                     </p>
                   </div>
-                  <button
-                    onClick={startScreenShare}
-                    className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Monitor className="w-4 h-4" /> Start Screen Share
-                  </button>
+                  {canScreenShare ? (
+                    <button
+                      onClick={startScreenShare}
+                      className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-xl text-xs font-black shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Monitor className="w-4 h-4" /> Start Screen Share
+                    </button>
+                  ) : (
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={() => changeMode('whiteboard')}
+                        className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <PenTool className="w-3.5 h-3.5" /> Open Whiteboard
+                      </button>
+                      <button
+                        onClick={() => setMode('idle')}
+                        className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition cursor-pointer"
+                      >
+                        Return to Grid
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2314,16 +2333,33 @@ function TeacherStudioInner({
 
               {/* Screen Share / Stop Sharing Button */}
               <button
-                onClick={() => { if (isScreenSharing || mode === 'screen') stopScreenShare(); else startScreenShare(); }}
-                title={isScreenSharing || mode === 'screen' ? 'Stop Screen Share' : 'Share Phone / Desktop Screen'}
-                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                onClick={() => {
+                  if (isScreenSharing || mode === 'screen') {
+                    stopScreenShare();
+                  } else {
+                    startScreenShare();
+                  }
+                }}
+                disabled={!canScreenShare && !isScreenSharing && mode !== 'screen'}
+                title={
                   isScreenSharing || mode === 'screen'
-                    ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
-                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                    ? 'Stop Screen Share'
+                    : canScreenShare
+                    ? 'Share Screen (Entire Screen / Window / Tab)'
+                    : (screenShareReason || 'Screen sharing not supported on this browser')
+                }
+                className={`px-2.5 sm:px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 ${
+                  isScreenSharing || mode === 'screen'
+                    ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20 cursor-pointer'
+                    : canScreenShare
+                    ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer'
+                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
-                <span className="hidden sm:inline">{isScreenSharing || mode === 'screen' ? 'Stop Share' : 'Share'}</span>
+                <span className="hidden sm:inline">
+                  {isScreenSharing || mode === 'screen' ? 'Stop Share' : 'Share Screen'}
+                </span>
               </button>
 
 
