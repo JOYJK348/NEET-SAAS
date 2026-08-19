@@ -1734,20 +1734,11 @@ function StudentClassroomInner({
               {/* Screen Share / Stop Sharing Button */}
               <button
                 onClick={toggleScreenShare}
-                disabled={!canScreenShare && !isScreenSharing}
-                title={
+                title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
+                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   isScreenSharing
-                    ? 'Stop Screen Share'
-                    : canScreenShare
-                    ? 'Share Screen (Entire Screen / Window / Tab)'
-                    : (screenShareReason || 'Screen sharing not supported on this browser')
-                }
-                className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 ${
-                  isScreenSharing
-                    ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20 cursor-pointer'
-                    : canScreenShare
-                    ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 cursor-pointer'
-                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                    ? 'bg-rose-600 text-white border-rose-500 shadow-rose-500/20'
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
