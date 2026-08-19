@@ -666,35 +666,50 @@ function StudentClassroomInner({
     const modeSyncChannel = new BroadcastChannel('neet-live-mode-sync');
     modeSyncChannel.onmessage = (e) => {
       if ((e.data.type === 'current-mode' || e.data.type === 'mode-change') && (e.data.classId === classId || !e.data.classId)) {
-        setTeacherMode(e.data.mode);
+        setTeacherMode((prev) => (prev === e.data.mode ? prev : e.data.mode));
         if (e.data.mode === 'whiteboard') {
-          setStudentViewMode('whiteboard');
+          setStudentViewMode((prev) => (prev === 'whiteboard' ? prev : 'whiteboard'));
         } else if (e.data.mode === 'pdf') {
-          setStudentViewMode('pdf');
+          setStudentViewMode((prev) => (prev === 'pdf' ? prev : 'pdf'));
         } else if (e.data.mode === 'idle') {
-          setStudentViewMode('idle');
+          setStudentViewMode((prev) => (prev === 'idle' ? prev : 'idle'));
         }
-        if (e.data.pdfPage) setTeacherPdfPage(e.data.pdfPage);
-        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
+        if (e.data.pdfPage) {
+          setTeacherPdfPage((prev) => (prev === e.data.pdfPage ? prev : e.data.pdfPage));
+        }
+        if (e.data.doc) {
+          setTeacherPdfDoc((prev) => {
+            if (prev?.id === e.data.doc.id && prev?.url === e.data.doc.url) return prev;
+            return e.data.doc;
+          });
+        }
       }
     };
 
     const pdfSyncChannel = new BroadcastChannel('neet-live-pdf-sync');
     pdfSyncChannel.onmessage = (e) => {
       if (e.data.type === 'pdf-sync' && (e.data.classId === classId || !e.data.classId)) {
-        if (e.data.page) setTeacherPdfPage(e.data.page);
-        if (e.data.doc) setTeacherPdfDoc(e.data.doc);
+        if (e.data.page) {
+          setTeacherPdfPage((prev) => (prev === e.data.page ? prev : e.data.page));
+        }
+        if (e.data.doc) {
+          setTeacherPdfDoc((prev) => {
+            if (prev?.id === e.data.doc.id && prev?.url === e.data.doc.url) return prev;
+            return e.data.doc;
+          });
+        }
       }
     };
 
-    // Ultra-fast sub-millisecond sync request handshake (20ms burst)
-    const sendSyncReq = () => {
+    // Initial handshake sync request
+    try {
+      modeSyncChannel.postMessage({ type: 'request-sync', classId });
+    } catch {}
+    const fallbackSyncTimer = setTimeout(() => {
       try {
         modeSyncChannel.postMessage({ type: 'request-sync', classId });
       } catch {}
-    };
-    sendSyncReq();
-    const syncInterval = setInterval(sendSyncReq, 20);
+    }, 500);
 
     const camChannel = new BroadcastChannel('neet-live-tutor-cam');
     camChannel.onmessage = (e) => {
@@ -713,7 +728,7 @@ function StudentClassroomInner({
     };
 
     return () => {
-      clearInterval(syncInterval);
+      clearTimeout(fallbackSyncTimer);
       channel.close();
       camChannel.close();
       micChannel.close();
@@ -778,22 +793,43 @@ function StudentClassroomInner({
     try {
       const data = JSON.parse(new TextDecoder().decode(msg.payload));
       if (data.type === 'mode-change') {
-        setTeacherMode(data.mode);
+        setTeacherMode((prev) => (prev === data.mode ? prev : data.mode));
         if (data.mode === 'whiteboard') {
-          setStudentViewMode('whiteboard');
+          setStudentViewMode((prev) => (prev === 'whiteboard' ? prev : 'whiteboard'));
         } else if (data.mode === 'pdf') {
-          setStudentViewMode('pdf');
+          setStudentViewMode((prev) => (prev === 'pdf' ? prev : 'pdf'));
         } else if (data.mode === 'idle') {
-          setStudentViewMode('idle');
+          setStudentViewMode((prev) => (prev === 'idle' ? prev : 'idle'));
         }
-        if (data.pdfPage) setTeacherPdfPage(data.pdfPage);
-        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.pdfPage) {
+          setTeacherPdfPage((prev) => (prev === data.pdfPage ? prev : data.pdfPage));
+        }
+        if (data.doc) {
+          setTeacherPdfDoc((prev) => {
+            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
+            return data.doc;
+          });
+        }
       } else if (data.type === 'pdf-page-change' || data.type === 'pdf-page') {
-        setTeacherPdfPage(data.page);
-        if (data.doc) setTeacherPdfDoc(data.doc);
+        if (data.page) {
+          setTeacherPdfPage((prev) => (prev === data.page ? prev : data.page));
+        }
+        if (data.doc) {
+          setTeacherPdfDoc((prev) => {
+            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
+            return data.doc;
+          });
+        }
       } else if (data.type === 'pdf-doc-change') {
-        if (data.doc) setTeacherPdfDoc(data.doc);
-        if (data.page) setTeacherPdfPage(data.page);
+        if (data.doc) {
+          setTeacherPdfDoc((prev) => {
+            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
+            return data.doc;
+          });
+        }
+        if (data.page) {
+          setTeacherPdfPage((prev) => (prev === data.page ? prev : data.page));
+        }
       } else if (data.type === 'tutor-mic-state') {
         setIsTutorMicOn(!!data.isMicOn);
       } else if (data.type === 'chat') {

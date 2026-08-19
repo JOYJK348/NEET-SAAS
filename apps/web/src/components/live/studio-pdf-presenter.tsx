@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 export interface PdfDocumentInfo {
   id: string;
   name: string;
-  url: string; // Base64 data URL, blob URL, or remote URL
+  url: string;
   category: string;
   totalPages: number;
   fileType?: 'pdf' | 'image';
@@ -78,7 +78,7 @@ export default function StudioPdfPresenter({
   const [zoom, setZoom] = useState<number>(100);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showPicker, setShowPicker] = useState<boolean>(false);
-  const [isLoadingPdf, setIsLoadingPdf] = useState<boolean>(false);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -87,12 +87,18 @@ export default function StudioPdfPresenter({
   const pdfDocRef = useRef<any>(null);
   const renderTaskRef = useRef<any>(null);
 
-  // Sync prop changes
+  const loadedDocKeyRef = useRef<string>('');
+  const isRenderingRef = useRef<boolean>(false);
+
+  // Sync prop changes safely by key
   useEffect(() => {
     if (propDoc) {
-      setSelectedDoc(propDoc);
-      if (propDoc.totalPages) {
-        setTotalPages(propDoc.totalPages);
+      const newKey = `${propDoc.id}_${propDoc.url}`;
+      if (newKey !== loadedDocKeyRef.current) {
+        setSelectedDoc(propDoc);
+        if (propDoc.totalPages) {
+          setTotalPages(propDoc.totalPages);
+        }
       }
     }
   }, [propDoc]);
@@ -101,7 +107,7 @@ export default function StudioPdfPresenter({
     if (propPage && propPage !== currentPage) {
       setCurrentPage(propPage);
     }
-  }, [propPage]);
+  }, [propPage, currentPage]);
 
   // Dynamically load PDF.js engine
   const getPdfJs = useCallback(async () => {
@@ -121,7 +127,6 @@ export default function StudioPdfPresenter({
       }
     } catch {}
 
-    // CDN fallback
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -140,77 +145,11 @@ export default function StudioPdfPresenter({
     });
   }, []);
 
-  // Load and Parse PDF Document
-  useEffect(() => {
-    if (!selectedDoc || selectedDoc.fileType === 'image') {
-      pdfDocRef.current = null;
-      setIsLoadingPdf(false);
-      return;
-    }
+  // Render a specific page onto the canvas
+  const renderPdfPage = useCallback(
+    async (pageNumber: number, currentZoom: number) => {
+      if (!pdfDocRef.current || !canvasRef.current) return;
 
-    let isCancelled = false;
-    setIsLoadingPdf(true);
-
-    const loadDoc = async () => {
-      try {
-        const pdfjs = await getPdfJs();
-        if (!pdfjs || isCancelled) return;
-
-        let loadingTask: any;
-
-        if (selectedDoc.url.startsWith('data:')) {
-          // Base64 data URL -> convert to binary Uint8Array
-          const base64Data = selectedDoc.url.split(',')[1];
-          const raw = atob(base64Data);
-          const uint8Array = new Uint8Array(raw.length);
-          for (let i = 0; i < raw.length; i++) {
-            uint8Array[i] = raw.charCodeAt(i);
-          }
-          loadingTask = pdfjs.getDocument({ data: uint8Array });
-        } else {
-          // Remote URL or Blob
-          loadingTask = pdfjs.getDocument(selectedDoc.url);
-        }
-
-        const pdf = await loadingTask.promise;
-        if (isCancelled) return;
-
-        pdfDocRef.current = pdf;
-        const realPages = pdf.numPages || 1;
-        setTotalPages(realPages);
-
-        if (selectedDoc.totalPages !== realPages && isTeacher) {
-          const updatedDoc = { ...selectedDoc, totalPages: realPages };
-          setSelectedDoc(updatedDoc);
-          onDocChange?.(updatedDoc);
-        }
-
-        setIsLoadingPdf(false);
-      } catch (err: any) {
-        console.error('PDF.js Load Error:', err);
-        if (!isCancelled) {
-          setIsLoadingPdf(false);
-          toast.error('Could not render PDF pages. You can try re-uploading the file.');
-        }
-      }
-    };
-
-    loadDoc();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [selectedDoc, getPdfJs, isTeacher, onDocChange]);
-
-  // Render Current Page onto HTML5 Canvas
-  useEffect(() => {
-    if (!pdfDocRef.current || !canvasRef.current || selectedDoc?.fileType === 'image') {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const renderPage = async () => {
       try {
         if (renderTaskRef.current) {
           try {
@@ -219,17 +158,17 @@ export default function StudioPdfPresenter({
           renderTaskRef.current = null;
         }
 
-        const pageNum = Math.max(1, Math.min(currentPage, totalPages));
+        const maxPage = pdfDocRef.current.numPages || totalPages;
+        const pageNum = Math.max(1, Math.min(pageNumber, maxPage));
         const page = await pdfDocRef.current.getPage(pageNum);
-        if (isCancelled || !canvasRef.current) return;
+        if (!canvasRef.current) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Scale resolution for high-DPI crystal-clear presentation on mobile & retina
         const pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-        const baseScale = (zoom / 100) * 1.5;
+        const baseScale = (currentZoom / 100) * 1.5;
         const viewport = page.getViewport({ scale: baseScale });
 
         canvas.width = viewport.width * pixelRatio;
@@ -250,17 +189,84 @@ export default function StudioPdfPresenter({
         await renderTask.promise;
       } catch (err: any) {
         if (err?.name !== 'RenderingCancelledException') {
-          console.warn('PDF Page Render Notice:', err);
+          console.warn('PDF Render:', err);
+        }
+      }
+    },
+    [totalPages]
+  );
+
+  // Load and Parse PDF Document ONLY when document ID/URL changes
+  useEffect(() => {
+    if (!selectedDoc || selectedDoc.fileType === 'image') {
+      pdfDocRef.current = null;
+      loadedDocKeyRef.current = '';
+      setIsInitialLoading(false);
+      return;
+    }
+
+    const docKey = `${selectedDoc.id}_${selectedDoc.url}`;
+    if (docKey === loadedDocKeyRef.current) {
+      // Document already loaded in memory, just render active page
+      renderPdfPage(currentPage, zoom);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsInitialLoading(true);
+
+    const loadDoc = async () => {
+      try {
+        const pdfjs = await getPdfJs();
+        if (!pdfjs || isCancelled) return;
+
+        let loadingTask: any;
+
+        if (selectedDoc.url.startsWith('data:')) {
+          const base64Data = selectedDoc.url.split(',')[1];
+          const raw = atob(base64Data);
+          const uint8Array = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i++) {
+            uint8Array[i] = raw.charCodeAt(i);
+          }
+          loadingTask = pdfjs.getDocument({ data: uint8Array });
+        } else {
+          loadingTask = pdfjs.getDocument(selectedDoc.url);
+        }
+
+        const pdf = await loadingTask.promise;
+        if (isCancelled) return;
+
+        pdfDocRef.current = pdf;
+        loadedDocKeyRef.current = docKey;
+        const realPages = pdf.numPages || 1;
+        setTotalPages(realPages);
+        setIsInitialLoading(false);
+
+        // Render first page onto canvas immediately
+        renderPdfPage(currentPage, zoom);
+      } catch (err: any) {
+        console.error('PDF.js Load Error:', err);
+        if (!isCancelled) {
+          setIsInitialLoading(false);
+          toast.error('Could not render PDF document.');
         }
       }
     };
 
-    renderPage();
+    loadDoc();
 
     return () => {
       isCancelled = true;
     };
-  }, [currentPage, totalPages, zoom, selectedDoc]);
+  }, [selectedDoc, getPdfJs, renderPdfPage, currentPage, zoom]);
+
+  // Page turns / zoom changes render cleanly on existing canvas
+  useEffect(() => {
+    if (pdfDocRef.current && loadedDocKeyRef.current && selectedDoc?.fileType !== 'image') {
+      renderPdfPage(currentPage, zoom);
+    }
+  }, [currentPage, zoom, renderPdfPage, selectedDoc]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) {
@@ -551,10 +557,10 @@ export default function StudioPdfPresenter({
 
       {/* ── Main Presentation Stage ── */}
       <div className="flex-1 w-full h-full relative overflow-auto flex items-center justify-center p-2 sm:p-4 bg-slate-950">
-        {isLoadingPdf && (
+        {isInitialLoading && (
           <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-            <p className="text-xs font-bold text-slate-300">Rendering high-resolution PDF page...</p>
+            <p className="text-xs font-bold text-slate-300">Loading document...</p>
           </div>
         )}
 
