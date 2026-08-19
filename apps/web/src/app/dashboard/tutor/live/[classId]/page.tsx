@@ -213,7 +213,7 @@ export default function TeacherStudioPage() {
           }
         } catch {}
 
-        // Fallback: Join token endpoint
+        // Fallback 1: Join token via API helper
         const encodedTeacher = encodeURIComponent(teacherName);
         try {
           const data = await api.get<any>(
@@ -232,10 +232,35 @@ export default function TeacherStudioPage() {
           }
         } catch {}
 
-        // Direct fallback token to real LiveKit cloud
-        const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-        const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-        setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs });
+        // Fallback 2: Direct Render backend and local endpoints
+        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const endpoints = [
+          `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/start`,
+          `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
+          `http://${host}:3000/api/v1/live-classes/${classId}/start`,
+          `http://${host}:3000/v1/live-classes/${classId}/start`,
+          `/api/v1/live-classes/${classId}/start`,
+        ];
+
+        for (const url of endpoints) {
+          try {
+            const isStart = url.includes('/start');
+            const res = await fetch(url, {
+              method: isStart ? 'POST' : 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.token) {
+                const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
+                setLiveKitConfig({ token: data.token, wsUrl });
+                if (data.liveClass) setClassDetail(data.liveClass);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch {}
+        }
       } catch (err) {
         console.error('Failed to init live studio:', err);
       } finally {
@@ -2112,74 +2137,90 @@ function TeacherStudioInner({
                 /* Standard Grid View */
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto pr-1 content-start">
                   {/* 1. Host (Teacher) Video Tile */}
-                  <div className={`aspect-video bg-slate-900 border transition-all duration-300 rounded-2xl overflow-hidden relative shadow-2xl flex flex-col items-center justify-center group ${
-                    isMicOn && isSelfSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-800/90'
-                  }`}>
-                    {isScreenSharing ? (
-                      <video
-                        autoPlay
-                        playsInline
-                        muted
-                        ref={(el) => {
-                          if (el && screenStreamRef.current && el.srcObject !== screenStreamRef.current) {
-                            el.srcObject = screenStreamRef.current;
-                          }
-                        }}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : isCamOn && tutorCamFrame ? (
-                      <img src={tutorCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Host Camera" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-center">
-                        <div className={`w-14 h-14 rounded-full text-white flex items-center justify-center font-extrabold text-lg shadow-lg transition ${
-                          isSelfSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-violet-600 border-2 border-violet-400/40'
-                        }`}>
-                          {tutorName.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-xs font-bold text-slate-200">{tutorName} (You)</span>
-                      </div>
-                    )}
+                  {(() => {
+                    const hostCamPub = localParticipant.getTrackPublication(Track.Source.Camera);
+                    const hasHostCam = isCamOn && hostCamPub && !hostCamPub.isMuted && hostCamPub.track;
 
-                    {/* Spotlight Pin Button */}
-                    <button
-                      onClick={() => setPinnedParticipant({ id: 'host', name: `${tutorName} (Host)`, isHost: true })}
-                      className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md z-10"
-                      title="Spotlight Full Screen"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                    </button>
-
-                    {/* Top Right Mic & Cam Status Badges with Audio Waves */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                      <div className={`p-1.5 rounded-lg text-xs font-bold backdrop-blur-md flex items-center gap-1 ${isMicOn ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300' : 'bg-rose-500/20 border border-rose-500/50 text-rose-300'}`}>
-                        {isMicOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
-                        {isMicOn && isSelfSpeaking && (
-                          <span className="flex gap-0.5 items-end h-3">
-                            <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
-                            <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
-                            <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
-                          </span>
+                    return (
+                      <div className={`aspect-video bg-slate-900 border transition-all duration-300 rounded-2xl overflow-hidden relative shadow-2xl flex flex-col items-center justify-center group ${
+                        isMicOn && isSelfSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-800/90'
+                      }`}>
+                        {isScreenSharing ? (
+                          <video
+                            autoPlay
+                            playsInline
+                            muted
+                            ref={(el) => {
+                              if (el && screenStreamRef.current && el.srcObject !== screenStreamRef.current) {
+                                el.srcObject = screenStreamRef.current;
+                              }
+                            }}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : hasHostCam ? (
+                          <VideoTrack
+                            trackRef={{ participant: localParticipant, source: Track.Source.Camera, publication: hostCamPub }}
+                            className="w-full h-full object-cover scale-x-[-1]"
+                          />
+                        ) : isCamOn && tutorCamFrame ? (
+                          <img src={tutorCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Host Camera" />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-center">
+                            <div className={`w-14 h-14 rounded-full text-white flex items-center justify-center font-extrabold text-lg shadow-lg transition ${
+                              isSelfSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-violet-600 border-2 border-violet-400/40'
+                            }`}>
+                              {tutorName.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-xs font-bold text-slate-200">{tutorName} (You)</span>
+                          </div>
                         )}
-                      </div>
-                      <div className={`p-1.5 rounded-lg text-xs font-bold backdrop-blur-md ${isCamOn ? 'bg-violet-500/20 border border-violet-500/50 text-violet-300' : 'bg-slate-800/80 border border-slate-700 text-slate-400'}`}>
-                        {isCamOn ? <Video className="w-3.5 h-3.5" /> : <VideoOff className="w-3.5 h-3.5" />}
-                      </div>
-                    </div>
 
-                    {/* Bottom Left Participant Label Bar */}
-                    <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800/80 flex items-center justify-between z-10">
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="text-xs font-bold text-slate-100 truncate">{tutorName}</span>
+                        {/* Spotlight Pin Button */}
+                        <button
+                          onClick={() => setPinnedParticipant({ id: 'host', name: `${tutorName} (Host)`, isHost: true })}
+                          className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md z-10"
+                          title="Spotlight Full Screen"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                        </button>
+
+                        {/* Top Right Mic & Cam Status Badges with Audio Waves */}
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                          <div className={`p-1.5 rounded-lg text-xs font-bold backdrop-blur-md flex items-center gap-1 ${isMicOn ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300' : 'bg-rose-500/20 border border-rose-500/50 text-rose-300'}`}>
+                            {isMicOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5" />}
+                            {isMicOn && isSelfSpeaking && (
+                              <span className="flex gap-0.5 items-end h-3">
+                                <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
+                                <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
+                                <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
+                              </span>
+                            )}
+                          </div>
+                          <div className={`p-1.5 rounded-lg text-xs font-bold backdrop-blur-md ${hasHostCam || isCamOn ? 'bg-violet-500/20 border border-violet-500/50 text-violet-300' : 'bg-slate-800/80 border border-slate-700 text-slate-400'}`}>
+                            {hasHostCam || isCamOn ? <Video className="w-3.5 h-3.5" /> : <VideoOff className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+
+                        {/* Bottom Left Participant Label Bar */}
+                        <div className="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-800/80 flex items-center justify-between z-10">
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-xs font-bold text-slate-100 truncate">{tutorName}</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider px-2 py-0.5 rounded bg-violet-500/10 border border-violet-500/20">
+                            Host
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider px-2 py-0.5 rounded bg-violet-500/10 border border-violet-500/20">
-                        Host
-                      </span>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* 2. Student Video Tiles */}
                   {combinedStudentList.map((p, idx) => {
+                    const rp = remoteParticipants.find((r) => r.sid === p.id || r.name === p.name);
+                    const rpCamPub = rp?.getTrackPublication(Track.Source.Camera);
+                    const hasRpCam = rpCamPub && !rpCamPub.isMuted && rpCamPub.track;
+
                     const studentCam =
                       studentCams[p.id] ||
                       Object.values(studentCams).find(
@@ -2194,11 +2235,12 @@ function TeacherStudioInner({
 
                     const isStudentMicOn = studentMicData
                       ? studentMicData.isMicOn
-                      : remoteParticipants.find((rp) => rp.sid === p.id || rp.name === p.name)?.isMicrophoneEnabled ?? false;
+                      : rp?.isMicrophoneEnabled ?? false;
 
                     const isStudentCamOn = Boolean(
+                      hasRpCam ||
                       studentCam ||
-                        remoteParticipants.find((rp) => rp.sid === p.id || rp.name === p.name)?.isCameraEnabled
+                      rp?.isCameraEnabled
                     );
 
                     const isHand = raisedHands.some((h) => h.name.toLowerCase() === p.name.toLowerCase());
@@ -2206,7 +2248,12 @@ function TeacherStudioInner({
                     
                     return (
                       <div key={p.id || idx} className={`aspect-video bg-slate-900 border rounded-2xl overflow-hidden relative shadow-xl flex flex-col items-center justify-center group hover:border-slate-700 transition ${isSharingScreen ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/30' : isStudentMicOn ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-800/90'}`}>
-                        {studentScreen ? (
+                        {hasRpCam && rp ? (
+                          <VideoTrack
+                            trackRef={{ participant: rp, source: Track.Source.Camera, publication: rpCamPub }}
+                            className="w-full h-full object-cover scale-x-[-1]"
+                          />
+                        ) : studentScreen ? (
                           <img src={studentScreen.frame} className="w-full h-full object-contain" alt={`${p.name} Screen Share`} />
                         ) : studentCam ? (
                           <img src={studentCam.frame} className="w-full h-full object-cover scale-x-[-1]" alt={p.name} />

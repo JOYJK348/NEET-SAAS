@@ -288,6 +288,7 @@ export default function StudentClassroomPage() {
         } catch {}
 
         const endpoints = [
+          `https://neet-saas.onrender.com/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
           `http://${host}:3000/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
           `http://${host}:3000/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
           `/api/v1/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
@@ -729,6 +730,22 @@ function StudentClassroomInner({
   const [speakingUser, setSpeakingUser] = useState<string | null>(null);
   const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
   const [isTutorSpeaking, setIsTutorSpeaking] = useState(false);
+
+  // Auto-unlock audio elements for iOS and Mobile Android autoplay policy
+  useEffect(() => {
+    const unlockAudio = () => {
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach((el) => {
+        el.play().catch(() => {});
+      });
+    };
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
 
   // ── WebRTC LiveKit DataChannel for Real-Time Cross-Device Sync (Global Internet)
   const { send: studentDataSend } = useDataChannel((msg) => {
@@ -1716,6 +1733,13 @@ function StudentClassroomInner({
                     {/* Combined Students Tiles */}
                     {combinedStudentList.map((st, idx) => {
                       const isSpeaking = st.isSelf && isSelfSpeaking;
+                      const selfCamPub = localParticipant.getTrackPublication(Track.Source.Camera);
+                      const hasSelfCam = isCamOn && selfCamPub && !selfCamPub.isMuted && selfCamPub.track;
+
+                      const otherRP = !st.isSelf ? remoteParticipants.find((r) => r.sid === st.id || r.name === st.name) : null;
+                      const otherCamPub = otherRP?.getTrackPublication(Track.Source.Camera);
+                      const hasOtherCam = otherCamPub && !otherCamPub.isMuted && otherCamPub.track;
+
                       return (
                         <div
                           key={st.id || idx}
@@ -1723,30 +1747,35 @@ function StudentClassroomInner({
                             isSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-700'
                           }`}
                         >
-                          {st.isSelf && isCamOn ? (
-                            localCamFrame ? (
-                              <img src={localCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Your Camera" />
-                            ) : (
-                              <video
-                                autoPlay
-                                playsInline
-                                muted
-                                ref={(el) => {
-                                  if (el && mediaStreamRef.current && el.srcObject !== mediaStreamRef.current) {
-                                    el.srcObject = mediaStreamRef.current;
-                                  }
-                                }}
+                          {st.isSelf ? (
+                            hasSelfCam ? (
+                              <VideoTrack
+                                trackRef={{ participant: localParticipant, source: Track.Source.Camera, publication: selfCamPub }}
                                 className="w-full h-full object-cover scale-x-[-1]"
                               />
+                            ) : localCamFrame ? (
+                              <img src={localCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Your Camera" />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
+                                <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                                  isSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
+                                }`}>
+                                  {st.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-semibold text-slate-300">{st.name} (You)</span>
+                              </div>
                             )
+                          ) : hasOtherCam && otherRP ? (
+                            <VideoTrack
+                              trackRef={{ participant: otherRP, source: Track.Source.Camera, publication: otherCamPub }}
+                              className="w-full h-full object-cover scale-x-[-1]"
+                            />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
-                              <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                                isSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
-                              }`}>
+                              <div className="w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base bg-blue-600/20 border border-blue-500/40">
                                 {st.name.charAt(0).toUpperCase()}
                               </div>
-                              <span className="text-xs font-semibold text-slate-300">{st.name} {st.isSelf ? '(You)' : ''}</span>
+                              <span className="text-xs font-semibold text-slate-300">{st.name}</span>
                             </div>
                           )}
 
