@@ -1000,7 +1000,7 @@ function TeacherStudioInner({
   const [studentMics, setStudentMics] = useState<Record<string, { name: string; isMicOn: boolean }>>({});
 
   // ── PDF State
-  const [activePdfDoc, setActivePdfDoc] = useState<PdfDocumentInfo>(SAMPLE_NEET_DOCUMENTS[0]);
+  const [activePdfDoc, setActivePdfDoc] = useState<PdfDocumentInfo | null>(null);
   const [pdfPage, setPdfPage] = useState<number>(1);
 
   // ── Local Media Stream (Webcam / Mic / Screen Share)

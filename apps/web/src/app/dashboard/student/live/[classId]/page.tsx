@@ -546,7 +546,7 @@ function StudentClassroomInner({
     }
     return 'idle';
   });
-  const [teacherPdfDoc, setTeacherPdfDoc] = useState<PdfDocumentInfo>(SAMPLE_NEET_DOCUMENTS[0]);
+  const [teacherPdfDoc, setTeacherPdfDoc] = useState<PdfDocumentInfo | null>(null);
   const [teacherPdfPage, setTeacherPdfPage] = useState(1);
 
   // ── Local Media Stream (Student Webcam / Mic)
