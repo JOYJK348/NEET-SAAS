@@ -602,23 +602,7 @@ function StudentClassroomInner({
       // ── API-based join request (cross-device reliable) ──
       const registerViaApi = async () => {
         try {
-          const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-          const urls = [
-            `/api/v1/live-classes/${classId}/join-request`,
-            `http://${host}:3000/api/v1/live-classes/${classId}/join-request`,
-            `/v1/live-classes/${classId}/join-request`,
-            `http://${host}:3000/v1/live-classes/${classId}/join-request`,
-          ];
-          for (const url of urls) {
-            try {
-              const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ studentId, studentName }),
-              });
-              if (res.ok) break;
-            } catch {}
-          }
+          await api.post(`/live-classes/${classId}/join-request`, { studentId, studentName }, { skipGlobalToast: true });
         } catch {}
       };
       registerViaApi();

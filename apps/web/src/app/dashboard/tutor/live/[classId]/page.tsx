@@ -1002,44 +1002,29 @@ function TeacherStudioInner({
     });
   }, [remoteParticipants, admittedStudents]);
 
-  // ── API Polling: Cross-device join request fallback (every 3s)
+  // ── API Polling: Cross-device join request fallback (every 2s)
   useEffect(() => {
     const pollJoinRequests = async () => {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const urls = [
-          `/api/v1/live-classes/${classId}/join-requests`,
-          `http://${host}:3000/api/v1/live-classes/${classId}/join-requests`,
-          `/v1/live-classes/${classId}/join-requests`,
-          `http://${host}:3000/v1/live-classes/${classId}/join-requests`,
-        ];
-        for (const url of urls) {
-          try {
-            const res = await fetch(url);
-            if (res.ok) {
-              const data = await res.json();
-              const requests: Array<{ id: string; name: string; time: string }> = data?.requests || [];
-              requests.forEach((req) => {
-                const normName = req.name.trim().toLowerCase();
-                const isAdmitted = admittedStudents.some(
-                  (s) => s.id === req.id || s.name.toLowerCase() === normName
-                );
-                if (!isAdmitted) {
-                  setPendingRequests((prev) => {
-                    if (prev.some((r) => r.id === req.id || r.name.toLowerCase() === normName)) return prev;
-                    return [...prev, { id: req.id, name: req.name.trim(), time: req.time }];
-                  });
-                }
-              });
-              break;
-            }
-          } catch {}
-        }
+        const data = await api.get<any>(`/live-classes/${classId}/join-requests`, { skipGlobalToast: true });
+        const requests: Array<{ id: string; name: string; time: string }> = data?.requests || [];
+        requests.forEach((req) => {
+          const normName = req.name.trim().toLowerCase();
+          const isAdmitted = admittedStudents.some(
+            (s) => s.id === req.id || s.name.toLowerCase() === normName
+          );
+          if (!isAdmitted) {
+            setPendingRequests((prev) => {
+              if (prev.some((r) => r.id === req.id || r.name.toLowerCase() === normName)) return prev;
+              return [...prev, { id: req.id, name: req.name.trim(), time: req.time }];
+            });
+          }
+        });
       } catch {}
     };
 
     pollJoinRequests();
-    const interval = setInterval(pollJoinRequests, 3000);
+    const interval = setInterval(pollJoinRequests, 2000);
     return () => clearInterval(interval);
   }, [classId, admittedStudents]);
 
@@ -1398,16 +1383,7 @@ function TeacherStudioInner({
       statusBc.postMessage({ type: 'class-reopened', classId });
       statusBc.close();
       // Remove from server-side join request store (cross-device)
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const delUrls = [
-        `/api/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `http://${host}:3000/api/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `http://${host}:3000/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-      ];
-      delUrls.forEach((url) => {
-        fetch(url, { method: 'DELETE' }).catch(() => {});
-      });
+      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`, { skipGlobalToast: true }).catch(() => {});
       toast.success(`✅ ${nameToAdmit} admitted to class`);
     } catch {}
   };
@@ -1449,16 +1425,7 @@ function TeacherStudioInner({
       ch.postMessage({ type: 'join-denied', studentId, classId });
       ch.close();
       // Remove from server-side store
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const delUrls = [
-        `/api/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `http://${host}:3000/api/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-        `http://${host}:3000/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
-      ];
-      delUrls.forEach((url) => {
-        fetch(url, { method: 'DELETE' }).catch(() => {});
-      });
+      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`, { skipGlobalToast: true }).catch(() => {});
       toast.error(`🚫 ${studentName || 'Student'} denied entry`);
     } catch {}
   };
