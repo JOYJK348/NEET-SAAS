@@ -32,63 +32,110 @@ export class LiveClassService {
     process.env.SUPABASE_STORAGE_LIVE_RECORDINGS_BUCKET || 'live-class-recordings';
 
   /**
-   * In-memory cross-device join request store.
-   * Key: classId → Map<studentId, { id, name, time, timestamp }>
-   * Cleared when the class ends or after 4 hours (stale cleanup).
+   * Fallback in-memory store for classes with no active DB session (demo/local mode).
+   * Production uses providerMetadata on LiveClassSessions for true cross-device/cross-instance reliability.
    */
-  private readonly joinRequests = new Map<string, Map<string, { id: string; name: string; time: string; timestamp: number }>>();
-  private readonly admittedStudents = new Map<string, Set<string>>();
+  private readonly _memJoinRequests = new Map<string, Map<string, { id: string; name: string; time: string; ts: number }>>();
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly ctx: RequestContextService,
-    private readonly livekitService: LiveKitService,
-    private readonly calendarSyncService: CalendarSyncService,
-  ) {}
-
-  // ─── Join Request: Student registers intent to join ────────────────────────
-
-  registerJoinRequest(classId: string, studentId: string, studentName: string): void {
-    const admitted = this.admittedStudents.get(classId);
-    if (admitted?.has(studentId)) return; // already admitted, no-op
-
-    if (!this.joinRequests.has(classId)) {
-      this.joinRequests.set(classId, new Map());
-    }
-    const classRequests = this.joinRequests.get(classId)!;
-    if (!classRequests.has(studentId)) {
-      classRequests.set(studentId, {
-        id: studentId,
-        name: studentName,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: Date.now(),
+  private async _getActiveSession(classId: string) {
+    try {
+      return await this.prisma.liveClassSessions.findFirst({
+        where: { liveClassId: classId, status: { in: ['CREATED', 'STARTED'] as any }, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
       });
-      this.logger.log(`Join request registered: student=${studentName} class=${classId}`);
+    } catch { return null; }
+  }
+
+  // ─── Join Request: DB-backed, cross-device, cross-instance ────────────────
+
+  async registerJoinRequest(classId: string, studentId: string, studentName: string): Promise<void> {
+    const session = await this._getActiveSession(classId);
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (session) {
+      try {
+        const meta: any = (session.providerMetadata as any) || {};
+        const pending: Record<string, any> = meta.pendingJoinRequests || {};
+        const admitted: Record<string, boolean> = meta.admittedStudents || {};
+        if (admitted[studentId]) return; // already admitted
+        if (!pending[studentId]) {
+          pending[studentId] = { id: studentId, name: studentName, time: timeStr, ts: Date.now() };
+          await this.prisma.liveClassSessions.update({
+            where: { id: session.id },
+            data: { providerMetadata: { ...meta, pendingJoinRequests: pending } },
+          });
+          this.logger.log(`[DB] Join request registered: student=${studentName} class=${classId}`);
+        }
+      } catch (e) { this.logger.warn(`registerJoinRequest DB err: ${e}`); }
+      return;
+    }
+
+    // Fallback: in-memory (local dev with no session)
+    if (!this._memJoinRequests.has(classId)) this._memJoinRequests.set(classId, new Map());
+    const map = this._memJoinRequests.get(classId)!;
+    if (!map.has(studentId)) {
+      map.set(studentId, { id: studentId, name: studentName, time: timeStr, ts: Date.now() });
     }
   }
 
-  listJoinRequests(classId: string): Array<{ id: string; name: string; time: string }> {
-    const classRequests = this.joinRequests.get(classId);
-    if (!classRequests) return [];
-    // Clean stale requests older than 4 hours
+  async listJoinRequests(classId: string): Promise<Array<{ id: string; name: string; time: string }>> {
+    const session = await this._getActiveSession(classId);
+
+    if (session) {
+      try {
+        const meta: any = (session.providerMetadata as any) || {};
+        const pending: Record<string, any> = meta.pendingJoinRequests || {};
+        const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+        const result = Object.values(pending)
+          .filter((r: any) => r.ts > cutoff)
+          .map(({ id, name, time }: any) => ({ id, name, time }));
+        return result;
+      } catch { return []; }
+    }
+
+    // Fallback: in-memory
+    const map = this._memJoinRequests.get(classId);
+    if (!map) return [];
     const cutoff = Date.now() - 4 * 60 * 60 * 1000;
-    for (const [sid, req] of classRequests.entries()) {
-      if (req.timestamp < cutoff) classRequests.delete(sid);
-    }
-    return Array.from(classRequests.values()).map(({ id, name, time }) => ({ id, name, time }));
+    return Array.from(map.values()).filter(r => r.ts > cutoff).map(({ id, name, time }) => ({ id, name, time }));
   }
 
-  removeJoinRequest(classId: string, studentId: string): void {
-    this.joinRequests.get(classId)?.delete(studentId);
-    if (!this.admittedStudents.has(classId)) {
-      this.admittedStudents.set(classId, new Set());
+  async removeJoinRequest(classId: string, studentId: string): Promise<void> {
+    const session = await this._getActiveSession(classId);
+
+    if (session) {
+      try {
+        const meta: any = (session.providerMetadata as any) || {};
+        const pending: Record<string, any> = meta.pendingJoinRequests || {};
+        const admitted: Record<string, boolean> = meta.admittedStudents || {};
+        delete pending[studentId];
+        admitted[studentId] = true;
+        await this.prisma.liveClassSessions.update({
+          where: { id: session.id },
+          data: { providerMetadata: { ...meta, pendingJoinRequests: pending, admittedStudents: admitted } },
+        });
+      } catch (e) { this.logger.warn(`removeJoinRequest DB err: ${e}`); }
+      return;
     }
-    this.admittedStudents.get(classId)!.add(studentId);
+
+    // Fallback: in-memory
+    this._memJoinRequests.get(classId)?.delete(studentId);
   }
 
-  clearJoinRequests(classId: string): void {
-    this.joinRequests.delete(classId);
-    this.admittedStudents.delete(classId);
+  async clearJoinRequests(classId: string): Promise<void> {
+    this._memJoinRequests.delete(classId);
+    const session = await this._getActiveSession(classId);
+    if (session) {
+      try {
+        const meta: any = (session.providerMetadata as any) || {};
+        delete meta.pendingJoinRequests;
+        delete meta.admittedStudents;
+        await this.prisma.liveClassSessions.update({
+          where: { id: session.id },
+          data: { providerMetadata: meta },
+        });
+      } catch {}
+    }
   }
 
   // ─── Schedule ─────────────────────────────────────────────────────────────

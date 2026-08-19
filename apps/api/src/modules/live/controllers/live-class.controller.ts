@@ -160,20 +160,21 @@ export class LiveClassController {
   @Post(':id/join-request')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Student: Register join request for tutor approval' })
-  registerJoinRequest(
+  async registerJoinRequest(
     @Param('id') id: string,
     @Body() body: { studentId: string; studentName: string },
   ) {
-    this.liveClassService.registerJoinRequest(id, body.studentId || 'unknown', body.studentName || 'Student');
+    await this.liveClassService.registerJoinRequest(id, body.studentId || 'unknown', body.studentName || 'Student');
     return { success: true };
   }
 
-  /** Tutor: Poll pending join requests (every 3s) */
+  /** Tutor: Poll pending join requests (every 2s) */
   @Public()
   @Get(':id/join-requests')
   @ApiOperation({ summary: 'Tutor: Get pending join requests for a class' })
-  listJoinRequests(@Param('id') id: string) {
-    return { requests: this.liveClassService.listJoinRequests(id) };
+  async listJoinRequests(@Param('id') id: string) {
+    const requests = await this.liveClassService.listJoinRequests(id);
+    return { requests };
   }
 
   /** Tutor: Remove/admit a specific student */
@@ -181,11 +182,11 @@ export class LiveClassController {
   @Delete(':id/join-requests/:studentId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tutor: Remove student from waiting room (after admit/deny)' })
-  removeJoinRequest(
+  async removeJoinRequest(
     @Param('id') id: string,
     @Param('studentId') studentId: string,
   ) {
-    this.liveClassService.removeJoinRequest(id, studentId);
+    await this.liveClassService.removeJoinRequest(id, studentId);
     return { success: true };
   }
 
