@@ -511,6 +511,37 @@ function StudentClassroomInner({
   const remoteParticipants = useRemoteParticipants();
   const connectionState = useConnectionState();
 
+  // ── Hardware Mic & Camera States
+  const [isMicOn, setIsMicOn] = useState(false);
+  const [isCamOn, setIsCamOn] = useState(false);
+  const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
+  const [isTutorSpeaking, setIsTutorSpeaking] = useState(false);
+  const [speakingUser, setSpeakingUser] = useState<string | null>(null);
+
+  const toggleMic = async () => {
+    const next = !isMicOn;
+    setIsMicOn(next);
+    try {
+      await localParticipant.setMicrophoneEnabled(next, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      });
+    } catch (err) {
+      console.warn('LiveKit student setMicrophoneEnabled:', err);
+    }
+  };
+
+  const toggleCam = async () => {
+    const next = !isCamOn;
+    setIsCamOn(next);
+    try {
+      await localParticipant.setCameraEnabled(next);
+    } catch (err) {
+      console.warn('LiveKit student setCameraEnabled:', err);
+    }
+  };
+
   const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat');
   const [dbParticipants, setDbParticipants] = useState<Array<{ id: string; name: string; role?: string; admissionNumber?: string }>>([]);
 
@@ -541,9 +572,10 @@ function StudentClassroomInner({
     // Add self
     list.push({ id: 'self-student', name: studentSelfName, isSelf: true });
 
-    // Add LiveKit remote participants
+    // Add LiveKit remote participants (students only)
     remoteParticipants.forEach((p) => {
-      if (p.name && !list.some((item) => item.name.toLowerCase() === p.name!.toLowerCase())) {
+      const isTeacher = p.identity.startsWith('host-') || p.name?.toLowerCase().includes('teacher') || p.name?.toLowerCase().includes('host');
+      if (!isTeacher && p.name && !list.some((item) => item.name.toLowerCase() === p.name!.toLowerCase())) {
         list.push({ id: p.sid, name: p.name });
       }
     });

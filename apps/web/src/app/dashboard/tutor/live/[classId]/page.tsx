@@ -354,6 +354,81 @@ function TeacherStudioInner({
 
   const tutorName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Teacher (Host)';
 
+  // ── Hardware Mic & Camera States
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isCamOn, setIsCamOn] = useState(true);
+  const [isSelfSpeaking, setIsSelfSpeaking] = useState(false);
+  const [speakingUser, setSpeakingUser] = useState<string | null>(null);
+  const isMicOnRef = useRef(true);
+
+  // ── Student & Class Interaction States
+  const [pendingRequests, setPendingRequests] = useState<Array<{ id: string; name: string; time: string }>>([]);
+  const [admittedStudents, setAdmittedStudents] = useState<Array<{ id: string; name: string }>>([]);
+  const [raisedHands, setRaisedHands] = useState<Array<{ id: string; name: string; time: string }>>([]);
+  const [studentMics, setStudentMics] = useState<Record<string, { name: string; isMicOn: boolean }>>({});
+  const [studentCams, setStudentCams] = useState<Record<string, { name: string; frame: string }>>({});
+  const [pinnedParticipant, setPinnedParticipant] = useState<{ id: string; name: string; isHost?: boolean } | null>(null);
+
+  // ── Combined Student List
+  const combinedStudentList = React.useMemo(() => {
+    const list: Array<{ id: string; name: string; admissionNumber?: string }> = [];
+
+    admittedStudents.forEach((st) => {
+      if (!list.some((item) => item.id === st.id || item.name.toLowerCase() === st.name.toLowerCase())) {
+        list.push({ id: st.id, name: st.name });
+      }
+    });
+
+    remoteParticipants.forEach((p) => {
+      const isTeacher = p.identity.startsWith('host-') || p.name?.toLowerCase().includes('teacher') || p.name?.toLowerCase().includes('host');
+      if (!isTeacher && p.name && !list.some((item) => item.id === p.sid || item.name.toLowerCase() === p.name!.toLowerCase())) {
+        list.push({ id: p.sid, name: p.name });
+      }
+    });
+
+    dbParticipants.forEach((dbP) => {
+      if (!list.some((item) => item.id === dbP.id || item.name.toLowerCase() === dbP.name.toLowerCase())) {
+        list.push({ id: dbP.id, name: dbP.name, admissionNumber: dbP.admissionNumber });
+      }
+    });
+
+    return list;
+  }, [admittedStudents, remoteParticipants, dbParticipants]);
+
+  // Sync LiveKit Microphone & Camera on connection
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connected) {
+      localParticipant.setMicrophoneEnabled(isMicOn).catch(() => {});
+      localParticipant.setCameraEnabled(isCamOn).catch(() => {});
+    }
+  }, [connectionState]);
+
+  const toggleMic = async () => {
+    const next = !isMicOn;
+    setIsMicOn(next);
+    isMicOnRef.current = next;
+    try {
+      await localParticipant.setMicrophoneEnabled(next, {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      });
+      safeSendRef.current?.({ type: 'tutor-mic-state', isMicOn: next });
+    } catch (err) {
+      console.warn('LiveKit tutor setMicrophoneEnabled:', err);
+    }
+  };
+
+  const toggleCam = async () => {
+    const next = !isCamOn;
+    setIsCamOn(next);
+    try {
+      await localParticipant.setCameraEnabled(next);
+    } catch (err) {
+      console.warn('LiveKit tutor setCameraEnabled:', err);
+    }
+  };
+
   // ── Database Joined Participants Sync
   const [dbParticipants, setDbParticipants] = useState<Array<{ id: string; name: string; role?: string; admissionNumber?: string }>>([]);
   const [showEndModal, setShowEndModal] = useState(false);
