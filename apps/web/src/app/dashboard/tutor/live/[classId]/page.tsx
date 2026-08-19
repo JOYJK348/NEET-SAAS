@@ -749,6 +749,8 @@ function TeacherStudioInner({
       } catch (uploadErr) {
         console.warn('Upload recorded class failed:', uploadErr);
       }
+    }
+
     try {
       safeSendRef.current?.({ type: 'class-ended', classId });
       const statusBc = new BroadcastChannel('neet-live-class-status');
