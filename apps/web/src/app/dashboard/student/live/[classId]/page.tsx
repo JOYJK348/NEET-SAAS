@@ -1188,14 +1188,17 @@ function StudentClassroomInner({
       if (!res.stream) {
         if (res.isCancelled) {
           toast.info('Screen share was cancelled.');
+          stopStudentSharing();
+          return;
         } else if (res.isUnsupported) {
-          toast.error(res.error || 'Screen capture not supported on this device.');
-          toast('Tip: Tap Document Camera to stream notes/problems using your rear camera!');
+          toast.info('📱 Direct screen capture is restricted by this browser / HTTP connection. Switching to Document Camera...');
+          await toggleDocCameraShare();
+          return;
         } else {
           toast.error(res.error || 'Screen share could not be started.');
+          stopStudentSharing();
+          return;
         }
-        setIsScreenSharing(false);
-        return;
       }
 
       const stream = res.stream;

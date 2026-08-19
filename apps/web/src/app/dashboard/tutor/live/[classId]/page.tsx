@@ -1689,14 +1689,17 @@ function TeacherStudioInner({
       if (!res.stream) {
         if (res.isCancelled) {
           toast.info('Screen share was cancelled.');
+          stopScreenShare();
+          return;
         } else if (res.isUnsupported) {
-          toast.error(res.error || 'Screen capture not supported on this browser.');
-          toast('Tip: Tap Document Camera to stream notes/textbook using your rear camera!');
+          toast.info('📱 Direct screen capture is restricted by this browser / HTTP connection. Switching to Document Camera...');
+          await startDocCameraShare();
+          return;
         } else {
           toast.error(res.error || 'Screen share could not be started.');
+          stopScreenShare();
+          return;
         }
-        stopScreenShare();
-        return;
       }
 
       const stream = res.stream;
