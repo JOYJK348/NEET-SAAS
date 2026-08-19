@@ -31,12 +31,65 @@ export class LiveClassService {
   private readonly recordingsBucket =
     process.env.SUPABASE_STORAGE_LIVE_RECORDINGS_BUCKET || 'live-class-recordings';
 
+  /**
+   * In-memory cross-device join request store.
+   * Key: classId → Map<studentId, { id, name, time, timestamp }>
+   * Cleared when the class ends or after 4 hours (stale cleanup).
+   */
+  private readonly joinRequests = new Map<string, Map<string, { id: string; name: string; time: string; timestamp: number }>>();
+  private readonly admittedStudents = new Map<string, Set<string>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ctx: RequestContextService,
     private readonly livekitService: LiveKitService,
     private readonly calendarSyncService: CalendarSyncService,
   ) {}
+
+  // ─── Join Request: Student registers intent to join ────────────────────────
+
+  registerJoinRequest(classId: string, studentId: string, studentName: string): void {
+    const admitted = this.admittedStudents.get(classId);
+    if (admitted?.has(studentId)) return; // already admitted, no-op
+
+    if (!this.joinRequests.has(classId)) {
+      this.joinRequests.set(classId, new Map());
+    }
+    const classRequests = this.joinRequests.get(classId)!;
+    if (!classRequests.has(studentId)) {
+      classRequests.set(studentId, {
+        id: studentId,
+        name: studentName,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now(),
+      });
+      this.logger.log(`Join request registered: student=${studentName} class=${classId}`);
+    }
+  }
+
+  listJoinRequests(classId: string): Array<{ id: string; name: string; time: string }> {
+    const classRequests = this.joinRequests.get(classId);
+    if (!classRequests) return [];
+    // Clean stale requests older than 4 hours
+    const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+    for (const [sid, req] of classRequests.entries()) {
+      if (req.timestamp < cutoff) classRequests.delete(sid);
+    }
+    return Array.from(classRequests.values()).map(({ id, name, time }) => ({ id, name, time }));
+  }
+
+  removeJoinRequest(classId: string, studentId: string): void {
+    this.joinRequests.get(classId)?.delete(studentId);
+    if (!this.admittedStudents.has(classId)) {
+      this.admittedStudents.set(classId, new Set());
+    }
+    this.admittedStudents.get(classId)!.add(studentId);
+  }
+
+  clearJoinRequests(classId: string): void {
+    this.joinRequests.delete(classId);
+    this.admittedStudents.delete(classId);
+  }
 
   // ─── Schedule ─────────────────────────────────────────────────────────────
 

@@ -153,7 +153,44 @@ export class LiveClassController {
     return this.liveClassService.getParticipants(id);
   }
 
+  // ─── Join Requests (Cross-Device Waiting Room) ────────────────────────────
+
+  /** Student: Register intent to join (called on page load) */
+  @Public()
+  @Post(':id/join-request')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Student: Register join request for tutor approval' })
+  registerJoinRequest(
+    @Param('id') id: string,
+    @Body() body: { studentId: string; studentName: string },
+  ) {
+    this.liveClassService.registerJoinRequest(id, body.studentId || 'unknown', body.studentName || 'Student');
+    return { success: true };
+  }
+
+  /** Tutor: Poll pending join requests (every 3s) */
+  @Public()
+  @Get(':id/join-requests')
+  @ApiOperation({ summary: 'Tutor: Get pending join requests for a class' })
+  listJoinRequests(@Param('id') id: string) {
+    return { requests: this.liveClassService.listJoinRequests(id) };
+  }
+
+  /** Tutor: Remove/admit a specific student */
+  @Public()
+  @Delete(':id/join-requests/:studentId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Tutor: Remove student from waiting room (after admit/deny)' })
+  removeJoinRequest(
+    @Param('id') id: string,
+    @Param('studentId') studentId: string,
+  ) {
+    this.liveClassService.removeJoinRequest(id, studentId);
+    return { success: true };
+  }
+
   // ─── Recording status (studio / timetable chip) ──────────────────────────
+
 
   @Get(':id/recording')
   @UseGuards(JwtAuthGuard)

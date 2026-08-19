@@ -599,6 +599,30 @@ function StudentClassroomInner({
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const joinChannel = new BroadcastChannel('neet-live-join-requests');
 
+      // ── API-based join request (cross-device reliable) ──
+      const registerViaApi = async () => {
+        try {
+          const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+          const urls = [
+            `/api/v1/live-classes/${classId}/join-request`,
+            `http://${host}:3000/api/v1/live-classes/${classId}/join-request`,
+            `/v1/live-classes/${classId}/join-request`,
+            `http://${host}:3000/v1/live-classes/${classId}/join-request`,
+          ];
+          for (const url of urls) {
+            try {
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId, studentName }),
+              });
+              if (res.ok) break;
+            } catch {}
+          }
+        } catch {}
+      };
+      registerViaApi();
+
       const sendReq = () => {
         try {
           joinChannel.postMessage({
