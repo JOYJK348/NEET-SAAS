@@ -60,16 +60,40 @@ type Mode = 'idle' | 'whiteboard' | 'screen';
 /** Safely capture display stream across Android/iOS mobile and desktop browsers */
 async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
-    return { stream: null, isUnsupported: true, error: 'Media devices not available on this browser.' };
+    return { stream: null, isUnsupported: true, error: 'Media devices are not available on this browser.' };
   }
 
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(navigator.userAgent || '');
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(ua);
+  const isInApp = /FBAN|FBAV|Instagram|WhatsApp|Telegram|Line|MicroMessenger|Snapchat/i.test(ua) || (isMobile && !/Chrome|CriOS|Firefox|Edg/i.test(ua));
 
   if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+    if (isInApp) {
+      return {
+        stream: null,
+        isUnsupported: true,
+        error: '📱 You are inside WhatsApp/In-App browser. Tap ⋮ (top right) and choose "Open in Chrome" to share your screen!',
+      };
+    }
+    if (isIOS) {
+      return {
+        stream: null,
+        isUnsupported: true,
+        error: 'Apple iOS restricts full screen sharing in web browsers. Please use Whiteboard mode or join from a laptop / Android Chrome.',
+      };
+    }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      return {
+        stream: null,
+        isUnsupported: true,
+        error: 'Screen sharing requires a secure HTTPS connection.',
+      };
+    }
     return {
       stream: null,
       isUnsupported: true,
-      error: 'Direct screen capture is not available on this HTTP link. Please use HTTPS/production for full mobile screen sharing.',
+      error: 'Screen sharing is not supported in this mobile browser. Please open in Google Chrome app on your phone.',
     };
   }
 
