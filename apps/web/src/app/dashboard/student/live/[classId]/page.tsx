@@ -894,106 +894,6 @@ function StudentClassroomInner({
   ]);
   const [inputMsg, setInputMsg] = useState('');
 
-  const [remoteWhiteboardFrame, setRemoteWhiteboardFrame] = useState<string | null>(null);
-
-  useEffect(() => {
-    const wbChannel = new BroadcastChannel('neet-live-whiteboard');
-    wbChannel.onmessage = (e) => {
-      if (e.data.type === 'whiteboard-frame') {
-        setRemoteWhiteboardFrame(e.data.frame);
-      }
-    };
-    return () => {
-      wbChannel.close();
-    };
-  }, []);
-
-  // ── DataChannel Handler (Listen to Teacher Mode Changes & Chat)
-  const { send } = useDataChannel((msg) => {
-    try {
-      const data = JSON.parse(new TextDecoder().decode(msg.payload));
-      if (data.type === 'mode-change') {
-        setTeacherMode((prev) => (prev === data.mode ? prev : data.mode));
-        if (data.mode === 'whiteboard') {
-          setStudentViewMode((prev) => (prev === 'whiteboard' ? prev : 'whiteboard'));
-        } else if (data.mode === 'pdf') {
-          setStudentViewMode((prev) => (prev === 'pdf' ? prev : 'pdf'));
-        } else if (data.mode === 'idle') {
-          setStudentViewMode((prev) => (prev === 'idle' ? prev : 'idle'));
-        }
-        if (data.pdfPage) {
-          setTeacherPdfPage((prev) => (prev === data.pdfPage ? prev : data.pdfPage));
-        }
-        if (data.doc) {
-          setTeacherPdfDoc((prev) => {
-            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
-            return data.doc;
-          });
-        }
-      } else if (data.type === 'pdf-page-change' || data.type === 'pdf-page') {
-        if (data.page) {
-          setTeacherPdfPage((prev) => (prev === data.page ? prev : data.page));
-        }
-        if (data.doc) {
-          setTeacherPdfDoc((prev) => {
-            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
-            return data.doc;
-          });
-        }
-      } else if (data.type === 'pdf-doc-change') {
-        if (data.doc) {
-          setTeacherPdfDoc((prev) => {
-            if (prev?.id === data.doc.id && prev?.url === data.doc.url) return prev;
-            return data.doc;
-          });
-        }
-        if (data.page) {
-          setTeacherPdfPage((prev) => (prev === data.page ? prev : data.page));
-        }
-      } else if (data.type === 'tutor-mic-state') {
-        setIsTutorMicOn(!!data.isMicOn);
-      } else if (data.type === 'chat') {
-        setChatMessages((prev) => [...prev, { sender: data.sender, text: data.text, time: data.time }]);
-      } else if (data.type === 'join-approved') {
-        if (!data.studentId || data.studentId === studentId || data.studentId === 'all' || data.studentId.includes(studentId) || studentId.includes(data.studentId)) {
-          setIsApproved(true);
-          setIsDenied(false);
-          try {
-            localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-            localStorage.setItem(`class_${classId}_approved_global`, 'true');
-          } catch {}
-          toast.success('🎉 You have been admitted to the live class!');
-        }
-      } else if (data.type === 'join-denied') {
-        if (!data.studentId || data.studentId === studentId || data.studentId === 'all' || data.studentId.includes(studentId) || studentId.includes(data.studentId)) {
-          setIsDenied(true);
-          setIsApproved(false);
-        }
-      } else if (data.type === 'class-ended') {
-        setIsClassEnded(true);
-        try {
-          localStorage.removeItem(`class_${classId}_approved_${studentId}`);
-          localStorage.removeItem(`class_${classId}_approved`);
-          localStorage.removeItem(`class_${classId}_approved_global`);
-          localStorage.removeItem(`student_token_${classId}`);
-          localStorage.removeItem(`student_wsUrl_${classId}`);
-        } catch {}
-        toast.info('⏱ The tutor has ended the live session. Redirecting to dashboard...');
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.location.href = '/dashboard/student';
-          }
-        }, 1200);
-      } else if (data.type === 'whiteboard-frame') {
-        setRemoteWhiteboardFrame(data.frame);
-      }
-    } catch {}
-  });
-
-  useEffect(() => {
-    sendDataRef.current = send;
-  }, [send]);
-
   const [isClassEnded, setIsClassEnded] = useState(false);
 
   const stopAllMediaTracks = useCallback(() => {
@@ -1223,17 +1123,6 @@ function StudentClassroomInner({
       stopAllMediaTracks();
     };
   }, [stopAllMediaTracks, handleTriggerClassEnded]);
-
-  const safeSend = (payload: any) => {
-    if (connectionState !== ConnectionState.Connected) return;
-    try {
-      const encoder = new TextEncoder();
-      const promise = send(encoder.encode(JSON.stringify(payload)), { reliable: true });
-      if (promise && typeof (promise as any).catch === 'function') {
-        (promise as any).catch(() => {});
-      }
-    } catch {}
-  };
 
   const studentCamBroadcastRef = useRef<BroadcastChannel | null>(null);
   const studentCamFrameIntervalRef = useRef<any>(null);

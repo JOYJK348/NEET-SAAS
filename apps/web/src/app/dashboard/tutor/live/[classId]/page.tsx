@@ -1921,16 +1921,6 @@ function TeacherStudioInner({
 
   const cameraTracks = useTracks([Track.Source.Camera]);
 
-  const handleWhiteboardFrame = (frame: string) => {
-    whiteboardFrameRef.current = frame;
-    safeSend({ type: 'whiteboard-frame', frame });
-    try {
-      const wbChannel = new BroadcastChannel('neet-live-whiteboard');
-      wbChannel.postMessage({ type: 'whiteboard-frame', frame, classId });
-      wbChannel.close();
-    } catch {}
-  };
-
   return (
     <div className="h-[100dvh] w-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden font-sans select-none">
       {/* ── Top Header Bar ── */}
