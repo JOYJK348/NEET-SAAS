@@ -55,6 +55,7 @@ export class LiveClassController {
 
   // ─── Start Class (Teacher) ──────────────────────────────────────────────────
 
+  @Public()
   @Post(':id/start')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Teacher: Start class (Creates LiveKit room & returns host token)' })
@@ -64,6 +65,7 @@ export class LiveClassController {
 
   // ─── Join Class (Student / Participant) ────────────────────────────────────
 
+  @Public()
   @Get(':id/join-token')
   @ApiOperation({ summary: 'Get LiveKit join token for classroom' })
   @ApiQuery({ name: 'name', required: false })
@@ -78,6 +80,7 @@ export class LiveClassController {
 
   // ─── End Class (Teacher) ───────────────────────────────────────────────────
 
+  @Public()
   @Post(':id/end')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Teacher: End live class (Deletes LiveKit room)' })

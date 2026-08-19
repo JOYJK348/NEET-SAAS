@@ -121,9 +121,22 @@ export default function StudentClassroomPage() {
   const classId = params.classId as string;
   const { user, hasHydrated } = useAuthStore();
 
-  // ── Admission state — automatically connects enrolled student to live room
+  // ── Admission state — ALWAYS starts in waiting room until tutor approves
   const studentId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('studentId') || 'student-1' : 'student-1');
-  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('admitted');
+  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('waiting');
+
+  // Clear all cached approvals on mount so every fresh page load requires tutor admission
+  useEffect(() => {
+    try {
+      localStorage.removeItem(`class_${classId}_approved`);
+      localStorage.removeItem(`class_${classId}_approved_${studentId}`);
+      localStorage.removeItem(`class_${classId}_approved_global`);
+      sessionStorage.removeItem(`class_${classId}_approved`);
+      sessionStorage.removeItem(`class_${classId}_approved_${studentId}`);
+      sessionStorage.removeItem(`class_${classId}_approved_global`);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId, studentId]);
 
   // ── LiveKit config — populated AFTER tutor approval
   const [liveKitConfig, setLiveKitConfig] = useState<{ token: string; wsUrl: string; classTitle?: string; scheduledEnd?: string | Date } | null>(null);
@@ -595,14 +608,7 @@ function StudentClassroomInner({
 
   const studentId = user ? user.id : 'student-1';
   const sendDataRef = useRef<((data: Uint8Array, options?: any) => Promise<void>) | null>(null);
-  const [isApproved, setIsApproved] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      // sessionStorage only — resets on page refresh so each class session requires fresh tutor approval
-      return sessionStorage.getItem(`class_${classId}_approved_${studentId}`) === 'true' ||
-             sessionStorage.getItem(`class_${classId}_approved_global`) === 'true';
-    }
-    return false;
-  });
+  const [isApproved, setIsApproved] = useState<boolean>(true);
   const [isDenied, setIsDenied] = useState(false);
 
   // Clear stale localStorage approval keys on mount so the student is never silently auto-admitted

@@ -213,63 +213,14 @@ export default function TeacherStudioPage() {
           }
         } catch {}
 
-        let res: Response | null = null;
-
-        // Try API endpoints with Authorization header
-        const startEndpoints = [
-          `http://${host}:3000/v1/live-classes/${classId}/start`,
-          `http://${host}:3000/api/v1/live-classes/${classId}/start`,
-          `/v1/live-classes/${classId}/start`,
-          `/api/v1/live-classes/${classId}/start`,
-        ];
-
-        for (const url of startEndpoints) {
-          try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 8000);
-            res = await fetch(url, { method: 'POST', headers, signal: controller.signal });
-            clearTimeout(timer);
-            if (res && res.ok) break;
-          } catch {}
-        }
-
-        if (res && res.ok) {
-          const data = await res.json();
-          if (data.token) {
-            const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
-            setLiveKitConfig({ token: data.token, wsUrl });
-            if (data.liveClass) setClassDetail(data.liveClass);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(`tutor_token_${classId}`, data.token);
-              localStorage.setItem(`tutor_wsUrl_${classId}`, wsUrl);
-            }
-            setLoading(false);
-            return;
-          }
-        }
-
         // Fallback: Join token endpoint
         const encodedTeacher = encodeURIComponent(teacherName);
-        let tokenRes: Response | null = null;
-        const joinEndpoints = [
-          `http://${host}:3000/v1/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
-          `/v1/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
-          `/api/v1/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
-        ];
-
-        for (const url of joinEndpoints) {
-          try {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 8000);
-            tokenRes = await fetch(url, { headers, signal: controller.signal });
-            clearTimeout(timer);
-            if (tokenRes && tokenRes.ok) break;
-          } catch {}
-        }
-
-        if (tokenRes && tokenRes.ok) {
-          const data = await tokenRes.json();
-          if (data.token) {
+        try {
+          const data = await api.get<any>(
+            `/live-classes/${classId}/join-token?name=${encodedTeacher}&role=host`,
+            { skipGlobalToast: true }
+          );
+          if (data && data.token) {
             const wsUrl = data.wsUrl || 'wss://neet-n80sqwyo.livekit.cloud';
             setLiveKitConfig({ token: data.token, wsUrl });
             if (typeof window !== 'undefined') {
@@ -279,11 +230,11 @@ export default function TeacherStudioPage() {
             setLoading(false);
             return;
           }
-        }
+        } catch {}
 
-        // Final fallback: Generate interactive session configuration
+        // Direct fallback token to real LiveKit cloud
+        const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
         const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
-        const fallbackWs = 'wss://demo-livekit.example.com';
         setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs });
       } catch (err) {
         console.error('Failed to init live studio:', err);
@@ -1043,10 +994,8 @@ function TeacherStudioInner({
 
     remoteParticipants.forEach((p) => {
       const displayName = (p.name || p.identity || 'Student').trim();
-      const isAdmitted = admittedStudents.some(
-        (s) => s.id === p.sid || s.id === p.identity || s.name.toLowerCase() === displayName.toLowerCase()
-      );
-      if (isAdmitted) {
+      const isHost = p.identity.startsWith('host-') || displayName.toLowerCase().includes('teacher') || displayName.toLowerCase().includes('host');
+      if (!isHost) {
         addIfNew(p.sid, displayName);
       }
     });
