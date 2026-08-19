@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FileText,
   ChevronLeft,
@@ -14,9 +14,7 @@ import {
   BookOpen,
   CheckCircle2,
   Sparkles,
-  Download,
-  Eye,
-  RefreshCw,
+  Loader2,
   FolderOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,7 +22,7 @@ import { toast } from 'sonner';
 export interface PdfDocumentInfo {
   id: string;
   name: string;
-  url: string;
+  url: string; // Base64 data URL, blob URL, or remote URL
   category: string;
   totalPages: number;
   fileType?: 'pdf' | 'image';
@@ -33,27 +31,27 @@ export interface PdfDocumentInfo {
 export const SAMPLE_NEET_DOCUMENTS: PdfDocumentInfo[] = [
   {
     id: 'sample-biology-notes',
-    name: 'NEET Biology - Cell Structure & Genetics Summary.pdf',
+    name: 'NEET Biology - High Yield Study Summary.pdf',
     category: 'Biology',
-    totalPages: 8,
+    totalPages: 5,
     fileType: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    url: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
   },
   {
     id: 'sample-physics-mechanics',
-    name: 'NEET Physics - Mechanics Formula & Problems.pdf',
+    name: 'NEET Physics - Mechanics & Formulae Sheet.pdf',
     category: 'Physics',
-    totalPages: 10,
+    totalPages: 8,
     fileType: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    url: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
   },
   {
     id: 'sample-chemistry-reactions',
-    name: 'NEET Chemistry - Organic Reaction Mechanisms.pdf',
+    name: 'NEET Chemistry - Organic Mechanisms & Notes.pdf',
     category: 'Chemistry',
-    totalPages: 12,
+    totalPages: 6,
     fileType: 'pdf',
-    url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+    url: 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf',
   },
 ];
 
@@ -76,24 +74,193 @@ export default function StudioPdfPresenter({
 }: StudioPdfPresenterProps) {
   const [selectedDoc, setSelectedDoc] = useState<PdfDocumentInfo | null>(propDoc || null);
   const [currentPage, setCurrentPage] = useState<number>(propPage);
+  const [totalPages, setTotalPages] = useState<number>(propDoc?.totalPages || 1);
   const [zoom, setZoom] = useState<number>(100);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showPicker, setShowPicker] = useState<boolean>(false);
+  const [isLoadingPdf, setIsLoadingPdf] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const pdfDocRef = useRef<any>(null);
+  const renderTaskRef = useRef<any>(null);
 
+  // Sync prop changes
   useEffect(() => {
     if (propDoc) {
       setSelectedDoc(propDoc);
+      if (propDoc.totalPages) {
+        setTotalPages(propDoc.totalPages);
+      }
     }
   }, [propDoc]);
 
   useEffect(() => {
-    if (propPage) {
+    if (propPage && propPage !== currentPage) {
       setCurrentPage(propPage);
     }
   }, [propPage]);
+
+  // Dynamically load PDF.js engine
+  const getPdfJs = useCallback(async () => {
+    if (typeof window === 'undefined') return null;
+
+    if ((window as any).pdfjsLib) {
+      return (window as any).pdfjsLib;
+    }
+
+    try {
+      const pdfjs = await import('pdfjs-dist');
+      if (pdfjs && pdfjs.GlobalWorkerOptions) {
+        pdfjs.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        (window as any).pdfjsLib = pdfjs;
+        return pdfjs;
+      }
+    } catch {}
+
+    // CDN fallback
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        const cdnPdfJs = (window as any).pdfjsLib;
+        if (cdnPdfJs) {
+          cdnPdfJs.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          resolve(cdnPdfJs);
+        } else {
+          reject(new Error('PDF.js not available'));
+        }
+      };
+      script.onerror = () => reject(new Error('Failed to load PDF engine'));
+      document.head.appendChild(script);
+    });
+  }, []);
+
+  // Load and Parse PDF Document
+  useEffect(() => {
+    if (!selectedDoc || selectedDoc.fileType === 'image') {
+      pdfDocRef.current = null;
+      setIsLoadingPdf(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsLoadingPdf(true);
+
+    const loadDoc = async () => {
+      try {
+        const pdfjs = await getPdfJs();
+        if (!pdfjs || isCancelled) return;
+
+        let loadingTask: any;
+
+        if (selectedDoc.url.startsWith('data:')) {
+          // Base64 data URL -> convert to binary Uint8Array
+          const base64Data = selectedDoc.url.split(',')[1];
+          const raw = atob(base64Data);
+          const uint8Array = new Uint8Array(raw.length);
+          for (let i = 0; i < raw.length; i++) {
+            uint8Array[i] = raw.charCodeAt(i);
+          }
+          loadingTask = pdfjs.getDocument({ data: uint8Array });
+        } else {
+          // Remote URL or Blob
+          loadingTask = pdfjs.getDocument(selectedDoc.url);
+        }
+
+        const pdf = await loadingTask.promise;
+        if (isCancelled) return;
+
+        pdfDocRef.current = pdf;
+        const realPages = pdf.numPages || 1;
+        setTotalPages(realPages);
+
+        if (selectedDoc.totalPages !== realPages && isTeacher) {
+          const updatedDoc = { ...selectedDoc, totalPages: realPages };
+          setSelectedDoc(updatedDoc);
+          onDocChange?.(updatedDoc);
+        }
+
+        setIsLoadingPdf(false);
+      } catch (err: any) {
+        console.error('PDF.js Load Error:', err);
+        if (!isCancelled) {
+          setIsLoadingPdf(false);
+          toast.error('Could not render PDF pages. You can try re-uploading the file.');
+        }
+      }
+    };
+
+    loadDoc();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDoc, getPdfJs, isTeacher, onDocChange]);
+
+  // Render Current Page onto HTML5 Canvas
+  useEffect(() => {
+    if (!pdfDocRef.current || !canvasRef.current || selectedDoc?.fileType === 'image') {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const renderPage = async () => {
+      try {
+        if (renderTaskRef.current) {
+          try {
+            renderTaskRef.current.cancel();
+          } catch {}
+          renderTaskRef.current = null;
+        }
+
+        const pageNum = Math.max(1, Math.min(currentPage, totalPages));
+        const page = await pdfDocRef.current.getPage(pageNum);
+        if (isCancelled || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Scale resolution for high-DPI crystal-clear presentation on mobile & retina
+        const pixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+        const baseScale = (zoom / 100) * 1.5;
+        const viewport = page.getViewport({ scale: baseScale });
+
+        canvas.width = viewport.width * pixelRatio;
+        canvas.height = viewport.height * pixelRatio;
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+        const renderContext = {
+          canvasContext: ctx,
+          viewport: viewport,
+        };
+
+        const renderTask = page.render(renderContext);
+        renderTaskRef.current = renderTask;
+
+        await renderTask.promise;
+      } catch (err: any) {
+        if (err?.name !== 'RenderingCancelledException') {
+          console.warn('PDF Page Render Notice:', err);
+        }
+      }
+    };
+
+    renderPage();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentPage, totalPages, zoom, selectedDoc]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) {
@@ -104,8 +271,7 @@ export default function StudioPdfPresenter({
   };
 
   const handleNextPage = () => {
-    const total = selectedDoc?.totalPages || 20;
-    if (currentPage < total) {
+    if (currentPage < totalPages) {
       const next = currentPage + 1;
       setCurrentPage(next);
       onPageChange?.(next);
@@ -115,6 +281,7 @@ export default function StudioPdfPresenter({
   const handleSelectDocument = (doc: PdfDocumentInfo) => {
     setSelectedDoc(doc);
     setCurrentPage(1);
+    setTotalPages(doc.totalPages || 1);
     setShowPicker(false);
     onDocChange?.(doc);
     onPageChange?.(1);
@@ -127,27 +294,47 @@ export default function StudioPdfPresenter({
     const isImg = file.type.startsWith('image/');
 
     if (!isPdf && !isImg) {
-      toast.error('Please upload a PDF document (.pdf) or image file (.png, .jpg)');
+      toast.error('Please upload a valid PDF (.pdf) or image (.png, .jpg)');
       return;
     }
 
     setIsUploading(true);
     const reader = new FileReader();
 
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const dataUrl = reader.result as string;
+        let detectedPages = 1;
+
+        if (isPdf) {
+          try {
+            const pdfjs = await getPdfJs();
+            if (pdfjs) {
+              const base64Data = dataUrl.split(',')[1];
+              const raw = atob(base64Data);
+              const uint8Array = new Uint8Array(raw.length);
+              for (let i = 0; i < raw.length; i++) {
+                uint8Array[i] = raw.charCodeAt(i);
+              }
+              const pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
+              detectedPages = pdf.numPages || 1;
+            }
+          } catch {
+            detectedPages = 1;
+          }
+        }
+
         const customDoc: PdfDocumentInfo = {
           id: `custom-${Date.now()}`,
           name: file.name,
           url: dataUrl,
           category: 'Uploaded Document',
-          totalPages: isPdf ? 15 : 1,
+          totalPages: detectedPages,
           fileType: isPdf ? 'pdf' : 'image',
         };
 
         handleSelectDocument(customDoc);
-        toast.success(`📄 "${file.name}" loaded successfully!`);
+        toast.success(`📄 "${file.name}" loaded (${detectedPages} page${detectedPages > 1 ? 's' : ''})!`);
       } catch (err) {
         toast.error('Failed to parse uploaded document.');
       } finally {
@@ -156,7 +343,7 @@ export default function StudioPdfPresenter({
     };
 
     reader.onerror = () => {
-      toast.error('Error reading file from your device.');
+      toast.error('Error reading file.');
       setIsUploading(false);
     };
 
@@ -168,7 +355,6 @@ export default function StudioPdfPresenter({
     if (file) {
       handleFileUpload(file);
     }
-    // Reset file input so same file can be re-uploaded if modified
     if (e.target) e.target.value = '';
   };
 
@@ -222,7 +408,7 @@ export default function StudioPdfPresenter({
             </div>
             <span className="text-[10px] text-slate-400 font-medium">
               {isTeacher
-                ? 'Presenter Controls • Pages live-synced to all students'
+                ? 'Presenter Mode • Pages live-synced to all students'
                 : 'Synchronized Live Presentation'}
             </span>
           </div>
@@ -236,7 +422,7 @@ export default function StudioPdfPresenter({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
                 className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-sm cursor-pointer disabled:opacity-50"
-                title="Upload PDF or Image from your phone/laptop"
+                title="Upload PDF or Image from device"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>{isUploading ? 'Loading...' : 'Upload File'}</span>
@@ -304,7 +490,7 @@ export default function StudioPdfPresenter({
         </div>
       </div>
 
-      {/* ── Material Picker Dropdown Overlay ── */}
+      {/* ── Material Picker Modal Dropdown ── */}
       {showPicker && isTeacher && (
         <div className="absolute top-14 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 bg-slate-900/98 border border-slate-700 rounded-2xl shadow-2xl z-30 p-3 sm:p-4 backdrop-blur-xl animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
@@ -363,35 +549,42 @@ export default function StudioPdfPresenter({
         </div>
       )}
 
-      {/* ── Main Presentation Canvas Stage ── */}
-      <div className="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-2 sm:p-4 bg-slate-950">
+      {/* ── Main Presentation Stage ── */}
+      <div className="flex-1 w-full h-full relative overflow-auto flex items-center justify-center p-2 sm:p-4 bg-slate-950">
+        {isLoadingPdf && (
+          <div className="absolute inset-0 z-20 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+            <p className="text-xs font-bold text-slate-300">Rendering high-resolution PDF page...</p>
+          </div>
+        )}
+
         {selectedDoc ? (
-          <div
-            style={{
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'center center',
-            }}
-            className="w-full h-full max-w-5xl rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden flex flex-col relative transition-transform duration-150"
-          >
-            {/* Real PDF / Image Display Frame */}
+          <div className="w-full h-full flex items-center justify-center relative overflow-auto p-1 sm:p-2">
             {selectedDoc.fileType === 'image' || selectedDoc.url.startsWith('data:image/') ? (
-              <div className="w-full h-full flex items-center justify-center p-2 bg-slate-950 overflow-auto">
-                <img
-                  src={selectedDoc.url}
-                  alt={selectedDoc.name}
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                />
-              </div>
-            ) : (
-              <iframe
-                src={`${selectedDoc.url}#page=${currentPage}&view=FitH&toolbar=0`}
-                className="w-full h-full rounded-2xl bg-white border-0"
-                title={selectedDoc.name}
+              <img
+                src={selectedDoc.url}
+                alt={selectedDoc.name}
+                style={{
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'center center',
+                }}
+                className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl transition-transform duration-150"
               />
+            ) : (
+              /* High-Res HTML5 Canvas for PDF.js Rendering */
+              <div
+                style={{
+                  transform: `scale(${zoom / 100})`,
+                  transformOrigin: 'center center',
+                }}
+                className="shadow-2xl rounded-xl overflow-hidden bg-white border border-slate-800 transition-transform duration-150 flex items-center justify-center"
+              >
+                <canvas ref={canvasRef} className="max-w-full max-h-[85vh] object-contain block" />
+              </div>
             )}
           </div>
         ) : (
-          /* Empty Initial State: Upload Dropzone */
+          /* Empty Initial Dropzone */
           <div className="flex flex-col items-center justify-center max-w-md w-full p-6 sm:p-8 bg-slate-900/90 border border-slate-800 rounded-3xl text-center shadow-2xl space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-lg">
               <FolderOpen className="w-8 h-8" />
@@ -432,7 +625,7 @@ export default function StudioPdfPresenter({
         )}
       </div>
 
-      {/* ── Bottom Presentation Page Navigator ── */}
+      {/* ── Bottom Page Turn Navigator ── */}
       {selectedDoc && (
         <div className="h-12 sm:h-14 bg-slate-900/95 border-t border-slate-800 px-4 flex items-center justify-between shrink-0 z-20 backdrop-blur-md">
           <button
@@ -448,11 +641,11 @@ export default function StudioPdfPresenter({
             <span className="hidden sm:inline">Previous</span>
           </button>
 
-          {/* Page status indicator */}
+          {/* Page status indicator with actual page numbers */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-300">
-              Page <span className="text-white font-black">{currentPage}</span>
-              {selectedDoc.totalPages ? ` / ${selectedDoc.totalPages}` : ''}
+              Page <span className="text-white font-black">{currentPage}</span> of{' '}
+              <span className="text-indigo-400 font-black">{totalPages}</span>
             </span>
             {!isTeacher && (
               <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
@@ -464,13 +657,9 @@ export default function StudioPdfPresenter({
 
           <button
             onClick={handleNextPage}
-            disabled={
-              !isTeacher ||
-              (selectedDoc.totalPages ? currentPage >= selectedDoc.totalPages : false)
-            }
+            disabled={!isTeacher || currentPage >= totalPages}
             className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition ${
-              !isTeacher ||
-              (selectedDoc.totalPages ? currentPage >= selectedDoc.totalPages : false)
+              !isTeacher || currentPage >= totalPages
                 ? 'bg-slate-800/40 border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                 : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white cursor-pointer active:scale-95'
             }`}
