@@ -121,9 +121,9 @@ export default function StudentClassroomPage() {
   const classId = params.classId as string;
   const { user, hasHydrated } = useAuthStore();
 
-  // ── Admission state (waiting room) — always start fresh in waiting room
+  // ── Admission state — automatically connects enrolled student to live room
   const studentId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('studentId') || 'student-1' : 'student-1');
-  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('waiting');
+  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('admitted');
 
   // ── LiveKit config — populated AFTER tutor approval
   const [liveKitConfig, setLiveKitConfig] = useState<{ token: string; wsUrl: string; classTitle?: string; scheduledEnd?: string | Date } | null>(null);

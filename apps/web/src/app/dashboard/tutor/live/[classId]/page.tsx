@@ -971,7 +971,8 @@ function TeacherStudioInner({
     };
 
     remoteParticipants.forEach((p) => {
-      if (p.name) addIfNew(p.sid, p.name);
+      const displayName = p.name || p.identity || 'Student';
+      addIfNew(p.sid, displayName);
     });
 
     admittedStudents.forEach((aS) => {
