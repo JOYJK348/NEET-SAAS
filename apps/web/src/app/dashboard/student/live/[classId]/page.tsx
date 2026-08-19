@@ -573,6 +573,7 @@ function StudentClassroomInner({
   const [pinnedParticipant, setPinnedParticipant] = useState<{ id: string; name: string; isTeacher: boolean } | null>(null);
 
   const studentId = user ? user.id : 'student-1';
+  const sendDataRef = useRef<((data: Uint8Array, options?: any) => Promise<void>) | null>(null);
   const [isApproved, setIsApproved] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(`class_${classId}_approved_${studentId}`) === 'true' ||
@@ -601,7 +602,7 @@ function StudentClassroomInner({
 
         try {
           const encoder = new TextEncoder();
-          send(encoder.encode(JSON.stringify({
+          sendDataRef.current?.(encoder.encode(JSON.stringify({
             type: 'join-request',
             classId,
             id: studentId,
@@ -645,7 +646,7 @@ function StudentClassroomInner({
         window.removeEventListener('storage', handleStorage);
       };
     }
-  }, [isApproved, isDenied, classId, studentId, user, send]);
+  }, [isApproved, isDenied, classId, studentId, user]);
 
   const [remoteScreenFrame, setRemoteScreenFrame] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -886,6 +887,10 @@ function StudentClassroomInner({
       }
     } catch {}
   });
+
+  useEffect(() => {
+    sendDataRef.current = send;
+  }, [send]);
 
   const [isClassEnded, setIsClassEnded] = useState(false);
 
