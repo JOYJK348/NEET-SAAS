@@ -607,6 +607,28 @@ function StudentClassroomInner({
       };
       registerViaApi();
 
+      // ── API-based approval status polling (cross-device 100% reliable) ──
+      const pollApprovalStatus = async () => {
+        try {
+          const res = await api.get<{ approved?: boolean; denied?: boolean }>(
+            `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
+            { skipGlobalToast: true }
+          );
+          if (res?.approved) {
+            setIsApproved(true);
+            setIsDenied(false);
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
+              sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
+            }
+          } else if (res?.denied) {
+            setIsDenied(true);
+          }
+        } catch {}
+      };
+      pollApprovalStatus();
+      const statusPollInterval = setInterval(pollApprovalStatus, 1500);
+
       const sendReq = () => {
         try {
           joinChannel.postMessage({
@@ -663,6 +685,7 @@ function StudentClassroomInner({
 
       return () => {
         clearInterval(interval);
+        clearInterval(statusPollInterval);
         joinChannel.close();
         window.removeEventListener('storage', handleStorage);
       };

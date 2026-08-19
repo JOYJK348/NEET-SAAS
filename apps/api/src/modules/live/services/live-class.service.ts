@@ -46,10 +46,25 @@ export class LiveClassService {
 
   private async _getActiveSession(classId: string) {
     try {
-      return await this.prisma.liveClassSessions.findFirst({
+      let session = await this.prisma.liveClassSessions.findFirst({
         where: { liveClassId: classId, status: { in: ['CREATED', 'STARTED'] as any }, deletedAt: null },
         orderBy: { createdAt: 'desc' },
       });
+      if (!session) {
+        session = await this.prisma.liveClassSessions.create({
+          data: {
+            tenantId: this.ctx?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d',
+            liveClassId: classId,
+            providerSessionId: `room-${classId}`,
+            status: 'STARTED',
+            startedAt: new Date(),
+            createdBy: 'system',
+            updatedBy: 'system',
+            providerMetadata: {},
+          },
+        });
+      }
+      return session;
     } catch { return null; }
   }
 
@@ -64,7 +79,7 @@ export class LiveClassService {
         const meta: any = (session.providerMetadata as any) || {};
         const pending: Record<string, any> = meta.pendingJoinRequests || {};
         const admitted: Record<string, boolean> = meta.admittedStudents || {};
-        if (admitted[studentId]) return; // already admitted
+        if (admitted[studentId] || admitted['all']) return; // already admitted
         if (!pending[studentId]) {
           pending[studentId] = { id: studentId, name: studentName, time: timeStr, ts: Date.now() };
           await this.prisma.liveClassSessions.update({
@@ -77,7 +92,7 @@ export class LiveClassService {
       return;
     }
 
-    // Fallback: in-memory (local dev with no session)
+    // Fallback: in-memory (local dev with no DB connection)
     if (!this._memJoinRequests.has(classId)) this._memJoinRequests.set(classId, new Map());
     const map = this._memJoinRequests.get(classId)!;
     if (!map.has(studentId)) {
@@ -107,7 +122,25 @@ export class LiveClassService {
     return Array.from(map.values()).filter(r => r.ts > cutoff).map(({ id, name, time }) => ({ id, name, time }));
   }
 
-  async removeJoinRequest(classId: string, studentId: string): Promise<void> {
+  async checkJoinStatus(classId: string, studentId: string): Promise<{ approved: boolean; denied: boolean }> {
+    const session = await this._getActiveSession(classId);
+    if (session) {
+      try {
+        const meta: any = (session.providerMetadata as any) || {};
+        const admitted: Record<string, boolean> = meta.admittedStudents || {};
+        const denied: Record<string, boolean> = meta.deniedStudents || {};
+        return {
+          approved: !!admitted[studentId] || !!admitted['all'],
+          denied: !!denied[studentId] || !!denied['all'],
+        };
+      } catch {
+        return { approved: false, denied: false };
+      }
+    }
+    return { approved: false, denied: false };
+  }
+
+  async removeJoinRequest(classId: string, studentId: string, action: 'admit' | 'deny' = 'admit'): Promise<void> {
     const session = await this._getActiveSession(classId);
 
     if (session) {
@@ -115,11 +148,21 @@ export class LiveClassService {
         const meta: any = (session.providerMetadata as any) || {};
         const pending: Record<string, any> = meta.pendingJoinRequests || {};
         const admitted: Record<string, boolean> = meta.admittedStudents || {};
+        const denied: Record<string, boolean> = meta.deniedStudents || {};
+
         delete pending[studentId];
-        admitted[studentId] = true;
+        if (studentId === 'all') {
+          Object.keys(pending).forEach((id) => delete pending[id]);
+        }
+        if (action === 'admit') {
+          admitted[studentId] = true;
+        } else {
+          denied[studentId] = true;
+        }
+
         await this.prisma.liveClassSessions.update({
           where: { id: session.id },
-          data: { providerMetadata: { ...meta, pendingJoinRequests: pending, admittedStudents: admitted } },
+          data: { providerMetadata: { ...meta, pendingJoinRequests: pending, admittedStudents: admitted, deniedStudents: denied } },
         });
       } catch (e) { this.logger.warn(`removeJoinRequest DB err: ${e}`); }
       return;

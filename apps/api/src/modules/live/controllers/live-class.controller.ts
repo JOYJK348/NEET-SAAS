@@ -177,6 +177,17 @@ export class LiveClassController {
     return { requests };
   }
 
+  /** Student: Poll join request approval status */
+  @Public()
+  @Get(':id/join-status')
+  @ApiOperation({ summary: 'Student: Check if tutor approved join request' })
+  async checkJoinStatus(
+    @Param('id') id: string,
+    @Query('studentId') studentId: string,
+  ) {
+    return this.liveClassService.checkJoinStatus(id, studentId || 'unknown');
+  }
+
   /** Tutor: Remove/admit a specific student */
   @Public()
   @Delete(':id/join-requests/:studentId')
@@ -185,8 +196,9 @@ export class LiveClassController {
   async removeJoinRequest(
     @Param('id') id: string,
     @Param('studentId') studentId: string,
+    @Query('action') action?: 'admit' | 'deny',
   ) {
-    await this.liveClassService.removeJoinRequest(id, studentId);
+    await this.liveClassService.removeJoinRequest(id, studentId, action || 'admit');
     return { success: true };
   }
 

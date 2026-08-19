@@ -1383,7 +1383,7 @@ function TeacherStudioInner({
       statusBc.postMessage({ type: 'class-reopened', classId });
       statusBc.close();
       // Remove from server-side join request store (cross-device)
-      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`, { skipGlobalToast: true }).catch(() => {});
+      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}?action=admit`, { skipGlobalToast: true }).catch(() => {});
       toast.success(`✅ ${nameToAdmit} admitted to class`);
     } catch {}
   };
@@ -1411,6 +1411,7 @@ function TeacherStudioInner({
       const statusBc = new BroadcastChannel('neet-live-class-status');
       statusBc.postMessage({ type: 'class-reopened', classId });
       statusBc.close();
+      api.delete(`/live-classes/${classId}/join-requests/all?action=admit`, { skipGlobalToast: true }).catch(() => {});
       toast.success(`✅ All ${pendingList.length} students admitted`);
     } catch {}
   };
@@ -1425,7 +1426,7 @@ function TeacherStudioInner({
       ch.postMessage({ type: 'join-denied', studentId, classId });
       ch.close();
       // Remove from server-side store
-      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`, { skipGlobalToast: true }).catch(() => {});
+      api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}?action=deny`, { skipGlobalToast: true }).catch(() => {});
       toast.error(`🚫 ${studentName || 'Student'} denied entry`);
     } catch {}
   };
@@ -1437,6 +1438,7 @@ function TeacherStudioInner({
       const ch = new BroadcastChannel('neet-live-join-requests');
       ch.postMessage({ type: 'join-denied', studentId: 'all', classId });
       ch.close();
+      api.delete(`/live-classes/${classId}/join-requests/all?action=deny`, { skipGlobalToast: true }).catch(() => {});
       toast.error(`🚫 All ${pendingList.length} students denied entry`);
     } catch {}
   };
