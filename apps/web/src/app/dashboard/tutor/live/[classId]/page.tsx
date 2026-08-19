@@ -1026,12 +1026,17 @@ function TeacherStudioInner({
   const modeRef = useRef(mode);
   const isScreenSharingRef = useRef(isScreenSharing);
   const isMicOnRef = useRef(isMicOn);
+  const activePdfDocRef = useRef(activePdfDoc);
+  const pdfPageRef = useRef(pdfPage);
+  const whiteboardFrameRef = useRef<string | null>(null);
 
   useEffect(() => {
     modeRef.current = mode;
     isScreenSharingRef.current = isScreenSharing;
     isMicOnRef.current = isMicOn;
-  }, [mode, isScreenSharing, isMicOn]);
+    activePdfDocRef.current = activePdfDoc;
+    pdfPageRef.current = pdfPage;
+  }, [mode, isScreenSharing, isMicOn, activePdfDoc, pdfPage]);
 
   const [screenFrame, setScreenFrame] = useState<string | null>(null);
   const [tutorCamFrame, setTutorCamFrame] = useState<string | null>(null);
@@ -1356,12 +1361,23 @@ function TeacherStudioInner({
     modeSyncChannel.onmessage = (e) => {
       if (e.data.type === 'request-sync') {
         try {
-          modeSyncChannel.postMessage({ type: 'current-mode', mode: isScreenSharingRef.current ? 'screen' : modeRef.current, classId });
+          modeSyncChannel.postMessage({
+            type: 'current-mode',
+            mode: isScreenSharingRef.current ? 'screen' : modeRef.current,
+            classId,
+            doc: activePdfDocRef.current,
+            pdfPage: pdfPageRef.current,
+          });
           if (isScreenSharingRef.current && screenFrameRef.current) {
             broadcastRef.current?.postMessage({ type: 'frame', frame: screenFrameRef.current });
           }
           if (tutorCamFrameRef.current) {
             camBroadcastRef.current?.postMessage({ type: 'cam-frame', frame: tutorCamFrameRef.current });
+          }
+          if (whiteboardFrameRef.current) {
+            const wbBc = new BroadcastChannel('neet-live-whiteboard');
+            wbBc.postMessage({ type: 'whiteboard-frame', frame: whiteboardFrameRef.current, classId });
+            wbBc.close();
           }
           const micBc = new BroadcastChannel('neet-live-tutor-mic');
           micBc.postMessage({ type: 'tutor-mic-state', isMicOn: isMicOnRef.current });
@@ -1564,6 +1580,16 @@ function TeacherStudioInner({
       const bc = new BroadcastChannel('neet-live-pdf-sync');
       bc.postMessage({ type: 'pdf-sync', page: 1, doc, classId });
       bc.close();
+    } catch {}
+  };
+
+  const handleWhiteboardFrame = (frame: string) => {
+    whiteboardFrameRef.current = frame;
+    safeSend({ type: 'whiteboard-frame', frame });
+    try {
+      const wbBc = new BroadcastChannel('neet-live-whiteboard');
+      wbBc.postMessage({ type: 'whiteboard-frame', frame, classId });
+      wbBc.close();
     } catch {}
   };
 
