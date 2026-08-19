@@ -1405,9 +1405,9 @@ function TeacherStudioInner({
         `/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
         `http://${host}:3000/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
       ];
-      for (const url of delUrls) {
-        try { const r = await fetch(url, { method: 'DELETE' }); if (r.ok) break; } catch {}
-      }
+      delUrls.forEach((url) => {
+        fetch(url, { method: 'DELETE' }).catch(() => {});
+      });
       toast.success(`✅ ${nameToAdmit} admitted to class`);
     } catch {}
   };
@@ -1439,7 +1439,7 @@ function TeacherStudioInner({
     } catch {}
   };
 
-  const denyStudent = async (studentId: string, studentName?: string) => {
+  const denyStudent = (studentId: string, studentName?: string) => {
     setPendingRequests((prev) => prev.filter((r) => r.id !== studentId));
     try {
       safeSend({ type: 'join-denied', studentId, classId });
@@ -1456,9 +1456,9 @@ function TeacherStudioInner({
         `/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
         `http://${host}:3000/v1/live-classes/${classId}/join-requests/${encodeURIComponent(studentId)}`,
       ];
-      for (const url of delUrls) {
-        try { const r = await fetch(url, { method: 'DELETE' }); if (r.ok) break; } catch {}
-      }
+      delUrls.forEach((url) => {
+        fetch(url, { method: 'DELETE' }).catch(() => {});
+      });
       toast.error(`🚫 ${studentName || 'Student'} denied entry`);
     } catch {}
   };
