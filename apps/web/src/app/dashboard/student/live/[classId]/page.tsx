@@ -46,13 +46,25 @@ import { useAuthStore } from '@/stores/auth-store';
 import { api } from '@/lib/api';
 
 import StudioWhiteboard from '@/components/live/studio-whiteboard';
-import StudioPdfPresenter, { PdfDocumentInfo, SAMPLE_NEET_DOCUMENTS } from '@/components/live/studio-pdf-presenter';
+import StudioPdfPresenter, {
+  PdfDocumentInfo,
+  SAMPLE_NEET_DOCUMENTS,
+} from '@/components/live/studio-pdf-presenter';
 
 type Mode = 'idle' | 'whiteboard' | 'screen' | 'pdf';
 
 /** Safely capture display stream using runtime capability detection and granular error handling */
-async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; error?: string; isUnsupported?: boolean; isCancelled?: boolean }> {
-  if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+async function getScreenMediaStream(): Promise<{
+  stream: MediaStream | null;
+  error?: string;
+  isUnsupported?: boolean;
+  isCancelled?: boolean;
+}> {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.mediaDevices ||
+    typeof navigator.mediaDevices.getDisplayMedia !== 'function'
+  ) {
     return {
       stream: null,
       isUnsupported: true,
@@ -86,16 +98,28 @@ async function getScreenMediaStream(): Promise<{ stream: MediaStream | null; err
       msg.includes('cancel') ||
       msg.includes('dismiss')
     ) {
-      return { stream: null, isCancelled: true, error: 'Screen sharing permission was cancelled or dismissed.' };
+      return {
+        stream: null,
+        isCancelled: true,
+        error: 'Screen sharing permission was cancelled or dismissed.',
+      };
     }
     if (name === 'NotFoundError') {
       return { stream: null, error: 'No display or screen source found.' };
     }
     if (name === 'NotReadableError') {
-      return { stream: null, error: 'Could not access screen. System permission or another application may be blocking capture.' };
+      return {
+        stream: null,
+        error:
+          'Could not access screen. System permission or another application may be blocking capture.',
+      };
     }
     if (name === 'NotSupportedError' || name === 'TypeError') {
-      return { stream: null, isUnsupported: true, error: 'Screen sharing is not supported by this browser version.' };
+      return {
+        stream: null,
+        isUnsupported: true,
+        error: 'Screen sharing is not supported by this browser version.',
+      };
     }
     if (name === 'OverconstrainedError') {
       return { stream: null, error: 'Screen capture constraints could not be satisfied.' };
@@ -122,8 +146,14 @@ export default function StudentClassroomPage() {
   const { user, hasHydrated } = useAuthStore();
 
   // ── Admission state — ALWAYS starts in waiting room until tutor approves
-  const studentId = user?.id || (typeof window !== 'undefined' ? localStorage.getItem('studentId') || 'student-1' : 'student-1');
-  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>('waiting');
+  const studentId =
+    user?.id ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('studentId') || 'student-1'
+      : 'student-1');
+  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>(
+    'waiting',
+  );
 
   // Clear all cached approvals on mount so every fresh page load requires tutor admission
   useEffect(() => {
@@ -135,11 +165,16 @@ export default function StudentClassroomPage() {
       sessionStorage.removeItem(`class_${classId}_approved_${studentId}`);
       sessionStorage.removeItem(`class_${classId}_approved_global`);
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId, studentId]);
 
   // ── LiveKit config — populated AFTER tutor approval
-  const [liveKitConfig, setLiveKitConfig] = useState<{ token: string; wsUrl: string; classTitle?: string; scheduledEnd?: string | Date } | null>(null);
+  const [liveKitConfig, setLiveKitConfig] = useState<{
+    token: string;
+    wsUrl: string;
+    classTitle?: string;
+    scheduledEnd?: string | Date;
+  } | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState(false);
   const [retryCount, setRetryCount] = useState(0); // incremented to trigger retry
@@ -166,18 +201,26 @@ export default function StudentClassroomPage() {
   useEffect(() => {
     if (admissionState !== 'waiting') return;
 
-    const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : localStorage.getItem('user_display_name') || 'Student';
+    const studentName = user
+      ? `${user.firstName} ${user.lastName || ''}`.trim()
+      : localStorage.getItem('user_display_name') || 'Student';
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     // Register join request via API (cross-device DB-backed)
-    api.post(`/live-classes/${classId}/join-request`, { studentId, studentName }, { skipGlobalToast: true }).catch(() => {});
+    api
+      .post(
+        `/live-classes/${classId}/join-request`,
+        { studentId, studentName },
+        { skipGlobalToast: true },
+      )
+      .catch(() => {});
 
     // Poll approval status via API every 1.5s
     const pollStatus = async () => {
       try {
         const res = await api.get<{ approved?: boolean; denied?: boolean }>(
           `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
-          { skipGlobalToast: true }
+          { skipGlobalToast: true },
         );
         if (res?.approved) {
           try {
@@ -196,7 +239,13 @@ export default function StudentClassroomPage() {
 
     const sendReq = () => {
       try {
-        joinChannel.postMessage({ type: 'join-request', classId, id: studentId, name: studentName, time });
+        joinChannel.postMessage({
+          type: 'join-request',
+          classId,
+          id: studentId,
+          name: studentName,
+          time,
+        });
       } catch {}
     };
     sendReq();
@@ -213,14 +262,20 @@ export default function StudentClassroomPage() {
         setAdmissionState('waiting');
         setLiveKitConfig(null);
         tokenFetchedRef.current = false;
-      } else if (d.type === 'join-approved' && (!d.classId || d.classId === classId) &&
-        (!d.studentId || d.studentId === studentId || d.studentId === 'all')) {
+      } else if (
+        d.type === 'join-approved' &&
+        (!d.classId || d.classId === classId) &&
+        (!d.studentId || d.studentId === studentId || d.studentId === 'all')
+      ) {
         try {
           sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
         } catch {}
         setAdmissionState('admitted');
-      } else if (d.type === 'join-denied' && (!d.classId || d.classId === classId) &&
-        (!d.studentId || d.studentId === studentId || d.studentId === 'all')) {
+      } else if (
+        d.type === 'join-denied' &&
+        (!d.classId || d.classId === classId) &&
+        (!d.studentId || d.studentId === studentId || d.studentId === 'all')
+      ) {
         setAdmissionState('denied');
       }
     };
@@ -260,7 +315,8 @@ export default function StudentClassroomPage() {
         const studentName = nameFromUser || localStorage.getItem('user_display_name') || 'Student';
         if (nameFromUser) localStorage.setItem('user_display_name', nameFromUser);
 
-        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+        const accessToken =
+          localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
@@ -322,15 +378,25 @@ export default function StudentClassroomPage() {
 
         // Direct fallback token so student enters room immediately
         if (isMounted) {
-          const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
+          const fallbackToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
           const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-          setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
+          setLiveKitConfig({
+            token: fallbackToken,
+            wsUrl: fallbackWs,
+            classTitle: 'NEET Live Interactive Session',
+          });
         }
       } catch {
         if (isMounted) {
-          const fallbackToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
+          const fallbackToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI1MzM3MDkwODAwMCwiaWF0IjoxNTE2MjM5MDIyLCJpc3MiOiJkZXZrZXkiLCJzdWIiOiJzdHVkaW8iLCJ2aWRlbyI6eyJyb29tSm9pbiI6dHJ1ZSwicm9vbSI6InJvb20tZGVtbyIsImNhblB1Ymxpc2giOnRydWUsImNhblN1YnNjcmliZSI6dHJ1ZSwiY2FuUHVibGlzaERhdGEiOnRydWV9fQ.demo';
           const fallbackWs = 'wss://neet-n80sqwyo.livekit.cloud';
-          setLiveKitConfig({ token: fallbackToken, wsUrl: fallbackWs, classTitle: 'NEET Live Interactive Session' });
+          setLiveKitConfig({
+            token: fallbackToken,
+            wsUrl: fallbackWs,
+            classTitle: 'NEET Live Interactive Session',
+          });
         }
       } finally {
         if (isMounted) {
@@ -370,7 +436,10 @@ export default function StudentClassroomPage() {
             </div>
             <div className="space-y-1.5">
               <h2 className="text-lg font-black text-white">Waiting for Admission</h2>
-              <p className="text-xs text-slate-400 leading-relaxed">Your request has been sent to the tutor. Please wait while the tutor admits you into the live class.</p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Your request has been sent to the tutor. Please wait while the tutor admits you into
+                the live class.
+              </p>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800 border border-slate-700 text-slate-400 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
@@ -394,9 +463,12 @@ export default function StudentClassroomPage() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black uppercase tracking-wider">
               ADMISSION DECLINED
             </span>
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Teacher Declined Entry</h2>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Teacher Declined Entry
+            </h2>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              The tutor has declined your admission request at this time. You may try again or return to the dashboard.
+              The tutor has declined your admission request at this time. You may try again or
+              return to the dashboard.
             </p>
           </div>
           <div className="flex flex-col gap-2.5">
@@ -428,7 +500,9 @@ export default function StudentClassroomPage() {
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
               <Video className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">Connect Meet</h1>
+            <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">
+              Connect Meet
+            </h1>
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
               <Radio className="w-2.5 h-2.5" /> LIVE
             </div>
@@ -454,9 +528,12 @@ export default function StudentClassroomPage() {
             <AlertTriangle className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">Class Not Started Yet</h3>
+            <h3 className="text-lg font-black text-slate-900 tracking-tight">
+              Class Not Started Yet
+            </h3>
             <p className="text-xs text-slate-500 mt-1 font-medium leading-relaxed">
-              You have been admitted but the tutor has not started the live room yet. Please wait and try again.
+              You have been admitted but the tutor has not started the live room yet. Please wait
+              and try again.
             </p>
           </div>
           <button
@@ -511,10 +588,10 @@ function StudentClassroomInner({
   const remoteParticipants = useRemoteParticipants();
   const connectionState = useConnectionState();
 
-
-
   const [activeTab, setActiveTab] = useState<'chat' | 'participants'>('chat');
-  const [dbParticipants, setDbParticipants] = useState<Array<{ id: string; name: string; role?: string; admissionNumber?: string }>>([]);
+  const [dbParticipants, setDbParticipants] = useState<
+    Array<{ id: string; name: string; role?: string; admissionNumber?: string }>
+  >([]);
 
   useEffect(() => {
     const fetchDbParticipants = async () => {
@@ -535,18 +612,28 @@ function StudentClassroomInner({
     return () => clearInterval(interval);
   }, [classId]);
 
-  const studentSelfName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : (typeof window !== 'undefined' && localStorage.getItem('user_display_name')) || 'Student';
+  const studentSelfName = user
+    ? `${user.firstName} ${user.lastName || ''}`.trim()
+    : (typeof window !== 'undefined' && localStorage.getItem('user_display_name')) || 'Student';
 
   const combinedStudentList = React.useMemo(() => {
-    const list: Array<{ id: string; name: string; admissionNumber?: string; isSelf?: boolean }> = [];
+    const list: Array<{ id: string; name: string; admissionNumber?: string; isSelf?: boolean }> =
+      [];
 
     // Add self
     list.push({ id: 'self-student', name: studentSelfName, isSelf: true });
 
     // Add LiveKit remote participants (students only)
     remoteParticipants.forEach((p) => {
-      const isTeacher = p.identity.startsWith('host-') || p.name?.toLowerCase().includes('teacher') || p.name?.toLowerCase().includes('host');
-      if (!isTeacher && p.name && !list.some((item) => item.name.toLowerCase() === p.name!.toLowerCase())) {
+      const isTeacher =
+        p.identity.startsWith('host-') ||
+        p.name?.toLowerCase().includes('teacher') ||
+        p.name?.toLowerCase().includes('host');
+      if (
+        !isTeacher &&
+        p.name &&
+        !list.some((item) => item.name.toLowerCase() === p.name!.toLowerCase())
+      ) {
         list.push({ id: p.sid, name: p.name });
       }
     });
@@ -562,7 +649,7 @@ function StudentClassroomInner({
   }, [remoteParticipants, dbParticipants, studentSelfName]);
   const screenTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
   const activeScreenTrack = screenTracks.find(
-    (t) => t.publication || (t as any).track || t.source === Track.Source.ScreenShare
+    (t) => t.publication || (t as any).track || t.source === Track.Source.ScreenShare,
   );
 
   // ── Sync Mode State from Teacher DataChannel: 'whiteboard' | 'pdf' | 'screen'
@@ -576,7 +663,7 @@ function StudentClassroomInner({
   const [studentViewMode, setStudentViewMode] = useState<'idle' | 'whiteboard' | 'pdf'>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem(`student_class_${classId}_vmode`);
-      if (saved) return saved as ('idle' | 'whiteboard' | 'pdf');
+      if (saved) return saved as 'idle' | 'whiteboard' | 'pdf';
     }
     return 'idle';
   });
@@ -604,7 +691,11 @@ function StudentClassroomInner({
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [showMobileDrawer, setShowMobileDrawer] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [pinnedParticipant, setPinnedParticipant] = useState<{ id: string; name: string; isTeacher: boolean } | null>(null);
+  const [pinnedParticipant, setPinnedParticipant] = useState<{
+    id: string;
+    name: string;
+    isTeacher: boolean;
+  } | null>(null);
 
   const studentId = user ? user.id : 'student-1';
   const sendDataRef = useRef<((data: Uint8Array, options?: any) => Promise<void>) | null>(null);
@@ -617,19 +708,25 @@ function StudentClassroomInner({
       localStorage.removeItem(`class_${classId}_approved_${studentId}`);
       localStorage.removeItem(`class_${classId}_approved_global`);
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!isApproved && !isDenied) {
-      const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : localStorage.getItem('user_display_name') || 'Student';
+      const studentName = user
+        ? `${user.firstName} ${user.lastName || ''}`.trim()
+        : localStorage.getItem('user_display_name') || 'Student';
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const joinChannel = new BroadcastChannel('neet-live-join-requests');
 
       // ── API-based join request (cross-device reliable) ──
       const registerViaApi = async () => {
         try {
-          await api.post(`/live-classes/${classId}/join-request`, { studentId, studentName }, { skipGlobalToast: true });
+          await api.post(
+            `/live-classes/${classId}/join-request`,
+            { studentId, studentName },
+            { skipGlobalToast: true },
+          );
         } catch {}
       };
       registerViaApi();
@@ -639,7 +736,7 @@ function StudentClassroomInner({
         try {
           const res = await api.get<{ approved?: boolean; denied?: boolean }>(
             `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
-            { skipGlobalToast: true }
+            { skipGlobalToast: true },
           );
           if (res?.approved) {
             setIsApproved(true);
@@ -669,13 +766,18 @@ function StudentClassroomInner({
 
         try {
           const encoder = new TextEncoder();
-          sendDataRef.current?.(encoder.encode(JSON.stringify({
-            type: 'join-request',
-            classId,
-            id: studentId,
-            name: studentName,
-            time,
-          })), { reliable: true });
+          sendDataRef.current?.(
+            encoder.encode(
+              JSON.stringify({
+                type: 'join-request',
+                classId,
+                id: studentId,
+                name: studentName,
+                time,
+              }),
+            ),
+            { reliable: true },
+          );
         } catch {}
       };
       sendReq();
@@ -684,9 +786,13 @@ function StudentClassroomInner({
       joinChannel.onmessage = (e) => {
         const data = e.data;
         if (
-          (data.type === 'join-approved') &&
+          data.type === 'join-approved' &&
           (!data.classId || data.classId === classId) &&
-          (!data.studentId || data.studentId === studentId || data.studentId === 'all' || data.studentId.includes(studentId) || studentId.includes(data.studentId))
+          (!data.studentId ||
+            data.studentId === studentId ||
+            data.studentId === 'all' ||
+            data.studentId.includes(studentId) ||
+            studentId.includes(data.studentId))
         ) {
           setIsApproved(true);
           setIsDenied(false);
@@ -701,7 +807,10 @@ function StudentClassroomInner({
       };
 
       const handleStorage = (e: StorageEvent) => {
-        if (e.key === `class_${classId}_approved_${studentId}` || e.key === `class_${classId}_approved_global`) {
+        if (
+          e.key === `class_${classId}_approved_${studentId}` ||
+          e.key === `class_${classId}_approved_global`
+        ) {
           if (e.storageArea === sessionStorage) {
             setIsApproved(true);
             setIsDenied(false);
@@ -781,7 +890,10 @@ function StudentClassroomInner({
       } else if (data.type === 'tutor-mic-state' || data.type === 'tutor-mic') {
         setIsTutorMicOn(Boolean(data.isMicOn));
       } else if (data.type === 'chat') {
-        setChatMessages((prev) => [...prev, { sender: data.sender, text: data.text, time: data.time }]);
+        setChatMessages((prev) => [
+          ...prev,
+          { sender: data.sender, text: data.text, time: data.time },
+        ]);
       } else if (data.type === 'class-ended') {
         toast.info('The tutor ended the live session.');
         router.push('/dashboard/student');
@@ -789,20 +901,27 @@ function StudentClassroomInner({
     } catch {}
   });
 
-  const safeSend = useCallback((payload: any) => {
-    if (connectionState !== ConnectionState.Connected) return;
-    try {
-      const encoder = new TextEncoder();
-      const promise = studentDataSend(encoder.encode(JSON.stringify(payload)), { reliable: true });
-      if (promise && typeof (promise as any).catch === 'function') {
-        (promise as any).catch(() => {});
-      }
-    } catch {}
-  }, [connectionState, studentDataSend]);
+  const safeSend = useCallback(
+    (payload: any) => {
+      if (connectionState !== ConnectionState.Connected) return;
+      try {
+        const encoder = new TextEncoder();
+        const promise = studentDataSend(encoder.encode(JSON.stringify(payload)), {
+          reliable: true,
+        });
+        if (promise && typeof (promise as any).catch === 'function') {
+          (promise as any).catch(() => {});
+        }
+      } catch {}
+    },
+    [connectionState, studentDataSend],
+  );
 
   useEffect(() => {
     sendDataRef.current = (data, opts) => {
-      try { studentDataSend(data, opts); } catch {}
+      try {
+        studentDataSend(data, opts);
+      } catch {}
       return Promise.resolve();
     };
   }, [studentDataSend]);
@@ -822,7 +941,10 @@ function StudentClassroomInner({
 
     const modeSyncChannel = new BroadcastChannel('neet-live-mode-sync');
     modeSyncChannel.onmessage = (e) => {
-      if ((e.data.type === 'current-mode' || e.data.type === 'mode-change') && (e.data.classId === classId || !e.data.classId)) {
+      if (
+        (e.data.type === 'current-mode' || e.data.type === 'mode-change') &&
+        (e.data.classId === classId || !e.data.classId)
+      ) {
         setTeacherMode(e.data.mode);
         if (e.data.mode === 'whiteboard') setStudentViewMode('whiteboard');
         else if (e.data.mode === 'pdf') setStudentViewMode('pdf');
@@ -899,14 +1021,33 @@ function StudentClassroomInner({
       name: studentSelfName,
       isMicOn,
     });
-  }, [teacherMode, studentViewMode, isMicOn, isCamOn, classId, localParticipant, studentId, studentSelfName]);
+  }, [
+    teacherMode,
+    studentViewMode,
+    isMicOn,
+    isCamOn,
+    classId,
+    localParticipant,
+    studentId,
+    studentSelfName,
+  ]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const localCamVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localCamCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const localCamCaptureIntervalRef = useRef<any>(null);
 
   // ── Chat State
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: string; text: string; time: string }>>([
-    { sender: 'System', text: 'Connected to Live Class Studio.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+  const [chatMessages, setChatMessages] = useState<
+    Array<{ sender: string; text: string; time: string }>
+  >([
+    {
+      sender: 'System',
+      text: 'Connected to Live Class Studio.',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
   ]);
   const [inputMsg, setInputMsg] = useState('');
 
@@ -921,6 +1062,17 @@ function StudentClassroomInner({
       clearInterval(studentCamFrameIntervalRef.current);
       studentCamFrameIntervalRef.current = null;
     }
+    if (localCamCaptureIntervalRef.current) {
+      clearInterval(localCamCaptureIntervalRef.current);
+      localCamCaptureIntervalRef.current = null;
+    }
+    if (localCamVideoRef.current) localCamVideoRef.current.srcObject = null;
+    try {
+      const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
+      if (camTrack) localParticipant.unpublishTrack(camTrack as any).catch(() => {});
+      const micTrack = micStreamRef.current?.getAudioTracks()[0];
+      if (micTrack) localParticipant.unpublishTrack(micTrack as any).catch(() => {});
+    } catch {}
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach((t) => {
         t.stop();
@@ -935,16 +1087,28 @@ function StudentClassroomInner({
       });
       mediaStreamRef.current = null;
     }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => {
+        t.stop();
+        t.enabled = false;
+      });
+      micStreamRef.current = null;
+    }
     try {
       localParticipant.setScreenShareEnabled(false);
-      localParticipant.setCameraEnabled(false);
-      localParticipant.setMicrophoneEnabled(false);
     } catch {}
     try {
-      screenBroadcastRef.current?.postMessage({ type: 'student-screen-stop', id: localParticipant.sid });
-      studentCamBroadcastRef.current?.postMessage({ type: 'student-cam-off', id: localParticipant.sid });
+      screenBroadcastRef.current?.postMessage({
+        type: 'student-screen-stop',
+        id: localParticipant.sid,
+      });
+      studentCamBroadcastRef.current?.postMessage({
+        type: 'student-cam-off',
+        id: localParticipant.sid,
+      });
     } catch {}
     setLocalStudentScreenFrame(null);
+    setLocalCamFrame(null);
     setIsScreenSharing(false);
     setIsCamOn(false);
     setIsMicOn(false);
@@ -952,7 +1116,9 @@ function StudentClassroomInner({
 
   const [autoEndCountdown, setAutoEndCountdown] = useState<string | null>(null);
   const [isNearAutoEnd, setIsNearAutoEnd] = useState(false);
-  const [endedReason, setEndedReason] = useState<string>("The teacher has ended today's live session.");
+  const [endedReason, setEndedReason] = useState<string>(
+    "The teacher has ended today's live session.",
+  );
   const [redirectCount, setRedirectCount] = useState(5);
   const autoEndingRef = useRef(false);
 
@@ -992,7 +1158,9 @@ function StudentClassroomInner({
     return !isNaN(parsed) ? parsed : null;
   };
 
-  const targetCutoffMsRef = useRef<number | null>(parseEndMs(scheduledEnd) ? parseEndMs(scheduledEnd)! + 15 * 60 * 1000 : null);
+  const targetCutoffMsRef = useRef<number | null>(
+    parseEndMs(scheduledEnd) ? parseEndMs(scheduledEnd)! + 15 * 60 * 1000 : null,
+  );
 
   // 1. Fetch class details & update targetCutoffMsRef (5s interval)
   useEffect(() => {
@@ -1012,7 +1180,11 @@ function StudentClassroomInner({
             if (res.ok) {
               const json = await res.json();
               const data = json?.data ?? json; // unwrap {success, data: {...}} wrapper
-              if (data.status === 'LIVE' || data.status === 'SCHEDULED' || data.status === 'WAITING') {
+              if (
+                data.status === 'LIVE' ||
+                data.status === 'SCHEDULED' ||
+                data.status === 'WAITING'
+              ) {
                 autoEndingRef.current = false;
                 setIsClassEnded(false);
               } else if (data.status === 'CANCELLED') {
@@ -1027,7 +1199,9 @@ function StudentClassroomInner({
                 targetCutoffMsRef.current = cutoff;
                 if (cutoff <= Date.now() && !autoEndingRef.current) {
                   autoEndingRef.current = true;
-                  handleTriggerClassEnded('Scheduled class duration + 15 minutes grace period completed.');
+                  handleTriggerClassEnded(
+                    'Scheduled class duration + 15 minutes grace period completed.',
+                  );
                   return;
                 }
               }
@@ -1047,7 +1221,7 @@ function StudentClassroomInner({
       statusChannel.onmessage = (evt) => {
         if (evt.data?.classId === classId) {
           if (evt.data?.type === 'class-ended') {
-            handleTriggerClassEnded('The teacher has ended today\'s live session.');
+            handleTriggerClassEnded("The teacher has ended today's live session.");
           } else if (evt.data?.type === 'class-reopened') {
             autoEndingRef.current = false;
             setIsClassEnded(false);
@@ -1150,7 +1324,6 @@ function StudentClassroomInner({
     };
   }, []);
 
-
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenBroadcastRef = useRef<BroadcastChannel | null>(null);
   const screenFrameIntervalRef = useRef<any>(null);
@@ -1161,7 +1334,9 @@ function StudentClassroomInner({
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
-    const hasGetDisplayMedia = !!(navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function');
+    const hasGetDisplayMedia = !!(
+      navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function'
+    );
     const isSecure = window.isSecureContext ?? true;
 
     if (!isSecure) {
@@ -1198,7 +1373,10 @@ function StudentClassroomInner({
       } catch {}
     }
     try {
-      screenBroadcastRef.current?.postMessage({ type: 'student-screen-stop', id: localParticipant.sid });
+      screenBroadcastRef.current?.postMessage({
+        type: 'student-screen-stop',
+        id: localParticipant.sid,
+      });
     } catch {}
     setLocalStudentScreenFrame(null);
     studentScreenFrameRef.current = null;
@@ -1265,7 +1443,9 @@ function StudentClassroomInner({
             ctx.drawImage(hiddenVideo, 0, 0, w, h);
             const frame = canvas.toDataURL('image/jpeg', 0.5);
             studentScreenFrameRef.current = frame;
-            const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
+            const studentName = user
+              ? `${user.firstName} ${user.lastName || ''}`.trim()
+              : 'Student';
             screenBroadcastRef.current?.postMessage({
               type: 'student-screen-frame',
               id: localParticipant.sid,
@@ -1318,14 +1498,23 @@ function StudentClassroomInner({
     let microphone: MediaStreamAudioSourceNode | null = null;
     let animId: number;
 
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
+    const ensureMicStream = (): Promise<MediaStream> => {
+      if (micStreamRef.current) return Promise.resolve(micStreamRef.current);
+      return navigator.mediaDevices
+        .getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        })
+        .then((s) => {
+          micStreamRef.current = s;
+          return s;
+        });
+    };
+
+    ensureMicStream()
       .then((stream) => {
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
@@ -1377,18 +1566,91 @@ function StudentClassroomInner({
     return () => clearInterval(interval);
   }, [isTutorMicOn]);
 
-  // ── Toggle Mic/Cam
+  // ── Local Camera Capture Loop — powers the local preview tile + cross-device cam frames
+  const stopLocalCamFrameLoop = useCallback(() => {
+    if (localCamCaptureIntervalRef.current) {
+      clearInterval(localCamCaptureIntervalRef.current);
+      localCamCaptureIntervalRef.current = null;
+    }
+    if (localCamVideoRef.current) localCamVideoRef.current.srcObject = null;
+  }, []);
+
+  const startLocalCamFrameLoop = useCallback(() => {
+    stopLocalCamFrameLoop();
+    const stream = mediaStreamRef.current;
+    if (!stream || stream.getVideoTracks().length === 0) return;
+    const hiddenVideo = localCamVideoRef.current || document.createElement('video');
+    localCamVideoRef.current = hiddenVideo;
+    hiddenVideo.srcObject = stream;
+    hiddenVideo.muted = true;
+    hiddenVideo.playsInline = true;
+    hiddenVideo.setAttribute('playsinline', 'true');
+    hiddenVideo.load();
+    hiddenVideo.play().catch(() => {});
+    const canvas = localCamCanvasRef.current || document.createElement('canvas');
+    localCamCanvasRef.current = canvas;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const studentName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student';
+    const selfId = localParticipant.sid || studentId;
+
+    localCamCaptureIntervalRef.current = setInterval(() => {
+      try {
+        if (!ctx) return;
+        const w = hiddenVideo.videoWidth || 640;
+        const h = hiddenVideo.videoHeight || 480;
+        if (canvas.width !== w) canvas.width = w;
+        if (canvas.height !== h) canvas.height = h;
+        ctx.drawImage(hiddenVideo, 0, 0, w, h);
+        const frame = canvas.toDataURL('image/jpeg', 0.45);
+        setLocalCamFrame(frame);
+        try {
+          studentCamBroadcastRef.current?.postMessage({
+            type: 'student-cam',
+            id: selfId,
+            name: studentName,
+            frame,
+          });
+        } catch {}
+        safeSend({ type: 'student-cam', id: selfId, name: studentName, frame });
+      } catch {}
+    }, 120); // ~8fps is plenty for a small camera preview tile
+  }, [stopLocalCamFrameLoop, localParticipant, studentId, user, safeSend]);
+
+  // ── Toggle Mic/Cam — capture locally, publish to LiveKit, and mirror via frames
   const toggleMic = async () => {
     const next = !isMicOn;
     setIsMicOn(next);
     try {
-      await localParticipant.setMicrophoneEnabled(next, {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      });
+      if (next) {
+        if (!micStreamRef.current) {
+          micStreamRef.current = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+        }
+        const micTrack = micStreamRef.current.getAudioTracks()[0];
+        if (micTrack) micTrack.enabled = true;
+        if (connectionState === ConnectionState.Connected) {
+          try {
+            await localParticipant.publishTrack(micTrack, { source: Track.Source.Microphone });
+          } catch {}
+        }
+      } else {
+        const micTrack = micStreamRef.current?.getAudioTracks()[0];
+        if (micTrack && connectionState === ConnectionState.Connected) {
+          try {
+            await localParticipant.unpublishTrack(micTrack, true);
+          } catch {}
+        }
+        micStreamRef.current?.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+      }
     } catch (err) {
       console.warn('LiveKit mic publish:', err);
+      if (next) toast.error('Microphone could not be started. Please check permissions.');
     }
   };
 
@@ -1396,11 +1658,74 @@ function StudentClassroomInner({
     const next = !isCamOn;
     setIsCamOn(next);
     try {
-      await localParticipant.setCameraEnabled(next);
+      if (next) {
+        if (!mediaStreamRef.current) {
+          mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false,
+          });
+        }
+        const camTrack = mediaStreamRef.current.getVideoTracks()[0];
+        if (camTrack) camTrack.enabled = true;
+        startLocalCamFrameLoop();
+        if (connectionState === ConnectionState.Connected) {
+          try {
+            await localParticipant.publishTrack(camTrack, { source: Track.Source.Camera });
+          } catch {}
+        }
+      } else {
+        stopLocalCamFrameLoop();
+        const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
+        if (camTrack && connectionState === ConnectionState.Connected) {
+          try {
+            await localParticipant.unpublishTrack(camTrack, true);
+          } catch {}
+        }
+        mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+        mediaStreamRef.current = null;
+        setLocalCamFrame(null);
+        try {
+          studentCamBroadcastRef.current?.postMessage({
+            type: 'student-cam-off',
+            id: localParticipant.sid || studentId,
+          });
+        } catch {}
+        safeSend({
+          type: 'student-cam-off',
+          id: localParticipant.sid || studentId,
+          name: studentSelfName,
+        });
+      }
     } catch (err) {
       console.warn('LiveKit camera publish:', err);
+      if (next) toast.error('Camera could not be started. Please check permissions.');
     }
   };
+
+  // Re-publish pending local media once the room finishes connecting
+  useEffect(() => {
+    if (connectionState !== ConnectionState.Connected) return;
+    try {
+      const camTrack = mediaStreamRef.current?.getVideoTracks()[0];
+      if (
+        isCamOn &&
+        camTrack &&
+        !localParticipant.getTrackPublications().some((p) => p.track?.mediaStreamTrack === camTrack)
+      ) {
+        localParticipant.publishTrack(camTrack, { source: Track.Source.Camera }).catch(() => {});
+      }
+      const micTrack = micStreamRef.current?.getAudioTracks()[0];
+      if (
+        isMicOn &&
+        micTrack &&
+        !localParticipant.getTrackPublications().some((p) => p.track?.mediaStreamTrack === micTrack)
+      ) {
+        localParticipant
+          .publishTrack(micTrack, { source: Track.Source.Microphone })
+          .catch(() => {});
+      }
+    } catch {}
+  }, [connectionState, isCamOn, isMicOn, localParticipant]);
 
   // ── Send Chat Message
   const handleSendChat = (e: React.FormEvent) => {
@@ -1425,8 +1750,12 @@ function StudentClassroomInner({
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
             <Video className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">Connect Meet</h1>
-          <span className="hidden sm:block text-xs text-slate-400 font-medium truncate max-w-[140px]">({classTitle})</span>
+          <h1 className="text-sm sm:text-lg font-extrabold text-white tracking-tight">
+            Connect Meet
+          </h1>
+          <span className="hidden sm:block text-xs text-slate-400 font-medium truncate max-w-[140px]">
+            ({classTitle})
+          </span>
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
             <Radio className="w-2.5 h-2.5" /> LIVE
           </div>
@@ -1460,7 +1789,9 @@ function StudentClassroomInner({
             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow-sm">
               {studentSelfName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[80px] truncate">{studentSelfName}</span>
+            <span className="text-xs font-bold text-slate-200 hidden sm:inline max-w-[80px] truncate">
+              {studentSelfName}
+            </span>
           </div>
         </div>
       </header>
@@ -1500,7 +1831,11 @@ function StudentClassroomInner({
                     playsInline
                     muted
                     ref={(el) => {
-                      if (el && screenStreamRef.current && el.srcObject !== screenStreamRef.current) {
+                      if (
+                        el &&
+                        screenStreamRef.current &&
+                        el.srcObject !== screenStreamRef.current
+                      ) {
                         el.srcObject = screenStreamRef.current;
                       }
                     }}
@@ -1510,40 +1845,61 @@ function StudentClassroomInner({
                   <div className="flex flex-col items-center justify-center gap-3 text-slate-500">
                     <Monitor className="w-12 h-12 text-emerald-400 animate-pulse" />
                     <p className="text-sm font-semibold text-slate-200">Your Screen Share Active</p>
-                    <p className="text-xs text-emerald-400 font-mono">Broadcasting live presentation to live studio...</p>
+                    <p className="text-xs text-emerald-400 font-mono">
+                      Broadcasting live presentation to live studio...
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
             {/* Grid View Mode */}
-            {!isScreenSharing && teacherMode !== 'screen' && teacherMode !== 'whiteboard' && teacherMode !== 'pdf' && studentViewMode === 'idle' && (
-              <>
-                {pinnedParticipant ? (
-                  /* Focused Spotlight View */
-                  <div className="w-full h-full relative rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shadow-md flex items-center justify-center">
-                    {pinnedParticipant.isTeacher ? (
-                      remoteTutorCamFrame ? (
-                        <img src={remoteTutorCamFrame} className="w-full h-full object-contain scale-x-[-1]" alt="Teacher Camera" />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
-                          <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
-                            T
+            {!isScreenSharing &&
+              teacherMode !== 'screen' &&
+              teacherMode !== 'whiteboard' &&
+              teacherMode !== 'pdf' &&
+              studentViewMode === 'idle' && (
+                <>
+                  {pinnedParticipant ? (
+                    /* Focused Spotlight View */
+                    <div className="w-full h-full relative rounded-xl overflow-hidden bg-slate-950 border border-slate-700 shadow-md flex items-center justify-center">
+                      {pinnedParticipant.isTeacher ? (
+                        remoteTutorCamFrame ? (
+                          <img
+                            src={remoteTutorCamFrame}
+                            className="w-full h-full object-contain scale-x-[-1]"
+                            alt="Teacher Camera"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400">
+                            <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
+                              T
+                            </div>
+                            <span className="text-base font-bold text-slate-200">
+                              Teacher (Host)
+                            </span>
                           </div>
-                          <span className="text-base font-bold text-slate-200">Teacher (Host)</span>
-                        </div>
-                      )
-                    ) : (
-                      (pinnedParticipant.id === studentId || pinnedParticipant.name.includes('(You)')) && isCamOn ? (
+                        )
+                      ) : (pinnedParticipant.id === studentId ||
+                          pinnedParticipant.name.includes('(You)')) &&
+                        isCamOn ? (
                         localCamFrame ? (
-                          <img src={localCamFrame} className="w-full h-full object-contain scale-x-[-1]" alt="Your Camera" />
+                          <img
+                            src={localCamFrame}
+                            className="w-full h-full object-contain scale-x-[-1]"
+                            alt="Your Camera"
+                          />
                         ) : (
                           <video
                             autoPlay
                             playsInline
                             muted
                             ref={(el) => {
-                              if (el && mediaStreamRef.current && el.srcObject !== mediaStreamRef.current) {
+                              if (
+                                el &&
+                                mediaStreamRef.current &&
+                                el.srcObject !== mediaStreamRef.current
+                              ) {
                                 el.srcObject = mediaStreamRef.current;
                               }
                             }}
@@ -1555,173 +1911,117 @@ function StudentClassroomInner({
                           <div className="w-20 h-20 rounded-full bg-blue-600/20 border border-blue-500/40 text-blue-400 font-extrabold flex items-center justify-center text-3xl shadow-lg">
                             {pinnedParticipant.name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-base font-bold text-slate-200">{pinnedParticipant.name}</span>
+                          <span className="text-base font-bold text-slate-200">
+                            {pinnedParticipant.name}
+                          </span>
                         </div>
-                      )
-                    )}
+                      )}
 
-                    {/* Name Pill */}
-                    <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{pinnedParticipant.name} (Spotlight)</span>
+                      {/* Name Pill */}
+                      <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>{pinnedParticipant.name} (Spotlight)</span>
+                      </div>
+
+                      {/* Unpin Button */}
+                      <button
+                        onClick={() => setPinnedParticipant(null)}
+                        className="absolute top-3 right-3 bg-black/75 hover:bg-black text-white p-2 rounded-xl backdrop-blur-md border border-slate-700 transition flex items-center gap-1.5 text-xs font-bold shadow-lg"
+                        title="Exit Spotlight"
+                      >
+                        <Minimize2 className="w-4 h-4 text-blue-400" />
+                        <span>Exit Grid View</span>
+                      </button>
                     </div>
+                  ) : (
+                    /* Standard 3x3 Box Grid */
+                    <div className="w-full h-full p-1.5 sm:p-2.5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto content-start">
+                      {/* Host Teacher Tile */}
+                      {(() => {
+                        const teacherRP =
+                          remoteParticipants.find(
+                            (p) =>
+                              p.identity.startsWith('host-') ||
+                              (p.name && p.name.toLowerCase().includes('teacher')) ||
+                              (p.name && p.name.toLowerCase().includes('host')),
+                          ) || remoteParticipants[0];
+                        const camPub = teacherRP?.getTrackPublication(Track.Source.Camera);
+                        const hasCamTrack = camPub && !camPub.isMuted && camPub.track;
 
-                    {/* Unpin Button */}
-                    <button
-                      onClick={() => setPinnedParticipant(null)}
-                      className="absolute top-3 right-3 bg-black/75 hover:bg-black text-white p-2 rounded-xl backdrop-blur-md border border-slate-700 transition flex items-center gap-1.5 text-xs font-bold shadow-lg"
-                      title="Exit Spotlight"
-                    >
-                      <Minimize2 className="w-4 h-4 text-blue-400" />
-                      <span>Exit Grid View</span>
-                    </button>
-                  </div>
-                ) : (
-                  /* Standard 3x3 Box Grid */
-                  <div className="w-full h-full p-1.5 sm:p-2.5 grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 overflow-y-auto content-start">
-                    {/* Host Teacher Tile */}
-                    {(() => {
-                      const teacherRP = remoteParticipants.find(
-                        (p) => p.identity.startsWith('host-') || (p.name && p.name.toLowerCase().includes('teacher')) || (p.name && p.name.toLowerCase().includes('host'))
-                      ) || remoteParticipants[0];
-                      const camPub = teacherRP?.getTrackPublication(Track.Source.Camera);
-                      const hasCamTrack = camPub && !camPub.isMuted && camPub.track;
-
-                      return (
-                        <div className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
-                          isTutorSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-700'
-                        }`}>
-                          {hasCamTrack && teacherRP ? (
-                            <VideoTrack
-                              trackRef={{ participant: teacherRP, source: Track.Source.Camera, publication: camPub }}
-                              className="w-full h-full object-cover scale-x-[-1]"
-                            />
-                          ) : remoteScreenFrame ? (
-                            <img src={remoteScreenFrame} className="w-full h-full object-contain" alt="Teacher Screen Share Stream" />
-                          ) : remoteTutorCamFrame ? (
-                            <img src={remoteTutorCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Teacher Camera" />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
-                              <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                                isTutorSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
-                              }`}>
-                                T
-                              </div>
-                              <span className="text-xs font-semibold text-slate-300">Teacher (Host)</span>
-                            </div>
-                          )}
-
-                          {/* Spotlight Pin Button */}
-                          <button
-                            onClick={() => setPinnedParticipant({ id: 'teacher', name: 'Teacher (Host)', isTeacher: true })}
-                            className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
-                            title="Spotlight Full Screen"
+                        return (
+                          <div
+                            className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
+                              isTutorSpeaking
+                                ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
+                                : 'border-slate-700'
+                            }`}
                           >
-                            <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                          </button>
-
-                          {/* Name Tag Pill */}
-                          <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
-                            Teacher (Host)
-                          </div>
-
-                          {/* Status Badges & Speaking Wave Indicator */}
-                          <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
-                            {isTutorMicOn ? (
-                              <div className="flex items-center gap-1">
-                                <Mic className={`w-3.5 h-3.5 ${isTutorSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`} />
-                                {isTutorSpeaking && (
-                                  <span className="flex gap-0.5 items-end h-3">
-                                    <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
-                                    <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
-                                    <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <MicOff className="w-3.5 h-3.5 text-rose-400" />
-                            )}
-                            {hasCamTrack || remoteTutorCamFrame ? (
-                              <Video className="w-3.5 h-3.5 text-emerald-400" />
-                            ) : (
-                              <VideoOff className="w-3.5 h-3.5 text-rose-400" />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Combined Students Tiles */}
-                    {combinedStudentList.map((st, idx) => {
-                      const isSpeaking = st.isSelf && isSelfSpeaking;
-                      const selfCamPub = localParticipant.getTrackPublication(Track.Source.Camera);
-                      const hasSelfCam = isCamOn && selfCamPub && !selfCamPub.isMuted && selfCamPub.track;
-
-                      const otherRP = !st.isSelf ? remoteParticipants.find((r) => r.sid === st.id || r.name === st.name) : null;
-                      const otherCamPub = otherRP?.getTrackPublication(Track.Source.Camera);
-                      const hasOtherCam = otherCamPub && !otherCamPub.isMuted && otherCamPub.track;
-
-                      return (
-                        <div
-                          key={st.id || idx}
-                          className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
-                            isSpeaking ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20' : 'border-slate-700'
-                          }`}
-                        >
-                          {st.isSelf ? (
-                            hasSelfCam ? (
+                            {hasCamTrack && teacherRP ? (
                               <VideoTrack
-                                trackRef={{ participant: localParticipant, source: Track.Source.Camera, publication: selfCamPub }}
+                                trackRef={{
+                                  participant: teacherRP,
+                                  source: Track.Source.Camera,
+                                  publication: camPub,
+                                }}
                                 className="w-full h-full object-cover scale-x-[-1]"
                               />
-                            ) : localCamFrame ? (
-                              <img src={localCamFrame} className="w-full h-full object-cover scale-x-[-1]" alt="Your Camera" />
+                            ) : remoteScreenFrame ? (
+                              <img
+                                src={remoteScreenFrame}
+                                className="w-full h-full object-contain"
+                                alt="Teacher Screen Share Stream"
+                              />
+                            ) : remoteTutorCamFrame ? (
+                              <img
+                                src={remoteTutorCamFrame}
+                                className="w-full h-full object-cover scale-x-[-1]"
+                                alt="Teacher Camera"
+                              />
                             ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
-                                <div className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
-                                  isSpeaking ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse' : 'bg-blue-600/20 border border-blue-500/40'
-                                }`}>
-                                  {st.name.charAt(0).toUpperCase()}
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-slate-900 text-slate-400">
+                                <div
+                                  className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                                    isTutorSpeaking
+                                      ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
+                                      : 'bg-blue-600/20 border border-blue-500/40'
+                                  }`}
+                                >
+                                  T
                                 </div>
-                                <span className="text-xs font-semibold text-slate-300">{st.name} (You)</span>
+                                <span className="text-xs font-semibold text-slate-300">
+                                  Teacher (Host)
+                                </span>
                               </div>
-                            )
-                          ) : hasOtherCam && otherRP ? (
-                            <VideoTrack
-                              trackRef={{ participant: otherRP, source: Track.Source.Camera, publication: otherCamPub }}
-                              className="w-full h-full object-cover scale-x-[-1]"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
-                              <div className="w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base bg-blue-600/20 border border-blue-500/40">
-                                {st.name.charAt(0).toUpperCase()}
-                              </div>
-                              <span className="text-xs font-semibold text-slate-300">{st.name}</span>
+                            )}
+
+                            {/* Spotlight Pin Button */}
+                            <button
+                              onClick={() =>
+                                setPinnedParticipant({
+                                  id: 'teacher',
+                                  name: 'Teacher (Host)',
+                                  isTeacher: true,
+                                })
+                              }
+                              className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
+                              title="Spotlight Full Screen"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                            </button>
+
+                            {/* Name Tag Pill */}
+                            <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm">
+                              Teacher (Host)
                             </div>
-                          )}
 
-                        {/* Spotlight Pin Button */}
-                        <button
-                          onClick={() => setPinnedParticipant({ id: st.id || `student-${idx}`, name: st.name, isTeacher: false })}
-                          className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
-                          title="Spotlight Full Screen"
-                        >
-                          <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
-                        </button>
-
-                        {/* Name Tag Pill */}
-                        <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm truncate max-w-[80%]">
-                          {st.name} {st.isSelf ? '(You)' : ''}
-                        </div>
-
-                        {/* Status Badges & Speaking Waves */}
-                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
-                          {st.isSelf ? (
-                            <>
-                              {isMicOn ? (
+                            {/* Status Badges & Speaking Wave Indicator */}
+                            <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
+                              {isTutorMicOn ? (
                                 <div className="flex items-center gap-1">
-                                  <Mic className={`w-3.5 h-3.5 ${isSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`} />
-                                  {isSpeaking && (
+                                  <Mic
+                                    className={`w-3.5 h-3.5 ${isTutorSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`}
+                                  />
+                                  {isTutorSpeaking && (
                                     <span className="flex gap-0.5 items-end h-3">
                                       <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
                                       <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
@@ -1732,29 +2032,161 @@ function StudentClassroomInner({
                               ) : (
                                 <MicOff className="w-3.5 h-3.5 text-rose-400" />
                               )}
-                              {isCamOn ? <Video className="w-3.5 h-3.5 text-emerald-400" /> : <VideoOff className="w-3.5 h-3.5 text-rose-400" />}
-                            </>
-                          ) : (
-                            <>
-                              <Mic className="w-3.5 h-3.5 text-emerald-400" />
-                              <Video className="w-3.5 h-3.5 text-emerald-400" />
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  </div>
-                )}
-              </>
-            )}
+                              {hasCamTrack || remoteTutorCamFrame ? (
+                                <Video className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <VideoOff className="w-3.5 h-3.5 text-rose-400" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Combined Students Tiles */}
+                      {combinedStudentList.map((st, idx) => {
+                        const isSpeaking = st.isSelf && isSelfSpeaking;
+                        const selfCamPub = localParticipant.getTrackPublication(
+                          Track.Source.Camera,
+                        );
+                        const hasSelfCam =
+                          isCamOn && selfCamPub && !selfCamPub.isMuted && selfCamPub.track;
+
+                        const otherRP = !st.isSelf
+                          ? remoteParticipants.find((r) => r.sid === st.id || r.name === st.name)
+                          : null;
+                        const otherCamPub = otherRP?.getTrackPublication(Track.Source.Camera);
+                        const hasOtherCam =
+                          otherCamPub && !otherCamPub.isMuted && otherCamPub.track;
+
+                        return (
+                          <div
+                            key={st.id || idx}
+                            className={`relative rounded-xl overflow-hidden bg-slate-950 border transition-all duration-300 shadow-sm flex items-center justify-center aspect-video group ${
+                              isSpeaking
+                                ? 'border-2 border-emerald-400 ring-4 ring-emerald-500/40 shadow-emerald-500/20'
+                                : 'border-slate-700'
+                            }`}
+                          >
+                            {st.isSelf ? (
+                              hasSelfCam ? (
+                                <VideoTrack
+                                  trackRef={{
+                                    participant: localParticipant,
+                                    source: Track.Source.Camera,
+                                    publication: selfCamPub,
+                                  }}
+                                  className="w-full h-full object-cover scale-x-[-1]"
+                                />
+                              ) : localCamFrame ? (
+                                <img
+                                  src={localCamFrame}
+                                  className="w-full h-full object-cover scale-x-[-1]"
+                                  alt="Your Camera"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
+                                  <div
+                                    className={`w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base transition ${
+                                      isSpeaking
+                                        ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 animate-pulse'
+                                        : 'bg-blue-600/20 border border-blue-500/40'
+                                    }`}
+                                  >
+                                    {st.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="text-xs font-semibold text-slate-300">
+                                    {st.name} (You)
+                                  </span>
+                                </div>
+                              )
+                            ) : hasOtherCam && otherRP ? (
+                              <VideoTrack
+                                trackRef={{
+                                  participant: otherRP,
+                                  source: Track.Source.Camera,
+                                  publication: otherCamPub,
+                                }}
+                                className="w-full h-full object-cover scale-x-[-1]"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-400">
+                                <div className="w-12 h-12 rounded-full text-blue-400 font-extrabold flex items-center justify-center text-base bg-blue-600/20 border border-blue-500/40">
+                                  {st.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-semibold text-slate-300">
+                                  {st.name}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Spotlight Pin Button */}
+                            <button
+                              onClick={() =>
+                                setPinnedParticipant({
+                                  id: st.id || `student-${idx}`,
+                                  name: st.name,
+                                  isTeacher: false,
+                                })
+                              }
+                              className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition bg-black/70 hover:bg-black text-white p-1.5 rounded-lg border border-slate-600 shadow-md"
+                              title="Spotlight Full Screen"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                            </button>
+
+                            {/* Name Tag Pill */}
+                            <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-md shadow-sm truncate max-w-[80%]">
+                              {st.name} {st.isSelf ? '(You)' : ''}
+                            </div>
+
+                            {/* Status Badges & Speaking Waves */}
+                            <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm p-1 rounded-md text-white">
+                              {st.isSelf ? (
+                                <>
+                                  {isMicOn ? (
+                                    <div className="flex items-center gap-1">
+                                      <Mic
+                                        className={`w-3.5 h-3.5 ${isSpeaking ? 'text-emerald-400 animate-pulse' : 'text-emerald-400'}`}
+                                      />
+                                      {isSpeaking && (
+                                        <span className="flex gap-0.5 items-end h-3">
+                                          <span className="w-0.5 h-2.5 bg-emerald-400 animate-bounce" />
+                                          <span className="w-0.5 h-3 bg-emerald-400 animate-bounce delay-75" />
+                                          <span className="w-0.5 h-1.5 bg-emerald-400 animate-bounce delay-150" />
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                                  )}
+                                  {isCamOn ? (
+                                    <Video className="w-3.5 h-3.5 text-emerald-400" />
+                                  ) : (
+                                    <VideoOff className="w-3.5 h-3.5 text-rose-400" />
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <Mic className="w-3.5 h-3.5 text-emerald-400" />
+                                  <Video className="w-3.5 h-3.5 text-emerald-400" />
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
 
             {/* Whiteboard Mode (Teacher Broadcast or Student Whiteboard) */}
-            {!isScreenSharing && (teacherMode === 'whiteboard' || studentViewMode === 'whiteboard') && (
-              <div className="w-full h-full relative bg-slate-900">
-                <StudioWhiteboard isTeacher={false} remoteFrame={remoteWhiteboardFrame} />
-              </div>
-            )}
+            {!isScreenSharing &&
+              (teacherMode === 'whiteboard' || studentViewMode === 'whiteboard') && (
+                <div className="w-full h-full relative bg-slate-900">
+                  <StudioWhiteboard isTeacher={false} remoteFrame={remoteWhiteboardFrame} />
+                </div>
+              )}
 
             {/* PDF Presentation Mode (Teacher Sync) */}
             {!isScreenSharing && (teacherMode === 'pdf' || studentViewMode === 'pdf') && (
@@ -1785,7 +2217,9 @@ function StudentClassroomInner({
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
                     <Monitor className="w-12 h-12 text-blue-500 animate-pulse" />
-                    <p className="text-sm font-semibold text-slate-200">Teacher Screen Share Active</p>
+                    <p className="text-sm font-semibold text-slate-200">
+                      Teacher Screen Share Active
+                    </p>
                   </div>
                 )}
               </div>
@@ -1796,18 +2230,24 @@ function StudentClassroomInner({
           <div className="mt-2 sm:mt-3 flex items-center justify-center shrink-0 px-1">
             <div className="bg-white/95 border border-slate-200 backdrop-blur-md px-3 sm:px-6 py-2 rounded-full shadow-lg flex items-center gap-1.5 sm:gap-3 max-w-full overflow-x-auto">
               {/* Mic */}
-              <button onClick={toggleMic} title={isMicOn ? 'Mute' : 'Unmute'}
+              <button
+                onClick={toggleMic}
+                title={isMicOn ? 'Mute' : 'Unmute'}
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 ${
                   isMicOn ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
-                }`}>
+                }`}
+              >
                 {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
               </button>
 
               {/* Camera */}
-              <button onClick={toggleCam} title={isCamOn ? 'Stop Video' : 'Start Video'}
+              <button
+                onClick={toggleCam}
+                title={isCamOn ? 'Stop Video' : 'Start Video'}
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shadow-sm transition shrink-0 ${
                   isCamOn ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
-                }`}>
+                }`}
+              >
                 {isCamOn ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
               </button>
 
@@ -1822,13 +2262,19 @@ function StudentClassroomInner({
                 }`}
               >
                 <Monitor className="w-4 h-4" />
-                <span className="hidden sm:inline">{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
+                <span className="hidden sm:inline">
+                  {isScreenSharing ? 'Stop Share' : 'Share Screen'}
+                </span>
               </button>
 
               {/* Touch Whiteboard (Mobile & Desktop) */}
               <button
-                onClick={() => setStudentViewMode(studentViewMode === 'whiteboard' ? 'idle' : 'whiteboard')}
-                title={studentViewMode === 'whiteboard' ? 'Close Whiteboard' : 'Open Touch Whiteboard'}
+                onClick={() =>
+                  setStudentViewMode(studentViewMode === 'whiteboard' ? 'idle' : 'whiteboard')
+                }
+                title={
+                  studentViewMode === 'whiteboard' ? 'Close Whiteboard' : 'Open Touch Whiteboard'
+                }
                 className={`px-3 py-2 rounded-full border text-xs font-bold transition shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer ${
                   studentViewMode === 'whiteboard' || teacherMode === 'whiteboard'
                     ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
@@ -1839,13 +2285,16 @@ function StudentClassroomInner({
                 <span className="hidden sm:inline">Whiteboard</span>
               </button>
 
-
-
               {/* Raise Hand */}
-              <button onClick={toggleRaiseHand} title="Raise Hand"
+              <button
+                onClick={toggleRaiseHand}
+                title="Raise Hand"
                 className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center shadow-sm transition shrink-0 ${
-                  isHandRaised ? 'bg-amber-100 text-amber-600 border-amber-400 animate-bounce' : 'bg-white text-slate-700 border-slate-300'
-                }`}>
+                  isHandRaised
+                    ? 'bg-amber-100 text-amber-600 border-amber-400 animate-bounce'
+                    : 'bg-white text-slate-700 border-slate-300'
+                }`}
+              >
                 <Hand className="w-4 h-4 text-amber-500" />
               </button>
 
@@ -1894,8 +2343,10 @@ function StudentClassroomInner({
               </button>
 
               {/* End Call */}
-              <button onClick={() => setShowLeaveModal(true)}
-                className="px-3 sm:px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setShowLeaveModal(true)}
+                className="px-3 sm:px-5 py-2 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1 shrink-0"
+              >
                 <span className="hidden sm:inline">End </span>Call
               </button>
             </div>
@@ -1936,93 +2387,114 @@ function StudentClassroomInner({
               </button>
             </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 flex flex-col overflow-hidden p-4 gap-3 bg-white">
-            {/* Participants Tab */}
-            {activeTab === 'participants' && (
-              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                {/* Host Row */}
-                <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-slate-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                      T
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">Teacher (Host)</p>
-                      <p className="text-[10px] text-blue-600 font-semibold">Host / Presenter</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isTutorMicOn ? (
-                      <Mic className="w-4 h-4 text-emerald-500" />
-                    ) : (
-                      <MicOff className="w-4 h-4 text-rose-500" />
-                    )}
-                    {remoteTutorCamFrame ? (
-                      <Video className="w-4 h-4 text-emerald-500" />
-                    ) : (
-                      <VideoOff className="w-4 h-4 text-rose-500" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Combined Student List */}
-                {combinedStudentList.map((p, idx) => {
-                  const isMicActive = p.isSelf ? isMicOn : false;
-                  const isCamActive = p.isSelf ? isCamOn : false;
-                  return (
-                    <div key={p.id || idx} className="flex items-center justify-between py-2 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">
-                          {p.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-800">{p.name} {p.isSelf ? '(You)' : ''}</p>
-                          <p className="text-[10px] text-slate-400">{p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {isMicActive ? <Mic className="w-4 h-4 text-emerald-500" /> : <MicOff className="w-4 h-4 text-rose-500" />}
-                        {isCamActive ? <Video className="w-4 h-4 text-emerald-500" /> : <VideoOff className="w-4 h-4 text-rose-400" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Chat Tab */}
-            {activeTab === 'chat' && (
-              <>
+            {/* Tab Content */}
+            <div className="flex-1 flex flex-col overflow-hidden p-4 gap-3 bg-white">
+              {/* Participants Tab */}
+              {activeTab === 'participants' && (
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className="flex flex-col space-y-1">
-                      <span className="text-[10px] font-bold text-slate-400">{msg.sender}</span>
-                      <div className="p-3 rounded-2xl bg-blue-50 text-slate-800 border border-blue-100 text-xs leading-relaxed max-w-[90%]">
-                        {msg.text}
+                  {/* Host Row */}
+                  <div className="flex items-center justify-between py-2 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-slate-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        T
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Teacher (Host)</p>
+                        <p className="text-[10px] text-blue-600 font-semibold">Host / Presenter</p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center gap-2">
+                      {isTutorMicOn ? (
+                        <Mic className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <MicOff className="w-4 h-4 text-rose-500" />
+                      )}
+                      {remoteTutorCamFrame ? (
+                        <Video className="w-4 h-4 text-emerald-500" />
+                      ) : (
+                        <VideoOff className="w-4 h-4 text-rose-500" />
+                      )}
+                    </div>
+                  </div>
 
-                {/* Message Input Box (Connect Meet Style Input) */}
-                <form onSubmit={handleSendChat} className="flex items-center gap-2 pt-3 border-t border-slate-200 shrink-0">
-                  <input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={inputMsg}
-                    onChange={(e) => setInputMsg(e.target.value)}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                  <button type="submit" className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shrink-0">
-                    <ArrowUp className="w-4 h-4" />
-                  </button>
-                </form>
-              </>
-            )}
+                  {/* Combined Student List */}
+                  {combinedStudentList.map((p, idx) => {
+                    const isMicActive = p.isSelf ? isMicOn : false;
+                    const isCamActive = p.isSelf ? isCamOn : false;
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className="flex items-center justify-between py-2 border-b border-slate-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">
+                            {p.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800">
+                              {p.name} {p.isSelf ? '(You)' : ''}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isMicActive ? (
+                            <Mic className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <MicOff className="w-4 h-4 text-rose-500" />
+                          )}
+                          {isCamActive ? (
+                            <Video className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <VideoOff className="w-4 h-4 text-rose-400" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Chat Tab */}
+              {activeTab === 'chat' && (
+                <>
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className="flex flex-col space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400">{msg.sender}</span>
+                        <div className="p-3 rounded-2xl bg-blue-50 text-slate-800 border border-blue-100 text-xs leading-relaxed max-w-[90%]">
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Message Input Box (Connect Meet Style Input) */}
+                  <form
+                    onSubmit={handleSendChat}
+                    className="flex items-center gap-2 pt-3 border-t border-slate-200 shrink-0"
+                  >
+                    <input
+                      type="text"
+                      placeholder="Type a message..."
+                      value={inputMsg}
+                      onChange={(e) => setInputMsg(e.target.value)}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="submit"
+                      className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-md shrink-0"
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
 
       {/* ── Mobile Slide-Up Sheet (Chat & Participants) ── */}
@@ -2044,18 +2516,24 @@ function StudentClassroomInner({
               <button
                 onClick={() => setActiveTab('participants')}
                 className={`flex-1 py-3 text-center border-b-2 transition ${
-                  activeTab === 'participants' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'
+                  activeTab === 'participants'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500'
                 }`}
               >
-                <Users className="w-4 h-4 inline mr-1" />Participants
+                <Users className="w-4 h-4 inline mr-1" />
+                Participants
               </button>
               <button
                 onClick={() => setActiveTab('chat')}
                 className={`flex-1 py-3 text-center border-b-2 transition ${
-                  activeTab === 'chat' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500'
+                  activeTab === 'chat'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-slate-500'
                 }`}
               >
-                <MessageSquare className="w-4 h-4 inline mr-1" />Chat
+                <MessageSquare className="w-4 h-4 inline mr-1" />
+                Chat
               </button>
               <button
                 onClick={() => setShowMobileDrawer(false)}
@@ -2070,7 +2548,9 @@ function StudentClassroomInner({
                 <div className="flex-1 overflow-y-auto space-y-2">
                   <div className="flex items-center justify-between py-2.5 border-b border-slate-100">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">T</div>
+                      <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                        T
+                      </div>
                       <div>
                         <p className="text-xs font-bold text-slate-800">Teacher (Host)</p>
                         <p className="text-[10px] text-blue-600 font-semibold">Host / Presenter</p>
@@ -2093,17 +2573,35 @@ function StudentClassroomInner({
                     const isMicActive = p.isSelf ? isMicOn : false;
                     const isCamActive = p.isSelf ? isCamOn : false;
                     return (
-                      <div key={p.id || idx} className="flex items-center justify-between py-2.5 border-b border-slate-100">
+                      <div
+                        key={p.id || idx}
+                        className="flex items-center justify-between py-2.5 border-b border-slate-100"
+                      >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">{p.name.charAt(0).toUpperCase()}</div>
+                          <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center text-xs font-bold">
+                            {p.name.charAt(0).toUpperCase()}
+                          </div>
                           <div>
-                            <p className="text-xs font-semibold text-slate-800">{p.name}{p.isSelf ? ' (You)' : ''}</p>
-                            <p className="text-[10px] text-slate-400">{p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}</p>
+                            <p className="text-xs font-semibold text-slate-800">
+                              {p.name}
+                              {p.isSelf ? ' (You)' : ''}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {p.admissionNumber ? `Roll: ${p.admissionNumber}` : 'Student'}
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-1.5">
-                          {isMicActive ? <Mic className="w-4 h-4 text-emerald-500" /> : <MicOff className="w-4 h-4 text-rose-500" />}
-                          {isCamActive ? <Video className="w-4 h-4 text-emerald-500" /> : <VideoOff className="w-4 h-4 text-rose-400" />}
+                          {isMicActive ? (
+                            <Mic className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <MicOff className="w-4 h-4 text-rose-500" />
+                          )}
+                          {isCamActive ? (
+                            <Video className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <VideoOff className="w-4 h-4 text-rose-400" />
+                          )}
                         </div>
                       </div>
                     );
@@ -2116,7 +2614,9 @@ function StudentClassroomInner({
                     {chatMessages.map((msg, idx) => (
                       <div key={idx} className="flex flex-col gap-0.5">
                         <span className="text-[10px] font-bold text-slate-400">{msg.sender}</span>
-                        <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 text-xs text-slate-800 leading-relaxed max-w-[85%]">{msg.text}</div>
+                        <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 text-xs text-slate-800 leading-relaxed max-w-[85%]">
+                          {msg.text}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2128,7 +2628,10 @@ function StudentClassroomInner({
                       onChange={(e) => setInputMsg(e.target.value)}
                       className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-4 py-3 text-sm text-slate-800 focus:outline-none focus:border-blue-500"
                     />
-                    <button type="submit" className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
+                    <button
+                      type="submit"
+                      className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0"
+                    >
                       <ArrowUp className="w-4 h-4" />
                     </button>
                   </form>
@@ -2138,8 +2641,6 @@ function StudentClassroomInner({
           </div>
         </>
       )}
-
-
 
       {/* ── Professional Leave Class Confirmation Modal ── */}
       {showLeaveModal && (
@@ -2156,7 +2657,8 @@ function StudentClassroomInner({
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed bg-slate-950 p-4 rounded-2xl border border-slate-800/80">
-              Are you sure you want to disconnect from this live class? You can rejoin anytime while the teacher session is active.
+              Are you sure you want to disconnect from this live class? You can rejoin anytime while
+              the teacher session is active.
             </p>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -2195,7 +2697,8 @@ function StudentClassroomInner({
               </span>
               <h2 className="text-xl font-black text-white">Asking to Join...</h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Your admission request has been sent to the tutor. Please wait while the tutor admits you into the live session.
+                Your admission request has been sent to the tutor. Please wait while the tutor
+                admits you into the live session.
               </p>
             </div>
             <div className="w-full pt-2">
@@ -2225,9 +2728,12 @@ function StudentClassroomInner({
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-600 text-[11px] font-black uppercase tracking-wider">
                 ADMISSION DECLINED
               </span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Teacher Declined Entry</h2>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Teacher Declined Entry
+              </h2>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                The tutor has declined or ignored your admission request at this time. You may retry requesting entry or return to dashboard.
+                The tutor has declined or ignored your admission request at this time. You may retry
+                requesting entry or return to dashboard.
               </p>
             </div>
 
@@ -2267,7 +2773,9 @@ function StudentClassroomInner({
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
                 Live Session Completed
               </span>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Class Has Ended 🎉</h2>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                Class Has Ended 🎉
+              </h2>
               <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200">
                 {endedReason}
               </p>
