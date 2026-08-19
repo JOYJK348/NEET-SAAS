@@ -1321,9 +1321,6 @@ function TeacherStudioInner({
     });
     try {
       safeSend({ type: 'join-approved', studentId, classId });
-      // localStorage signal for cross-tab sync
-      localStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-      localStorage.setItem(`class_${classId}_approved_global`, 'true');
       // BroadcastChannel for same-browser instant notify
       const ch = new BroadcastChannel('neet-live-join-requests');
       ch.postMessage({ type: 'join-approved', studentId, classId });
@@ -1352,15 +1349,16 @@ function TeacherStudioInner({
       return next;
     });
     try {
-      safeSend({ type: 'join-approved', studentId: 'all', classId });
-      localStorage.setItem(`class_${classId}_approved_global`, 'true');
+      pendingList.forEach((st) => {
+        safeSend({ type: 'join-approved', studentId: st.id, classId });
+        api.delete(`/live-classes/${classId}/join-requests/${encodeURIComponent(st.id)}?action=admit`, { skipGlobalToast: true }).catch(() => {});
+      });
       const ch = new BroadcastChannel('neet-live-join-requests');
       ch.postMessage({ type: 'join-approved', studentId: 'all', classId });
       ch.close();
       const statusBc = new BroadcastChannel('neet-live-class-status');
       statusBc.postMessage({ type: 'class-reopened', classId });
       statusBc.close();
-      api.delete(`/live-classes/${classId}/join-requests/all?action=admit`, { skipGlobalToast: true }).catch(() => {});
       toast.success(`✅ All ${pendingList.length} students admitted`);
     } catch {}
   };

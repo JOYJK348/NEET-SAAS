@@ -181,9 +181,7 @@ export default function StudentClassroomPage() {
         );
         if (res?.approved) {
           try {
-            sessionStorage.setItem(`class_${classId}_approved`, 'true');
             sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-            sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
           } catch {}
           setAdmissionState('admitted');
         } else if (res?.denied) {
@@ -218,9 +216,7 @@ export default function StudentClassroomPage() {
       } else if (d.type === 'join-approved' && (!d.classId || d.classId === classId) &&
         (!d.studentId || d.studentId === studentId || d.studentId === 'all')) {
         try {
-          sessionStorage.setItem(`class_${classId}_approved`, 'true');
           sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
-          sessionStorage.setItem(`class_${classId}_approved_global`, 'true');
         } catch {}
         setAdmissionState('admitted');
       } else if (d.type === 'join-denied' && (!d.classId || d.classId === classId) &&
@@ -229,9 +225,9 @@ export default function StudentClassroomPage() {
       }
     };
 
-    // sessionStorage fallback for cross-tab sync
+    // sessionStorage fallback for same-browser cross-tab sync
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === `class_${classId}_approved_${studentId}` || e.key === `class_${classId}_approved_global`) {
+      if (e.key === `class_${classId}_approved_${studentId}`) {
         setAdmissionState('admitted');
       }
       if (e.key === `class_${classId}_denied_${studentId}`) {

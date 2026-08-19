@@ -79,15 +79,20 @@ export class LiveClassService {
         const meta: any = (session.providerMetadata as any) || {};
         const pending: Record<string, any> = meta.pendingJoinRequests || {};
         const admitted: Record<string, boolean> = meta.admittedStudents || {};
-        if (admitted[studentId] || admitted['all']) return; // already admitted
-        if (!pending[studentId]) {
-          pending[studentId] = { id: studentId, name: studentName, time: timeStr, ts: Date.now() };
-          await this.prisma.liveClassSessions.update({
-            where: { id: session.id },
-            data: { providerMetadata: { ...meta, pendingJoinRequests: pending } },
-          });
-          this.logger.log(`[DB] Join request registered: student=${studentName} class=${classId}`);
-        }
+        const denied: Record<string, boolean> = meta.deniedStudents || {};
+
+        // A new join request means student is in the waiting room — invalidate any previous approval/denial
+        delete admitted[studentId];
+        delete admitted['all'];
+        delete denied[studentId];
+
+        pending[studentId] = { id: studentId, name: studentName, time: timeStr, ts: Date.now() };
+
+        await this.prisma.liveClassSessions.update({
+          where: { id: session.id },
+          data: { providerMetadata: { ...meta, pendingJoinRequests: pending, admittedStudents: admitted, deniedStudents: denied } },
+        });
+        this.logger.log(`[DB] Join request registered: student=${studentName} (${studentId}) class=${classId}`);
       } catch (e) { this.logger.warn(`registerJoinRequest DB err: ${e}`); }
       return;
     }
@@ -95,9 +100,7 @@ export class LiveClassService {
     // Fallback: in-memory (local dev with no DB connection)
     if (!this._memJoinRequests.has(classId)) this._memJoinRequests.set(classId, new Map());
     const map = this._memJoinRequests.get(classId)!;
-    if (!map.has(studentId)) {
-      map.set(studentId, { id: studentId, name: studentName, time: timeStr, ts: Date.now() });
-    }
+    map.set(studentId, { id: studentId, name: studentName, time: timeStr, ts: Date.now() });
   }
 
   async listJoinRequests(classId: string): Promise<Array<{ id: string; name: string; time: string }>> {
@@ -130,8 +133,8 @@ export class LiveClassService {
         const admitted: Record<string, boolean> = meta.admittedStudents || {};
         const denied: Record<string, boolean> = meta.deniedStudents || {};
         return {
-          approved: !!admitted[studentId] || !!admitted['all'],
-          denied: !!denied[studentId] || !!denied['all'],
+          approved: !!admitted[studentId],
+          denied: !!denied[studentId],
         };
       } catch {
         return { approved: false, denied: false };
