@@ -967,6 +967,31 @@ function TeacherStudioInner({
     return [];
   });
 
+  // ── Automatically Detect Remote Participants in Waiting Room
+  useEffect(() => {
+    remoteParticipants.forEach((p) => {
+      const pName = (p.name || p.identity || 'Student').trim();
+      const isAdmitted = admittedStudents.some(
+        (s) => s.id === p.sid || s.id === p.identity || s.name.toLowerCase() === pName.toLowerCase()
+      );
+      if (!isAdmitted) {
+        setPendingRequests((prev) => {
+          if (prev.some((r) => r.id === p.sid || r.id === p.identity || r.name.toLowerCase() === pName.toLowerCase())) {
+            return prev;
+          }
+          return [
+            ...prev,
+            {
+              id: p.sid,
+              name: pName,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ];
+        });
+      }
+    });
+  }, [remoteParticipants, admittedStudents]);
+
   const combinedStudentList = React.useMemo(() => {
     const list: Array<{ id: string; name: string; admissionNumber?: string }> = [];
     const seenIds = new Set<string>();
@@ -981,8 +1006,13 @@ function TeacherStudioInner({
     };
 
     remoteParticipants.forEach((p) => {
-      const displayName = p.name || p.identity || 'Student';
-      addIfNew(p.sid, displayName);
+      const displayName = (p.name || p.identity || 'Student').trim();
+      const isAdmitted = admittedStudents.some(
+        (s) => s.id === p.sid || s.id === p.identity || s.name.toLowerCase() === displayName.toLowerCase()
+      );
+      if (isAdmitted) {
+        addIfNew(p.sid, displayName);
+      }
     });
 
     admittedStudents.forEach((aS) => {
@@ -1970,7 +2000,7 @@ function TeacherStudioInner({
 
           {/* ── Prominent Floating Join Request Alert Banner (Mobile & Desktop) ── */}
           {pendingRequests.length > 0 && (
-            <div className="absolute top-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-96 z-50 bg-slate-900/98 border-2 border-amber-500/80 shadow-2xl rounded-2xl p-3 backdrop-blur-xl animate-in fade-in slide-in-from-top-3 text-left">
+            <div className="fixed top-14 left-2 right-2 sm:left-auto sm:right-4 sm:w-96 z-50 bg-slate-900/98 border-2 border-amber-500/90 shadow-2xl rounded-2xl p-3 backdrop-blur-xl animate-in fade-in slide-in-from-top-3 text-left">
               <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-800">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
