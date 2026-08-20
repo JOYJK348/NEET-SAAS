@@ -129,9 +129,72 @@ function AddStudentContent() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  const onInvalidSubmit = useCallback(
+    (errs: any) => {
+      const errorKeys = Object.keys(errs);
+      if (errorKeys.length === 0) return;
+
+      const personalFields = [
+        'firstName',
+        'lastName',
+        'email',
+        'phone',
+        'dateOfBirth',
+        'gender',
+        'address',
+        'city',
+        'state',
+        'pincode',
+      ];
+      const academicFields = [
+        'branchId',
+        'academicYearId',
+        'courseId',
+        'batchId',
+        'admissionDate',
+        'classType',
+      ];
+      const parentFields = ['parentName', 'parentPhone', 'parentEmail', 'emergencyContact'];
+
+      let firstErrorStep = -1;
+      for (const fieldName of errorKeys) {
+        if (personalFields.includes(fieldName) && firstErrorStep === -1) {
+          firstErrorStep = 0;
+        } else if (
+          academicFields.includes(fieldName) &&
+          (firstErrorStep === -1 || firstErrorStep > 1)
+        ) {
+          firstErrorStep = 1;
+        } else if (
+          parentFields.includes(fieldName) &&
+          (firstErrorStep === -1 || firstErrorStep > 2)
+        ) {
+          firstErrorStep = 2;
+        }
+      }
+
+      if (firstErrorStep !== -1) {
+        setCurrentStep(firstErrorStep);
+      }
+
+      const errorMessages = errorKeys
+        .map((key) => {
+          const err = errs[key];
+          return err?.message ? `${key}: ${err.message}` : key;
+        })
+        .join('. ');
+
+      toast({
+        title: 'Form Validation Failed',
+        description: errorMessages || 'Please check the highlighted fields.',
+        variant: 'destructive',
+      });
+    },
+    [setCurrentStep],
+  );
+
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
-      if (currentStep !== FORM_STEPS.length - 1) return;
       try {
         const student = (await createStudent(data)) as any;
         if (student) {
@@ -217,7 +280,7 @@ function AddStudentContent() {
         }
       }
     },
-    [createStudent, router, setError, setCurrentStep, currentStep],
+    [createStudent, router, setError, setCurrentStep],
   );
 
   const handleCredentialsClose = useCallback(() => {
@@ -310,7 +373,7 @@ function AddStudentContent() {
         </div>
 
         <div className="space-y-6">
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}>
             <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
               {renderStep()}
 
@@ -320,21 +383,7 @@ function AddStudentContent() {
                 onPrevious={handlePrevious}
                 onNext={
                   currentStep === FORM_STEPS.length - 1
-                    ? () => {
-                        handleSubmit(onSubmit, (errs) => {
-                          const errorFields = Object.keys(errs)
-                            .map((key) => {
-                              const err = errs[key as keyof typeof errs];
-                              return `${key}: ${err?.message || 'invalid input'}`;
-                            })
-                            .join('. ');
-                          toast({
-                            title: 'Form Validation Failed',
-                            description: errorFields || 'Please verify all inputs.',
-                            variant: 'destructive',
-                          });
-                        })();
-                      }
+                    ? () => handleSubmit(onSubmit, onInvalidSubmit)()
                     : handleNext
                 }
                 isSubmitting={isCreating}
