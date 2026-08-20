@@ -132,9 +132,11 @@ export default function StudentClassroomPage() {
       ? localStorage.getItem('studentId') || 'student-1'
       : 'student-1');
 
-  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied'>(
+  const [admissionState, setAdmissionState] = useState<'waiting' | 'admitted' | 'denied' | 'fee_locked'>(
     'waiting',
   );
+  const [feeLockReason, setFeeLockReason] = useState<string>('');
+  const [feeLockAmount, setFeeLockAmount] = useState<number>(0);
 
   useEffect(() => {
     try {
@@ -189,16 +191,27 @@ export default function StudentClassroomPage() {
         { studentId, studentName },
         { skipGlobalToast: true },
       )
-      .catch(() => {});
+      .catch((err: any) => {
+        const resData = err?.response?.data;
+        if (resData?.code === 'FEE_PAYMENT_REQUIRED' || resData?.feeLocked) {
+          setFeeLockReason(resData.message || 'Fee payment pending.');
+          setFeeLockAmount(resData.outstandingAmount || 0);
+          setAdmissionState('fee_locked');
+        }
+      });
 
     // Poll approval status every 1.5s
     const pollStatus = async () => {
       try {
-        const res = await api.get<{ approved?: boolean; denied?: boolean }>(
+        const res = await api.get<{ approved?: boolean; denied?: boolean; feeLocked?: boolean; message?: string; outstandingAmount?: number }>(
           `/live-classes/${classId}/join-status?studentId=${encodeURIComponent(studentId)}`,
           { skipGlobalToast: true },
         );
-        if (res?.approved) {
+        if (res?.feeLocked) {
+          setFeeLockReason(res.message || 'Fee payment pending.');
+          setFeeLockAmount(res.outstandingAmount || 0);
+          setAdmissionState('fee_locked');
+        } else if (res?.approved) {
           try {
             sessionStorage.setItem(`class_${classId}_approved_${studentId}`, 'true');
           } catch {}
@@ -206,7 +219,14 @@ export default function StudentClassroomPage() {
         } else if (res?.denied) {
           setAdmissionState('denied');
         }
-      } catch {}
+      } catch (err: any) {
+        const resData = err?.response?.data;
+        if (resData?.code === 'FEE_PAYMENT_REQUIRED' || resData?.feeLocked) {
+          setFeeLockReason(resData.message || 'Fee payment pending.');
+          setFeeLockAmount(resData.outstandingAmount || 0);
+          setAdmissionState('fee_locked');
+        }
+      }
     };
 
     pollStatus();
@@ -233,7 +253,7 @@ export default function StudentClassroomPage() {
         const encodedName = encodeURIComponent(studentName);
 
         const data = await api.get<any>(
-          `/live-classes/${classId}/join-token?name=${encodedName}&role=student`,
+          `/live-classes/${classId}/join-token?name=${encodedName}&role=student&studentId=${encodeURIComponent(studentId)}`,
           { skipGlobalToast: true },
         );
 
@@ -254,9 +274,14 @@ export default function StudentClassroomPage() {
         if (isMounted) {
           setTokenError(true);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('[LiveKit Student] Failed to fetch join token:', err);
-        if (isMounted) {
+        const resData = err?.response?.data;
+        if (resData?.code === 'FEE_PAYMENT_REQUIRED' || resData?.feeLocked) {
+          setFeeLockReason(resData.message || 'Fee payment pending.');
+          setFeeLockAmount(resData.outstandingAmount || 0);
+          setAdmissionState('fee_locked');
+        } else if (isMounted) {
           setTokenError(true);
         }
       } finally {
@@ -270,7 +295,7 @@ export default function StudentClassroomPage() {
     return () => {
       isMounted = false;
     };
-  }, [admissionState, classId, user, hasHydrated, retryCount]);
+  }, [admissionState, classId, user, hasHydrated, retryCount, studentId]);
 
   if (admissionState === 'waiting') {
     return (
@@ -303,6 +328,52 @@ export default function StudentClassroomPage() {
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               Connecting live stream...
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (admissionState === 'fee_locked') {
+    return (
+      <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans text-slate-100">
+        <div className="bg-slate-900 border border-rose-500/30 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-300 relative overflow-hidden">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl" />
+
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto text-3xl shadow-lg">
+            🔒
+          </div>
+
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[11px] font-black uppercase tracking-wider">
+              FEE PAYMENT REQUIRED
+            </span>
+            <h2 className="text-xl font-black text-white tracking-tight">
+              Live Class Access Restricted
+            </h2>
+            <p className="text-xs text-slate-400 font-medium leading-relaxed">
+              {feeLockReason || 'Your fee payment is pending or overdue. Please clear your fee payments to unlock live interactive classes.'}
+            </p>
+            {feeLockAmount > 0 && (
+              <div className="inline-block mt-2 bg-rose-950/60 border border-rose-500/30 px-3 py-1.5 rounded-xl text-rose-300 text-xs font-bold">
+                Overdue Dues: ₹{feeLockAmount.toLocaleString('en-IN')}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2.5 pt-2">
+            <button
+              onClick={() => router.push('/dashboard/student/fees')}
+              className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-2xl shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Pay Fees Now 💳</span>
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/student')}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-2xl transition cursor-pointer"
+            >
+              Return to Student Dashboard
+            </button>
           </div>
         </div>
       </div>

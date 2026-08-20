@@ -72,6 +72,20 @@ export class LiveClassController {
     return this.liveClassService.startClass(id);
   }
 
+  // ─── Fee Access Check ──────────────────────────────────────────────────────
+
+  @Public()
+  @Get('check-fee-access')
+  @ApiOperation({ summary: 'Check if student has fee dues restricting live class access' })
+  async checkFeeAccess(
+    @Query('studentId') studentId?: string,
+    @CurrentUser() user?: AuthenticatedRequestUser,
+  ) {
+    const tenantId = user?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d';
+    const targetStudentId = studentId || user?.sub || 'unknown';
+    return this.liveClassService.checkStudentFeeStatus(tenantId, targetStudentId);
+  }
+
   // ─── Join Class (Student / Participant) ────────────────────────────────────
 
   @Public()
@@ -83,8 +97,11 @@ export class LiveClassController {
     @Param('id') id: string,
     @Query('name') name?: string,
     @Query('role') role?: string,
+    @Query('studentId') queryStudentId?: string,
+    @CurrentUser() user?: AuthenticatedRequestUser,
   ) {
-    return this.liveClassService.getJoinToken(id, name, role);
+    const userId = user?.sub || queryStudentId;
+    return this.liveClassService.getJoinToken(id, name, role, userId);
   }
 
   // ─── End Class (Teacher) ───────────────────────────────────────────────────

@@ -68,9 +68,122 @@ export class LiveClassService {
     } catch { return null; }
   }
 
+  /**
+   * Helper: Check if a student is locked out of Live Classes due to unpaid / overdue fees or suspended academic status.
+   */
+  async checkStudentFeeStatus(
+    tenantId: string,
+    studentUserId: string,
+  ): Promise<{ isFeeLocked: boolean; reason?: string; outstandingAmount?: number }> {
+    if (!studentUserId || studentUserId === 'unknown' || studentUserId === 'student-1') {
+      return { isFeeLocked: false };
+    }
+
+    try {
+      // 1. Find StudentProfile (userId = studentUserId or studentCode)
+      const studentProfile = await this.prisma.studentProfiles.findFirst({
+        where: {
+          OR: [{ userId: studentUserId }, { studentCode: studentUserId }],
+          deletedAt: null,
+        },
+      });
+
+      if (!studentProfile) {
+        return { isFeeLocked: false };
+      }
+
+      // Check academic status
+      if (studentProfile.academicStatus === 'SUSPENDED') {
+        return {
+          isFeeLocked: true,
+          reason: 'Academic status is SUSPENDED due to fee dues. Live class access is restricted.',
+          outstandingAmount: 0,
+        };
+      }
+
+      // 2. Find StudentAdmissions
+      const admissions = await this.prisma.studentAdmissions.findMany({
+        where: {
+          studentProfileId: studentProfile.userId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!admissions || admissions.length === 0) {
+        return { isFeeLocked: false };
+      }
+
+      const admissionIds = admissions.map((a) => a.id);
+
+      // 3. Find StudentFeeAssignments
+      const feeAssignments = await this.prisma.studentFeeAssignments.findMany({
+        where: {
+          studentAdmissionId: { in: admissionIds },
+          deletedAt: null,
+        },
+        select: { id: true, outstandingAmount: true },
+      });
+
+      if (!feeAssignments || feeAssignments.length === 0) {
+        return { isFeeLocked: false };
+      }
+
+      const assignmentIds = feeAssignments.map((fa) => fa.id);
+      const totalOutstanding = feeAssignments.reduce(
+        (sum, fa) => sum + Number(fa.outstandingAmount || 0),
+        0,
+      );
+
+      // 4. Find Overdue or Unpaid StudentFeeInstallments
+      const now = new Date();
+      const overdueInstallments = await this.prisma.studentFeeInstallments.findMany({
+        where: {
+          studentFeeAssignmentId: { in: assignmentIds },
+          deletedAt: null,
+          balanceAmount: { gt: 0 },
+          OR: [
+            { status: 'OVERDUE' },
+            { status: { in: ['UNPAID', 'PARTIALLY_PAID'] as any }, dueDate: { lt: now } },
+          ],
+        },
+      });
+
+      if (overdueInstallments.length > 0) {
+        const totalOverdueBalance = overdueInstallments.reduce(
+          (sum, inst) => sum + Number(inst.balanceAmount || 0),
+          0,
+        );
+
+        return {
+          isFeeLocked: true,
+          reason: `Unpaid fee dues detected (${overdueInstallments.length} overdue installment(s)). Please clear your fee payments to attend live classes.`,
+          outstandingAmount: totalOverdueBalance || totalOutstanding,
+        };
+      }
+
+      return { isFeeLocked: false };
+    } catch (err) {
+      this.logger.warn(`checkStudentFeeStatus error for ${studentUserId}: ${err}`);
+      return { isFeeLocked: false };
+    }
+  }
+
   // ─── Join Request: DB-backed, cross-device, cross-instance ────────────────
 
   async registerJoinRequest(classId: string, studentId: string, studentName: string): Promise<void> {
+    const targetTenant = this.ctx?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d';
+    const feeStatus = await this.checkStudentFeeStatus(targetTenant, studentId);
+    if (feeStatus.isFeeLocked) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: 'FEE_PAYMENT_REQUIRED',
+        message: feeStatus.reason || 'Live class access is locked due to unpaid fee dues.',
+        feeLocked: true,
+        outstandingAmount: feeStatus.outstandingAmount || 0,
+      });
+    }
+
     const session = await this._getActiveSession(classId);
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -125,7 +238,18 @@ export class LiveClassService {
     return Array.from(map.values()).filter(r => r.ts > cutoff).map(({ id, name, time }) => ({ id, name, time }));
   }
 
-  async checkJoinStatus(classId: string, studentId: string): Promise<{ approved: boolean; denied: boolean }> {
+  async checkJoinStatus(classId: string, studentId: string): Promise<{ approved: boolean; denied: boolean; feeLocked?: boolean; message?: string }> {
+    const targetTenant = this.ctx?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d';
+    const feeStatus = await this.checkStudentFeeStatus(targetTenant, studentId);
+    if (feeStatus.isFeeLocked) {
+      return {
+        approved: false,
+        denied: true,
+        feeLocked: true,
+        message: feeStatus.reason || 'Fee payment pending. Access restricted.',
+      };
+    }
+
     const session = await this._getActiveSession(classId);
     if (session) {
       try {
@@ -346,9 +470,9 @@ export class LiveClassService {
 
   // ─── Get Join Token (Student/Participant) ───────────────────────────────────
 
-  async getJoinToken(id: string, participantName?: string, role?: string) {
+  async getJoinToken(id: string, participantName?: string, role?: string, reqUserId?: string) {
     const tenantId = this.ctx?.tenantId;
-    const userId = this.ctx?.userId;
+    const userId = reqUserId || this.ctx?.userId;
 
     const liveClass = await this.findOneOrThrow(id, tenantId || undefined);
 
