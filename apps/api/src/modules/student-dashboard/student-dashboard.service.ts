@@ -549,26 +549,24 @@ export class StudentDashboardService {
           }
         }
 
-        if (sessionType !== 'ONE_TO_ONE') {
-          sessionType = 'BATCH';
-          studentName = undefined;
-        }
+        const now = new Date();
+        const todayKey = this.toLocalDateKey(now);
+        const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
+        const isToday = sessionDateKey === todayKey;
 
-        const matchingLiveClass = activeLiveClasses.find(
-          (lc) =>
-            lc.id === s.id ||
-            (lc.batchId && lc.batchId === s.batchId && lc.subjectId === s.subjectId) ||
-            (lc.batchId && lc.batchId === s.batchId),
-        );
+        const matchingLiveClass = activeLiveClasses.find((lc) => {
+          if (lc.id === s.id) return true;
+          if (lc.batchId && lc.batchId === s.batchId) {
+            const lcDate = this.toLocalDateKey(new Date(lc.scheduledStart));
+            return lcDate === sessionDateKey;
+          }
+          return false;
+        });
 
         // Always use the actual session row times (s.startsAt/endsAt) as ground truth.
-        // The session row is synced by ScheduleService.update whenever the schedule changes.
-        // sched.startTime/endTime is the TEMPLATE and may be stale if the series was split.
         let startStr = this.formatTime(new Date(s.startsAt));
         let endStr = this.formatTime(new Date(s.endsAt));
 
-        // Also check the schedule template - if it has a LATER end time than the session row,
-        // use the template's time (handles race condition where session sync hasn't happened yet)
         if (sched?.endTime && sched.endTime > endStr) {
           endStr = sched.endTime;
         }
@@ -576,7 +574,6 @@ export class StudentDashboardService {
           startStr = sched.startTime;
         }
 
-        // If a live class is active, its scheduled times take highest priority
         if (matchingLiveClass?.scheduledStart) {
           startStr = this.formatTime(new Date(matchingLiveClass.scheduledStart));
         }
@@ -585,7 +582,6 @@ export class StudentDashboardService {
           endStr = this.formatTime(new Date(matchingLiveClass.scheduledEnd));
         }
 
-        const now = new Date();
         const [sH, sM] = startStr.split(':').map(Number);
         const [eH, eM] = endStr.split(':').map(Number);
 
@@ -598,19 +594,25 @@ export class StudentDashboardService {
         const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
         let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
 
-        const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
-        if (matchingLiveClass?.status === 'LIVE' || (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= graceEnd)) {
-          liveStatus = 'LIVE_NOW';
-        } else if (isFinished || now > graceEnd) {
+        if (isToday) {
+          const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
+          if (
+            matchingLiveClass?.status === 'LIVE' ||
+            (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= graceEnd)
+          ) {
+            liveStatus = 'LIVE_NOW';
+          } else if (isFinished || now > graceEnd) {
+            liveStatus = 'COMPLETED';
+          }
+        } else if (sessionDateKey < todayKey || isFinished) {
           liveStatus = 'COMPLETED';
+        } else {
+          liveStatus = 'UPCOMING';
         }
 
         const tutorName = sched?.staffProfileId
           ? staffMap.get(sched.staffProfileId) ?? null
           : null;
-
-        const todayKey = this.toLocalDateKey(now);
-        const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
 
         return {
           id: matchingLiveClass ? matchingLiveClass.id : s.id,

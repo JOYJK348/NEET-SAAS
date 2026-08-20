@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -8,6 +8,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useStudentOverview } from '@/features/student-dashboard/hooks/use-student-overview';
 import { useJoinSession } from '@/features/student-dashboard/hooks/use-student-timetable';
 import type { StudentSessionDto } from '@/features/student-dashboard/types/student-dashboard.types';
+import { api } from '@/lib/api';
 import {
   BookOpen,
   CalendarCheck2,
@@ -153,10 +154,15 @@ function formatTime(startsAt: string, endsAt: string): string {
 }
 
 // ─── Session Card ─────────────────────────────────────────────────────────────
-function SessionCard({ session, showDate }: { session: StudentSessionDto; showDate?: boolean }) {
+function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessionDto; showDate?: boolean; isFeeLocked?: boolean }) {
   const router = useRouter();
 
   const handleJoin = async () => {
+    if (isFeeLocked) {
+      toast.error('Live class access is locked due to pending fee dues.');
+      router.push('/dashboard/student/fees');
+      return;
+    }
     router.push(`/dashboard/student/live/${session.id || 'demo-class-1'}`);
   };
 
@@ -266,14 +272,25 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
             className={cn(
               'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all duration-150 min-h-[38px] shadow-2xs text-center',
               canJoinNow
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
+                ? isFeeLocked
+                  ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white shadow-rose-500/20 active:scale-98 cursor-pointer'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
                 : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed',
             )}
           >
-            <Video className="w-4 h-4" />
-            <span>
-              {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
-            </span>
+            {isFeeLocked && canJoinNow ? (
+              <span className="flex items-center gap-1.5">
+                <span>🔒</span>
+                <span>Fee Payment Required 💳</span>
+              </span>
+            ) : (
+              <>
+                <Video className="w-4 h-4" />
+                <span>
+                  {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
+                </span>
+              </>
+            )}
           </button>
 
           <a
@@ -315,7 +332,13 @@ function EmptySchedule({ title = 'No classes today', sub = 'Enjoy your free day!
 
 // ─── Student Upcoming Schedule Section (Bounded Scroll + Search/Filter) ─────
 
-function StudentUpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: StudentSessionDto[] }) {
+function StudentUpcomingScheduleSection({
+  upcomingSchedule,
+  isFeeLocked,
+}: {
+  upcomingSchedule: StudentSessionDto[];
+  isFeeLocked?: boolean;
+}) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
 
@@ -441,7 +464,12 @@ function StudentUpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule
           </div>
         ) : (
           filteredSchedule.map((session, idx) => (
-            <SessionCard key={`${session.id || 'upcoming'}-${session.startsAt || idx}-${session.date || idx}-${idx}`} session={session} showDate />
+            <SessionCard
+              key={`${session.id || 'upcoming'}-${session.startsAt || idx}-${session.date || idx}-${idx}`}
+              session={session}
+              showDate
+              isFeeLocked={isFeeLocked}
+            />
           ))
         )}
       </div>
@@ -453,6 +481,16 @@ function StudentUpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule
 function StudentOverviewContent() {
   const { user } = useAuth();
   const { overview, isLoading, error } = useStudentOverview();
+  const [isFeeLocked, setIsFeeLocked] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ isFeeLocked?: boolean }>('/live-classes/check-fee-access', { skipGlobalToast: true })
+      .then((res) => {
+        if (res?.isFeeLocked) setIsFeeLocked(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 16 ? 'Good Afternoon' : 'Good Evening';
@@ -593,14 +631,21 @@ function StudentOverviewContent() {
           ) : (
             <div className="space-y-3">
               {overview.todaysSchedule.map((session, idx) => (
-                <SessionCard key={`${session.id || 'today'}-${session.startsAt || idx}-${idx}`} session={session} />
+                <SessionCard
+                  key={`${session.id || 'today'}-${session.startsAt || idx}-${idx}`}
+                  session={session}
+                  isFeeLocked={isFeeLocked}
+                />
               ))}
             </div>
           )}
         </div>
 
         {/* Bounded Scrollable & Filterable Upcoming Schedule */}
-        <StudentUpcomingScheduleSection upcomingSchedule={overview?.upcomingSchedule || []} />
+        <StudentUpcomingScheduleSection
+          upcomingSchedule={overview?.upcomingSchedule || []}
+          isFeeLocked={isFeeLocked}
+        />
       </div>
     </div>
   );

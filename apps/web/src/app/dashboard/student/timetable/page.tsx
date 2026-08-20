@@ -118,8 +118,10 @@ function LiveStatusBadge({ status }: { status: string }) {
 }
 
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
+import { useEffect } from 'react';
 
-function TimetableSessionCard({ session, date }: { session: StudentSessionDto; date: string }) {
+function TimetableSessionCard({ session, date, isFeeLocked }: { session: StudentSessionDto; date: string; isFeeLocked?: boolean }) {
   const router = useRouter();
   const isCancelled = session.sessionStatus === 'CANCELLED';
   const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
@@ -149,6 +151,11 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
   }, [isLive, isCancelled, session, date]);
 
   const handleJoin = () => {
+    if (isFeeLocked) {
+      toast.error('Live class access is locked due to pending fee dues.');
+      router.push('/dashboard/student/fees');
+      return;
+    }
     router.push(`/dashboard/student/live/${session.id || 'demo-class-1'}`);
   };
 
@@ -193,13 +200,13 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
         <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
           <span className="text-slate-400">👤 Tutor:</span>
           <strong className="text-slate-900 font-black">
-            {session.tutorName || 'Bharathi M'}
+            {session.tutorName || 'Faculty'}
           </strong>
         </span>
         <DeliveryModeBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Action Button: Enabled ONLY for active/current sessions */}
+      {/* Action Button */}
       {!isCancelled && (
         <div className="pt-1 border-t border-slate-100">
           <button
@@ -208,14 +215,25 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
             className={cn(
               'w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all duration-150 min-h-[40px] shadow-2xs text-center',
               canJoinNow
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
+                ? isFeeLocked
+                  ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white shadow-rose-500/20 active:scale-98 cursor-pointer'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
                 : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed'
             )}
           >
-            <Video className="w-4 h-4" />
-            <span>
-              {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
-            </span>
+            {isFeeLocked && canJoinNow ? (
+              <span className="flex items-center gap-1.5">
+                <span>🔒</span>
+                <span>Fee Payment Required 💳</span>
+              </span>
+            ) : (
+              <>
+                <Video className="w-4 h-4" />
+                <span>
+                  {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
+                </span>
+              </>
+            )}
           </button>
         </div>
       )}
@@ -226,6 +244,16 @@ function TimetableSessionCard({ session, date }: { session: StudentSessionDto; d
 function TimetableContent() {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('LIST');
+  const [isFeeLocked, setIsFeeLocked] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ isFeeLocked?: boolean }>('/live-classes/check-fee-access', { skipGlobalToast: true })
+      .then((res) => {
+        if (res?.isFeeLocked) setIsFeeLocked(true);
+      })
+      .catch(() => {});
+  }, []);
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -435,6 +463,7 @@ function TimetableContent() {
                 key={session.id}
                 session={session}
                 date={selectedDateKey}
+                isFeeLocked={isFeeLocked}
               />
             ))}
           </div>
@@ -513,7 +542,7 @@ function TimetableContent() {
                           {s.subject?.name || 'Class'}
                         </p>
                         <p className="text-[9px] text-slate-500 font-semibold truncate">
-                          👤 {s.tutorName || 'Bharathi M'}
+                          👤 {s.tutorName || 'Faculty'}
                         </p>
                         <p className="text-[9px] text-violet-700 font-mono font-bold">
                           {s.startsAt} – {s.endsAt}
@@ -555,7 +584,7 @@ function TimetableContent() {
                 </div>
                 <div className="space-y-3">
                   {sessions.map((session) => (
-                    <TimetableSessionCard key={session.id} session={session} date={dKey} />
+                    <TimetableSessionCard key={session.id} session={session} date={dKey} isFeeLocked={isFeeLocked} />
                   ))}
                 </div>
               </div>
