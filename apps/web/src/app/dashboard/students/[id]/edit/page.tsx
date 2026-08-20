@@ -218,9 +218,73 @@ function EditStudentContent() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  const onInvalidSubmit = useCallback(
+    (errs: any) => {
+      const errorKeys = Object.keys(errs);
+      if (errorKeys.length === 0) return;
+
+      const personalFields = [
+        'firstName',
+        'lastName',
+        'email',
+        'phone',
+        'dateOfBirth',
+        'gender',
+        'address',
+        'city',
+        'state',
+        'pincode',
+      ];
+      const academicFields = [
+        'branchId',
+        'academicYearId',
+        'courseId',
+        'batchId',
+        'admissionDate',
+        'classType',
+      ];
+      const parentFields = ['parentName', 'parentPhone', 'parentEmail', 'emergencyContact'];
+
+      let firstErrorStep = -1;
+      for (const fieldName of errorKeys) {
+        if (personalFields.includes(fieldName) && firstErrorStep === -1) {
+          firstErrorStep = 0;
+        } else if (
+          academicFields.includes(fieldName) &&
+          (firstErrorStep === -1 || firstErrorStep > 1)
+        ) {
+          firstErrorStep = 1;
+        } else if (
+          parentFields.includes(fieldName) &&
+          (firstErrorStep === -1 || firstErrorStep > 2)
+        ) {
+          firstErrorStep = 2;
+        }
+      }
+
+      if (firstErrorStep !== -1) {
+        setCurrentStep(firstErrorStep);
+      }
+
+      const errorMessages = errorKeys
+        .map((key) => {
+          const err = errs[key];
+          return err?.message ? `${key}: ${err.message}` : key;
+        })
+        .join('. ');
+
+      toast({
+        title: 'Form Validation Failed',
+        description: errorMessages || 'Please check the highlighted fields.',
+        variant: 'destructive',
+      });
+    },
+    [setCurrentStep],
+  );
+
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
-      if (!id || currentStep !== FORM_STEPS.length - 1) return;
+      if (!id) return;
       try {
         const result = await updateStudent({ id, ...data, status: studentStatus });
         if (result) {
@@ -230,9 +294,39 @@ function EditStudentContent() {
       } catch (err: any) {
         const responseData = err.response?.data;
         if (responseData?.code === 'VALIDATION_ERROR' && Array.isArray(responseData.errors)) {
+          let firstErrorStep = -1;
           responseData.errors.forEach((e: { field: string; message: string }) => {
-            setError(e.field as keyof StudentFormData, { type: 'server', message: e.message });
+            const fieldName = e.field as keyof StudentFormData;
+            setError(fieldName, { type: 'server', message: e.message });
+
+            let stepIndex = -1;
+            const personalFields = [
+              'firstName',
+              'lastName',
+              'email',
+              'phone',
+              'dateOfBirth',
+              'gender',
+              'address',
+              'city',
+              'state',
+              'pincode',
+            ];
+            const academicFields = ['courseId', 'batchId', 'admissionDate', 'classType'];
+            const parentFields = ['parentName', 'parentPhone', 'parentEmail'];
+
+            if (personalFields.includes(e.field)) stepIndex = 0;
+            else if (academicFields.includes(e.field)) stepIndex = 1;
+            else if (parentFields.includes(e.field)) stepIndex = 2;
+
+            if (stepIndex !== -1 && (firstErrorStep === -1 || stepIndex < firstErrorStep)) {
+              firstErrorStep = stepIndex;
+            }
           });
+
+          if (firstErrorStep !== -1) {
+            setCurrentStep(firstErrorStep);
+          }
           toast({
             title: 'Validation Failed',
             description: 'Please check the input fields for errors.',
@@ -245,6 +339,7 @@ function EditStudentContent() {
               type: 'server',
               message: 'A student with this email already exists',
             });
+            setCurrentStep(0);
           }
           toast({ title: 'Conflict', description: msg, variant: 'destructive' });
         } else {
@@ -256,7 +351,7 @@ function EditStudentContent() {
         }
       }
     },
-    [id, updateStudent, router, studentStatus, setError, currentStep],
+    [id, updateStudent, router, studentStatus, setError, setCurrentStep],
   );
 
   if (studentLoading) {
@@ -402,7 +497,7 @@ function EditStudentContent() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}>
           <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
             {renderStep()}
 
@@ -412,21 +507,7 @@ function EditStudentContent() {
               onPrevious={handlePrevious}
               onNext={
                 currentStep === FORM_STEPS.length - 1
-                  ? () => {
-                      handleSubmit(onSubmit, (errs) => {
-                        const errorFields = Object.keys(errs)
-                          .map((key) => {
-                            const err = errs[key as keyof typeof errs];
-                            return `${key}: ${err?.message || 'invalid input'}`;
-                          })
-                          .join('. ');
-                        toast({
-                          title: 'Form Validation Failed',
-                          description: errorFields || 'Please verify all inputs.',
-                          variant: 'destructive',
-                        });
-                      })();
-                    }
+                  ? () => handleSubmit(onSubmit, onInvalidSubmit)()
                   : handleNext
               }
               isSubmitting={isUpdating}
