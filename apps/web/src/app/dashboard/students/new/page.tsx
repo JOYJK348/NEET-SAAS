@@ -381,11 +381,7 @@ function AddStudentContent() {
                 currentStep={currentStep}
                 totalSteps={FORM_STEPS.length}
                 onPrevious={handlePrevious}
-                onNext={
-                  currentStep === FORM_STEPS.length - 1
-                    ? () => handleSubmit(onSubmit, onInvalidSubmit)()
-                    : handleNext
-                }
+                onNext={handleNext}
                 isSubmitting={isCreating}
                 isLastStep={currentStep === FORM_STEPS.length - 1}
               />

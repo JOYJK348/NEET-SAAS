@@ -202,27 +202,21 @@ export function useCreateStudent(): UseCreateStudentReturn {
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: (input: CreateStudentInput) => studentService.createStudent(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err : new Error('Failed to create student'));
+    },
   });
 
   const createStudent = useCallback(
     async (input: CreateStudentInput): Promise<Student | null> => {
-      try {
-        setError(null);
-        const result = await mutateAsync(input, {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: studentServiceKeys.lists() });
-            queryClient.invalidateQueries({ queryKey: studentServiceKeys.stats() });
-          },
-          onError: (err) => {
-            setError(err instanceof Error ? err : new Error('Failed to create student'));
-          },
-        });
-        return result;
-      } catch (err) {
-        throw err;
-      }
+      setError(null);
+      return await mutateAsync(input);
     },
-    [mutateAsync, queryClient],
+    [mutateAsync],
   );
 
   return { createStudent, isCreating: isPending, error };
