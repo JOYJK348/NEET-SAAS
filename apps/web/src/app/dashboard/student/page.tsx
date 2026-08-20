@@ -167,19 +167,30 @@ function SessionCard({ session, showDate }: { session: StudentSessionDto; showDa
 
   const canJoinNow = useMemo(() => {
     if (isCancelled) return false;
-    if (isLive) return true;
+    if (session.canJoin || isLive) return true;
     if (session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
 
     if (session.date && session.startsAt && session.endsAt) {
       try {
         const now = new Date();
         const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const start = new Date(`${dateStr}T${session.startsAt.length === 5 ? session.startsAt + ':00' : session.startsAt}`);
-        const end = new Date(`${dateStr}T${session.endsAt.length === 5 ? session.endsAt + ':00' : session.endsAt}`);
+        const todayStr = new Date().toLocaleDateString('en-CA');
 
-        // Allow joining 10 mins before start until end time
-        const windowStart = new Date(start.getTime() - 10 * 60 * 1000);
-        return now >= windowStart && now <= end;
+        if (dateStr === todayStr) {
+          const [startH, startM] = session.startsAt.split(':').map(Number);
+          const [endH, endM] = session.endsAt.split(':').map(Number);
+
+          const start = new Date();
+          start.setHours(startH, startM, 0, 0);
+
+          const end = new Date();
+          end.setHours(endH, endM, 0, 0);
+
+          // Allow joining 15 mins before start until 15 mins past end time
+          const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+          const windowEnd = new Date(end.getTime() + 15 * 60 * 1000);
+          return now >= windowStart && now <= windowEnd;
+        }
       } catch {}
     }
 

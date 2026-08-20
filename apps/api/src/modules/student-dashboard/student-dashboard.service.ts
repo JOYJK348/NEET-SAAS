@@ -360,13 +360,15 @@ export class StudentDashboardService {
       ctx.classType,
     );
 
+    const todayKey = this.toLocalDateKey(today);
+    const strictTodaysSchedule = enriched.filter((s) => s.date === todayKey);
+    const strictUpcomingSchedule = enrichedUpcoming.filter((s) => s.date > todayKey);
+
     // Live-now detection
-    const now = new Date();
-    const liveNow = enriched.filter(
+    const liveNow = strictTodaysSchedule.filter(
       (s) =>
         s.sessionStatus !== 'CANCELLED' &&
-        new Date(`${s.date}T${s.startsAt}`) <= now &&
-        new Date(`${s.date}T${s.endsAt}`) >= now,
+        s.liveStatus === 'LIVE_NOW',
     );
 
     const enrolledBatchesData = await this.prisma.batches.findMany({
@@ -390,13 +392,13 @@ export class StudentDashboardService {
       enrolledCourses,
       enrolledBatches,
       stats: {
-        todaysClasses: enriched.length,
-        upcomingClasses: enrichedUpcoming.length,
+        todaysClasses: strictTodaysSchedule.length,
+        upcomingClasses: strictUpcomingSchedule.length,
         activeBatches: batchIds.length,
         attendanceRate,
       },
-      todaysSchedule: enriched,
-      upcomingSchedule: enrichedUpcoming,
+      todaysSchedule: strictTodaysSchedule,
+      upcomingSchedule: strictUpcomingSchedule,
       liveNow,
     };
   }
@@ -472,6 +474,9 @@ export class StudentDashboardService {
         where: {
           tenantId,
           status: { in: ['SCHEDULED', 'LIVE', 'DRAFT'] },
+          scheduledStart: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
           deletedAt: null,
         },
         select: { id: true, batchId: true, subjectId: true, scheduledStart: true, scheduledEnd: true, status: true },
@@ -604,9 +609,12 @@ export class StudentDashboardService {
           ? staffMap.get(sched.staffProfileId) ?? null
           : null;
 
+        const todayKey = this.toLocalDateKey(now);
+        const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
+
         return {
           id: matchingLiveClass ? matchingLiveClass.id : s.id,
-          date: this.toLocalDateKey(s.attendanceDate),
+          date: sessionDateKey,
           startsAt: startStr,
           endsAt: endStr,
           dayOfWeek: this.weekdayFromDateKey(
@@ -632,8 +640,9 @@ export class StudentDashboardService {
           studentName,
           // canJoin: Allow joining when live or within 15 mins early window
           canJoin:
+            sessionDateKey === todayKey &&
             s.sessionStatus !== 'CANCELLED' &&
-            liveStatus !== 'COMPLETED' &&
+            (matchingLiveClass?.status === 'LIVE' || liveStatus === 'LIVE_NOW') &&
             studentClassType !== 'CLASSROOM' &&
             (sched?.deliveryMode ? ['ONLINE', 'HYBRID'].includes(sched.deliveryMode) : true),
         };

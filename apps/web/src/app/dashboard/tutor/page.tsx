@@ -128,28 +128,33 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
 
     if (!isOnlineOrHybrid) return false;
 
-    // Enable Join Live Class ONLY if liveStatus is LIVE_NOW or sessionStatus is STARTED
-    if (session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED') return true;
+    // Enable Join Live Class if session.canJoin or liveStatus is LIVE_NOW or sessionStatus is STARTED
+    if (session.canJoin || session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED') {
+      return true;
+    }
+
+    if (session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
 
     // Check if current time is within active start/end window for today's session
     if (session.date && session.startsAt && session.endsAt) {
       try {
         const now = new Date();
         const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = new Date().toLocaleDateString('en-CA');
         if (dateStr === todayStr) {
           const [startH, startM] = session.startsAt.split(':').map(Number);
           const [endH, endM] = session.endsAt.split(':').map(Number);
 
-          const start = new Date(now);
+          const start = new Date();
           start.setHours(startH, startM, 0, 0);
 
-          const end = new Date(now);
+          const end = new Date();
           end.setHours(endH, endM, 0, 0);
 
-          // Allow starting 5 mins before start time up until end time
-          const windowStart = new Date(start.getTime() - 5 * 60 * 1000);
-          return now >= windowStart && now <= end;
+          // Allow starting 15 mins before start time up until 15 mins past end time
+          const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
+          const windowEnd = new Date(end.getTime() + 15 * 60 * 1000);
+          return now >= windowStart && now <= windowEnd;
         }
       } catch {}
     }

@@ -209,6 +209,7 @@ export class TutorDashboardService {
         where: {
           tenantId,
           status: { in: ['LIVE', 'SCHEDULED'] },
+          scheduledStart: { gte: today, lt: tomorrow },
           deletedAt: null,
           ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
         },
@@ -347,15 +348,24 @@ export class TutorDashboardService {
       this.enrichSessions(tenantId, upcomingSessions),
     ]);
 
+    const todayKey = this.toLocalDateKey(today);
+    const strictTodaysSchedule = todaysEnriched.filter((s) => s.date === todayKey);
+    const strictUpcomingSchedule = upcomingEnriched.filter((s) => s.date > todayKey);
+
     // Live-now detection
-    const liveNow = todaysEnriched.filter(
+    const liveNow = strictTodaysSchedule.filter(
       (s) => s.liveStatus === 'LIVE_NOW' || s.canJoin,
     );
 
     return {
-      stats: { todaysClasses, upcomingClasses, myBatches, totalStudents },
-      todaysSchedule: todaysEnriched,
-      upcomingSchedule: upcomingEnriched,
+      stats: {
+        todaysClasses: strictTodaysSchedule.length,
+        upcomingClasses: strictUpcomingSchedule.length,
+        myBatches,
+        totalStudents,
+      },
+      todaysSchedule: strictTodaysSchedule,
+      upcomingSchedule: strictUpcomingSchedule,
       liveNow,
     };
   }
@@ -591,7 +601,7 @@ export class TutorDashboardService {
         canJoin:
           sessionDateKey === todayKey &&
           s.sessionStatus !== 'CANCELLED' &&
-          liveStatus !== 'COMPLETED',
+          (matchingLiveClass?.status === 'LIVE' || liveStatus === 'LIVE_NOW'),
       };
     });
   }
