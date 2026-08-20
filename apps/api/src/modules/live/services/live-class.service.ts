@@ -80,13 +80,30 @@ export class LiveClassService {
     }
 
     try {
-      // 1. Find StudentProfile (userId = studentUserId or studentCode)
-      const studentProfile = await this.prisma.studentProfiles.findFirst({
+      // 1. Find StudentProfile (userId = studentUserId or studentCode or search Users by email/ID)
+      let studentProfile = await this.prisma.studentProfiles.findFirst({
         where: {
           OR: [{ userId: studentUserId }, { studentCode: studentUserId }],
           deletedAt: null,
         },
       });
+
+      if (!studentProfile) {
+        const userRec = await this.prisma.users.findFirst({
+          where: {
+            OR: [
+              { id: studentUserId },
+              { email: studentUserId.trim().toLowerCase() },
+            ],
+            deletedAt: null,
+          },
+        });
+        if (userRec) {
+          studentProfile = await this.prisma.studentProfiles.findFirst({
+            where: { userId: userRec.id, deletedAt: null },
+          });
+        }
+      }
 
       if (!studentProfile) {
         return { isFeeLocked: false };
@@ -111,7 +128,11 @@ export class LiveClassService {
       });
 
       if (!admissions || admissions.length === 0) {
-        return { isFeeLocked: false };
+        return {
+          isFeeLocked: true,
+          reason: 'Student admission record pending. Please complete fee registration to access live classes.',
+          outstandingAmount: 0,
+        };
       }
 
       const admissionIds = admissions.map((a) => a.id);
@@ -126,7 +147,11 @@ export class LiveClassService {
       });
 
       if (!feeAssignments || feeAssignments.length === 0) {
-        return { isFeeLocked: false };
+        return {
+          isFeeLocked: true,
+          reason: 'No active fee payment record found. Please complete your fee payment to attend live classes.',
+          outstandingAmount: 0,
+        };
       }
 
       const assignmentIds = feeAssignments.map((fa) => fa.id);
@@ -135,29 +160,57 @@ export class LiveClassService {
         0,
       );
 
-      // 4. Find Overdue or Unpaid StudentFeeInstallments
+      // 4. Find StudentFeeInstallments
       const now = new Date();
-      const overdueInstallments = await this.prisma.studentFeeInstallments.findMany({
+      const installments = await this.prisma.studentFeeInstallments.findMany({
         where: {
           studentFeeAssignmentId: { in: assignmentIds },
           deletedAt: null,
-          balanceAmount: { gt: 0 },
-          OR: [
-            { status: 'OVERDUE' },
-            { status: { in: ['UNPAID', 'PARTIALLY_PAID'] as any }, dueDate: { lt: now } },
-          ],
         },
+        orderBy: { installmentNumber: 'asc' },
       });
 
-      if (overdueInstallments.length > 0) {
-        const totalOverdueBalance = overdueInstallments.reduce(
-          (sum, inst) => sum + Number(inst.balanceAmount || 0),
-          0,
-        );
+      if (!installments || installments.length === 0) {
+        // If fee assignment exists with outstanding amount > 0, lock access
+        if (totalOutstanding > 0) {
+          return {
+            isFeeLocked: true,
+            reason: 'Fee payment pending. Please complete your fee payment to attend live classes.',
+            outstandingAmount: totalOutstanding,
+          };
+        }
+        return { isFeeLocked: false };
+      }
+
+      // Check if student has unpaid initial installment or any overdue installments
+      const firstInstallment = installments[0];
+      const hasUnpaidFirstInstallment =
+        firstInstallment &&
+        (Number(firstInstallment.paidAmount || 0) === 0 || firstInstallment.status === 'UNPAID') &&
+        Number(firstInstallment.balanceAmount || 0) > 0;
+
+      const overdueInstallments = installments.filter(
+        (inst) =>
+          inst.status === 'OVERDUE' ||
+          (Number(inst.balanceAmount || 0) > 0 &&
+            inst.status !== 'PAID' &&
+            new Date(inst.dueDate) < now),
+      );
+
+      if (hasUnpaidFirstInstallment || overdueInstallments.length > 0) {
+        const totalOverdueBalance =
+          overdueInstallments.reduce(
+            (sum, inst) => sum + Number(inst.balanceAmount || 0),
+            0,
+          ) || Number(firstInstallment?.balanceAmount || totalOutstanding);
+
+        const reasonStr = hasUnpaidFirstInstallment
+          ? 'Initial tuition fee payment is pending. Please complete your fee payment to attend live classes.'
+          : `Unpaid fee dues detected (${overdueInstallments.length} overdue installment(s)). Please clear your fee payments to attend live classes.`;
 
         return {
           isFeeLocked: true,
-          reason: `Unpaid fee dues detected (${overdueInstallments.length} overdue installment(s)). Please clear your fee payments to attend live classes.`,
+          reason: reasonStr,
           outstandingAmount: totalOverdueBalance || totalOutstanding,
         };
       }
