@@ -1,5 +1,7 @@
 'use client';
 
+// Student Live Class Interactive Studio Page — Fee Lock Protection Active
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
