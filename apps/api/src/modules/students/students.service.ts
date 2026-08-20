@@ -27,7 +27,7 @@ import {
   validateAcademicStatusTransition,
 } from './students.validation';
 import { AdmissionNumberGenerator } from '../admissions/utils/admission-number-generator';
-import { hashSync, genSaltSync } from 'bcrypt';
+import { hash } from 'bcrypt';
 import * as XLSX from 'xlsx';
 import { MailService } from '../mail/mail.service';
 
@@ -107,8 +107,101 @@ export class StudentsService {
     const rawPassword = dto.phone
       ? `Stud@${dto.phone.replace(/\D/g, '').slice(-4)}`
       : `Stud@${1000 + Math.floor(Math.random() * 9000)}`;
-    const passwordHash = hashSync(rawPassword, genSaltSync(10));
+    const passwordHash = await hash(rawPassword, 8);
 
+    // PRE-COMPUTE parent password hash OUTSIDE the transaction
+    // (bcrypt is CPU-intensive and will cause Prisma's 5s interactive transaction timeout)
+    let precomputedParentHash: string | null = null;
+    let precomputedRawParentPassword: string | null = null;
+    let preExistingParentUser: any = null;
+
+    const hasParentEmail =
+      (dto.isParentPortalEnabled || dto.parentEmail) &&
+      dto.parentEmail &&
+      dto.parentEmail.trim();
+
+    if (hasParentEmail) {
+      const pEmail = dto.parentEmail!.trim().toLowerCase();
+      // Check parent existence BEFORE the transaction
+      preExistingParentUser = await this.prisma.users.findFirst({
+        where: { tenantId, email: pEmail, deletedAt: null },
+      });
+      // Only hash if we need to create a new parent account
+      if (!preExistingParentUser) {
+        precomputedRawParentPassword = generateParentPasswordFromPhone(dto.parentPhone);
+        precomputedParentHash = await hash(precomputedRawParentPassword, 8);
+      }
+    }
+
+    // Pre-resolve STUDENT and PARENT system roles OUTSIDE the transaction
+    let preResolvedStudentRole = await this.prisma.roles.findFirst({
+      where: { code: 'STUDENT', deletedAt: null },
+    });
+    if (!preResolvedStudentRole) {
+      preResolvedStudentRole = await this.prisma.roles.findFirst({
+        where: { code: 'STUDENT' },
+      });
+    }
+    if (!preResolvedStudentRole) {
+      try {
+        preResolvedStudentRole = await this.prisma.roles.create({
+          data: {
+            tenantId,
+            code: 'STUDENT',
+            name: 'Student',
+            roleType: 'SYSTEM',
+            isDefault: true,
+            isEditable: false,
+            isDeletable: false,
+            priority: 1,
+            metadata: {},
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        });
+      } catch {
+        preResolvedStudentRole = await this.prisma.roles.findFirst({
+          where: { code: 'STUDENT' },
+        });
+      }
+    }
+
+    let preResolvedParentRole: any = null;
+    if (hasParentEmail) {
+      preResolvedParentRole = await this.prisma.roles.findFirst({
+        where: { code: 'PARENT', deletedAt: null },
+      });
+      if (!preResolvedParentRole) {
+        preResolvedParentRole = await this.prisma.roles.findFirst({
+          where: { code: 'PARENT' },
+        });
+      }
+      if (!preResolvedParentRole) {
+        try {
+          preResolvedParentRole = await this.prisma.roles.create({
+            data: {
+              tenantId,
+              code: 'PARENT',
+              name: 'Parent',
+              roleType: 'SYSTEM',
+              isDefault: false,
+              isEditable: false,
+              isDeletable: false,
+              priority: 1,
+              metadata: {},
+              createdBy: userId,
+              updatedBy: userId,
+            },
+          });
+        } catch {
+          preResolvedParentRole = await this.prisma.roles.findFirst({
+            where: { code: 'PARENT' },
+          });
+        }
+      }
+    }
+
+    // Use 30s timeout — the transaction does many DB inserts across 6-8 tables on a remote DB
     const profile = await this.prisma.$transaction(async (tx) => {
       const user = await tx.users.create({
         data: {
@@ -279,36 +372,13 @@ export class StudentsService {
       }
 
       // Assign STUDENT role for portal access
-      let studentRole = await tx.roles.findFirst({
-        where: {
-          code: 'STUDENT',
-          deletedAt: null,
-        },
-      });
-      if (!studentRole) {
-        studentRole = await tx.roles.create({
-          data: {
-            tenantId,
-            code: 'STUDENT',
-            name: 'Student',
-            roleType: 'SYSTEM',
-            isDefault: true,
-            isEditable: false,
-            isDeletable: false,
-            priority: 1,
-            metadata: {},
-            createdBy: userId,
-            updatedBy: userId,
-          },
-        });
-      }
-      if (studentRole) {
+      if (preResolvedStudentRole) {
         await tx.userRoles
           .create({
             data: {
               tenantId,
               userId: user.id,
-              roleId: studentRole.id,
+              roleId: preResolvedStudentRole.id,
               effectiveFrom: new Date(),
               effectiveTo: new Date('2099-12-31'),
               revokedBy: '',
@@ -335,34 +405,11 @@ export class StudentsService {
         const pEmail = dto.parentEmail.trim().toLowerCase();
         const relationshipType = (dto.parentRelationshipType as any) || 'FATHER';
 
-        // Find or create PARENT role in tenant
-        let parentRole = await tx.roles.findFirst({
-          where: { tenantId, code: 'PARENT' },
-        });
-        if (!parentRole) {
-          parentRole = await tx.roles
-            .create({
-              data: {
-                tenantId,
-                code: 'PARENT',
-                name: 'Parent',
-                roleType: 'SYSTEM',
-                isDefault: false,
-                isEditable: false,
-                isDeletable: false,
-                priority: 1,
-                metadata: {},
-                createdBy: userId,
-                updatedBy: userId,
-              },
-            })
-            .catch(() => null);
-        }
+        // Use pre-resolved PARENT role
+        const parentRole = preResolvedParentRole;
 
-        // Check if parent user already exists in this tenant
-        let parentUser = await tx.users.findFirst({
-          where: { tenantId, email: pEmail, deletedAt: null },
-        });
+        // Check if parent user already exists in this tenant (pre-checked outside transaction)
+        let parentUser = preExistingParentUser;
 
         if (parentUser) {
           // Relationship mismatch check
@@ -450,9 +497,9 @@ export class StudentsService {
             message: 'Existing parent account linked successfully.',
           };
         } else {
-          // Create New Parent Account
-          const rawParentPassword = generateParentPasswordFromPhone(dto.parentPhone);
-          const parentPasswordHash = hashSync(rawParentPassword, genSaltSync(10));
+          // Create New Parent Account (password hash pre-computed outside transaction)
+          const rawParentPassword = precomputedRawParentPassword || generateParentPasswordFromPhone(dto.parentPhone);
+          const parentPasswordHash = precomputedParentHash || await hash(rawParentPassword, 8);
           const pNameParts = (dto.parentName || 'Parent').trim().split(' ');
           const pFirstName = pNameParts[0] || 'Parent';
           const pLastName = pNameParts.slice(1).join(' ') || '';
@@ -528,7 +575,7 @@ export class StudentsService {
       }
 
       return { studentProfile, parentPortalInfo };
-    });
+    }, { timeout: 30000 });
 
     const response = await this.toResponseAsync(profile.studentProfile);
 
@@ -663,7 +710,7 @@ export class StudentsService {
       where: { tenantId, studentProfileId: studentId, relationship: 'Parent' },
     });
     const newRawPassword = generateParentPasswordFromPhone(parentContact?.phone || undefined);
-    const newHash = hashSync(newRawPassword, genSaltSync(10));
+    const newHash = await hash(newRawPassword, 8);
 
     await this.prisma.users.update({
       where: { id: parentUser.id },
@@ -1375,7 +1422,7 @@ export class StudentsService {
       const rawPassword = phone
         ? `Stud@${phone.replace(/\D/g, '').slice(-4)}`
         : `Stud@${1000 + Math.floor(Math.random() * 9000)}`;
-      const passwordHash = hashSync(rawPassword, genSaltSync(10));
+      const passwordHash = await hash(rawPassword, 8);
 
       try {
         await this.prisma.$transaction(async (tx) => {
@@ -1496,7 +1543,7 @@ export class StudentsService {
               });
 
               const rawParentPassword = generateParentPasswordFromPhone(pPhone);
-              const parentPasswordHash = hashSync(rawParentPassword, genSaltSync(10));
+              const parentPasswordHash = await hash(rawParentPassword, 8);
 
               if (!parentUser) {
                 const nameParts = pName.trim().split(' ');

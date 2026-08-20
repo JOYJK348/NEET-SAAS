@@ -18,7 +18,7 @@ export class QueryParamsDto {
   @IsOptional()
   @Type(() => Number)
   @Min(1)
-  @Max(100)
+  @Max(500)
   limit?: number = 20;
 
   @ApiPropertyOptional({ example: 'createdAt' })

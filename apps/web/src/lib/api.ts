@@ -17,21 +17,22 @@ export function isCancellationError(error: unknown): boolean {
   if (!error) return false;
   if (axios.isCancel(error)) return true;
   const err = error as any;
+  // NOTE: ECONNABORTED is a *timeout* error, NOT a user cancellation - do not suppress it here
   if (
     err.name === 'CanceledError' ||
     err.name === 'AbortError' ||
-    err.code === 'ERR_CANCELED' ||
-    err.code === 'ECONNABORTED'
+    err.code === 'ERR_CANCELED'
   ) {
     return true;
   }
   const msg = (err.message || '').toString().toLowerCase();
+  // Only match explicit user-initiated cancellations, not generic 'aborted' which can be timeouts
   if (
-    msg.includes('canceled') ||
-    msg.includes('cancelled') ||
-    msg.includes('aborted') ||
-    msg.includes('abort') ||
-    msg === 'canceled'
+    msg === 'canceled' ||
+    msg === 'cancelled' ||
+    msg.includes('request aborted') ||
+    msg.includes('request canceled') ||
+    msg.includes('request cancelled')
   ) {
     return true;
   }
@@ -78,7 +79,7 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
-      timeout: 20000,
+      timeout: 30000,
     });
 
     this.setupInterceptors();
@@ -118,6 +119,7 @@ class ApiClient {
       },
       async (error: AxiosError) => {
         // Ignore silent request cancellations (AbortSignal / fast typing / route changes / tab switches)
+        // NOTE: ECONNABORTED (timeout) is NOT a cancellation — let it fall through to error handling
         if (isCancellationError(error)) {
           return Promise.reject(error);
         }

@@ -232,6 +232,7 @@ function AddStudentContent() {
         }
       } catch (err: any) {
         console.error('[STUDENT CREATE] API Error caught:', err);
+        console.error('[STUDENT CREATE] Full 400 error response:', JSON.stringify(err.response?.data, null, 2));
         const responseData = err.response?.data;
         if (
           responseData &&
@@ -391,7 +392,7 @@ function AddStudentContent() {
         </div>
 
         <div className="space-y-6">
-          <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}>
+          <div>
             <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
               {renderStep()}
 
@@ -399,14 +400,17 @@ function AddStudentContent() {
                 currentStep={currentStep}
                 totalSteps={FORM_STEPS.length}
                 onPrevious={handlePrevious}
-                onNext={handleNext}
+                onNext={
+                  currentStep === FORM_STEPS.length - 1
+                    ? () => handleSubmit(onSubmit, onInvalidSubmit)()
+                    : handleNext
+                }
                 isSubmitting={isCreating || isSavingLocal}
                 isLastStep={currentStep === FORM_STEPS.length - 1}
               />
             </StudentFormLayout>
-          </form>
+          </div>
         </div>
-      </div>
 
       {credentials && (
         <StudentLoginCredentialsDialog
@@ -418,6 +422,7 @@ function AddStudentContent() {
           parentPortalInfo={credentials.parentPortalInfo}
         />
       )}
+      </div>
     </DashboardLayout>
   );
 }

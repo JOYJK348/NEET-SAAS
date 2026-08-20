@@ -86,7 +86,7 @@ export const studentService: StudentService = {
   },
 
   async createStudent(input: CreateStudentInput) {
-    const { bloodGroup, ...rest } = input;
+    const { bloodGroup, profileImage: _profileImage, ...rest } = input as any;
     const data: Record<string, any> = { ...rest };
     if (bloodGroup) {
       const mapping: Record<string, string> = {
@@ -103,11 +103,18 @@ export const studentService: StudentService = {
         data.bloodGroup = mapping[bloodGroup];
       }
     }
+    // Remove empty string fields that would fail backend whitelist validation
+    Object.keys(data).forEach((key) => {
+      if (data[key] === '' || data[key] === null || data[key] === undefined) {
+        delete data[key];
+      }
+    });
+    console.log('[STUDENT CREATE] Exact payload being sent to POST /api/v1/students:', JSON.stringify(data, null, 2));
     return api.post<Student>('/students', data, { skipGlobalToast: true } as any);
   },
 
   async updateStudent(input: UpdateStudentInput) {
-    const { id, status, bloodGroup, ...rest } = input;
+    const { id, status, bloodGroup, profileImage: _profileImage, ...rest } = input as any;
     const data: Record<string, unknown> = { ...rest };
     if (status !== undefined) {
       data.academicStatus = status === 'INACTIVE' ? 'SUSPENDED' : status;
@@ -131,6 +138,12 @@ export const studentService: StudentService = {
     } else if (bloodGroup === '') {
       data.bloodGroup = undefined;
     }
+    // Remove empty string fields that would fail backend whitelist validation
+    Object.keys(data).forEach((key) => {
+      if (data[key] === '' || data[key] === null || data[key] === undefined) {
+        delete data[key];
+      }
+    });
     const res = await api.put<Student & { academicStatus?: string }>(`/students/${id}`, data, {
       skipGlobalToast: true,
     } as any);

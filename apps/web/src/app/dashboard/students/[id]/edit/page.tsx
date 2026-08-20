@@ -509,7 +509,7 @@ function EditStudentContent() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}>
+        <div>
           <StudentFormLayout steps={FORM_STEPS} currentStep={currentStep}>
             {renderStep()}
 
@@ -517,12 +517,16 @@ function EditStudentContent() {
               currentStep={currentStep}
               totalSteps={FORM_STEPS.length}
               onPrevious={handlePrevious}
-              onNext={handleNext}
+              onNext={
+                currentStep === FORM_STEPS.length - 1
+                  ? () => handleSubmit(onSubmit, onInvalidSubmit)()
+                  : handleNext
+              }
               isSubmitting={isUpdating || isSavingLocal}
               isLastStep={currentStep === FORM_STEPS.length - 1}
             />
           </StudentFormLayout>
-        </form>
+        </div>
       </div>
     </DashboardLayout>
   );
