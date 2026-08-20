@@ -78,7 +78,7 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
-      timeout: 60000,
+      timeout: 20000,
     });
 
     this.setupInterceptors();
@@ -276,10 +276,16 @@ class ApiClient {
             description: message || 'An unexpected error occurred. Please try again later.',
           });
         } else if (!status) {
-          toast.error('Network Error', {
-            description:
-              message || 'Unable to connect to the server. Please check your connection.',
-          });
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            toast.error('Request Timed Out', {
+              description: 'The operation took too long to complete. Please try again.',
+            });
+          } else {
+            toast.error('Network Error', {
+              description:
+                message || 'Unable to connect to the server. Please check your connection.',
+            });
+          }
         }
     }
   }

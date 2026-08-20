@@ -218,8 +218,11 @@ function EditStudentContent() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
+
   const onInvalidSubmit = useCallback(
     (errs: any) => {
+      console.warn('[STUDENT EDIT] Client validation failed:', errs);
       const errorKeys = Object.keys(errs);
       if (errorKeys.length === 0) return;
 
@@ -285,13 +288,19 @@ function EditStudentContent() {
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
       if (!id) return;
+      console.log('[STUDENT EDIT] Save button clicked - Starting API update submission for studentId:', id);
+
+      setIsSavingLocal(true);
       try {
         const result = await updateStudent({ id, ...data, status: studentStatus });
+        console.log('[STUDENT EDIT] API Response received successfully:', result);
+
         if (result) {
           toast({ title: 'Student details updated successfully' });
           router.push(`/dashboard/students/${id}`);
         }
       } catch (err: any) {
+        console.error('[STUDENT EDIT] API Error caught:', err);
         const responseData = err.response?.data;
         if (responseData?.code === 'VALIDATION_ERROR' && Array.isArray(responseData.errors)) {
           let firstErrorStep = -1;
@@ -349,6 +358,9 @@ function EditStudentContent() {
             variant: 'destructive',
           });
         }
+      } finally {
+        setIsSavingLocal(false);
+        console.log('[STUDENT EDIT] Submission finalized - isSavingLocal reset to false');
       }
     },
     [id, updateStudent, router, studentStatus, setError, setCurrentStep],
@@ -506,7 +518,7 @@ function EditStudentContent() {
               totalSteps={FORM_STEPS.length}
               onPrevious={handlePrevious}
               onNext={handleNext}
-              isSubmitting={isUpdating}
+              isSubmitting={isUpdating || isSavingLocal}
               isLastStep={currentStep === FORM_STEPS.length - 1}
             />
           </StudentFormLayout>

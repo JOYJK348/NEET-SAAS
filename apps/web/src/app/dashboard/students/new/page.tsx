@@ -129,8 +129,11 @@ function AddStudentContent() {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   }, []);
 
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
+
   const onInvalidSubmit = useCallback(
     (errs: any) => {
+      console.warn('[STUDENT CREATE] Client validation failed:', errs);
       const errorKeys = Object.keys(errs);
       if (errorKeys.length === 0) return;
 
@@ -195,8 +198,19 @@ function AddStudentContent() {
 
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
+      console.log('[STUDENT CREATE] Save button clicked - Starting API submission payload:', {
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        courseId: data.courseId,
+        batchId: data.batchId,
+      });
+
+      setIsSavingLocal(true);
       try {
         const student = (await createStudent(data)) as any;
+        console.log('[STUDENT CREATE] API Response received successfully:', student);
+
         if (student) {
           toast({ title: 'Student created successfully' });
           if (student.generatedPassword || student.parentPortalInfo) {
@@ -217,6 +231,7 @@ function AddStudentContent() {
           });
         }
       } catch (err: any) {
+        console.error('[STUDENT CREATE] API Error caught:', err);
         const responseData = err.response?.data;
         if (
           responseData &&
@@ -278,6 +293,9 @@ function AddStudentContent() {
             variant: 'destructive',
           });
         }
+      } finally {
+        setIsSavingLocal(false);
+        console.log('[STUDENT CREATE] Submission finalized - isSavingLocal reset to false');
       }
     },
     [createStudent, router, setError, setCurrentStep],
@@ -382,7 +400,7 @@ function AddStudentContent() {
                 totalSteps={FORM_STEPS.length}
                 onPrevious={handlePrevious}
                 onNext={handleNext}
-                isSubmitting={isCreating}
+                isSubmitting={isCreating || isSavingLocal}
                 isLastStep={currentStep === FORM_STEPS.length - 1}
               />
             </StudentFormLayout>

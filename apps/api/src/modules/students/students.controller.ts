@@ -58,6 +58,7 @@ export class StudentsController {
     @Body() dto: CreateStudentDto,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
+    console.log(`[STUDENT API] POST /api/v1/students request received for Email: ${dto.email} (Tenant: ${user.tenantId}, User: ${user.sub})`);
     return this.studentsService.create(dto, user.tenantId!, user.sub);
   }
 
@@ -134,6 +135,7 @@ export class StudentsController {
     @Body() dto: UpdateStudentDto,
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
+    console.log(`[STUDENT API] PUT /api/v1/students/${id} request received (Tenant: ${user.tenantId}, User: ${user.sub})`);
     return this.studentsService.update(id, dto, user.tenantId!, user.sub);
   }
 
