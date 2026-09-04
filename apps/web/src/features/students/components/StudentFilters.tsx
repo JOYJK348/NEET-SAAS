@@ -53,8 +53,8 @@ export function StudentFilters({
         <Select value={status || 'ALL'} onValueChange={(val) => onStatusChange(val as any)}>
           <SelectTrigger
             className={cn(
-              'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
-              status !== 'ALL' && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+              'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-slate-200 hover:border-blue-300 text-[11px] sm:text-xs font-semibold transition-all shadow-2xs truncate',
+              status !== 'ALL' && 'border-[#0052CC] bg-blue-50/60 text-[#0052CC] font-extrabold',
             )}
           >
             <div className="flex items-center gap-1 min-w-0 truncate">
@@ -82,8 +82,8 @@ export function StudentFilters({
           >
             <SelectTrigger
               className={cn(
-                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
-                !!course && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-slate-200 hover:border-blue-300 text-[11px] sm:text-xs font-semibold transition-all shadow-2xs truncate',
+                !!course && 'border-[#0052CC] bg-blue-50/60 text-[#0052CC] font-extrabold',
               )}
             >
               <SelectValue placeholder="Course" />
@@ -109,8 +109,8 @@ export function StudentFilters({
           >
             <SelectTrigger
               className={cn(
-                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-[#E5E7EB] hover:border-violet-300 text-[11px] sm:text-xs font-semibold transition-all shadow-xs truncate',
-                !!batch && 'border-violet-500 bg-violet-50/50 text-violet-700 font-bold',
+                'w-full h-9 sm:h-10 px-2 sm:px-3 rounded-xl bg-white border-slate-200 hover:border-blue-300 text-[11px] sm:text-xs font-semibold transition-all shadow-2xs truncate',
+                !!batch && 'border-[#0052CC] bg-blue-50/60 text-[#0052CC] font-extrabold',
               )}
             >
               <SelectValue placeholder="Batch" />
@@ -137,9 +137,9 @@ export function StudentFilters({
             onCourseChange('');
             onBatchChange('');
           }}
-          className="col-span-3 sm:col-span-1 h-8 sm:h-10 rounded-xl gap-1 px-2 text-[11px] sm:text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200 shrink-0 w-full sm:w-auto mt-0.5 sm:mt-0"
+          className="col-span-3 sm:col-span-1 h-8 sm:h-10 rounded-xl gap-1 px-2 text-[11px] sm:text-xs font-extrabold text-[#0052CC] bg-blue-50 hover:bg-blue-100 border-blue-200 shrink-0 w-full sm:w-auto mt-0.5 sm:mt-0"
         >
-          <X className="h-3 w-3 text-violet-600" />
+          <X className="h-3 w-3 text-[#0052CC]" />
           Clear Filters
         </Button>
       )}

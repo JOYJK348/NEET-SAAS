@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger, Inject } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { CreatePyqDto } from './dto/create-pyq.dto';
 import { VerifyPyqPaymentDto } from './dto/verify-pyq-payment.dto';
+import { STORAGE_SERVICE_TOKEN } from '../storage/interfaces/storage.interface';
+import type { IStorageService } from '../storage/interfaces/storage.interface';
 import * as crypto from 'crypto';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Razorpay = require('razorpay');
@@ -14,7 +16,33 @@ export class PyqService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    @Inject(STORAGE_SERVICE_TOKEN)
+    private readonly storageService: IStorageService,
   ) {}
+
+  private async refreshSignedUrlIfNeeded(rawUrl?: string | null): Promise<string | null> {
+    if (!rawUrl) return null;
+    const str = rawUrl.trim();
+
+    if (str.includes('/storage/v1/object/')) {
+      try {
+        const match = str.match(/\/storage\/v1\/object\/(?:sign|public)\/([^/]+)\/(.+?)(?:\?|$)/);
+        if (match) {
+          const [, bucketName, path] = match;
+          const freshUrl = await this.storageService.createBucketSignedUrl({
+            bucketName,
+            path,
+            expiresInSeconds: 604800, // 7 days
+          });
+          if (freshUrl) return freshUrl;
+        }
+      } catch (err) {
+        this.logger.warn(`Failed to refresh signed URL: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    }
+
+    return str;
+  }
 
   private getRazorpayInstance() {
     const keyId = this.configService.get<string>('RAZORPAY_KEY_ID') || process.env.RAZORPAY_KEY_ID || 'rzp_test_R6hU8YdE3yX1zM';
@@ -38,15 +66,11 @@ export class PyqService {
     const isPaid = dto.isPaid ?? (dto.price ? dto.price > 0 : false);
     const price = isPaid ? (dto.price || 0) : 0;
 
-    return (this.prisma.previousYearQuestionPapers as any).create({
+    return this.prisma.previousYearQuestionPapers.create({
       data: {
         tenantId,
         title: dto.title,
         year: dto.year,
-        courseId: dto.courseId || null,
-        courseName: dto.courseName || null,
-        batchId: dto.batchId || null,
-        batchName: dto.batchName || null,
         subjectId: dto.subjectId,
         subjectName: dto.subjectName,
         examType: dto.examType || 'NEET',
@@ -84,23 +108,89 @@ export class PyqService {
       }
     }
 
-    return papers.map((paper) => {
-      const isFree = !paper.isPaid || paper.price === 0;
-      const isPaperActive = paper.isActive ?? true;
+    return Promise.all(
+      papers.map(async (paper) => {
+        const isFree = !paper.isPaid || paper.price === 0;
+        const isPaperActive = paper.isActive ?? true;
 
-      // If paper is inactive, lock it for students even if free or previously unlocked
-      const isUnlocked =
-        isPaperActive &&
-        (query.userRole !== 'STUDENT' || isFree || unlockedMap.has(paper.id));
+        // If paper is inactive, lock it for students even if free or previously unlocked
+        const isUnlocked =
+          isPaperActive &&
+          (query.userRole !== 'STUDENT' || isFree || unlockedMap.has(paper.id));
 
-      return {
-        ...paper,
-        isUnlocked,
-        // Shield paper links if locked or inactive for student
-        paperUrl: isUnlocked ? paper.paperUrl : null,
-        solutionUrl: isUnlocked ? paper.solutionUrl : null,
-      };
+        return {
+          ...paper,
+          isUnlocked,
+          paperUrl: isUnlocked ? `/api/v1/pyq/${paper.id}/file` : null,
+          solutionUrl: isUnlocked && paper.solutionUrl ? `/api/v1/pyq/${paper.id}/solution` : null,
+        };
+      }),
+    );
+  }
+
+  async getPaperFileBuffer(
+    tenantId: string,
+    userId: string,
+    userRole: string,
+    id: string,
+    fileType: 'PAPER' | 'SOLUTION',
+  ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
+    const paper = await this.prisma.previousYearQuestionPapers.findFirst({
+      where: { tenantId, id, deletedAt: null },
     });
+    if (!paper) throw new NotFoundException('Question paper not found');
+
+    const isFree = !paper.isPaid || paper.price === 0;
+    const isPaperActive = paper.isActive ?? true;
+
+    if (!isPaperActive && userRole === 'STUDENT') {
+      throw new ForbiddenException('This question paper is currently deactivated by Admin');
+    }
+
+    if (userRole === 'STUDENT' && !isFree) {
+      const studentAdmissionId = await this.resolveStudentAdmissionId(tenantId, userId);
+      if (!studentAdmissionId) {
+        throw new ForbiddenException('Student profile not found');
+      }
+      const purchase = await this.prisma.pyqPurchases.findUnique({
+        where: { studentAdmissionId_pyqId: { studentAdmissionId, pyqId: id } },
+      });
+      if (!purchase || purchase.status !== 'SUCCESS') {
+        throw new ForbiddenException('Please unlock this question paper via Razorpay payment first');
+      }
+    }
+
+    const rawUrl = fileType === 'PAPER' ? paper.paperUrl : paper.solutionUrl;
+    if (!rawUrl) throw new NotFoundException(`${fileType === 'PAPER' ? 'Question paper' : 'Solution'} file not found`);
+
+    const str = rawUrl.trim();
+
+    // 1. If it's a Supabase storage URL, download directly via master Service Role Key (bypassing ALL bucket & token checks)
+    if (str.includes('/storage/v1/object/')) {
+      const match = str.match(/\/storage\/v1\/object\/(?:sign|public)\/([^/]+)\/(.+?)(?:\?|$)/);
+      if (match) {
+        const [, bucketName, path] = match;
+        const buffer = await this.storageService.downloadDirectStream(bucketName, path);
+        return {
+          buffer,
+          mimeType: 'application/pdf',
+          fileName: `${paper.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_${fileType.toLowerCase()}.pdf`,
+        };
+      }
+    }
+
+    // 2. Fallback: External HTTP URL download
+    try {
+      const response = await fetch(str);
+      const arrayBuffer = await response.arrayBuffer();
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        mimeType: response.headers.get('content-type') || 'application/pdf',
+        fileName: `${paper.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_${fileType.toLowerCase()}.pdf`,
+      };
+    } catch {
+      throw new BadRequestException('Failed to download paper file from storage location');
+    }
   }
 
   async toggleStatus(tenantId: string, id: string, isActive?: boolean) {
@@ -144,7 +234,12 @@ export class PyqService {
     }
 
     if (!paper.isPaid || paper.price <= 0) {
-      return { free: true, isUnlocked: true, paperUrl: paper.paperUrl, solutionUrl: paper.solutionUrl };
+      return {
+        free: true,
+        isUnlocked: true,
+        paperUrl: await this.refreshSignedUrlIfNeeded(paper.paperUrl),
+        solutionUrl: await this.refreshSignedUrlIfNeeded(paper.solutionUrl),
+      };
     }
 
     // Check if already purchased
@@ -152,7 +247,12 @@ export class PyqService {
       where: { studentAdmissionId_pyqId: { studentAdmissionId, pyqId } },
     });
     if (existing && existing.status === 'SUCCESS') {
-      return { alreadyPurchased: true, isUnlocked: true, paperUrl: paper.paperUrl, solutionUrl: paper.solutionUrl };
+      return {
+        alreadyPurchased: true,
+        isUnlocked: true,
+        paperUrl: await this.refreshSignedUrlIfNeeded(paper.paperUrl),
+        solutionUrl: await this.refreshSignedUrlIfNeeded(paper.solutionUrl),
+      };
     }
 
     const { instance: rzp, keyId } = this.getRazorpayInstance();
@@ -244,8 +344,8 @@ export class PyqService {
     return {
       success: true,
       isUnlocked: true,
-      paperUrl: paper.paperUrl,
-      solutionUrl: paper.solutionUrl,
+      paperUrl: await this.refreshSignedUrlIfNeeded(paper.paperUrl),
+      solutionUrl: await this.refreshSignedUrlIfNeeded(paper.solutionUrl),
       message: 'Payment verified successfully! Question paper is now unlocked.',
     };
   }

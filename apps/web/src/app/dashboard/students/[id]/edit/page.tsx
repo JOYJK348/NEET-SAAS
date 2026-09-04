@@ -9,7 +9,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react';
+import { ArrowLeft, ToggleLeft, ToggleRight, User } from 'lucide-react';
 import {
   useStudent,
   useUpdateStudent,
@@ -288,7 +288,10 @@ function EditStudentContent() {
   const onSubmit = useCallback(
     async (data: StudentFormData) => {
       if (!id) return;
-      console.log('[STUDENT EDIT] Save button clicked - Starting API update submission for studentId:', id);
+      console.log(
+        '[STUDENT EDIT] Save button clicked - Starting API update submission for studentId:',
+        id,
+      );
 
       setIsSavingLocal(true);
       try {
@@ -445,67 +448,63 @@ function EditStudentContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
         {/* Top Back Action Bar */}
         <div className="flex flex-row items-center justify-between gap-2 w-full">
           <button
             onClick={() => router.push(`/dashboard/students/${id}`)}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-2xs shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
+            <ArrowLeft className="w-4 h-4 text-[#0052CC] shrink-0" />
             <span className="hidden sm:inline">Back to Student Profile</span>
             <span className="sm:hidden">Back</span>
           </button>
         </div>
 
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <span className="text-xl sm:text-2xl font-black">✏️</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] sm:text-xs font-mono font-bold text-white border border-white/20">
-                    {student.studentId || 'STD-REG'}
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-400/20 text-emerald-100 border border-emerald-300/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight truncate">
-                  Edit Student &mdash; {student.firstName} {student.lastName}
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5">
-                  Update student personal info, course track, batch allocation, and parent contacts.
-                </p>
-              </div>
+        {/* Dedicated ISML LMS Style Light Blue Hero Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs border border-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+              <User className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200">
+                  {student.studentId || 'STD-REG'}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] leading-snug truncate">
+                Edit Student Details &mdash; {student.firstName} {student.lastName}
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Update student personal info, course track, batch allocation, and parent contacts.
+              </p>
+            </div>
+          </div>
 
-            {/* Status Toggle in Header */}
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-2.5 rounded-2xl border border-white/20 shrink-0">
-              <span className="text-xs font-bold text-white">Status:</span>
-              <button
-                type="button"
-                onClick={() =>
-                  setStudentStatus(studentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  studentStatus === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'
+          {/* Status Toggle in Header */}
+          <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-blue-200 shrink-0 shadow-2xs self-end sm:self-auto">
+            <span className="text-xs font-bold text-[#0B2447]">Status:</span>
+            <button
+              type="button"
+              onClick={() => setStudentStatus(studentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                studentStatus === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                  studentStatus === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0'
                 }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
-                    studentStatus === 'ACTIVE' ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-              <span className="text-xs font-extrabold text-white">
-                {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
-              </span>
-            </div>
+              />
+            </button>
+            <span className="text-xs font-extrabold text-[#0B2447]">
+              {studentStatus === 'ACTIVE' ? 'Active' : 'Inactive'}
+            </span>
           </div>
         </div>
 

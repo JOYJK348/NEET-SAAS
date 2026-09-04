@@ -151,7 +151,7 @@ function ChapterSortable({
         <div
           {...attributes}
           {...listeners}
-          className="flex items-center justify-center w-4 h-6 shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-gray-500"
+          className="flex items-center justify-center w-4 h-6 shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-slate-500"
         >
           <GripVertical className="h-3 w-3" />
         </div>
@@ -165,17 +165,19 @@ function ChapterSortable({
               onToggleChapter(chapter.id);
             }
           }}
-          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-xl text-left transition-all text-gray-600 hover:bg-violet-50/60 min-w-0 cursor-pointer"
+          className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-xl text-left transition-all text-slate-700 hover:bg-blue-50/60 min-w-0 cursor-pointer"
         >
           <div className="flex items-center justify-center w-4 h-4 shrink-0">
             {isChapterOpen ? (
-              <ChevronDown className="h-3 w-3 text-gray-400" />
+              <ChevronDown className="h-3 w-3 text-slate-400" />
             ) : (
-              <ChevronRight className="h-3 w-3 text-gray-400" />
+              <ChevronRight className="h-3 w-3 text-slate-400" />
             )}
           </div>
-          <Folder className="h-3 w-3 shrink-0 text-amber-500" />
-          <span className="text-[11px] font-semibold truncate flex-1">{chapter.name}</span>
+          <Folder className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+          <span className="text-[11px] font-bold truncate flex-1 text-[#0B2447]">
+            {chapter.name}
+          </span>
           <div className="relative shrink-0" ref={menuRef}>
             <div
               role="button"
@@ -191,19 +193,19 @@ function ChapterSortable({
                   setMenuOpen(!menuOpen);
                 }
               }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-gray-200 cursor-pointer"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-slate-200 cursor-pointer"
             >
-              <MoreVertical className="h-3 w-3 text-gray-400" />
+              <MoreVertical className="h-3 w-3 text-slate-400" />
             </div>
             {menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
+              <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
                     onChapterEdit(chapter);
                   }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 text-left"
                 >
                   <Edit3 className="h-3.5 w-3.5" />
                   Edit
@@ -214,19 +216,19 @@ function ChapterSortable({
                     setMenuOpen(false);
                     onChapterAddTopic(chapter.id);
                   }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 text-left"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 text-left"
                 >
                   <BookMarked className="h-3.5 w-3.5" />
                   Add Topic
                 </button>
-                <div className="border-t border-gray-100 my-1" />
+                <div className="border-t border-slate-100 my-1" />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpen(false);
                     onChapterDelete(chapter);
                   }}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 text-left"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
@@ -239,7 +241,7 @@ function ChapterSortable({
       {isChapterOpen && (
         <div className="ml-7 space-y-0.5">
           {chapter.topics.length === 0 && (
-            <p className="text-[10px] text-gray-400 italic py-1.5 pl-3">No topics</p>
+            <p className="text-[10px] text-slate-400 italic py-1.5 pl-3">No topics</p>
           )}
           {chapter.topics.map((topic) => (
             <TopicRow
@@ -254,7 +256,7 @@ function ChapterSortable({
           ))}
           <button
             onClick={() => onChapterAddTopic(chapter.id)}
-            className="flex items-center gap-1 w-full px-3 py-1 text-[10px] font-semibold text-violet-500 hover:text-violet-700 hover:bg-violet-50 rounded-xl transition-all opacity-0 hover:opacity-100"
+            className="flex items-center gap-1 w-full px-3 py-1 text-[10px] font-extrabold text-[#0052CC] hover:bg-blue-50 rounded-xl transition-all opacity-0 hover:opacity-100"
           >
             <Plus className="h-3 w-3" />
             Add Topic
@@ -282,34 +284,34 @@ function TopicBlockItem({
         case 'IMPORTANT_NOTE':
           return <Star className="h-2.5 w-2.5 text-amber-500" />;
         case 'FORMULA':
-          return <Sigma className="h-2.5 w-2.5 text-indigo-500" />;
+          return <Sigma className="h-2.5 w-2.5 text-[#0052CC]" />;
         case 'WORKED_EXAMPLE':
           return <GraduationCap className="h-2.5 w-2.5 text-emerald-500" />;
         case 'PRACTICE_QUESTION':
           return <HelpCircle className="h-2.5 w-2.5 text-orange-500" />;
         case 'DIVIDER':
-          return <Minus className="h-2.5 w-2.5 text-gray-300" />;
+          return <Minus className="h-2.5 w-2.5 text-slate-300" />;
         default:
-          return <List className="h-2.5 w-2.5 text-gray-400" />;
+          return <List className="h-2.5 w-2.5 text-slate-400" />;
       }
     }
     // Media types
     switch (type) {
       case 'PDF':
-        return <FileText className="h-2.5 w-2.5 text-red-500" />;
+        return <FileText className="h-2.5 w-2.5 text-rose-500" />;
       case 'LINK':
         return <ExternalLink className="h-2.5 w-2.5 text-blue-500" />;
       case 'VIDEO':
-        return <VideoIcon className="h-2.5 w-2.5 text-purple-500" />;
+        return <VideoIcon className="h-2.5 w-2.5 text-[#0052CC]" />;
       default:
-        return <List className="h-2.5 w-2.5 text-gray-400" />;
+        return <List className="h-2.5 w-2.5 text-slate-400" />;
     }
   };
 
   return (
     <div className="flex items-center gap-1.5 px-3 py-1 pl-8 group">
       <span className="shrink-0">{getIcon(blockType, itemType)}</span>
-      <span className="text-[10px] text-gray-500 truncate">{label}</span>
+      <span className="text-[10px] text-slate-600 truncate font-medium">{label}</span>
     </div>
   );
 }
@@ -359,13 +361,16 @@ function TopicRow({
           className={cn(
             'flex items-center gap-1.5 flex-1 w-full px-3 py-1.5 rounded-xl text-left transition-all min-w-0',
             isSelected
-              ? 'bg-violet-600 text-white rounded-r-xl'
-              : 'text-gray-600 hover:bg-violet-50 rounded-r-xl',
+              ? 'bg-[#0052CC] text-white font-extrabold rounded-r-xl shadow-2xs'
+              : 'text-slate-700 hover:bg-blue-50 font-medium rounded-r-xl',
           )}
         >
           <FileText className="h-3 w-3 shrink-0" />
           <span
-            className={cn('text-[11px] font-medium truncate flex-1', isSelected && 'font-semibold')}
+            className={cn(
+              'text-[11px] truncate flex-1',
+              isSelected ? 'font-extrabold' : 'font-medium',
+            )}
           >
             {topic.name}
           </span>
@@ -375,7 +380,7 @@ function TopicRow({
                 'text-[9px] font-bold tabular-nums px-1.5 py-0.5 rounded-md shrink-0',
                 isSelected
                   ? 'bg-white/20 text-white'
-                  : 'bg-gray-100 text-gray-500 group-hover:bg-violet-100',
+                  : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100',
               )}
             >
               {itemCount}
@@ -390,7 +395,7 @@ function TopicRow({
             }}
             className={cn(
               'opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md',
-              isSelected ? 'text-white/70 hover:bg-white/20' : 'hover:bg-gray-200',
+              isSelected ? 'text-white/80 hover:bg-white/20' : 'hover:bg-slate-200',
             )}
           >
             <MoreVertical className="h-3 w-3" />
@@ -407,7 +412,7 @@ function TopicRow({
             }}
             className={cn(
               'shrink-0 p-0.5 rounded-md transition-all',
-              isSelected ? 'text-white/70 hover:bg-white/20' : 'text-gray-400 hover:bg-gray-200',
+              isSelected ? 'text-white/80 hover:bg-white/20' : 'text-slate-400 hover:bg-slate-200',
             )}
           >
             {isToCOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -416,7 +421,7 @@ function TopicRow({
       </div>
       {/* Topic ToC - internal block outline */}
       {isSelected && isToCOpen && blockItems && blockItems.length > 0 && (
-        <div className="ml-2 pl-2 border-l-2 border-violet-200/50 mt-0.5 space-y-0.5">
+        <div className="ml-2 pl-2 border-l-2 border-blue-200 mt-0.5 space-y-0.5">
           {blockItems.map((block) => (
             <TopicBlockItem
               key={block.id}
@@ -461,10 +466,10 @@ function TopicMenu({
   };
 
   return (
-    <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-gray-200 py-1">
+    <div className="absolute right-0 top-full z-50 mt-0.5 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1">
       <button
         onClick={handleDelete}
-        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 text-left"
+        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 text-left"
       >
         <Trash2 className="h-3.5 w-3.5" />
         Delete
@@ -507,12 +512,6 @@ export function CourseOutlinePanel({
   const [copiedTemplate, setCopiedTemplate] = useState(false);
 
   const sampleTemplateText = `1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion\n4. Work, Energy and Power\n5. Rotational Motion\n6. Gravitation\n7. Thermodynamics`;
-
-  const handleOpenBulkChapters = (subjectId: string) => {
-    setBulkChaptersSubjectId(subjectId);
-    setBulkChaptersText('');
-    setBulkChaptersModalOpen(true);
-  };
 
   const handleCopySampleTemplate = () => {
     try {
@@ -743,7 +742,12 @@ export function CourseOutlinePanel({
 
     const lines = bulkChaptersText
       .split('\n')
-      .map((line) => line.trim().replace(/^[0-9]+\.\s*/, '').replace(/^[-*]\s*/, ''))
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^[0-9]+\.\s*/, '')
+          .replace(/^[-*]\s*/, ''),
+      )
       .filter(Boolean);
 
     if (lines.length === 0) {
@@ -763,7 +767,10 @@ export function CourseOutlinePanel({
       for (const name of lines) {
         const cleanName = name.trim();
         const codePrefix =
-          cleanName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'CH';
+          cleanName
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .substring(0, 4)
+            .toUpperCase() || 'CH';
         await createChapter.mutateAsync({
           courseSubjectId: bulkChaptersSubjectId,
           name: cleanName,
@@ -840,12 +847,12 @@ export function CourseOutlinePanel({
   if (loading) {
     return (
       <div className="p-4 space-y-3">
-        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-        <div className="h-8 w-full bg-gray-100 rounded-xl animate-pulse" />
+        <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+        <div className="h-8 w-full bg-slate-100 rounded-xl animate-pulse" />
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="space-y-2 pl-3">
-            <div className="h-5 w-3/4 bg-gray-100 rounded animate-pulse" />
-            <div className="h-4 w-1/2 bg-gray-50 rounded ml-4 animate-pulse" />
+            <div className="h-5 w-3/4 bg-slate-100 rounded animate-pulse" />
+            <div className="h-4 w-1/2 bg-slate-50 rounded ml-4 animate-pulse" />
           </div>
         ))}
       </div>
@@ -853,24 +860,24 @@ export function CourseOutlinePanel({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full text-[#0F172A] font-sans bg-white">
       <div className="p-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black tracking-widest text-gray-400 uppercase">
+          <span className="text-[10px] font-mono font-extrabold tracking-widest text-[#0052CC] uppercase">
             Course Outline
           </span>
-          <span className="text-[10px] font-bold text-gray-400 tabular-nums">
+          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
             {subjects.length} subjects
           </span>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter outline..."
-            className="w-full h-8 pl-8 pr-3 text-xs rounded-xl bg-gray-100 border border-transparent focus:border-violet-600/30 focus:bg-white focus:ring-2 focus:ring-violet-600/10 outline-none transition-all placeholder:text-gray-400"
+            className="w-full h-8 pl-8 pr-3 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:border-[#0052CC] focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400 font-medium"
           />
         </div>
       </div>
@@ -878,14 +885,14 @@ export function CourseOutlinePanel({
       <nav className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <div className="w-10 h-10 rounded-2xl bg-violet-100 flex items-center justify-center mb-3">
-              <BookOpen className="h-5 w-5 text-violet-600" />
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center mb-3">
+              <BookOpen className="h-5 w-5 text-[#0052CC]" />
             </div>
-            <p className="text-xs font-bold text-gray-500 mb-1">
-              {search ? 'No matches found' : 'No subjects yet'}
+            <p className="text-xs font-bold text-slate-700 mb-1">
+              {search ? 'No matches found' : 'No subjects mapped'}
             </p>
-            <p className="text-[10px] text-gray-400">
-              {search ? 'Try a different search term' : 'Add subjects to get started'}
+            <p className="text-[10px] text-slate-400 font-medium">
+              {search ? 'Try a different search term' : 'Map subjects to this course program'}
             </p>
           </div>
         ) : (
@@ -899,26 +906,28 @@ export function CourseOutlinePanel({
                   className={cn(
                     'group flex items-center gap-2 w-full px-3 py-2 rounded-xl text-left transition-all',
                     isSubjectOpen
-                      ? 'bg-violet-100/60 text-violet-900'
-                      : 'text-gray-700 hover:bg-violet-50/60',
+                      ? 'bg-blue-50 text-[#0052CC] font-bold'
+                      : 'text-slate-700 hover:bg-blue-50/60 font-medium',
                   )}
                 >
                   <div className="flex items-center justify-center w-5 h-5 shrink-0">
                     {isSubjectOpen ? (
-                      <ChevronDown className="h-3.5 w-3.5 text-violet-500" />
+                      <ChevronDown className="h-3.5 w-3.5 text-[#0052CC]" />
                     ) : (
-                      <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
                     )}
                   </div>
-                  <BookOpen className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-                  <span className="text-xs font-bold truncate flex-1">{subject.subject.name}</span>
-                  <span className="text-[9px] font-mono font-semibold text-gray-400 uppercase shrink-0">
+                  <BookOpen className="h-3.5 w-3.5 shrink-0 text-[#0052CC]" />
+                  <span className="text-xs font-extrabold truncate flex-1">
+                    {subject.subject.name}
+                  </span>
+                  <span className="text-[9px] font-mono font-bold text-slate-400 uppercase shrink-0">
                     {subject.subject.code}
                   </span>
                 </button>
 
                 {isSubjectOpen && (
-                  <div className="ml-2 pl-3 border-l-2 border-violet-100 space-y-0.5">
+                  <div className="ml-2 pl-3 border-l-2 border-blue-100 space-y-0.5">
                     <DndContext
                       sensors={sensors}
                       collisionDetection={closestCenter}
@@ -926,7 +935,7 @@ export function CourseOutlinePanel({
                     >
                       <SortableContext items={chapterIds} strategy={verticalListSortingStrategy}>
                         {subject.chapters.length === 0 && (
-                          <p className="text-[10px] text-gray-400 italic py-2 pl-3">No chapters</p>
+                          <p className="text-[10px] text-slate-400 italic py-2 pl-3">No chapters</p>
                         )}
                         {subject.chapters.map((chapter) => (
                           <ChapterSortable
@@ -936,7 +945,7 @@ export function CourseOutlinePanel({
                             onToggleChapter={toggleChapter}
                             onSelectTopic={onSelectTopic}
                             selectedTopicId={selectedTopicId}
-                            onChapterEdit={(ch) => {
+                            onChapterEdit={(_ch) => {
                               handleAddChapter(subject.id);
                             }}
                             onChapterDelete={handleDeleteChapterAction}
@@ -948,7 +957,6 @@ export function CourseOutlinePanel({
                         ))}
                       </SortableContext>
                     </DndContext>
-
                   </div>
                 )}
               </div>
@@ -957,49 +965,47 @@ export function CourseOutlinePanel({
         )}
       </nav>
 
-      {/* Bulk Upload Chapters Modal with Example Template */}
+      {/* Bulk Upload Chapters Modal */}
       {bulkChaptersModalOpen && (
         <Dialog open={bulkChaptersModalOpen} onOpenChange={setBulkChaptersModalOpen}>
-          <DialogContent className="max-w-xl rounded-3xl p-6 bg-white border border-gray-200 shadow-2xl">
-            <DialogHeader className="pb-3 border-b border-gray-100">
-              <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
-                <Upload className="h-5 w-5 text-violet-600" />
+          <DialogContent className="max-w-xl rounded-2xl p-6 bg-white border border-slate-200 shadow-2xl">
+            <DialogHeader className="pb-3 border-b border-slate-100">
+              <DialogTitle className="text-base font-extrabold text-[#0B2447] flex items-center gap-2">
+                <Upload className="h-5 w-5 text-[#0052CC]" />
                 Bulk Upload Chapters
               </DialogTitle>
-              <DialogDescription className="text-xs text-gray-500">
+              <DialogDescription className="text-xs text-slate-500 font-medium">
                 Paste chapter names line-by-line to add multiple chapters at once.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              {/* Example Template Banner */}
-              <div className="p-3.5 rounded-2xl bg-violet-50/80 border border-violet-100 space-y-2">
+              <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-violet-900 flex items-center gap-1.5">
-                    <ListPlus className="w-4 h-4 text-violet-600" />
+                  <span className="text-xs font-bold text-[#0052CC] flex items-center gap-1.5">
+                    <ListPlus className="w-4 h-4 text-[#0052CC]" />
                     Example Template Format
                   </span>
                   <button
                     type="button"
                     onClick={handleCopySampleTemplate}
-                    className="text-[11px] font-bold text-violet-700 hover:text-violet-900 bg-white px-2.5 py-1 rounded-lg border border-violet-200 shadow-xs flex items-center gap-1 transition-all"
+                    className="text-[11px] font-bold text-[#0052CC] hover:text-blue-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs flex items-center gap-1 transition-all"
                   >
                     {copiedTemplate ? (
                       <Check className="w-3 h-3 text-emerald-600" />
                     ) : (
-                      <Copy className="w-3 h-3 text-violet-600" />
+                      <Copy className="w-3 h-3 text-[#0052CC]" />
                     )}
                     {copiedTemplate ? 'Copied!' : 'Copy Example'}
                   </button>
                 </div>
-                <pre className="text-[11px] font-mono text-violet-800/90 bg-white/70 p-2.5 rounded-xl border border-violet-100/50 overflow-x-auto">
-{sampleTemplateText}
+                <pre className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-blue-200/60 overflow-x-auto">
+                  {sampleTemplateText}
                 </pre>
               </div>
 
-              {/* Input Textarea */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Paste Chapter List (Line by Line):
                 </label>
                 <textarea
@@ -1007,14 +1013,13 @@ export function CourseOutlinePanel({
                   onChange={(e) => setBulkChaptersText(e.target.value)}
                   rows={6}
                   placeholder={`1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion\n4. Work, Energy and Power`}
-                  className="w-full p-3 rounded-2xl border border-gray-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  className="w-full p-3 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
-              {/* Parameters Strip */}
-              <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-200">
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">
                     Default Hours / Chapter:
                   </label>
                   <input
@@ -1023,11 +1028,11 @@ export function CourseOutlinePanel({
                     max={100}
                     value={bulkDefaultHours}
                     onChange={(e) => setBulkDefaultHours(parseInt(e.target.value, 10) || 10)}
-                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">
                     Default Sessions / Chapter:
                   </label>
                   <input
@@ -1036,17 +1041,17 @@ export function CourseOutlinePanel({
                     max={100}
                     value={bulkDefaultSessions}
                     onChange={(e) => setBulkDefaultSessions(parseInt(e.target.value, 10) || 8)}
-                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full h-8 px-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setBulkChaptersModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-gray-600 hover:text-gray-900 rounded-xl hover:bg-gray-100 transition-colors"
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
               >
                 Cancel
               </button>
@@ -1054,7 +1059,7 @@ export function CourseOutlinePanel({
                 type="button"
                 disabled={isBulkSubmitting}
                 onClick={handleProcessBulkChapters}
-                className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-xl shadow-xs transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 text-xs font-extrabold text-white bg-[#0052CC] hover:bg-blue-700 rounded-xl shadow-2xs transition-all disabled:opacity-50"
               >
                 {isBulkSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1068,25 +1073,19 @@ export function CourseOutlinePanel({
         </Dialog>
       )}
 
-      <div className="p-3 border-t border-gray-200">
-        <button
-          disabled
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border-2 border-dashed border-violet-200 text-violet-400 text-xs font-bold cursor-not-allowed hover:border-violet-300 hover:text-violet-500 transition-all"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Subject
-        </button>
-      </div>
-
       <Dialog open={chapterFormOpen} onOpenChange={setChapterFormOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white rounded-2xl border border-slate-200">
           <DialogHeader>
-            <DialogTitle>Add Chapter</DialogTitle>
-            <DialogDescription>Enter a name for the new chapter</DialogDescription>
+            <DialogTitle className="text-base font-extrabold text-[#0B2447]">
+              Add Chapter
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium">
+              Enter a name for the new chapter
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Chapter Name *
               </label>
               <input
@@ -1098,20 +1097,20 @@ export function CourseOutlinePanel({
                   if (e.key === 'Enter') submitChapter();
                   if (e.key === 'Escape') setChapterFormOpen(false);
                 }}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10"
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 bg-white outline-none transition-all focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium"
               />
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setChapterFormOpen(false)}
-                className="h-9 px-4 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-all"
+                className="h-9 px-4 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={submitChapter}
                 disabled={!chapterName.trim() || savingChapter}
-                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition-all disabled:opacity-50 shadow-2xs"
               >
                 {savingChapter ? 'Creating...' : 'Create'}
               </button>
@@ -1121,14 +1120,16 @@ export function CourseOutlinePanel({
       </Dialog>
 
       <Dialog open={topicFormOpen} onOpenChange={setTopicFormOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white rounded-2xl border border-slate-200">
           <DialogHeader>
-            <DialogTitle>Add Topic</DialogTitle>
-            <DialogDescription>Enter a name for the new topic</DialogDescription>
+            <DialogTitle className="text-base font-extrabold text-[#0B2447]">Add Topic</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium">
+              Enter a name for the new topic
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Topic Name *
               </label>
               <input
@@ -1140,20 +1141,20 @@ export function CourseOutlinePanel({
                   if (e.key === 'Enter') submitTopic();
                   if (e.key === 'Escape') setTopicFormOpen(false);
                 }}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10"
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 bg-white outline-none transition-all focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium"
               />
             </div>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setTopicFormOpen(false)}
-                className="h-9 px-4 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-all"
+                className="h-9 px-4 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={submitTopic}
                 disabled={!topicName.trim() || savingTopic}
-                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all disabled:opacity-50"
+                className="flex items-center gap-1 h-9 px-4 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition-all disabled:opacity-50 shadow-2xs"
               >
                 {savingTopic ? 'Creating...' : 'Create'}
               </button>

@@ -28,6 +28,7 @@ import {
   AlertCircle,
   FileCheck2,
   RotateCcw,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -157,73 +158,72 @@ function BulkImportContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Top Back Action Bar */}
-        <div className="flex flex-row items-center justify-between gap-2 w-full">
-          <button
-            onClick={() => router.push('/dashboard/students')}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
-            <span className="hidden sm:inline">Back to Student Directory</span>
-            <span className="sm:hidden">Back</span>
-          </button>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Breadcrumb & Toolbar */}
+        <div className="flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <button
+              onClick={() => router.push('/dashboard/students')}
+              className="hover:underline flex items-center gap-1 font-bold text-slate-600"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[#0052CC]" /> Students
+            </button>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-extrabold text-[#0B2447]">Bulk Import</span>
+          </div>
 
           <Button
             type="button"
             variant="outline"
             onClick={handleReset}
-            className="rounded-xl text-xs font-bold text-slate-600 shrink-0 px-3 sm:px-4 py-2 gap-1.5"
+            className="rounded-xl text-xs font-bold text-slate-600 shrink-0 px-3.5 py-1.5 border-slate-200 gap-1.5"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             Reset Form
           </Button>
         </div>
 
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <FileSpreadsheet className="w-5 h-5 sm:w-7 sm:h-7 text-violet-100" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                  <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                    Bulk Student Enrollment Engine
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
-                  Bulk Student Registration & Import 📊
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5">
-                  Import multiple student records from Excel sheets, allocate default batches, and
-                  parse errors.
-                </p>
-              </div>
+        {/* Dedicated ISML LMS Style Light Blue Hero Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs border border-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+              <FileSpreadsheet className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-
-            <Button
-              onClick={handleDownloadTemplate}
-              className="gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-sm shrink-0 rounded-xl text-xs"
-            >
-              <Download className="w-4 h-4 text-violet-600" /> Download Excel Template
-            </Button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200 uppercase tracking-wider flex items-center gap-1 font-mono">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0052CC]" />
+                  BULK ENROLLMENT
+                </span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] leading-snug">
+                Bulk Student Registration & Import
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Import multiple student records from Excel sheets and assign default batches.
+              </p>
+            </div>
           </div>
+
+          <Button
+            onClick={handleDownloadTemplate}
+            className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold border-0 shadow-2xs shrink-0 rounded-xl text-xs px-4 py-2"
+          >
+            <Download className="w-4 h-4 text-white" /> Download Excel Template
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Step 1 (Academic Parameters) & Step 2 (Upload File) */}
+          {/* Left Column: Step 1 (Academic Details) & Step 2 (Upload File) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Step 1: Academic Settings */}
-            <Card className="rounded-3xl border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-black flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 text-xs font-black flex items-center justify-center">
                   1
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
-                  Target Academic & Campus Parameters
+                <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider">
+                  Target Academic & Campus Details
                 </h3>
               </div>
 
@@ -238,7 +238,7 @@ function BulkImportContent() {
                   <Select value={selectedYear} onValueChange={setSelectedYear}>
                     <SelectTrigger
                       id="year"
-                      className="bg-white border-[#E5E7EB] hover:border-violet-300 rounded-xl h-10 transition-colors text-xs font-medium"
+                      className="bg-slate-50 border-slate-200 hover:border-blue-300 rounded-xl h-10 transition-colors text-xs font-medium"
                     >
                       <SelectValue placeholder="Select Academic Year" />
                     </SelectTrigger>
@@ -266,7 +266,7 @@ function BulkImportContent() {
                   >
                     <SelectTrigger
                       id="branch"
-                      className="bg-white border-[#E5E7EB] hover:border-violet-300 rounded-xl h-10 transition-colors text-xs font-medium"
+                      className="bg-slate-50 border-slate-200 hover:border-blue-300 rounded-xl h-10 transition-colors text-xs font-medium"
                     >
                       <SelectValue
                         placeholder={selectedYear ? 'Select Branch' : 'Select Year First'}
@@ -296,7 +296,7 @@ function BulkImportContent() {
                   >
                     <SelectTrigger
                       id="course"
-                      className="bg-white border-[#E5E7EB] hover:border-violet-300 rounded-xl h-10 transition-colors text-xs font-medium"
+                      className="bg-slate-50 border-slate-200 hover:border-blue-300 rounded-xl h-10 transition-colors text-xs font-medium"
                     >
                       <SelectValue
                         placeholder={selectedBranch ? 'Select Course' : 'Select Branch First'}
@@ -326,7 +326,7 @@ function BulkImportContent() {
                   >
                     <SelectTrigger
                       id="batch"
-                      className="bg-white border-[#E5E7EB] hover:border-violet-300 rounded-xl h-10 transition-colors text-xs font-medium"
+                      className="bg-slate-50 border-slate-200 hover:border-blue-300 rounded-xl h-10 transition-colors text-xs font-medium"
                     >
                       <SelectValue
                         placeholder={selectedCourse ? 'Select Batch' : 'Select Course First'}
@@ -342,22 +342,22 @@ function BulkImportContent() {
                   </Select>
                 </div>
               </div>
-            </Card>
+            </div>
 
             {/* Step 2: Upload Excel File Dropzone */}
-            <Card className="rounded-3xl border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <span className="w-6 h-6 rounded-full bg-violet-100 text-violet-700 text-xs font-black flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 text-xs font-black flex items-center justify-center">
                   2
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+                <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider">
                   Upload Excel Spreadsheet (.xlsx)
                 </h3>
               </div>
 
               <div
-                className={`border-2 border-dashed border-slate-200 hover:border-violet-500 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/50 cursor-pointer transition-all hover:bg-violet-50/10 ${
-                  file ? 'border-violet-500 bg-violet-50/20' : ''
+                className={`border-2 border-dashed border-slate-200 hover:border-[#0052CC] rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/50 cursor-pointer transition-all hover:bg-blue-50/20 ${
+                  file ? 'border-[#0052CC] bg-blue-50/20' : ''
                 }`}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -370,14 +370,14 @@ function BulkImportContent() {
                 />
                 {file ? (
                   <>
-                    <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center text-violet-700 border border-violet-200">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-[#0052CC] border border-blue-200">
                       <FileSpreadsheet className="h-6 w-6" />
                     </div>
                     <div className="text-center">
-                      <span className="text-sm font-extrabold text-slate-900 block">
+                      <span className="text-sm font-extrabold text-[#0B2447] block">
                         {file.name}
                       </span>
-                      <span className="text-xs text-slate-400 font-semibold mt-0.5 block">
+                      <span className="text-xs text-slate-500 font-semibold mt-0.5 block font-mono">
                         {(file.size / 1024).toFixed(1)} KB &bull; Excel File Ready
                       </span>
                     </div>
@@ -413,7 +413,7 @@ function BulkImportContent() {
                 <Button
                   onClick={handleUpload}
                   disabled={!file || isUploading}
-                  className="w-full sm:w-auto gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs px-6 py-2.5 shadow-sm"
+                  className="w-full sm:w-auto gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs px-6 py-2.5 shadow-2xs"
                 >
                   {isUploading ? (
                     <>
@@ -427,18 +427,18 @@ function BulkImportContent() {
                   )}
                 </Button>
               </div>
-            </Card>
+            </div>
           </div>
 
-          {/* Right Column: Crystal-Clear Validation & Error Logs Panel */}
+          {/* Right Column: Validation & Error Logs Panel */}
           <div className="space-y-6">
-            <Card className="rounded-3xl border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-xs space-y-4 min-h-[400px]">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4 min-h-[400px]">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <FileCheck2 className="w-4.5 h-4.5 text-violet-600" /> Import Summary & Logs
+                <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+                  <FileCheck2 className="w-4.5 h-4.5 text-[#0052CC]" /> Import Summary & Logs
                 </h3>
                 {result && result.errors.length > 0 && (
-                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200">
+                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200 font-mono">
                     {result.errors.length} Error Logs
                   </span>
                 )}
@@ -446,29 +446,28 @@ function BulkImportContent() {
 
               {!result ? (
                 <div className="text-center py-16 space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 mx-auto flex items-center justify-center text-slate-300">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 mx-auto flex items-center justify-center text-[#0052CC]">
                     <FileSpreadsheet className="w-6 h-6" />
                   </div>
-                  <p className="text-xs font-bold text-slate-600">
+                  <p className="text-xs font-bold text-[#0B2447]">
                     No Import Operation Performed Yet
                   </p>
-                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                    Select target academic parameters, upload your Excel file, and click "Start Bulk
+                  <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    Select target academic details, upload your Excel file, and click "Start Bulk
                     Import" to view parsed logs.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-5">
-                  {/* Summary Metric Strip */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/60 text-emerald-800 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
                         Successfully Imported
                       </p>
                       <p className="text-2xl font-black text-emerald-900">{result.importedCount}</p>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200/60 text-rose-800 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600">
                         Validation Failures
                       </p>
@@ -476,14 +475,13 @@ function BulkImportContent() {
                     </div>
                   </div>
 
-                  {/* Crystal-Clear Error Logs List */}
                   <div>
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 text-rose-500" /> Crystal-Clear Error Logs
+                      <AlertCircle className="w-4 h-4 text-rose-500" /> Error Logs
                     </h4>
 
                     {result.errors.length === 0 ? (
-                      <div className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200/60 text-center space-y-1.5">
+                      <div className="p-5 rounded-2xl bg-emerald-50/50 border border-emerald-200 text-center space-y-1.5">
                         <CheckCircle2 className="w-6 h-6 text-emerald-500 mx-auto" />
                         <p className="text-xs font-bold text-emerald-800">100% Clean Import!</p>
                         <p className="text-[11px] text-emerald-600 font-medium">
@@ -493,7 +491,6 @@ function BulkImportContent() {
                     ) : (
                       <div className="max-h-[350px] overflow-y-auto space-y-2 pr-1">
                         {result.errors.map((errLog, idx) => {
-                          // Parse row number if present (e.g. "Row 3: Error message")
                           const matchRow = errLog.match(/Row\s*(\d+)[\:\s]*(.*)/i);
                           const rowNum = matchRow ? matchRow[1] : null;
                           const errText = matchRow ? matchRow[2] : errLog;
@@ -501,15 +498,15 @@ function BulkImportContent() {
                           return (
                             <div
                               key={idx}
-                              className="p-3 rounded-2xl bg-rose-50/40 border border-rose-200/70 text-xs text-rose-900 space-y-1"
+                              className="p-3 rounded-xl bg-rose-50/50 border border-rose-200 text-xs text-rose-900 space-y-1"
                             >
                               <div className="flex items-center justify-between gap-2">
                                 {rowNum ? (
-                                  <span className="text-[10px] font-mono font-black text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">
+                                  <span className="text-[10px] font-mono font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
                                     ROW #{rowNum}
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-mono font-black text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md border border-rose-200">
+                                  <span className="text-[10px] font-mono font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md border border-rose-200">
                                     LOG #{idx + 1}
                                   </span>
                                 )}
@@ -528,7 +525,7 @@ function BulkImportContent() {
                   </div>
                 </div>
               )}
-            </Card>
+            </div>
           </div>
         </div>
       </div>

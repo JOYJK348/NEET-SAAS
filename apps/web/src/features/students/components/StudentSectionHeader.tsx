@@ -16,10 +16,15 @@ export function StudentSectionHeader({
   className,
 }: StudentSectionHeaderProps) {
   return (
-    <div className={cn('flex items-start justify-between gap-4', className)}>
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold text-[#111827]">{title}</h3>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+    <div
+      className={cn(
+        'flex items-start justify-between gap-4 border-b border-slate-100 pb-3',
+        className,
+      )}
+    >
+      <div className="space-y-0.5">
+        <h3 className="text-base sm:text-lg font-extrabold text-[#0B2447]">{title}</h3>
+        {description && <p className="text-xs text-slate-500 font-medium">{description}</p>}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}
     </div>

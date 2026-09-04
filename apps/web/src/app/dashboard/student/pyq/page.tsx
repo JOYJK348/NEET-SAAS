@@ -11,13 +11,13 @@ import {
   Unlock,
   CheckCircle,
   Calendar,
-  Sparkles,
   Search,
-  IndianRupee,
-  ShieldCheck,
   AlertCircle,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+import { useQuery } from '@tanstack/react-query';
 
 declare global {
   interface Window {
@@ -41,13 +41,42 @@ interface StudentPYQ {
   description?: string | null;
 }
 
+export function getPermanentFileUrl(rawUrl?: string | null): string {
+  if (!rawUrl) return '#';
+
+  let url = rawUrl.trim();
+
+  // Handle relative API URLs
+  if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:')) {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    const baseUrl = apiBase.replace(/\/api\/v1\/?$/, '');
+    url = `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+
+  return url;
+}
+
+async function fetchPyqsData(): Promise<StudentPYQ[]> {
+  const res = await api.get<StudentPYQ[]>('/pyq');
+  return Array.isArray(res) ? res : (res as any)?.data || [];
+}
+
 export default function StudentPyqPage() {
-  const [pyqs, setPyqs] = useState<StudentPYQ[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
   const [selectedYear, setSelectedYear] = useState<string>('ALL');
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
+
+  const {
+    data: pyqs = [],
+    isLoading: loading,
+    refetch: fetchPyqs,
+  } = useQuery({
+    queryKey: ['student-pyq-all'],
+    queryFn: fetchPyqsData,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -63,36 +92,7 @@ export default function StudentPyqPage() {
     });
   };
 
-  const fetchPyqs = async () => {
-    try {
-      setLoading(true);
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const endpoints = [
-        '/pyq',
-        `/api/v1/pyq`,
-        `http://${host}:3000/api/v1/pyq`,
-        `/v1/pyq`,
-        `http://${host}:3000/v1/pyq`,
-      ];
-
-      for (const url of endpoints) {
-        try {
-          const res = await api.get<StudentPYQ[]>(url, { skipGlobalToast: true });
-          const data = Array.isArray(res) ? res : (res as any)?.data || [];
-          setPyqs(data);
-          return;
-        } catch {}
-      }
-      setPyqs([]);
-    } catch (err) {
-      console.error('Failed to fetch PYQs:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchPyqs();
     loadRazorpayScript();
   }, []);
 
@@ -107,27 +107,7 @@ export default function StudentPyqPage() {
         return;
       }
 
-      // 1. Create Order via Backend API
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const checkoutEndpoints = [
-        `/pyq/${paper.id}/checkout`,
-        `/api/v1/pyq/${paper.id}/checkout`,
-        `http://${host}:3000/api/v1/pyq/${paper.id}/checkout`,
-        `/v1/pyq/${paper.id}/checkout`,
-        `http://${host}:3000/v1/pyq/${paper.id}/checkout`,
-      ];
-
-      let checkoutData: any = null;
-      for (const url of checkoutEndpoints) {
-        try {
-          checkoutData = await api.post(url, undefined, { skipGlobalToast: true });
-          if (checkoutData) break;
-        } catch {}
-      }
-
-      if (!checkoutData) {
-        checkoutData = await api.post(`/pyq/${paper.id}/checkout`);
-      }
+      const checkoutData = await api.post<any>(`/pyq/${paper.id}/checkout`);
 
       if (checkoutData.free || checkoutData.alreadyPurchased) {
         toast.success('Paper unlocked!');
@@ -147,7 +127,6 @@ export default function StudentPyqPage() {
           try {
             toast.loading('Verifying payment signature...', { id: 'pyq-verify' });
 
-            // 2. Verify Payment via Backend API
             const verifyRes: any = await api.post(`/pyq/${paper.id}/verify-payment`, {
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
@@ -157,14 +136,7 @@ export default function StudentPyqPage() {
             toast.dismiss('pyq-verify');
             toast.success(verifyRes.message || 'Payment verified! Paper unlocked.');
 
-            // Update state locally
-            setPyqs((prev) =>
-              prev.map((p) =>
-                p.id === paper.id
-                  ? { ...p, isUnlocked: true, paperUrl: verifyRes.paperUrl, solutionUrl: verifyRes.solutionUrl }
-                  : p,
-              ),
-            );
+            fetchPyqs();
           } catch (err: any) {
             toast.dismiss('pyq-verify');
             toast.error(err?.response?.data?.message || 'Payment verification failed');
@@ -176,7 +148,7 @@ export default function StudentPyqPage() {
           name: 'Student User',
         },
         theme: {
-          color: '#7C3AED',
+          color: '#0052CC',
         },
         modal: {
           ondismiss: () => {
@@ -208,48 +180,46 @@ export default function StudentPyqPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] space-y-6">
-        {/* Banner Header */}
-        <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-900/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/20">
-                Exam Preparation Hub
-              </span>
-              <Sparkles className="w-4 h-4 text-amber-300 animate-bounce" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Previous Years Question Papers (PYQ)
-            </h1>
-            <p className="text-violet-200 text-xs sm:text-sm font-medium">
-              Practice subject-wise real exam question papers and detailed solutions.
-            </p>
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Student Hub</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Previous Years Question Papers</span>
           </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+            Previous Years Question Papers (PYQ)
+          </h1>
+          <p className="text-xs text-slate-600 font-medium">
+            Practice subject-wise real NEET exam question papers with detailed step-by-step
+            solutions.
+          </p>
         </div>
 
-        {/* Filters & Search */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-[#E5E7EB] shadow-sm">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        {/* Filters & Search Strip */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 w-full md:w-80 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 focus-within:border-[#0052CC] focus-within:ring-2 focus-within:ring-blue-100">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search PYQ papers by subject or title..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-violet-600 focus:outline-none transition-all"
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200 overflow-x-auto scrollbar-thin">
               {subjects.map((subj) => (
                 <button
                   key={subj}
                   onClick={() => setSelectedSubject(subj)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     selectedSubject === subj
-                      ? 'bg-violet-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      ? 'bg-[#0052CC] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#0B2447] hover:bg-white/60'
                   }`}
                 >
                   {subj}
@@ -260,7 +230,7 @@ export default function StudentPyqPage() {
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 text-slate-700 outline-none focus:border-violet-600"
+              className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 text-slate-700 outline-none focus:border-[#0052CC]"
             >
               <option value="ALL">All Years</option>
               <option value="2024">2024</option>
@@ -274,17 +244,18 @@ export default function StudentPyqPage() {
 
         {/* Papers Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
+          <div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+            Loading question papers...
           </div>
         ) : filteredPyqs.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-sm space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mx-auto">
-              <FileText className="w-8 h-8" />
+          <div className="p-12 text-center border border-dashed rounded-2xl border-slate-200 bg-white shadow-2xs space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] mx-auto flex items-center justify-center border border-blue-200">
+              <FileText className="w-6 h-6 text-[#0052CC]" />
             </div>
-            <h3 className="text-lg font-bold text-slate-800">No Papers Available</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Check back soon! Question papers for Physics, Chemistry, Biology & Maths are added regularly.
+            <h3 className="text-base font-extrabold text-[#0B2447]">No Papers Available</h3>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto font-medium">
+              Check back soon! Question papers for Physics, Chemistry, Biology & Maths are added
+              regularly.
             </p>
           </div>
         ) : (
@@ -296,35 +267,36 @@ export default function StudentPyqPage() {
               return (
                 <Card
                   key={paper.id}
-                  className={`rounded-3xl border bg-white shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group ${
-                    !isPaperActive ? 'opacity-85 border-rose-200 bg-slate-50/50' : 'border-slate-200'
+                  className={`group relative rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between ${
+                    !isPaperActive ? 'opacity-75 bg-slate-50' : ''
                   }`}
                 >
-                  <div className="p-5 space-y-4">
+                  {/* Header Banner */}
+                  <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 p-4 text-slate-900 border-b border-blue-200 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[11px] font-black uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-[#0052CC] border border-blue-200 text-[10px] font-extrabold uppercase">
                         {paper.subjectName}
                       </span>
 
                       <div className="flex items-center gap-1.5">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-mono font-bold flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 text-[10px] font-bold border border-slate-200 flex items-center gap-1">
                           <Calendar className="w-3 h-3 text-slate-400" />
                           {paper.year}
                         </span>
 
                         {!isPaperActive ? (
-                          <span className="px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 text-xs font-black flex items-center gap-1 border border-rose-200">
-                            <Lock className="w-3.5 h-3.5 text-rose-600" />
+                          <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-[10px] font-extrabold flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
                             INACTIVE
                           </span>
                         ) : paper.isUnlocked ? (
-                          <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black flex items-center gap-1">
-                            <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold flex items-center gap-1">
+                            <Unlock className="w-3 h-3" />
                             {isFree ? 'FREE' : 'UNLOCKED'}
                           </span>
                         ) : (
-                          <span className="px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 text-xs font-black flex items-center gap-1">
-                            <Lock className="w-3.5 h-3.5 text-amber-600" />
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-extrabold flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-amber-600" />
                             LOCKED (₹{paper.price})
                           </span>
                         )}
@@ -332,73 +304,80 @@ export default function StudentPyqPage() {
                     </div>
 
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 group-hover:text-violet-600 transition-colors line-clamp-2">
+                      <h3 className="text-base font-extrabold text-[#0B2447] leading-snug line-clamp-2">
                         {paper.title}
                       </h3>
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
                       {paper.description && (
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2 font-medium">
+                        <p className="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed">
                           {paper.description}
                         </p>
                       )}
 
                       {!isPaperActive && (
-                        <div className="mt-3 p-3 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-2 text-xs text-rose-900 font-medium">
+                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2 text-xs text-rose-900 font-medium">
                           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                          <span>This question paper is currently deactivated by Admin. Please contact Institute Admin for access.</span>
+                          <span>This paper is currently deactivated by Admin.</span>
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
-                    {!isPaperActive ? (
-                      <Button
-                        disabled
-                        className="w-full py-3 rounded-xl bg-slate-200 text-slate-500 font-bold text-xs gap-2 cursor-not-allowed opacity-80"
-                      >
-                        <Lock className="w-4 h-4 text-slate-400" />
-                        <span>Paper Deactivated (Contact Admin)</span>
-                      </Button>
-                    ) : paper.isUnlocked ? (
-                      <div className="flex items-center gap-2 w-full">
-                        {paper.paperUrl && (
-                          <a
-                            href={paper.paperUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex-1 py-2.5 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                          >
-                            <FileText className="w-4 h-4" />
-                            View Paper 📄
-                          </a>
-                        )}
-                        {paper.solutionUrl && (
-                          <a
-                            href={paper.solutionUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="py-2.5 px-3 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
-                            title="View Solutions"
-                          >
-                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            Solutions 🔑
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <Button
-                        onClick={() => handleUnlockPaper(paper)}
-                        disabled={unlockingId === paper.id}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-black text-xs shadow-md shadow-orange-500/20 gap-2 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Lock className="w-4 h-4" />
-                        <span>
-                          {unlockingId === paper.id
-                            ? 'Opening Razorpay...'
-                            : `Unlock Paper for ₹${paper.price}`}
-                        </span>
-                      </Button>
-                    )}
+                    {/* Actions Footer */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      {!isPaperActive ? (
+                        <Button
+                          disabled
+                          className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs gap-2 cursor-not-allowed border border-slate-200"
+                        >
+                          <Lock className="w-4 h-4 text-slate-400" />
+                          <span>Paper Deactivated</span>
+                        </Button>
+                      ) : paper.isUnlocked ? (
+                        <div className="flex items-center gap-2 w-full">
+                          {paper.paperUrl && (
+                            <a
+                              href={getPermanentFileUrl(paper.paperUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+                            >
+                              <FileText className="w-4 h-4" />
+                              View Paper
+                            </a>
+                          )}
+                          {paper.solutionUrl && (
+                            <a
+                              href={getPermanentFileUrl(paper.solutionUrl)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5"
+                              title="View Solutions"
+                            >
+                              <CheckCircle className="w-4 h-4 text-emerald-600" />
+                              Solutions
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => handleUnlockPaper(paper)}
+                          disabled={unlockingId === paper.id}
+                          className="w-full py-2.5 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs gap-2 transition-all cursor-pointer"
+                        >
+                          <Lock className="w-4 h-4" />
+                          <span>
+                            {unlockingId === paper.id
+                              ? 'Opening Checkout...'
+                              : `Unlock Paper (₹${paper.price})`}
+                          </span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </Card>
               );

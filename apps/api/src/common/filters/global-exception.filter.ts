@@ -11,6 +11,75 @@ import { RequestContextService } from '../middleware/request-context.service';
 
 const SILENT_NOT_FOUND_PATHS = new Set(['/', '/favicon.ico', '/favicon.png', '/robots.txt']);
 
+function sanitizeErrorMessage(msg: unknown, status?: number): string {
+  if (!msg) {
+    if (status === 401) return 'Unable to sign you in. Please check your details and try again.';
+    if (status === 403) return "You don't have permission to perform this action.";
+    if (status === 404) return 'The requested information could not be found.';
+    return 'Something went wrong. Please try again later.';
+  }
+
+  const str = typeof msg === 'string' ? msg : String(msg);
+  const lower = str.toLowerCase();
+
+  const techKeywords = [
+    'prisma',
+    'this.prisma',
+    'findfirst',
+    'findmany',
+    'findunique',
+    'findraw',
+    'aggregate',
+    'groupby',
+    'can\'t reach database',
+    'database server',
+    'supabase.co',
+    'connection pool',
+    'econnrefused',
+    'etimedout',
+    'invocation in',
+    'at object.',
+    'invalid `',
+    'prismaclient',
+    'clientknownrequesterror',
+    'clientinitializationerror',
+    'sqlstate',
+    'd:\\',
+    'c:\\',
+    'node_modules',
+    '.ts:',
+    '.js:',
+    'select ',
+    'insert into',
+    'update ',
+    'delete from',
+  ];
+
+  const uploadKeywords = ['upload', 'multipart', 'storage', 's3', 'supabase storage'];
+
+  if (techKeywords.some((keyword) => lower.includes(keyword))) {
+    return 'Something went wrong. Please try again in a few moments.';
+  }
+
+  if (uploadKeywords.some((keyword) => lower.includes(keyword)) && status === 400) {
+    return 'Unable to upload the file. Please try again.';
+  }
+
+  if (status === 401 && (lower.includes('unauthorized') || lower.includes('jwt') || lower.includes('token'))) {
+    return 'Unable to sign you in. Please check your details and try again.';
+  }
+
+  if (status === 403 && (lower.includes('forbidden') || lower.includes('permission'))) {
+    return "You don't have permission to perform this action.";
+  }
+
+  if (status === 404 && (lower.includes('not found') || lower.includes('cannot find'))) {
+    return 'The requested information could not be found.';
+  }
+
+  return str;
+}
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
@@ -100,9 +169,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         } else {
           status = HttpStatus.BAD_REQUEST;
           code = 'DB_ERROR';
-          message = err.message
-            ? err.message.replace(/\n/g, ' ').trim()
-            : 'Database operation failed';
+          message = 'Database operation failed';
         }
       } else if (err?.message) {
         message = err.message;
@@ -110,6 +177,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message = exception.message;
       }
     }
+
+    // Sanitize any technical Prisma/DB stack traces before sending response
+    message = sanitizeErrorMessage(message, status);
 
     // Skip noisy 404 logs for root and browser auto-requests
     const isSilent404 =

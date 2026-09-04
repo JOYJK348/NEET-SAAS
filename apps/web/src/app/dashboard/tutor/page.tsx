@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -10,6 +10,7 @@ import type { TutorialSessionDto } from '@/features/tutor-dashboard/types/overvi
 import { StatsSkeleton } from '@/components/ui/loading';
 import { ErrorState } from '@/components/ui/error-state';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
@@ -112,66 +113,39 @@ import { toast } from 'sonner';
 
 // ─── Session Card ────────────────────────────────────────────────────────────
 
+import { getClassStatus } from '@/lib/class-status';
+
 function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
   const router = useRouter();
-  const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
 
-  const canJoinNow = useMemo(() => {
-    if (isCancelled) return false;
+  // Tick every 30 seconds so button state auto-updates when class time expires
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-    // Live video studio is ONLY for Online/Hybrid classes or classes with a meeting link
-    const isOnlineOrHybrid =
-      session.deliveryMode === 'ONLINE' ||
-      session.deliveryMode === 'HYBRID' ||
-      Boolean(session.meetingLink);
-
-    if (!isOnlineOrHybrid) return false;
-
-    // Enable Join Live Class if session.canJoin or liveStatus is LIVE_NOW or sessionStatus is STARTED
-    if (session.canJoin || session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED') {
-      return true;
-    }
-
-    if (session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
-
-    // Check if current time is within active start/end window for today's session
-    if (session.date && session.startsAt && session.endsAt) {
-      try {
-        const now = new Date();
-        const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        if (dateStr === todayStr) {
-          const [startH, startM] = session.startsAt.split(':').map(Number);
-          const [endH, endM] = session.endsAt.split(':').map(Number);
-
-          const start = new Date();
-          start.setHours(startH, startM, 0, 0);
-
-          const end = new Date();
-          end.setHours(endH, endM, 0, 0);
-
-          // Allow starting 15 mins before start time up until 15 mins past end time
-          const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
-          const windowEnd = new Date(end.getTime() + 15 * 60 * 1000);
-          return now >= windowStart && now <= windowEnd;
-        }
-      } catch {}
-    }
-
-    return false;
-  }, [isCancelled, session]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const statusInfo = useMemo(() => getClassStatus(session, { isTutor: true }), [session, tick]);
+  const isCancelled = statusInfo.isCancelled;
+  const isLive = statusInfo.isLive;
+  const canJoinNow = statusInfo.canJoin;
 
   const handleJoinClass = () => {
-    toast.success("Opening Tutor Live Studio 🚀", {
+    toast.success('Opening Tutor Live Studio 🚀', {
       description: `Launching classroom studio for ${session.subject?.name || 'Live Class'}...`,
     });
     const queryParams = new URLSearchParams();
     if (session.sessionType) queryParams.set('sessionType', session.sessionType);
     if (session.studentName) queryParams.set('studentName', session.studentName);
-    if ((session as any).studentAdmissionId) queryParams.set('studentAdmissionId', (session as any).studentAdmissionId);
+    if ((session as any).studentAdmissionId)
+      queryParams.set('studentAdmissionId', (session as any).studentAdmissionId);
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    router.push(`/dashboard/tutor/live/${session.id || 'demo-class-1'}${qs}`);
+    const targetUrl = `/dashboard/tutor/live/${session.id || 'demo-class-1'}${qs}`;
+    router.push(targetUrl);
+    if (typeof window !== 'undefined') {
+      window.location.href = targetUrl;
+    }
   };
 
   const subjectName = session.subject?.name ?? 'Subject Session';
@@ -181,7 +155,8 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
     <div
       className={cn(
         'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3.5 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
-        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
+        isLive &&
+          'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
         isCancelled && 'border-rose-200 bg-rose-50/30 opacity-80',
       )}
     >
@@ -257,7 +232,10 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
                 1:1 Personalized Class
               </span>
               <p className="text-xs font-extrabold text-slate-900 truncate">
-                Student: <strong className="text-violet-900 font-black">{session.studentName || 'Assigned Student'}</strong>
+                Student:{' '}
+                <strong className="text-violet-900 font-black">
+                  {session.studentName || 'Assigned Student'}
+                </strong>
               </p>
             </div>
           </div>
@@ -276,7 +254,7 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
               className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
             >
               <Video className="w-4 h-4 shrink-0" />
-              <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
+              <span>{statusInfo.buttonLabel}</span>
             </button>
           ) : (
             <button
@@ -284,7 +262,7 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
               className="flex-1 inline-flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-80"
             >
               <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-              <span>Class Starts at {formatTime(session.startsAt, session.endsAt).split('–')[0].trim()} (Upcoming)</span>
+              <span>{statusInfo.buttonLabel}</span>
             </button>
           )}
 
@@ -325,32 +303,32 @@ function OverviewStats({
       value: overview.stats.todaysClasses,
       sub: overview.stats.todaysClasses > 0 ? 'Sessions scheduled' : 'Free schedule',
       icon: CalendarDays,
-      bg: 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white',
-      cardBg: 'bg-gradient-to-br from-violet-50/50 via-white to-white border-violet-100',
+      iconColor: 'text-[#0052CC]',
+      bgColor: 'bg-blue-50 border-blue-200',
     },
     {
       name: 'Upcoming (7 Days)',
       value: overview.stats.upcomingClasses,
       sub: 'Next week sessions',
       icon: BookOpen,
-      bg: 'bg-gradient-to-br from-sky-500 to-blue-600 text-white',
-      cardBg: 'bg-gradient-to-br from-sky-50/50 via-white to-white border-sky-100',
+      iconColor: 'text-indigo-600',
+      bgColor: 'bg-indigo-50 border-indigo-200',
     },
     {
       name: 'Assigned Batches',
       value: overview.stats.myBatches,
       sub: 'Active student groups',
       icon: Layers,
-      bg: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white',
-      cardBg: 'bg-gradient-to-br from-amber-50/50 via-white to-white border-amber-100',
+      iconColor: 'text-amber-600',
+      bgColor: 'bg-amber-50 border-amber-200',
     },
     {
       name: 'Total Students',
       value: overview.stats.totalStudents,
       sub: 'Enrolled under batches',
       icon: Users,
-      bg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white',
-      cardBg: 'bg-gradient-to-br from-emerald-50/50 via-white to-white border-emerald-100',
+      iconColor: 'text-emerald-600',
+      bgColor: 'bg-emerald-50 border-emerald-200',
     },
   ];
 
@@ -359,34 +337,32 @@ function OverviewStats({
       {stats.map((stat) => {
         const Icon = stat.icon;
         return (
-          <div
+          <Card
             key={stat.name}
-            className={cn(
-              'group relative rounded-3xl border p-5 shadow-2xs hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col justify-between',
-              stat.cardBg,
-            )}
+            className="group relative rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs hover:border-blue-300 transition-all flex flex-col justify-between"
           >
             <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                 {stat.name}
               </span>
               <div
                 className={cn(
-                  'w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform',
-                  stat.bg,
+                  'w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 transition-transform group-hover:scale-105',
+                  stat.bgColor,
+                  stat.iconColor,
                 )}
               >
-                <Icon className="w-5 h-5 text-white" />
+                <Icon className="w-5 h-5" />
               </div>
             </div>
 
             <div>
-              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">
+              <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2447] tracking-tight leading-none">
                 {stat.value}
               </p>
-              <p className="text-[11px] font-semibold text-slate-400 mt-1.5">{stat.sub}</p>
+              <p className="text-xs font-medium text-slate-500 mt-1.5">{stat.sub}</p>
             </div>
-          </div>
+          </Card>
         );
       })}
     </div>
@@ -399,7 +375,6 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
 
-  // Standard NEET curriculum subjects + any extra scheduled subjects
   const subjectList = useMemo(() => {
     const defaultSubjects = ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology', 'Maths'];
     const set = new Set<string>(defaultSubjects);
@@ -409,7 +384,6 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
     return Array.from(set);
   }, [upcomingSchedule]);
 
-  // Filtered upcoming sessions
   const filteredSchedule = useMemo(() => {
     return upcomingSchedule.filter((s) => {
       const subj = (s.subject?.name || '').toLowerCase();
@@ -419,11 +393,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
       const q = searchQuery.toLowerCase().trim();
 
       const matchesSearch =
-        !q ||
-        subj.includes(q) ||
-        batch.includes(q) ||
-        branch.includes(q) ||
-        mode.includes(q);
+        !q || subj.includes(q) || batch.includes(q) || branch.includes(q) || mode.includes(q);
 
       const matchesSubject =
         selectedSubjectFilter === 'ALL' ||
@@ -434,17 +404,17 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
   }, [upcomingSchedule, searchQuery, selectedSubjectFilter]);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+    <Card className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
       {/* Section Header */}
       <div className="space-y-3 border-b border-slate-100 pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4.5 h-4.5 text-sky-600 shrink-0" />
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+            <Calendar className="w-4.5 h-4.5 text-[#0052CC] shrink-0" />
+            <h2 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
               Upcoming Sessions (Next 7 Days)
             </h2>
           </div>
-          <span className="self-start sm:self-auto text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100 shrink-0">
+          <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 shrink-0">
             {filteredSchedule.length} of {upcomingSchedule.length} Sessions
           </span>
         </div>
@@ -459,7 +429,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search subject, batch or mode..."
-              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 transition"
+              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-[#0052CC] transition"
             />
             {searchQuery && (
               <button
@@ -478,7 +448,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
                 onClick={() => setSelectedSubjectFilter('ALL')}
                 className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
                   selectedSubjectFilter === 'ALL'
-                    ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                    ? 'bg-[#0052CC] text-white border-[#0052CC] font-extrabold shadow-2xs'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -490,7 +460,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
                   onClick={() => setSelectedSubjectFilter(subj)}
                   className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
                     selectedSubjectFilter.toLowerCase() === subj.toLowerCase()
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                      ? 'bg-[#0052CC] text-white border-[#0052CC] font-extrabold shadow-2xs'
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -520,7 +490,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
                 setSearchQuery('');
                 setSelectedSubjectFilter('ALL');
               }}
-              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-bold shadow-2xs hover:bg-violet-700 transition cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-[#0052CC] text-white text-xs font-extrabold shadow-2xs hover:bg-blue-700 transition cursor-pointer"
             >
               Clear Filters
             </button>
@@ -531,7 +501,7 @@ function UpcomingScheduleSection({ upcomingSchedule }: { upcomingSchedule: Tutor
           ))
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -543,17 +513,17 @@ function TutorDashboardContent() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
-        <div className="h-32 bg-slate-100 rounded-3xl animate-pulse" />
+      <div className="space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen">
+        <div className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
         <StatsSkeleton count={4} />
-        <div className="h-64 bg-slate-100 rounded-3xl animate-pulse" />
+        <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
+      <div className="p-4 lg:p-6 bg-[#F8FAFC] min-h-screen">
         <ErrorState
           title="Failed to load overview"
           message={error.message || 'Could not load your dashboard. Please try again.'}
@@ -566,7 +536,7 @@ function TutorDashboardContent() {
 
   if (!overview) {
     return (
-      <div className="p-4 lg:p-6 bg-[#FAFAFA] min-h-screen">
+      <div className="p-4 lg:p-6 bg-[#F8FAFC] min-h-screen">
         <EmptyState
           icon={<Calendar className="h-8 w-8 text-gray-400" />}
           title="No dashboard data available"
@@ -587,37 +557,36 @@ function TutorDashboardContent() {
   });
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* ── Signature Violet Gradient Hero Header Banner (Tenant Admin Match) ───── */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Faculty Portal & Dashboard
-            </span>
+    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+      {/* ── ISML LMS Light Blue Header Banner ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 rounded-2xl p-4 sm:p-6 text-slate-900 border border-blue-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Faculty Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Dashboard Overview</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
+          <h1 className="text-xl sm:text-2xl font-extrabold leading-tight text-[#0B2447]">
             {greeting}, {user?.firstName || 'Faculty'}! 👋
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
-            📅 {formattedDate} — Academic schedule and active batch overview.
+          <p className="text-slate-600 text-xs font-medium">
+            📅 {formattedDate} — Live academic schedule & active batch overview.
           </p>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
           <Link
             href="/dashboard/tutor/timetable"
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white rounded-xl text-xs font-bold transition shadow-2xs"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition shadow-2xs"
           >
-            <CalendarDays className="w-3.5 h-3.5" />
+            <CalendarDays className="w-4 h-4 text-[#0052CC]" />
             <span>Schedule</span>
           </Link>
           <Link
             href="/dashboard/tutor/batches"
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-xs"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs"
           >
-            <Layers className="w-3.5 h-3.5 text-violet-600" />
+            <Layers className="w-4 h-4 text-white" />
             <span>My Batches</span>
           </Link>
         </div>
@@ -627,49 +596,49 @@ function TutorDashboardContent() {
       <OverviewStats overview={overview} />
 
       {/* Quick Action Shortcuts Banner */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+      <Card className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-violet-600 shrink-0" />
-          <span className="text-xs font-bold text-slate-800">Quick Faculty Actions:</span>
+          <Zap className="w-4 h-4 text-[#0052CC] shrink-0" />
+          <span className="text-xs font-extrabold text-[#0B2447]">Quick Faculty Shortcuts:</span>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap text-xs font-bold">
+        <div className="flex items-center gap-2 flex-wrap text-xs font-extrabold">
           <Link
             href="/dashboard/tutor/batches"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 hover:bg-blue-100 transition"
           >
-            <Layers className="w-3.5 h-3.5 text-violet-600" />
+            <Layers className="w-3.5 h-3.5 text-[#0052CC]" />
             <span>My Batches</span>
           </Link>
           <Link
             href="/dashboard/tutor/timetable"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 hover:bg-blue-100 transition"
           >
-            <CalendarDays className="w-3.5 h-3.5 text-violet-600" />
+            <CalendarDays className="w-3.5 h-3.5 text-[#0052CC]" />
             <span>Schedule Calendar</span>
           </Link>
           <Link
             href="/dashboard/tutor/exams"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 transition"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 hover:bg-blue-100 transition"
           >
-            <FileCheck2 className="w-3.5 h-3.5 text-violet-600" />
+            <FileCheck2 className="w-3.5 h-3.5 text-[#0052CC]" />
             <span>Exams & Evaluations</span>
           </Link>
         </div>
-      </div>
+      </Card>
 
       {/* ── Today's Schedule & Upcoming Schedule Grids ──────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Schedule */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+        <Card className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
-              <Clock className="w-4.5 h-4.5 text-violet-600" />
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+              <Clock className="w-4.5 h-4.5 text-[#0052CC]" />
+              <h2 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
                 Today&apos;s Class Schedule
               </h2>
             </div>
-            <span className="text-xs font-black text-violet-700 bg-violet-50 px-2.5 py-1 rounded-full border border-violet-100">
+            <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
               {overview.todaysSchedule.length} Sessions
             </span>
           </div>
@@ -689,7 +658,7 @@ function TutorDashboardContent() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Bounded Scrollable & Filterable Upcoming Schedule */}
         <UpcomingScheduleSection upcomingSchedule={overview.upcomingSchedule} />

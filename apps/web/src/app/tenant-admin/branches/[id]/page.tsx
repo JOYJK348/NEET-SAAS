@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import {
   ArrowLeft,
   Building2,
@@ -25,7 +24,7 @@ import {
   Loader2,
   Calendar,
   Eye,
-  SlidersHorizontal,
+  ChevronRight,
 } from 'lucide-react';
 import { useBranch, useUpdateBranch } from '@/features/master-data/hooks/use-branches';
 import { useBranchCourses } from '@/features/master-data/hooks/use-branch-courses';
@@ -124,7 +123,7 @@ function BranchDetailContent() {
     return (
       <DashboardLayout>
         <div className="min-h-screen p-6 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#0052CC]" />
           <p className="text-sm font-semibold text-slate-600">Loading branch information...</p>
         </div>
       </DashboardLayout>
@@ -140,7 +139,7 @@ function BranchDetailContent() {
           <p className="text-xs text-slate-500">The requested campus branch could not be loaded.</p>
           <Button
             onClick={() => router.push('/tenant-admin/branches')}
-            className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+            className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-bold rounded-xl text-xs"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Branches
           </Button>
@@ -168,126 +167,124 @@ function BranchDetailContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Back & Edit Action Buttons - Mobile Responsive Row */}
-        <div className="flex flex-row items-center justify-between gap-2 w-full">
-          <button
-            onClick={() => router.push('/tenant-admin/branches')}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
-            <span className="hidden sm:inline">Back to All Branches</span>
-            <span className="sm:hidden">Back</span>
-          </button>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Back & Breadcrumb Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <button
+              onClick={() => router.push('/tenant-admin/branches')}
+              className="hover:underline flex items-center gap-1 font-bold text-slate-600"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[#0052CC]" /> Branches
+            </button>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-extrabold text-[#0B2447]">{branch.name}</span>
+          </div>
 
           <Button
             onClick={() => setIsEditing(!isEditing)}
             variant={isEditing ? 'outline' : 'default'}
             className={cn(
-              'gap-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 px-3 sm:px-4 py-2',
+              'gap-1.5 rounded-xl text-xs font-extrabold transition-all shadow-2xs shrink-0 px-4 py-2 self-end sm:self-auto',
               isEditing
                 ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'bg-violet-600 hover:bg-violet-700 text-white',
+                : 'bg-[#0052CC] hover:bg-blue-700 text-white',
             )}
           >
             {isEditing ? (
               <>
                 <Eye className="w-4 h-4 text-slate-500 shrink-0" />
-                <span className="hidden sm:inline">Cancel Editing</span>
-                <span className="sm:hidden">Cancel</span>
+                <span>Cancel Editing</span>
               </>
             ) : (
               <>
                 <Edit2 className="w-4 h-4 text-white shrink-0" />
-                <span className="hidden sm:inline">Edit Branch Details</span>
-                <span className="sm:hidden">Edit</span>
+                <span>Edit Branch Details</span>
               </>
             )}
           </Button>
         </div>
 
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <Building2 className="w-5 h-5 sm:w-7 sm:h-7 text-violet-100" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] sm:text-xs font-mono font-bold text-white border border-white/20">
-                    {branch.code}
-                  </span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border',
-                      isActive
-                        ? 'bg-emerald-400/20 text-emerald-100 border-emerald-300/30'
-                        : 'bg-rose-400/20 text-rose-100 border-rose-300/30',
-                    )}
-                  >
-                    {isActive ? (
-                      <>
-                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        Active Campus
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-3 h-3 text-rose-200" />
-                        Inactive
-                      </>
-                    )}
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight truncate">
-                  {branch.name}
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5 truncate">
-                  {branch.displayName || branch.name}
-                </p>
-              </div>
+        {/* Dedicated ISML LMS Light Blue Hero Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs border border-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 className="w-6 h-6 sm:w-7 sm:h-7" />
             </div>
-
-            <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
-              <div className="bg-white/10 backdrop-blur-md px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border border-white/20 text-left sm:text-right">
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase text-violet-200 tracking-wider">
-                  Campus Type
-                </p>
-                <p className="text-xs font-bold text-white uppercase mt-0.5">
-                  {branch.branchType.replace(/_/g, ' ')}
-                </p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200">
+                  {branch.code}
+                </span>
+                <span
+                  className={cn(
+                    'px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1',
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200',
+                  )}
+                >
+                  {isActive ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active Campus Node
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                      Inactive
+                    </>
+                  )}
+                </span>
               </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] leading-snug truncate">
+                {branch.name}
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">
+                {branch.displayName || branch.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
+            <div className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-right shadow-2xs">
+              <p className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+                Campus Category
+              </p>
+              <p className="text-xs font-extrabold text-[#0B2447] uppercase mt-0.5">
+                {branch.branchType ? branch.branchType.replace(/_/g, ' ') : 'CAMPUS'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Section 1: Overview & Campus Details (or Edit Form) */}
+        {/* Section 1: Overview & Parameters Form */}
         <div className="space-y-4">
           {isEditing ? (
             <form
               onSubmit={handleSave}
-              className="bg-white border border-[#E5E7EB] rounded-3xl p-6 shadow-sm space-y-6"
+              className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-6"
             >
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <Edit2 className="w-4 h-4 text-violet-600" /> Edit Campus Branch Parameters
+                  <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2">
+                    <Edit2 className="w-4 h-4 text-[#0052CC]" /> Edit Branch Details
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Update branch location name, code, contact information, and operational status.
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Update location name, code, email, phone, and operational status.
                   </p>
                 </div>
                 <Button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm"
+                  className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  Save Changes
+                  Save Branch Details
                 </Button>
               </div>
 
@@ -298,7 +295,7 @@ function BranchDetailContent() {
                       Branch Code
                     </label>
                     <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                      Fixed Code
+                      System Code
                     </span>
                   </div>
                   <Input
@@ -344,7 +341,7 @@ function BranchDetailContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, branchType: e.target.value as BranchType })
                     }
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#0052CC]"
                   >
                     <option value="HEAD_OFFICE">Head Office</option>
                     <option value="CAMPUS">Main Campus</option>
@@ -397,7 +394,7 @@ function BranchDetailContent() {
                   <select
                     value={formData.status || 'ACTIVE'}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#0052CC]"
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
@@ -417,84 +414,84 @@ function BranchDetailContent() {
                 <Button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+                  className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  Save Branch Parameters
+                  Save Branch Details
                 </Button>
               </div>
             </form>
           ) : (
             /* Overview & Details Info Cards */
             <div className="space-y-3">
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-violet-600" /> Overview & Contact Details
+              <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#0052CC]" /> Campus Communication & Info
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
                     <Mail className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Email Address
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {branch.email || 'Not configured'}
                     </p>
                   </div>
-                </Card>
+                </div>
 
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 shrink-0">
                     <Phone className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Phone Number
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {branch.phone || 'Not configured'}
                     </p>
                   </div>
-                </Card>
+                </div>
 
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Timezone
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {branch.timezone || 'Asia/Kolkata'}
                     </p>
                   </div>
-                </Card>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Section 2: Offered Courses */}
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-[#E5E7EB] shadow-xs space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <BookOpen className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-violet-600 shrink-0" /> Offered
-              Courses ({mappedCourses.length})
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+              <BookOpen className="w-4.5 h-4.5 text-[#0052CC] shrink-0" /> Offered Courses (
+              {mappedCourses.length})
             </h3>
-            <span className="text-[10px] sm:text-xs font-bold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg border border-violet-100 shrink-0">
+            <span className="text-xs font-bold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shrink-0 font-mono">
               {mappedCourses.length} Active Courses
             </span>
           </div>
 
           {mappedCourses.length === 0 ? (
-            <div className="text-center py-8 border border-dashed rounded-2xl border-slate-200 bg-slate-50/50">
+            <div className="text-center py-8 border border-dashed rounded-xl border-slate-200 bg-slate-50/50">
               <BookOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <p className="text-xs font-bold text-slate-700">
                 No courses offered at this branch yet.
@@ -508,18 +505,18 @@ function BranchDetailContent() {
               {mappedCourses.map((mc) => (
                 <div
                   key={mc.mappingId}
-                  className="p-4 border border-slate-200/80 rounded-2xl bg-slate-50/50 hover:bg-violet-50/30 transition-all flex flex-col justify-between gap-3 shadow-2xs"
+                  className="p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-blue-50/50 hover:border-blue-300 transition-all flex flex-col justify-between gap-3 shadow-2xs"
                 >
                   <div>
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
-                      <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wider bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-md shrink-0">
+                    <div className="flex items-center justify-between gap-1.5 mb-2">
+                      <span className="text-[10px] font-extrabold text-[#0052CC] uppercase tracking-wider bg-blue-100 px-2 py-0.5 rounded-md shrink-0">
                         {mc.academicYearName}
                       </span>
-                      <span className="text-xs font-mono font-bold text-slate-400 shrink-0">
+                      <span className="text-xs font-mono font-bold text-slate-500 shrink-0">
                         {mc.code}
                       </span>
                     </div>
-                    <h4 className="font-bold text-sm text-slate-900 mt-1 leading-snug break-words">
+                    <h4 className="font-bold text-xs sm:text-sm text-[#0B2447] mt-1 leading-snug line-clamp-2">
                       {mc.name}
                     </h4>
                   </div>
@@ -530,19 +527,19 @@ function BranchDetailContent() {
         </div>
 
         {/* Section 3: Active Student Batches */}
-        <div className="bg-white p-4 sm:p-6 rounded-3xl border border-[#E5E7EB] shadow-xs space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Layers className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-indigo-600 shrink-0" /> Active
-              Student Batches ({branchBatches.length})
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="text-xs sm:text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4.5 h-4.5 text-[#0052CC] shrink-0" /> Active Student Batches (
+              {branchBatches.length})
             </h3>
-            <span className="text-[10px] sm:text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 shrink-0">
+            <span className="text-xs font-bold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 shrink-0 font-mono">
               {branchBatches.length} Running Batches
             </span>
           </div>
 
           {branchBatches.length === 0 ? (
-            <div className="text-center py-8 border border-dashed rounded-2xl border-slate-200 bg-slate-50/50">
+            <div className="text-center py-8 border border-dashed rounded-xl border-slate-200 bg-slate-50/50">
               <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
               <p className="text-xs font-bold text-slate-700">
                 No active batches running at this branch.
@@ -552,31 +549,31 @@ function BranchDetailContent() {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
+            <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
               {branchBatches.map((batch) => (
                 <div
                   key={batch.id}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50/60 transition-colors gap-3.5"
+                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-slate-50 transition-colors gap-3.5"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-bold text-sm text-slate-900 leading-snug break-words">
+                      <span className="font-extrabold text-xs sm:text-sm text-[#0B2447] leading-snug">
                         {batch.name}
                       </span>
-                      <span className="text-xs font-mono font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100 shrink-0">
+                      <span className="text-xs font-mono font-bold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
                         {batch.code}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed break-words">
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
                       Program:{' '}
-                      <span className="text-slate-700 font-semibold">
+                      <span className="text-slate-800 font-bold">
                         {batch.courseName || 'Regular Course'}
                       </span>
                     </p>
                   </div>
 
                   <div className="flex items-center justify-between sm:flex-col sm:items-end shrink-0 gap-2 pt-2.5 sm:pt-0 border-t border-slate-100 sm:border-0">
-                    <span className="inline-flex items-center rounded-lg bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700 border border-indigo-100 shrink-0">
+                    <span className="inline-flex items-center rounded-lg bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-[#0052CC] border border-blue-200 shrink-0">
                       {batch.deliveryTypeName || 'Regular'}
                     </span>
                     <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 shrink-0">

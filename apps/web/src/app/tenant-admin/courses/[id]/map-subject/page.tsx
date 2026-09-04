@@ -19,6 +19,7 @@ import {
   Award,
   Layers,
   FileText,
+  ChevronRight,
 } from 'lucide-react';
 import { useCourse } from '@/features/master-data/hooks/use-courses';
 import { useSubjects } from '@/features/master-data/hooks/use-subjects';
@@ -65,7 +66,9 @@ function MapCourseSubjectContent() {
 
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const [selectedSubjectMasterDetails, setSelectedSubjectMasterDetails] = useState<any | null>(null);
+  const [selectedSubjectMasterDetails, setSelectedSubjectMasterDetails] = useState<any | null>(
+    null,
+  );
   const [loadingMasterDetails, setLoadingMasterDetails] = useState(false);
   const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
   const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
@@ -80,7 +83,8 @@ function MapCourseSubjectContent() {
 
     let isMounted = true;
     setLoadingMasterDetails(true);
-    api.get<any>(`/master/subjects/${formData.subjectId}/course-subject`)
+    api
+      .get<any>(`/master/subjects/${formData.subjectId}/course-subject`)
       .then((res) => {
         if (!isMounted) return;
         setSelectedSubjectMasterDetails(res);
@@ -210,7 +214,7 @@ function MapCourseSubjectContent() {
   if (courseLoading) {
     return (
       <DashboardLayout>
-        <div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">
+        <div className="p-8 text-center text-xs font-bold text-slate-500">
           Loading course program...
         </div>
       </DashboardLayout>
@@ -219,14 +223,14 @@ function MapCourseSubjectContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
         {/* Top Back Action Bar */}
         <div className="flex flex-row items-center justify-between gap-2 w-full">
           <button
             onClick={() => router.push(`/tenant-admin/courses/${courseId}?tab=curriculum`)}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:bg-slate-50 transition shadow-2xs shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
+            <ArrowLeft className="w-4 h-4 text-[#0052CC] shrink-0" />
             <span className="hidden sm:inline">Back to Course Curriculum</span>
             <span className="sm:hidden">Back</span>
           </button>
@@ -235,50 +239,41 @@ function MapCourseSubjectContent() {
             type="button"
             variant="outline"
             onClick={() => router.push(`/tenant-admin/courses/${courseId}?tab=curriculum`)}
-            className="rounded-xl text-xs font-bold text-slate-600 shrink-0 px-3 sm:px-4 py-2"
+            className="rounded-xl text-xs font-bold text-slate-600 shrink-0 px-3 sm:px-4 py-2 border-slate-200"
           >
             <X className="w-4 h-4 text-slate-400 shrink-0 mr-1" />
             Cancel
           </Button>
         </div>
 
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <BookOpen className="w-5 h-5 sm:w-7 sm:h-7 text-violet-100" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                  <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                    Course Syllabus Architecture
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
-                  Map Subject to {course?.name || 'Syllabus'} 📚
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5">
-                  Associate a master core subject (Physics, Chemistry, Biology) to this course
-                  program.
-                </p>
-              </div>
+        {/* Dedicated Screen Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-5 sm:p-6 rounded-2xl shadow-2xs border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Course Architecture</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Map Core Subject</span>
             </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+              Map Subject to {course?.name || 'Syllabus'}
+            </h1>
+            <p className="text-xs text-slate-600 font-medium">
+              Associate a master core subject (Physics, Chemistry, Biology) to this course program.
+            </p>
           </div>
         </div>
 
         {/* Map Subject Form Container */}
         <form
           onSubmit={handleSubmit}
-          className="bg-white border border-[#E5E7EB] rounded-3xl p-5 sm:p-7 shadow-sm space-y-6"
+          className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-2xs space-y-6"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-violet-600" /> Syllabus Mapping Parameters
+              <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#0052CC]" /> Syllabus Mapping Parameters
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
                 Configure planned hours, examination marks, and mandatory status.
               </p>
             </div>
@@ -286,7 +281,7 @@ function MapCourseSubjectContent() {
             <Button
               type="submit"
               disabled={assignMutation.isPending}
-              className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm shrink-0 px-4 py-2"
+              className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs shrink-0 px-4 py-2"
             >
               {assignMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -299,11 +294,13 @@ function MapCourseSubjectContent() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
                 Select Master Subject *
               </label>
               {subjectsLoading ? (
-                <p className="text-xs text-slate-400 animate-pulse">Loading core subjects...</p>
+                <p className="text-xs text-slate-400 animate-pulse font-medium">
+                  Loading core subjects...
+                </p>
               ) : availableSubjects.length === 0 ? (
                 <div className="p-3.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
@@ -311,51 +308,52 @@ function MapCourseSubjectContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {availableSubjects.map((s) => {
-                  const isSelected = formData.subjectId === s.id;
-                  return (
-                    <div
-                      key={s.id}
-                      onClick={() => {
-                        setFormData({ ...formData, subjectId: isSelected ? '' : s.id });
-                        if (errors.subjectId) setErrors((prev) => ({ ...prev, subjectId: undefined }));
-                      }}
-                      className={cn(
-                        'flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
-                        isSelected
-                          ? 'border-[#7c3aed] bg-violet-50/60 ring-2 ring-[#7c3aed]/20 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-violet-200 hover:bg-slate-50/50',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className="w-4 h-4 rounded text-[#7c3aed] focus:ring-[#7c3aed] cursor-pointer"
-                      />
-                      <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-100/70 text-[#7c3aed] shrink-0 font-bold text-sm">
-                        📚
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-extrabold text-slate-900 truncate">
-                            {s.name}
-                          </span>
-                          <span className="text-[9px] font-black bg-violet-100 text-[#7c3aed] px-1.5 py-0.2 rounded shrink-0">
-                            {s.code}
+                  {availableSubjects.map((s) => {
+                    const isSelected = formData.subjectId === s.id;
+                    return (
+                      <div
+                        key={s.id}
+                        onClick={() => {
+                          setFormData({ ...formData, subjectId: isSelected ? '' : s.id });
+                          if (errors.subjectId)
+                            setErrors((prev) => ({ ...prev, subjectId: undefined }));
+                        }}
+                        className={cn(
+                          'flex items-center gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer select-none',
+                          isSelected
+                            ? 'border-[#0052CC] bg-blue-50/60 ring-2 ring-[#0052CC]/20 shadow-2xs'
+                            : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50/50',
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          className="w-4 h-4 rounded text-[#0052CC] focus:ring-[#0052CC] cursor-pointer"
+                        />
+                        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-50 text-[#0052CC] shrink-0 font-extrabold text-sm border border-blue-200">
+                          <BookOpen className="w-4 h-4 text-[#0052CC]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-extrabold text-[#0B2447] truncate">
+                              {s.name}
+                            </span>
+                            <span className="text-[9px] font-mono font-extrabold bg-blue-50 text-[#0052CC] px-1.5 py-0.2 rounded border border-blue-200 shrink-0">
+                              {s.code}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-medium block">
+                            Type: {s.subjectType}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-medium block">
-                          Type: {s.subjectType}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
               )}
               {errors.subjectId && (
-                <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 mt-1">
                   <AlertCircle className="w-3 h-3" /> {errors.subjectId}
                 </p>
               )}
@@ -366,40 +364,44 @@ function MapCourseSubjectContent() {
               <div className="space-y-3 sm:col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-violet-600" />
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Select Chapters & Topics to Map to Course Syllabus 📚
+                    <Layers className="w-4 h-4 text-[#0052CC]" />
+                    <h4 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
+                      Select Chapters & Topics to Map to Course Syllabus
                     </h4>
                   </div>
 
-                  {selectedSubjectMasterDetails?.chapters && selectedSubjectMasterDetails.chapters.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleSelectAllToggle}
-                      className="text-xs font-bold text-violet-700 hover:underline flex items-center gap-1.5"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={
-                          selectedChapterIds.size === selectedSubjectMasterDetails.chapters.length &&
-                          selectedChapterIds.size > 0
-                        }
-                        onChange={handleSelectAllToggle}
-                        className="w-3.5 h-3.5 rounded text-violet-600 focus:ring-violet-500"
-                      />
-                      Select All Chapters & Topics
-                    </button>
-                  )}
+                  {selectedSubjectMasterDetails?.chapters &&
+                    selectedSubjectMasterDetails.chapters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSelectAllToggle}
+                        className="text-xs font-extrabold text-[#0052CC] hover:underline flex items-center gap-1.5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            selectedChapterIds.size ===
+                              selectedSubjectMasterDetails.chapters.length &&
+                            selectedChapterIds.size > 0
+                          }
+                          onChange={handleSelectAllToggle}
+                          className="w-3.5 h-3.5 rounded text-[#0052CC] focus:ring-[#0052CC]"
+                        />
+                        Select All Chapters & Topics
+                      </button>
+                    )}
                 </div>
 
                 {loadingMasterDetails ? (
                   <div className="py-6 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-violet-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0052CC]" />
                     Loading chapters for selected subject...
                   </div>
-                ) : !selectedSubjectMasterDetails?.chapters || selectedSubjectMasterDetails.chapters.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic text-center py-4 bg-white rounded-xl border border-slate-200">
-                    No chapters configured for this master subject yet. (All future chapters added will clone automatically).
+                ) : !selectedSubjectMasterDetails?.chapters ||
+                  selectedSubjectMasterDetails.chapters.length === 0 ? (
+                  <p className="text-xs text-slate-500 font-medium italic text-center py-4 bg-white rounded-xl border border-slate-200">
+                    No chapters configured for this master subject yet. (All future chapters added
+                    will clone automatically).
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -417,16 +419,18 @@ function MapCourseSubjectContent() {
                               id={`ch-${ch.id}`}
                               checked={isChChecked}
                               onChange={() => handleToggleChapterCheckbox(ch)}
-                              className="w-4 h-4 rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
+                              className="w-4 h-4 rounded text-[#0052CC] focus:ring-[#0052CC] cursor-pointer"
                             />
                             <label
                               htmlFor={`ch-${ch.id}`}
-                              className="text-xs font-bold text-slate-900 cursor-pointer flex items-center gap-2 flex-1"
+                              className="text-xs font-extrabold text-[#0B2447] cursor-pointer flex items-center gap-2 flex-1"
                             >
                               <span>{ch.name}</span>
-                              <span className="text-[10px] font-mono text-slate-400">({ch.code})</span>
+                              <span className="text-[10px] font-mono text-slate-400 font-semibold">
+                                ({ch.code})
+                              </span>
                             </label>
-                            <span className="text-[10px] text-violet-600 font-semibold">
+                            <span className="text-[10px] text-[#0052CC] font-bold">
                               {topics.length} topics
                             </span>
                           </div>
@@ -446,11 +450,11 @@ function MapCourseSubjectContent() {
                                       id={`tp-${tp.id}`}
                                       checked={isTpChecked}
                                       onChange={() => handleToggleTopicCheckbox(ch.id, tp.id)}
-                                      className="w-3.5 h-3.5 rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
+                                      className="w-3.5 h-3.5 rounded text-[#0052CC] focus:ring-[#0052CC] cursor-pointer"
                                     />
                                     <label
                                       htmlFor={`tp-${tp.id}`}
-                                      className="text-[11px] font-semibold text-slate-700 cursor-pointer truncate"
+                                      className="text-[11px] font-bold text-slate-700 cursor-pointer truncate"
                                     >
                                       {tp.name}
                                     </label>
@@ -469,7 +473,7 @@ function MapCourseSubjectContent() {
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-violet-600" /> Planned Teaching Hours *
+                <Clock className="w-3.5 h-3.5 text-[#0052CC]" /> Planned Teaching Hours *
               </label>
               <Input
                 type="number"
@@ -479,7 +483,7 @@ function MapCourseSubjectContent() {
                   setFormData({ ...formData, plannedHours: parseInt(e.target.value, 10) || 100 })
                 }
                 placeholder="e.g. 120"
-                className="rounded-xl border-slate-200 text-xs font-bold"
+                className="rounded-xl border-slate-200 text-xs font-bold bg-slate-50 focus:border-[#0052CC]"
               />
             </div>
 
@@ -494,13 +498,13 @@ function MapCourseSubjectContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, displayOrder: parseInt(e.target.value, 10) || 1 })
                 }
-                className="rounded-xl border-slate-200 text-xs font-bold"
+                className="rounded-xl border-slate-200 text-xs font-bold bg-slate-50 focus:border-[#0052CC]"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Award className="w-3.5 h-3.5 text-violet-600" /> Total Marks *
+                <Award className="w-3.5 h-3.5 text-[#0052CC]" /> Total Marks *
               </label>
               <Input
                 type="number"
@@ -509,13 +513,13 @@ function MapCourseSubjectContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, totalMarks: parseInt(e.target.value, 10) || 100 })
                 }
-                className="rounded-xl border-slate-200 text-xs font-bold"
+                className="rounded-xl border-slate-200 text-xs font-bold bg-slate-50 focus:border-[#0052CC]"
               />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                <Award className="w-3.5 h-3.5 text-violet-600" /> Minimum Passing Marks *
+                <Award className="w-3.5 h-3.5 text-[#0052CC]" /> Minimum Passing Marks *
               </label>
               <Input
                 type="number"
@@ -525,12 +529,12 @@ function MapCourseSubjectContent() {
                   setFormData({ ...formData, passingMarks: parseInt(e.target.value, 10) || 40 })
                 }
                 className={cn(
-                  'rounded-xl text-xs font-bold',
+                  'rounded-xl text-xs font-bold bg-slate-50 focus:border-[#0052CC]',
                   errors.passingMarks ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200',
                 )}
               />
               {errors.passingMarks && (
-                <p className="text-[11px] font-bold text-rose-500 flex items-center gap-1 mt-1">
+                <p className="text-[11px] font-bold text-rose-600 flex items-center gap-1 mt-1">
                   <AlertCircle className="w-3 h-3" /> {errors.passingMarks}
                 </p>
               )}
@@ -545,7 +549,7 @@ function MapCourseSubjectContent() {
                 onChange={(e) =>
                   setFormData({ ...formData, isMandatory: e.target.value === 'MANDATORY' })
                 }
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-[#0B2447] bg-slate-50 focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
               >
                 <option value="MANDATORY">Mandatory Core Subject</option>
                 <option value="OPTIONAL">Optional Elective Subject</option>
@@ -558,14 +562,14 @@ function MapCourseSubjectContent() {
               type="button"
               variant="outline"
               onClick={() => router.push(`/tenant-admin/courses/${courseId}?tab=curriculum`)}
-              className="rounded-xl text-xs font-bold text-slate-600"
+              className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={assignMutation.isPending || availableSubjects.length === 0}
-              className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+              className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
             >
               {assignMutation.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

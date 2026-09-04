@@ -10,13 +10,12 @@ import {
   DollarSign,
   CreditCard,
   AlertTriangle,
-  Receipt,
   Layers,
   Users,
   FileText,
   TrendingUp,
-  ArrowUpRight,
-  Sparkles,
+  ArrowRight,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -56,37 +55,37 @@ function FeesDashboardContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner - Signature Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Financial Operations & Ledger
-              </span>
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Management Portal</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Financial Operations & Ledger</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Fee Management Engine 💰
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+              Fee Management Engine
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Course fee plans, installment schedules, offline payments, and Razorpay online checkout.
+            <p className="text-xs text-slate-600 font-medium">
+              Course fee plans, installment schedules, offline payments, and Razorpay online
+              checkout.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 self-end sm:self-auto">
             <Button
               onClick={() => router.push('/tenant-admin/fees/plans')}
-              className="gap-2 bg-white/20 hover:bg-white/30 text-white font-bold border-0 backdrop-blur-sm rounded-xl text-xs"
+              className="gap-2 bg-white hover:bg-slate-50 text-[#0052CC] font-extrabold border border-blue-200 shadow-2xs rounded-xl text-xs"
             >
-              <Layers className="h-4 w-4" />
+              <Layers className="h-4 w-4 text-[#0052CC]" />
               <span>Fee Plans</span>
             </Button>
             <Button
               onClick={() => router.push('/tenant-admin/fees/payments/collect')}
-              className="gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-xs"
+              className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs"
             >
-              <CreditCard className="h-4 w-4 text-violet-600" />
+              <CreditCard className="h-4 w-4 text-white" />
               <span>Collect Payment</span>
             </Button>
           </div>
@@ -94,111 +93,161 @@ function FeesDashboardContent() {
 
         {/* KPI Cards Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Total Assigned Fee
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
-                {loading ? '...' : formatRupees(kpis?.totalAssignedFee || 0)}
-              </p>
-            </div>
-          </Card>
-
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Total Collected
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5">
-                {loading ? '...' : formatRupees(kpis?.totalCollected || 0)}
-              </p>
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Total Assigned Fee
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                  {loading ? '...' : formatRupees(kpis?.totalAssignedFee || 0)}
+                </p>
+              </div>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-amber-100 bg-amber-50 text-amber-600 shrink-0">
-              <CreditCard className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Total Outstanding
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-amber-600 mt-0.5">
-                {loading ? '...' : formatRupees(kpis?.totalOutstanding || 0)}
-              </p>
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Total Collected
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-0.5">
+                  {loading ? '...' : formatRupees(kpis?.totalCollected || 0)}
+                </p>
+              </div>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-rose-100 bg-rose-50 text-rose-600 shrink-0">
-              <AlertTriangle className="h-5 w-5" />
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Total Outstanding
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5">
+                  {loading ? '...' : formatRupees(kpis?.totalOutstanding || 0)}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Overdue Installments
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-rose-600 mt-0.5">
-                {loading ? '...' : kpis?.overdueCount || 0}
-              </p>
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Overdue Installments
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-rose-600 mt-0.5">
+                  {loading ? '...' : kpis?.overdueCount || 0}
+                </p>
+              </div>
             </div>
           </Card>
         </div>
 
         {/* Quick Action Navigation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Card 1: Fee Plans & Structures */}
           <Card
             onClick={() => router.push('/tenant-admin/fees/plans')}
-            className="p-6 rounded-2xl cursor-pointer border border-[#E5E7EB] bg-white hover:border-violet-300 transition-all hover:-translate-y-1 hover:shadow-md group"
+            className="p-6 rounded-2xl cursor-pointer border border-slate-200 bg-white hover:border-[#0052CC] transition-all hover:shadow-md group flex flex-col justify-between space-y-5 border-l-4 border-l-[#0052CC]"
           >
-            <div className="flex items-center justify-between">
-              <div className="p-3 rounded-2xl bg-violet-50 text-violet-600 border border-violet-100 group-hover:scale-110 transition-transform">
-                <Layers className="w-6 h-6" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 group-hover:scale-105 transition-transform shadow-2xs">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 font-mono">
+                  Structural Config
+                </span>
               </div>
-              <ArrowUpRight className="w-5 h-5 text-slate-400 group-hover:text-violet-600 transition-colors" />
+              <div>
+                <h3 className="text-lg font-extrabold text-[#0B2447] group-hover:text-[#0052CC] transition-colors">
+                  Fee Plans & Structures
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                  Define course fees, line items (Tuition, Material), and 3-month or 6-month
+                  installment plans.
+                </p>
+              </div>
             </div>
-            <h3 className="mt-4 text-base font-bold text-slate-900">Fee Plans & Structures</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Define course fees, line items (Tuition, Material), and 3-month or 6-month installment plans.
-            </p>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-[#0052CC]">
+              <span>Configure Plans</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </Card>
 
+          {/* Card 2: Student Fee Accounts */}
           <Card
             onClick={() => router.push('/tenant-admin/fees/students')}
-            className="p-6 rounded-2xl cursor-pointer border border-[#E5E7EB] bg-white hover:border-emerald-300 transition-all hover:-translate-y-1 hover:shadow-md group"
+            className="p-6 rounded-2xl cursor-pointer border border-slate-200 bg-white hover:border-[#0052CC] transition-all hover:shadow-md group flex flex-col justify-between space-y-5 border-l-4 border-l-[#0052CC]"
           >
-            <div className="flex items-center justify-between">
-              <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 group-hover:scale-110 transition-transform">
-                <Users className="w-6 h-6" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 group-hover:scale-105 transition-transform shadow-2xs">
+                  <Users className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 font-mono">
+                  Ledger & Balances
+                </span>
               </div>
-              <ArrowUpRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              <div>
+                <h3 className="text-lg font-extrabold text-[#0B2447] group-hover:text-[#0052CC] transition-colors">
+                  Student Fee Accounts
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                  Assign fees to students at enrollment, view installment schedules, and track
+                  individual balances.
+                </p>
+              </div>
             </div>
-            <h3 className="mt-4 text-base font-bold text-slate-900">Student Fee Accounts</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Assign fees to students at enrollment, view installment schedules, and track individual balances.
-            </p>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-[#0052CC]">
+              <span>Inspect Student Ledgers</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </Card>
 
+          {/* Card 3: Overdue & Outstanding Reports */}
           <Card
             onClick={() => router.push('/tenant-admin/fees/reports/outstanding')}
-            className="p-6 rounded-2xl cursor-pointer border border-[#E5E7EB] bg-white hover:border-rose-300 transition-all hover:-translate-y-1 hover:shadow-md group"
+            className="p-6 rounded-2xl cursor-pointer border border-slate-200 bg-white hover:border-rose-400 transition-all hover:shadow-md group flex flex-col justify-between space-y-5 border-l-4 border-l-rose-500"
           >
-            <div className="flex items-center justify-between">
-              <div className="p-3 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 group-hover:scale-110 transition-transform">
-                <FileText className="w-6 h-6" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="p-3 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 group-hover:scale-105 transition-transform shadow-2xs">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-mono">
+                  Analytics & Reports
+                </span>
               </div>
-              <ArrowUpRight className="w-5 h-5 text-slate-400 group-hover:text-rose-600 transition-colors" />
+              <div>
+                <h3 className="text-lg font-extrabold text-[#0B2447] group-hover:text-rose-600 transition-colors">
+                  Overdue & Outstanding Reports
+                </h3>
+                <p className="text-xs text-slate-500 mt-1.5 font-medium leading-relaxed">
+                  Filter students with unpaid or overdue installments, view days overdue, and export
+                  CSV reports.
+                </p>
+              </div>
             </div>
-            <h3 className="mt-4 text-base font-bold text-slate-900">Overdue & Outstanding Reports</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Filter students with unpaid or overdue installments, view days overdue, and export CSV reports.
-            </p>
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-extrabold text-rose-600">
+              <span>View Outstanding Reports</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </Card>
         </div>
       </div>

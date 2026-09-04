@@ -95,62 +95,44 @@ function LiveStatusBadge({ status }: { status: string }) {
   );
 }
 
+import { getClassStatus } from '@/lib/class-status';
+
 // Session Card Component with STRICT Live Button Logic
 function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
   const router = useRouter();
-  const isCancelled = session.sessionStatus === 'CANCELLED';
-  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
 
-  const canJoinNow = useMemo(() => {
-    if (isCancelled) return false;
+  const isOnlineOrHybrid =
+    session.deliveryMode === 'ONLINE' ||
+    session.deliveryMode === 'HYBRID' ||
+    Boolean(session.meetingLink);
 
-    // Live video studio is ONLY for Online/Hybrid classes or classes with a meeting link
-    const isOnlineOrHybrid =
-      session.deliveryMode === 'ONLINE' ||
-      session.deliveryMode === 'HYBRID' ||
-      Boolean(session.meetingLink);
-
-    if (!isOnlineOrHybrid) return false;
-
-    // Enable Join Live Class ONLY if liveStatus is LIVE_NOW or sessionStatus is STARTED
-    if (session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED') return true;
-
-    // Check if current time is within active start/end window for today's session
-    if (session.date && session.startsAt && session.endsAt) {
-      try {
-        const now = new Date();
-        const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const todayStr = new Date().toISOString().slice(0, 10);
-        if (dateStr === todayStr) {
-          const [startH, startM] = session.startsAt.split(':').map(Number);
-          const [endH, endM] = session.endsAt.split(':').map(Number);
-
-          const start = new Date(now);
-          start.setHours(startH, startM, 0, 0);
-
-          const end = new Date(now);
-          end.setHours(endH, endM, 0, 0);
-
-          // Allow starting 5 mins before start time up until end time
-          const windowStart = new Date(start.getTime() - 5 * 60 * 1000);
-          return now >= windowStart && now <= end;
-        }
-      } catch {}
+  const statusInfo = useMemo(() => {
+    const res = getClassStatus(session, { isTutor: true });
+    if (!isOnlineOrHybrid && !res.isCancelled && !res.isEnded) {
+      return { ...res, canJoin: false, buttonLabel: 'Classroom Lecture Scheduled (Offline)' };
     }
+    return res;
+  }, [session, isOnlineOrHybrid]);
 
-    return false;
-  }, [isCancelled, session]);
+  const isCancelled = statusInfo.isCancelled;
+  const isLive = statusInfo.isLive;
+  const canJoinNow = statusInfo.canJoin;
 
   const handleJoinClass = () => {
-    toast.success("Opening Tutor Live Studio 🚀", {
+    toast.success('Opening Tutor Live Studio 🚀', {
       description: `Launching classroom studio for ${session.subject?.name || 'Live Class'}...`,
     });
     const queryParams = new URLSearchParams();
     if (session.sessionType) queryParams.set('sessionType', session.sessionType);
     if (session.studentName) queryParams.set('studentName', session.studentName);
-    if ((session as any).studentAdmissionId) queryParams.set('studentAdmissionId', (session as any).studentAdmissionId);
+    if ((session as any).studentAdmissionId)
+      queryParams.set('studentAdmissionId', (session as any).studentAdmissionId);
     const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    router.push(`/dashboard/tutor/live/${session.id || 'demo-class-1'}${qs}`);
+    const targetUrl = `/dashboard/tutor/live/${session.id || 'demo-class-1'}${qs}`;
+    router.push(targetUrl);
+    if (typeof window !== 'undefined') {
+      window.location.href = targetUrl;
+    }
   };
 
   const subjectName = session.subject?.name ?? 'Subject Session';
@@ -160,7 +142,8 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
     <div
       className={cn(
         'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3.5 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
-        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
+        isLive &&
+          'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
         isCancelled && 'border-rose-200 bg-rose-50/30 opacity-80',
       )}
     >
@@ -234,7 +217,10 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
                 1:1 Personalized Class
               </span>
               <p className="text-xs font-extrabold text-slate-900 truncate">
-                Student: <strong className="text-violet-900 font-black">{session.studentName || 'Assigned Student'}</strong>
+                Student:{' '}
+                <strong className="text-violet-900 font-black">
+                  {session.studentName || 'Assigned Student'}
+                </strong>
               </p>
             </div>
           </div>
@@ -253,7 +239,7 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
               className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black transition-all shadow-2xs text-center bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer"
             >
               <Video className="w-4 h-4 shrink-0" />
-              <span>{isLive ? 'Join Live Class 🎥' : 'Start Live Class 🚀'}</span>
+              <span>{statusInfo.buttonLabel}</span>
             </button>
           ) : (
             <button
@@ -261,11 +247,7 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
               className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-80"
             >
               <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-              <span>
-                {session.deliveryMode === 'CLASSROOM'
-                  ? 'Classroom Lecture Scheduled (Offline)'
-                  : `Class Starts at ${formatTime(session.startsAt, session.endsAt).split('–')[0].trim()} (Upcoming)`}
-              </span>
+              <span>{statusInfo.buttonLabel}</span>
             </button>
           )}
         </div>
@@ -273,6 +255,8 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
     </div>
   );
 }
+
+import { ChevronRight } from 'lucide-react';
 
 function TutorClassesContent() {
   const { overview, isLoading: isOverviewLoading } = useTutorOverview();
@@ -304,14 +288,13 @@ function TutorClassesContent() {
       return overview?.upcomingSchedule || [];
     }
 
-    // Range > 7 days (30, 60, 90 days): Parse sessions from timetable response
     if (!timetable?.timetable) return [];
 
     const list: TutorialSessionDto[] = [];
     const todayKey = new Date().toISOString().slice(0, 10);
 
     for (const day of timetable.timetable) {
-      if (day.date <= todayKey) continue; // Skip past/today, keep upcoming
+      if (day.date <= todayKey) continue;
 
       for (const s of day.sessions) {
         list.push({
@@ -320,7 +303,9 @@ function TutorClassesContent() {
           dayOfWeek: day.dayOfWeek,
           startsAt: s.startsAt,
           endsAt: s.endsAt,
-          subject: s.subject ? { id: s.subject.id, name: s.subject.name, code: s.subject.code } : null,
+          subject: s.subject
+            ? { id: s.subject.id, name: s.subject.name, code: s.subject.code }
+            : null,
           batch: s.batch ? { id: s.batch.id, name: s.batch.name, code: s.batch.code } : null,
           branch: s.branch ? { id: s.branch.id, name: s.branch.name } : null,
           sessionStatus: s.sessionStatus || 'SCHEDULED',
@@ -354,7 +339,7 @@ function TutorClassesContent() {
 
   if (isLoading && todaysSchedule.length === 0 && upcomingSchedule.length === 0) {
     return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#FAFAFA]">
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#F8FAFC]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -370,110 +355,119 @@ function TutorClassesContent() {
   };
 
   return (
-    <div className="space-y-6 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Welcome Progress Hero Banner */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-md shadow-violet-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md border border-white/20 text-white">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            <span>Faculty Roster & Live Studio Control</span>
+    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+      {/* ── ISML LMS Light Blue Header Banner ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Faculty Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Assigned Classes</span>
           </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-            My Assigned Classes 📚
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447]">
+            My Assigned Classes & Live Sessions 📚
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5 font-medium">
-            Real-time schedule of today&apos;s lectures and recurring class sessions ({rangeLabels[daysRange]})
+          <p className="text-xs text-slate-600 font-medium">
+            Real-time schedule of today&apos;s lectures and recurring class sessions (
+            {rangeLabels[daysRange]})
           </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center shrink-0 self-start md:self-auto">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Total Sessions ({daysRange}D)</p>
-          <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">{totalSessionsCount}</p>
+        <div className="bg-white px-5 py-3 rounded-xl border border-blue-200 text-center shrink-0 self-start sm:self-auto shadow-2xs">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0052CC]">
+            Total Sessions ({daysRange}D)
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2447] mt-0.5">
+            {totalSessionsCount}
+          </p>
         </div>
       </div>
 
-      {/* KPI Metric Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0">
+      {/* ── KPI Metric Strip ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-blue-300 transition-all">
+          <div className="p-3 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
             <Clock className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Today&apos;s Sessions
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{todaysSchedule.length}</p>
+            <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">{todaysSchedule.length}</p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-indigo-300 transition-all">
+          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
             <CalendarDays className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Upcoming ({rangeLabels[daysRange]})
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{upcomingSchedule.length}</p>
+            <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">
+              {upcomingSchedule.length}
+            </p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-emerald-300 transition-all">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Enrolled Students
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{overview?.stats?.totalStudents || 0}</p>
+            <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">
+              {overview?.stats?.totalStudents || 0}
+            </p>
           </div>
         </Card>
       </div>
 
-      {/* Today's Schedule Section */}
+      {/* ── Today's Schedule Section ── */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-violet-600" />
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+            <Clock className="w-5 h-5 text-[#0052CC]" />
+            <h2 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
               Today&apos;s Class Schedule ({todaysSchedule.length})
             </h2>
           </div>
         </div>
 
         {todaysSchedule.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {todaysSchedule.map((session, index) => (
               <SessionCard key={`${session.id || 'today'}-${index}`} session={session} />
             ))}
           </div>
         ) : (
-          <Card className="p-6 rounded-2xl bg-white border border-[#E5E7EB] text-center text-xs font-medium text-slate-400">
+          <Card className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs font-medium text-slate-400 shadow-2xs">
             No classes scheduled for today.
           </Card>
         )}
       </div>
 
-      {/* Upcoming Sessions Section with Range Filter & Mode Filter */}
+      {/* ── Upcoming Sessions Section with Range Filter & Mode Filter ── */}
       <div className="space-y-4 pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+            <CalendarDays className="w-5 h-5 text-[#0052CC]" />
+            <h2 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
               Upcoming Recurring Sessions ({rangeLabels[daysRange]}) ({filteredUpcoming.length})
             </h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Date Range Selection Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
-              <Filter className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+            <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 text-xs font-bold text-[#0052CC]">
+              <Filter className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
               <select
                 value={daysRange}
                 onChange={(e) => setDaysRange(Number(e.target.value))}
-                className="bg-transparent border-0 outline-none font-bold text-xs text-violet-900 cursor-pointer"
+                className="bg-transparent border-0 outline-none font-extrabold text-xs text-[#0052CC] cursor-pointer"
               >
                 <option value={7}>Next 7 Days</option>
                 <option value={30}>Next 30 Days (1 Month)</option>
@@ -488,9 +482,9 @@ function TutorClassesContent() {
                 key={mode}
                 onClick={() => setModeFilter(mode)}
                 className={cn(
-                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
+                  'px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer',
                   modeFilter === mode
-                    ? 'bg-violet-600 text-white shadow-xs'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
                     : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200',
                 )}
               >
@@ -501,13 +495,17 @@ function TutorClassesContent() {
         </div>
 
         {filteredUpcoming.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredUpcoming.map((session, index) => (
-              <SessionCard key={`${session.id || 'upcoming'}-${index}`} session={session} showDate />
+              <SessionCard
+                key={`${session.id || 'upcoming'}-${index}`}
+                session={session}
+                showDate
+              />
             ))}
           </div>
         ) : (
-          <Card className="p-6 rounded-2xl bg-white border border-[#E5E7EB] text-center text-xs font-medium text-slate-400">
+          <Card className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs font-medium text-slate-400 shadow-2xs">
             No upcoming sessions found matching criteria.
           </Card>
         )}

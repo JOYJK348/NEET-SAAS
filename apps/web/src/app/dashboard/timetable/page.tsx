@@ -4,21 +4,18 @@ import { useState, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
   Plus,
-  Filter,
   Clock,
   Loader2,
   AlertCircle,
   RefreshCw,
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
   Grid,
   List,
-  Sparkles,
   Users,
   Layers,
-  BookOpen,
+  ChevronRight as ChevronRightIcon,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
@@ -107,29 +104,44 @@ export default function TimetablePage() {
   const { data: tutorsData } = useTutors({ limit: 100 });
   const { data: subjectsData } = useSubjects({ limit: 100 });
 
-  const batches = batchesData.map((b: any) => ({
-    id: b.id,
-    name: b.name,
-    code: b.code,
-    branchId: b.branchId,
-    academicYearId: b.academicYearId,
-    startDate: b.startDate,
-    endDate: b.endDate,
-  }));
+  const batches = useMemo(() => {
+    const raw = Array.isArray(batchesData)
+      ? batchesData
+      : ((batchesData as any)?.batches ?? (batchesData as any)?.data ?? []);
+    return raw.map((b: any) => ({
+      id: b.id,
+      name: b.name,
+      code: b.code,
+      branchId: b.branchId,
+      academicYearId: b.academicYearId,
+      startDate: b.startDate,
+      endDate: b.endDate,
+    }));
+  }, [batchesData]);
 
-  const tutors = (tutorsData?.data ?? []).map((t: any) => ({
-    id: t.userId || t.id,
-    firstName: t.firstName,
-    lastName: t.lastName,
-    employeeCode: t.employeeCode || '',
-    subjects: t.subjects || [],
-  }));
+  const tutors = useMemo(() => {
+    const raw = Array.isArray(tutorsData)
+      ? tutorsData
+      : ((tutorsData as any)?.data ?? (tutorsData as any)?.tutors ?? []);
+    return raw.map((t: any) => ({
+      id: t.id || t.userId,
+      firstName: t.firstName,
+      lastName: t.lastName,
+      employeeCode: t.employeeCode || '',
+      subjects: t.subjects || [],
+    }));
+  }, [tutorsData]);
 
-  const subjects = (subjectsData?.data ?? []).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    shortName: s.code || s.name.slice(0, 3).toUpperCase(),
-  }));
+  const subjects = useMemo(() => {
+    const raw = Array.isArray(subjectsData)
+      ? subjectsData
+      : ((subjectsData as any)?.data ?? (subjectsData as any)?.subjects ?? []);
+    return raw.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      shortName: s.code || s.name.slice(0, 3).toUpperCase(),
+    }));
+  }, [subjectsData]);
 
   const setFilter = (key: keyof FilterState, value: string) =>
     setFilters((f) => ({ ...f, [key]: value }));
@@ -261,30 +273,30 @@ export default function TimetablePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner - Signature Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Master Timetable & Schedules
-              </span>
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Management Portal</span>
+              <ChevronRightIcon className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Class Timetable & Master Schedules</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Class Timetable & Schedules 📅
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+              Class Timetable & Schedules
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Interactive calendar view for managing active classes, room allocations, tutor schedules, and session overrides.
+            <p className="text-xs text-slate-600 font-medium">
+              Interactive calendar view for managing active classes, room allocations, tutor
+              schedules, and session overrides.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
             <Button
               onClick={() => router.push('/dashboard/timetable/new')}
-              className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-xs"
+              className="w-full sm:w-auto gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs shrink-0 rounded-xl text-xs"
             >
-              <Plus className="h-4 w-4 text-violet-600 shrink-0" aria-hidden="true" />
+              <Plus className="h-4 w-4 text-white shrink-0" aria-hidden="true" />
               <span>Create Schedule</span>
             </Button>
           </div>
@@ -292,57 +304,69 @@ export default function TimetablePage() {
 
         {/* KPI Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Weekly Classes
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{totalClassesCount}</p>
-            </div>
-          </Card>
-
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 shrink-0">
-              <Layers className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Scheduled Batches
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{uniqueBatchesCount}</p>
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Weekly Classes
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                  {totalClassesCount}
+                </p>
+              </div>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
-              <Users className="h-5 w-5" />
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Scheduled Batches
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                  {uniqueBatchesCount}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                Assigned Tutors
-              </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{uniqueTutorsCount}</p>
+          </Card>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                  Assigned Tutors
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-0.5">
+                  {uniqueTutorsCount}
+                </p>
+              </div>
             </div>
           </Card>
         </div>
 
         {/* Toolbar & Filter Bar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
           {/* View Mode Pills */}
-          <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200 text-xs font-bold shrink-0">
+          <div className="flex items-center p-1 bg-slate-100/80 rounded-xl border border-slate-200 text-xs font-bold shrink-0">
             <button
               onClick={() => setViewMode('MONTH')}
               className={cn(
                 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
                 viewMode === 'MONTH'
-                  ? 'bg-white text-violet-700 shadow-xs font-black'
-                  : 'text-slate-600 hover:text-slate-900',
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-[#0B2447]',
               )}
             >
-              <CalendarDays className="w-3.5 h-3.5 text-violet-600" />
+              <CalendarDays className="w-3.5 h-3.5" />
               <span>Month</span>
             </button>
             <button
@@ -350,11 +374,11 @@ export default function TimetablePage() {
               className={cn(
                 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
                 viewMode === 'WEEK'
-                  ? 'bg-white text-violet-700 shadow-xs font-black'
-                  : 'text-slate-600 hover:text-slate-900',
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-[#0B2447]',
               )}
             >
-              <Grid className="w-3.5 h-3.5 text-violet-600" />
+              <Grid className="w-3.5 h-3.5" />
               <span>Week</span>
             </button>
             <button
@@ -362,11 +386,11 @@ export default function TimetablePage() {
               className={cn(
                 'flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg transition-all',
                 viewMode === 'LIST'
-                  ? 'bg-white text-violet-700 shadow-xs font-black'
-                  : 'text-slate-600 hover:text-slate-900',
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-extrabold'
+                  : 'text-slate-600 hover:text-[#0B2447]',
               )}
             >
-              <List className="w-3.5 h-3.5 text-violet-600" />
+              <List className="w-3.5 h-3.5" />
               <span>Agenda</span>
             </button>
           </div>
@@ -375,7 +399,7 @@ export default function TimetablePage() {
           <div className="flex items-center justify-between sm:justify-center gap-2 shrink-0">
             <button
               onClick={handleToday}
-              className="px-3 py-1.5 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-extrabold hover:bg-violet-100 transition-colors"
+              className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] text-xs font-extrabold hover:bg-blue-100 transition-colors"
             >
               Today
             </button>
@@ -386,7 +410,7 @@ export default function TimetablePage() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs sm:text-sm font-black text-slate-900 min-w-[120px] text-center">
+              <span className="text-xs sm:text-sm font-extrabold text-[#0B2447] min-w-[120px] text-center">
                 {monthName}
               </span>
               <button
@@ -398,7 +422,7 @@ export default function TimetablePage() {
             </div>
             <button
               onClick={() => refetch()}
-              className="w-8 h-8 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-slate-600 shrink-0 ml-1"
+              className="w-8 h-8 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-[#0052CC] shrink-0 ml-1"
               title="Refresh"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -410,10 +434,10 @@ export default function TimetablePage() {
             <select
               value={filters.batchId}
               onChange={(e) => setFilter('batchId', e.target.value)}
-              className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-violet-600 transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] transition-colors cursor-pointer"
             >
               <option value="">All Batches</option>
-              {batches.map((b) => (
+              {batches.map((b: any) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
@@ -423,10 +447,10 @@ export default function TimetablePage() {
             <select
               value={filters.staffProfileId}
               onChange={(e) => setFilter('staffProfileId', e.target.value)}
-              className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-violet-600 transition-colors cursor-pointer"
+              className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] transition-colors cursor-pointer"
             >
               <option value="">All Tutors</option>
-              {tutors.map((t) => (
+              {tutors.map((t: any) => (
                 <option key={t.id} value={t.id}>
                   {t.firstName} {t.lastName}
                 </option>
@@ -436,10 +460,10 @@ export default function TimetablePage() {
             <select
               value={filters.subjectId}
               onChange={(e) => setFilter('subjectId', e.target.value)}
-              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-violet-600 transition-colors cursor-pointer"
+              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] transition-colors cursor-pointer"
             >
               <option value="">All Subjects</option>
-              {subjects.map((s) => (
+              {subjects.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -449,7 +473,7 @@ export default function TimetablePage() {
             {(filters.batchId || filters.staffProfileId || filters.subjectId) && (
               <button
                 onClick={() => setFilters({ batchId: '', staffProfileId: '', subjectId: '' })}
-                className="text-xs text-violet-600 hover:underline font-bold px-2 py-1"
+                className="text-xs text-[#0052CC] hover:underline font-extrabold px-2 py-1"
               >
                 Clear
               </button>
@@ -458,15 +482,17 @@ export default function TimetablePage() {
         </div>
 
         {/* MOBILE 1ST NATIVE DAY SELECTOR (Visible on Mobile Screens < md) */}
-        <div className="block md:hidden bg-white rounded-2xl border border-slate-200/90 p-3.5 space-y-3 shadow-xs">
+        <div className="block md:hidden bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1">
-              <CalendarDays className="w-3.5 h-3.5 text-violet-600" />
-              <span>{selectedDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</span>
+            <span className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-1">
+              <CalendarDays className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>
+                {selectedDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+              </span>
             </span>
             <button
               onClick={handleToday}
-              className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-lg border border-violet-100"
+              className="text-[11px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200"
             >
               Today
             </button>
@@ -491,19 +517,19 @@ export default function TimetablePage() {
                   className={cn(
                     'flex flex-col items-center min-w-[58px] py-2 px-2.5 rounded-xl border transition-all shrink-0 cursor-pointer',
                     isSelected
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-500/20'
-                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100',
+                      ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs font-extrabold'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100',
                   )}
                 >
                   <span className="text-[10px] font-extrabold uppercase opacity-80">
                     {DAY_SHORT[day]}
                   </span>
-                  <span className="text-xs font-black mt-0.5">{WEEKDAY_LABELS[day]}</span>
+                  <span className="text-xs font-extrabold mt-0.5">{WEEKDAY_LABELS[day]}</span>
                   {count > 0 && (
                     <span
                       className={cn(
-                        'text-[9px] mt-1 font-black px-1.5 py-0.2 rounded-full',
-                        isSelected ? 'bg-white/25 text-white' : 'bg-violet-100 text-violet-800',
+                        'text-[9px] mt-1 font-extrabold px-1.5 py-0.2 rounded-full',
+                        isSelected ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#0052CC]',
                       )}
                     >
                       {count}
@@ -517,19 +543,21 @@ export default function TimetablePage() {
 
         {/* Loading & Error States */}
         {isLoading && !weeklyData && (
-          <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-xs">
-            <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
-            <span className="text-slate-500 text-sm font-medium">Loading schedule calendar...</span>
+          <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+            <Loader2 className="w-8 h-8 text-[#0052CC] animate-spin" />
+            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+              Loading timetable calendar...
+            </span>
           </div>
         )}
 
         {isError && !weeklyData && (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-slate-200 shadow-xs">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-slate-200 shadow-2xs">
             <AlertCircle className="w-8 h-8 text-rose-500" />
-            <p className="text-slate-700 text-sm font-semibold">Failed to load timetable</p>
+            <p className="text-[#0B2447] text-sm font-extrabold">Failed to load timetable</p>
             <button
               onClick={() => refetch()}
-              className="text-xs text-violet-600 hover:underline font-bold"
+              className="text-xs text-[#0052CC] hover:underline font-bold"
             >
               Try again
             </button>
@@ -543,20 +571,20 @@ export default function TimetablePage() {
             {viewMode === 'MONTH' && (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
                 {/* Main Calendar Grid (3 columns wide) */}
-                <div className="lg:col-span-3 bg-gradient-to-br from-white via-slate-50/60 to-violet-50/30 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+                <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
                   {/* Days of week header */}
-                  <div className="grid grid-cols-7 border-b border-slate-200/80 bg-slate-100/90 text-center text-[10px] sm:text-xs font-black text-slate-700 py-2.5 sm:py-3.5 uppercase tracking-wider">
+                  <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[10px] sm:text-xs font-extrabold text-slate-600 py-3 uppercase tracking-wider">
                     <div>Mon</div>
                     <div>Tue</div>
                     <div>Wed</div>
                     <div>Thu</div>
                     <div>Fri</div>
-                    <div className="text-violet-700 font-extrabold">Sat</div>
-                    <div className="text-rose-700 font-extrabold">Sun</div>
+                    <div className="text-[#0052CC]">Sat</div>
+                    <div className="text-rose-600">Sun</div>
                   </div>
 
                   {/* 35/42 Real Calendar Grid */}
-                  <div className="grid grid-cols-7 divide-x divide-y divide-slate-200/60 bg-slate-200/30">
+                  <div className="grid grid-cols-7 divide-x divide-y divide-slate-200 bg-slate-100">
                     {calendarDays.map((item, idx) => {
                       const dateSchedules = getSchedulesForDate(item.date);
                       const isSelected = selectedDate.toDateString() === item.date.toDateString();
@@ -570,24 +598,24 @@ export default function TimetablePage() {
                             'min-h-[70px] sm:min-h-[135px] p-1.5 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between group',
                             item.isCurrentMonth
                               ? isToday
-                                ? 'bg-gradient-to-b from-violet-100/60 via-violet-50/30 to-white'
+                                ? 'bg-blue-50/60'
                                 : isSelected
-                                  ? 'bg-violet-50/80'
-                                  : 'bg-white/90 hover:bg-violet-50/30'
+                                  ? 'bg-blue-50/40'
+                                  : 'bg-white hover:bg-slate-50'
                               : 'bg-slate-100/50 text-slate-400',
-                            isSelected && 'ring-2 ring-violet-600 ring-inset shadow-xs',
+                            isSelected && 'ring-2 ring-[#0052CC] ring-inset shadow-2xs',
                           )}
                         >
                           <div className="flex items-center justify-between">
                             <span
                               className={cn(
-                                'text-[10px] sm:text-xs font-black w-5 h-5 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl flex items-center justify-center transition-all',
+                                'text-[10px] sm:text-xs font-extrabold w-5 h-5 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center transition-all',
                                 isToday
-                                  ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30 scale-105 sm:scale-110'
+                                  ? 'bg-[#0052CC] text-white shadow-2xs'
                                   : isSelected
-                                    ? 'bg-violet-100 text-violet-900 border border-violet-300 font-black'
+                                    ? 'bg-blue-100 text-[#0052CC] font-black'
                                     : item.isCurrentMonth
-                                      ? 'text-slate-800 group-hover:text-violet-700 font-extrabold'
+                                      ? 'text-[#0B2447] group-hover:text-[#0052CC]'
                                       : 'text-slate-400 font-semibold',
                               )}
                             >
@@ -595,103 +623,57 @@ export default function TimetablePage() {
                             </span>
 
                             {dateSchedules.length > 0 && (
-                              <span className="text-[8px] sm:text-[10px] font-black text-white bg-violet-600 px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full shadow-2xs">
+                              <span className="text-[8px] sm:text-[10px] font-extrabold text-white bg-[#0052CC] px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full shadow-2xs">
                                 {dateSchedules.length}
                               </span>
                             )}
                           </div>
 
                           <div className="space-y-1 sm:space-y-1.5 mt-1 sm:mt-2 flex-1 flex flex-col justify-start">
-                              {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
-                                const subName =
-                                  subjects.find((s) => s.id === sch.subjectId)?.name || 'Class';
-                                const tutorName = tutors.find(
-                                  (t) => t.id === sch.staffProfileId,
-                                )?.firstName;
+                            {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
+                              const subName =
+                                subjects.find((s: any) => s.id === sch.subjectId)?.name || 'Class';
+                              const tutorName = tutors.find(
+                                (t: any) => t.id === sch.staffProfileId,
+                              )?.firstName;
 
-                                let isOneOnOne = false;
-                                let studentName = '';
-                                if (sch.notes) {
-                                  try {
-                                    const meta = JSON.parse(sch.notes);
-                                    if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentName) {
-                                      isOneOnOne = true;
-                                      studentName = meta.studentName || '';
-                                    }
-                                  } catch {}
-                                }
-
-                                let badgeStyle = 'bg-violet-50 text-violet-900 border-violet-200/80';
-                                let timeBadge = 'bg-violet-100/80 text-violet-800';
-                                let dotBg = 'bg-violet-600';
-
-                                if (subName.toLowerCase().includes('physics')) {
-                                  badgeStyle = 'bg-sky-50 text-sky-950 border-sky-200/80';
-                                  timeBadge = 'bg-sky-100 text-sky-900';
-                                  dotBg = 'bg-sky-600';
-                                } else if (subName.toLowerCase().includes('chemistry')) {
-                                  badgeStyle = 'bg-emerald-50 text-emerald-950 border-emerald-200/80';
-                                  timeBadge = 'bg-emerald-100 text-emerald-900';
-                                  dotBg = 'bg-emerald-600';
-                                } else if (subName.toLowerCase().includes('biology')) {
-                                  badgeStyle = 'bg-amber-50 text-amber-950 border-amber-200/80';
-                                  timeBadge = 'bg-amber-100 text-amber-900';
-                                  dotBg = 'bg-amber-600';
-                                } else if (subName.toLowerCase().includes('math')) {
-                                  badgeStyle = 'bg-rose-50 text-rose-950 border-rose-200/80';
-                                  timeBadge = 'bg-rose-100 text-rose-900';
-                                  dotBg = 'bg-rose-600';
-                                }
-
-                                return (
-                                  <div key={sch.id || sIdx}>
-                                    <div
-                                      className={`sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md ${badgeStyle} truncate flex items-center gap-1 border`}
-                                    >
-                                      <span className={`w-1.5 h-1.5 rounded-full ${dotBg} shrink-0`} />
-                                      <span className="truncate">{isOneOnOne ? `1:1 ${subName}` : subName}</span>
-                                    </div>
-
-                                    <div
-                                      className={`hidden sm:block text-[10px] font-bold p-2 rounded-xl border ${badgeStyle} shadow-2xs space-y-1 hover:brightness-95 transition-all`}
-                                    >
-                                      <div className="flex items-center justify-between gap-1">
-                                        <span className="font-extrabold truncate text-slate-900 text-[10.5px]">
-                                          {subName}
-                                        </span>
-                                        <span className="text-[8.5px] font-extrabold uppercase text-slate-500 bg-white/70 px-1 py-0.2 rounded border border-slate-200/60">
-                                          {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
-                                        </span>
-                                      </div>
-
-                                      {isOneOnOne && (
-                                        <div className="text-[9px] font-black text-violet-700 bg-violet-100 px-1.5 py-0.5 rounded flex items-center gap-1 truncate">
-                                          <Sparkles className="w-2.5 h-2.5 shrink-0" />
-                                          <span>1:1 {studentName ? `(${studentName})` : 'Class'}</span>
-                                        </div>
-                                      )}
-
-                                      <div
-                                        className={`flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold ${timeBadge}`}
-                                      >
-                                        <span>{sch.startTime}</span>
-                                        <span>-</span>
-                                        <span>{sch.endTime}</span>
-                                      </div>
-
-                                      {tutorName && (
-                                        <p className="text-[9px] text-slate-600 truncate font-semibold pt-0.5 border-t border-slate-200/40">
-                                          Tutor: <strong className="text-slate-900">{tutorName}</strong>
-                                        </p>
-                                      )}
-                                    </div>
+                              return (
+                                <div key={sch.id || sIdx}>
+                                  <div className="sm:hidden text-[8px] font-extrabold px-1 py-0.5 rounded-md bg-blue-50 text-[#0052CC] border border-blue-200 truncate flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#0052CC] shrink-0" />
+                                    <span className="truncate">{subName}</span>
                                   </div>
-                                );
-                              })}
+
+                                  <div className="hidden sm:block text-[10px] font-bold p-2 rounded-xl border bg-blue-50/70 border-blue-200 text-[#0B2447] shadow-2xs space-y-1 hover:brightness-95 transition-all">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="font-extrabold truncate text-[#0B2447] text-[10.5px]">
+                                        {subName}
+                                      </span>
+                                      <span className="text-[8.5px] font-extrabold uppercase text-[#0052CC] bg-white px-1 py-0.2 rounded border border-blue-200">
+                                        {DAY_SHORT[sch.dayOfWeek] || sch.dayOfWeek.slice(0, 3)}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between px-1.5 py-0.5 rounded-md font-mono text-[9px] font-bold bg-white text-[#0052CC] border border-blue-100">
+                                      <span>{sch.startTime}</span>
+                                      <span>-</span>
+                                      <span>{sch.endTime}</span>
+                                    </div>
+
+                                    {tutorName && (
+                                      <p className="text-[9px] text-slate-600 truncate font-medium pt-0.5 border-t border-blue-200/50">
+                                        Tutor:{' '}
+                                        <strong className="text-[#0B2447]">{tutorName}</strong>
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
 
                             {dateSchedules.length > 2 && (
                               <div className="mt-auto text-right">
-                                <span className="text-[7.5px] sm:text-[9px] font-bold text-violet-700 bg-violet-50 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-md border border-violet-200 inline-block">
+                                <span className="text-[7.5px] sm:text-[9px] font-extrabold text-[#0052CC] bg-blue-50 px-1 sm:px-2 py-0.2 sm:py-0.5 rounded-md border border-blue-200 inline-block">
                                   +{dateSchedules.length - 2}
                                 </span>
                               </div>
@@ -704,24 +686,21 @@ export default function TimetablePage() {
                 </div>
 
                 {/* Side Panel Roster */}
-                <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-5 space-y-4 shadow-xs h-fit">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4 shadow-2xs h-fit">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4.5 h-4.5 text-violet-600" />
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900">
-                          {selectedDate.toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </h3>
-                        <p className="text-[11px] font-bold text-violet-700 uppercase">
-                          {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
-                        </p>
-                      </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-[#0B2447]">
+                        {selectedDate.toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </h3>
+                      <p className="text-[11px] font-bold text-[#0052CC] uppercase">
+                        {selectedDate.toLocaleDateString('en-IN', { weekday: 'long' })}
+                      </p>
                     </div>
-                    <span className="text-xs font-black text-violet-800 bg-violet-50 border border-violet-100 px-3 py-1 rounded-full">
+                    <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
                       {selectedDaySchedules.length}{' '}
                       {selectedDaySchedules.length === 1 ? 'Class' : 'Classes'}
                     </span>
@@ -733,9 +712,9 @@ export default function TimetablePage() {
                         <ScheduleSlotCard
                           key={s.id}
                           schedule={s}
-                          subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                          batchName={batches.find((b) => b.id === s.batchId)?.name}
-                          tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                          subjectName={subjects.find((sub: any) => sub.id === s.subjectId)?.name}
+                          batchName={batches.find((b: any) => b.id === s.batchId)?.name}
+                          tutorName={tutors.find((t: any) => t.id === s.staffProfileId)?.firstName}
                           onAction={handleSessionAction}
                           onHistory={handleSessionHistory}
                         />
@@ -744,10 +723,12 @@ export default function TimetablePage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
                       <Clock className="w-8 h-8 text-slate-300 mb-2" />
-                      <p className="text-sm font-bold text-slate-700">No classes for this date</p>
-                      <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                        Tap any date on the calendar strip above to inspect classes or click 'Create'
-                        to add a schedule.
+                      <p className="text-sm font-extrabold text-[#0B2447]">
+                        No classes for this date
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1 max-w-xs font-medium">
+                        Select any date on the calendar above or click 'Create Schedule' to add a
+                        class.
                       </p>
                     </div>
                   )}
@@ -776,43 +757,40 @@ export default function TimetablePage() {
                         className={cn(
                           'p-3.5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2',
                           isSelected
-                            ? 'bg-violet-600 border-violet-600 text-white shadow-md shadow-violet-500/20 scale-[1.02]'
-                            : 'bg-white border-slate-200/80 hover:border-violet-200 text-slate-700 hover:bg-slate-50/50',
+                            ? 'bg-[#0052CC] border-[#0052CC] text-white shadow-2xs font-extrabold scale-[1.02]'
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50',
                         )}
                       >
                         <div className="flex items-center justify-between">
                           <span
                             className={cn(
                               'text-xs font-extrabold uppercase',
-                              isSelected ? 'text-violet-100' : 'text-slate-400',
+                              isSelected ? 'text-white' : 'text-slate-400',
                             )}
                           >
                             {DAY_SHORT[day]}
                           </span>
                           <span
                             className={cn(
-                              'text-[10px] font-black px-2 py-0.5 rounded-full',
+                              'text-[10px] font-extrabold px-2 py-0.5 rounded-full',
                               isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600',
                             )}
                           >
                             {daySchedules.length}
                           </span>
                         </div>
-                        <p className="text-sm font-black tracking-tight">{WEEKDAY_LABELS[day]}</p>
+                        <p className="text-sm font-extrabold">{WEEKDAY_LABELS[day]}</p>
                       </div>
                     );
                   })}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-2xs">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-violet-600" />
-                      <h3 className="text-sm font-black text-slate-900">
-                        Schedules for {WEEKDAY_FULL_LABELS[selectedDayKey]}
-                      </h3>
-                    </div>
-                    <span className="text-xs font-bold text-slate-400">
+                    <h3 className="text-sm font-extrabold text-[#0B2447]">
+                      Schedules for {WEEKDAY_FULL_LABELS[selectedDayKey]}
+                    </h3>
+                    <span className="text-xs font-extrabold text-[#0052CC]">
                       {selectedDaySchedules.length} Classes Scheduled
                     </span>
                   </div>
@@ -823,9 +801,9 @@ export default function TimetablePage() {
                         <ScheduleSlotCard
                           key={s.id}
                           schedule={s}
-                          subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                          batchName={batches.find((b) => b.id === s.batchId)?.name}
-                          tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                          subjectName={subjects.find((sub: any) => sub.id === s.subjectId)?.name}
+                          batchName={batches.find((b: any) => b.id === s.batchId)?.name}
+                          tutorName={tutors.find((t: any) => t.id === s.staffProfileId)?.firstName}
                           onAction={handleSessionAction}
                           onHistory={handleSessionHistory}
                         />
@@ -834,8 +812,8 @@ export default function TimetablePage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
                       <Clock className="w-8 h-8 text-slate-300 mb-2" />
-                      <p className="text-sm font-bold text-slate-700">No classes scheduled</p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-sm font-extrabold text-[#0B2447]">No classes scheduled</p>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">
                         No classes found for {WEEKDAY_FULL_LABELS[selectedDayKey]}. Click 'Create
                         Schedule' to add one.
                       </p>
@@ -847,8 +825,8 @@ export default function TimetablePage() {
 
             {/* VIEW MODE 3: AGENDA / FULL LIST VIEW */}
             {viewMode === 'LIST' && (
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-6">
-                <h3 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-3">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-5 space-y-6">
+                <h3 className="text-sm font-extrabold text-[#0B2447] border-b border-slate-100 pb-3">
                   Full Weekly Class Agenda
                 </h3>
                 <div className="space-y-6">
@@ -859,10 +837,10 @@ export default function TimetablePage() {
                     return (
                       <div key={day} className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-violet-700 bg-violet-50 px-3 py-1 rounded-full border border-violet-200">
+                          <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                             {WEEKDAY_FULL_LABELS[day]}
                           </span>
-                          <span className="text-xs text-slate-400 font-bold">
+                          <span className="text-xs text-slate-500 font-bold">
                             {daySchedules.length} {daySchedules.length === 1 ? 'class' : 'classes'}
                           </span>
                         </div>
@@ -871,9 +849,13 @@ export default function TimetablePage() {
                             <ScheduleSlotCard
                               key={s.id}
                               schedule={s}
-                              subjectName={subjects.find((sub) => sub.id === s.subjectId)?.name}
-                              batchName={batches.find((b) => b.id === s.batchId)?.name}
-                              tutorName={tutors.find((t) => t.id === s.staffProfileId)?.firstName}
+                              subjectName={
+                                subjects.find((sub: any) => sub.id === s.subjectId)?.name
+                              }
+                              batchName={batches.find((b: any) => b.id === s.batchId)?.name}
+                              tutorName={
+                                tutors.find((t: any) => t.id === s.staffProfileId)?.firstName
+                              }
                               onAction={handleSessionAction}
                               onHistory={handleSessionHistory}
                             />

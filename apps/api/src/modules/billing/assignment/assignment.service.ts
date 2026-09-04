@@ -222,8 +222,12 @@ export class FeeAssignmentService {
 
     let admission = await this.prisma.studentAdmissions.findFirst({
       where: {
-        id: studentAdmissionId,
         deletedAt: null,
+        OR: [
+          { id: studentAdmissionId },
+          { studentProfileId: studentAdmissionId },
+          { studentProfileIstudent_profile: { userId: studentAdmissionId } },
+        ],
         ...(tenantFilter ? { tenantId: tenantFilter } : {}),
       },
       include: {
@@ -236,48 +240,17 @@ export class FeeAssignmentService {
     });
 
     if (!admission) {
-      // Look up admission by student profile userId
+      // Look up admission across any tenant by student profile userId or email or ID
       admission = await this.prisma.studentAdmissions.findFirst({
         where: {
           deletedAt: null,
-          ...(tenantFilter ? { tenantId: tenantFilter } : {}),
-          studentProfileIstudent_profile: {
-            userId: studentAdmissionId,
-          },
+          OR: [
+            { id: studentAdmissionId },
+            { studentProfileId: studentAdmissionId },
+            { studentProfileIstudent_profile: { userId: studentAdmissionId } },
+            { studentProfileIstudent_profile: { userIdusers: { email: studentAdmissionId } } },
+          ],
         },
-        include: {
-          studentProfileIstudent_profile: {
-            include: {
-              userIdusers: true,
-            },
-          },
-        },
-      });
-    }
-
-    if (!admission) {
-      // Fallback to first available student admission for this tenant
-      admission = await this.prisma.studentAdmissions.findFirst({
-        where: {
-          deletedAt: null,
-          ...(tenantFilter ? { tenantId: tenantFilter } : {}),
-        },
-        orderBy: { createdAt: 'asc' },
-        include: {
-          studentProfileIstudent_profile: {
-            include: {
-              userIdusers: true,
-            },
-          },
-        },
-      });
-    }
-
-    if (!admission) {
-      // Ultimate fallback: any active student admission in database
-      admission = await this.prisma.studentAdmissions.findFirst({
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'asc' },
         include: {
           studentProfileIstudent_profile: {
             include: {

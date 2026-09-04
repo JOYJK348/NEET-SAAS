@@ -12,23 +12,38 @@ import { tutorService } from '@/features/tutors/services/tutor-service';
 import { scheduleKeys } from '@/features/scheduling/hooks/use-schedules';
 import { getWeeklyView } from '@/features/scheduling/services/schedule-service';
 import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
-import { studentDashboardKeys, studentDashboardApi } from '@/features/student-dashboard/api/student-dashboard.api';
-import { overviewKeys, overviewService } from '@/features/tutor-dashboard/services/overview-service';
+import {
+  studentDashboardKeys,
+  studentDashboardApi,
+} from '@/features/student-dashboard/api/student-dashboard.api';
+import {
+  overviewKeys,
+  overviewService,
+} from '@/features/tutor-dashboard/services/overview-service';
 
 /**
  * Universal Prefetch Orchestrator
- * 
+ *
  * Rules:
  * - Role-aware: Only prefetches endpoints accessible to the authenticated user's role.
  * - Non-disruptive: Passes { skipGlobalToast: true } so background prefetching never emits Access Denied toasts.
  * - Uses EXACT queryKeys matching default page params for 100% immediate cache hits (<20ms).
  */
-export async function prefetchCriticalData(queryClient: QueryClient, tenantId?: string, roleCode?: string) {
+export async function prefetchCriticalData(
+  queryClient: QueryClient,
+  tenantId?: string,
+  roleCode?: string,
+) {
   const role = (roleCode || '').toUpperCase();
   const isTutor = role === 'TUTOR' || role === 'FACULTY';
   const isStudent = role === 'STUDENT';
   const isParent = role === 'PARENT';
-  const isAdmin = !role || role === 'TENANT_ADMIN' || role.startsWith('TENANT_ADMIN') || role === 'SUPER_ADMIN' || role === 'PLATFORM_ADMIN';
+  const isAdmin =
+    !role ||
+    role === 'TENANT_ADMIN' ||
+    role.startsWith('TENANT_ADMIN') ||
+    role === 'SUPER_ADMIN' ||
+    role === 'PLATFORM_ADMIN';
 
   try {
     if (isTutor) {
@@ -41,17 +56,29 @@ export async function prefetchCriticalData(queryClient: QueryClient, tenantId?: 
         }),
         queryClient.prefetchQuery({
           queryKey: ['tutor', 'schedules', 'weekly'],
-          queryFn: ({ signal }) => api.get('/scheduling/schedules/weekly-view', { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            api.get('/scheduling/schedules/weekly-view', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
         queryClient.prefetchQuery({
           queryKey: ['tutor', 'batches'],
-          queryFn: ({ signal }) => api.get('/people/tutors/my-batches', { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            api.get('/people/tutors/my-batches', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
         queryClient.prefetchQuery({
-          queryKey: ['recordings', 'list', { search: '', status: 'ALL', subjectId: 'ALL', batchId: 'ALL' }, 1],
-          queryFn: ({ signal }) => api.get('/recordings', { params: { page: 1, limit: 12 }, signal, skipGlobalToast: true }),
+          queryKey: [
+            'recordings',
+            'list',
+            { search: '', status: 'ALL', subjectId: 'ALL', batchId: 'ALL' },
+            1,
+          ],
+          queryFn: ({ signal }) =>
+            api.get('/recordings', {
+              params: { page: 1, limit: 12 },
+              signal,
+              skipGlobalToast: true,
+            }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
       ]);
@@ -59,7 +86,7 @@ export async function prefetchCriticalData(queryClient: QueryClient, tenantId?: 
     }
 
     if (isStudent) {
-      // Student-specific prefetching: Overview, Timetable, Enrolled Courses, Batches, Attendance, Recordings, Fees
+      // Student-specific prefetching: Overview, Timetable, Enrolled Courses, Batches, Attendance, Recordings, Exams, Fees
       await Promise.allSettled([
         queryClient.prefetchQuery({
           queryKey: studentDashboardKeys.overview(),
@@ -87,8 +114,30 @@ export async function prefetchCriticalData(queryClient: QueryClient, tenantId?: 
           staleTime: STALE_TIMES.DEFAULT,
         }),
         queryClient.prefetchQuery({
-          queryKey: ['recordings', 'list', { search: '', status: 'ALL', subjectId: 'ALL', batchId: 'ALL' }, 1],
-          queryFn: ({ signal }) => api.get('/recordings', { params: { page: 1, limit: 12 }, signal, skipGlobalToast: true }),
+          queryKey: ['student-exams'],
+          queryFn: ({ signal }) =>
+            api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['student-recordings-all'],
+          queryFn: ({ signal }) =>
+            api.get('/recordings', {
+              params: { page: 1, limit: 100 },
+              signal,
+              skipGlobalToast: true,
+            }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['student-pyq-all'],
+          queryFn: ({ signal }) => api.get('/pyq', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['student-fee-account', 'DEMO_STUDENT_ID'],
+          queryFn: ({ signal }) =>
+            api.get('/billing/fee-assignments/DEMO_STUDENT_ID', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
       ]);
@@ -148,76 +197,147 @@ export async function prefetchCriticalData(queryClient: QueryClient, tenantId?: 
         // 1. Tenant Dashboard Overview
         queryClient.prefetchQuery({
           queryKey: queryKeys.dashboard.overview(tenantId),
-          queryFn: ({ signal }) => api.get('/tenant-dashboard/overview', { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            api.get('/tenant-dashboard/overview', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
 
         // 2. Courses Page (/tenant-admin/courses)
         queryClient.prefetchQuery({
-          queryKey: queryKeys.courses.list({ page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' }, tenantId),
-          queryFn: ({ signal }) => coursesApi.getCourses({ page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' }, { signal, skipGlobalToast: true }),
+          queryKey: queryKeys.courses.list(
+            { page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+            tenantId,
+          ),
+          queryFn: ({ signal }) =>
+            coursesApi.getCourses(
+              { page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.MASTERS,
         }),
         queryClient.prefetchQuery({
           queryKey: queryKeys.courses.list({ limit: 200 }, tenantId),
-          queryFn: ({ signal }) => coursesApi.getCourses({ limit: 200 }, { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            coursesApi.getCourses({ limit: 200 }, { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.MASTERS,
         }),
 
         // 3. Subjects Page (/tenant-admin/subjects)
         queryClient.prefetchQuery({
-          queryKey: queryKeys.subjects.list({ page: 1, limit: 12, search: undefined, sortBy: 'name', sortOrder: 'asc' }, tenantId),
-          queryFn: ({ signal }) => subjectsApi.getSubjects({ page: 1, limit: 12, search: undefined, sortBy: 'name', sortOrder: 'asc' }, { signal, skipGlobalToast: true }),
+          queryKey: queryKeys.subjects.list(
+            { page: 1, limit: 12, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+            tenantId,
+          ),
+          queryFn: ({ signal }) =>
+            subjectsApi.getSubjects(
+              { page: 1, limit: 12, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.MASTERS,
         }),
         queryClient.prefetchQuery({
           queryKey: queryKeys.subjects.list({ limit: 200 }, tenantId),
-          queryFn: ({ signal }) => subjectsApi.getSubjects({ limit: 200 }, { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            subjectsApi.getSubjects({ limit: 200 }, { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.MASTERS,
         }),
 
         // 4. Branches Page (/tenant-admin/branches)
         queryClient.prefetchQuery({
-          queryKey: queryKeys.branches.list({ page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' }, tenantId),
-          queryFn: ({ signal }) => branchesApi.getBranches({ page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' }, { signal, skipGlobalToast: true }),
+          queryKey: queryKeys.branches.list(
+            { page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+            tenantId,
+          ),
+          queryFn: ({ signal }) =>
+            branchesApi.getBranches(
+              { page: 1, limit: 10, search: undefined, sortBy: 'name', sortOrder: 'asc' },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.MASTERS,
         }),
         queryClient.prefetchQuery({
           queryKey: queryKeys.branches.list({ limit: 200 }, tenantId),
-          queryFn: ({ signal }) => branchesApi.getBranches({ limit: 200 }, { signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            branchesApi.getBranches({ limit: 200 }, { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.MASTERS,
         }),
 
         // 5. Academic Years Page (/tenant-admin/academic-years)
         queryClient.prefetchQuery({
-          queryKey: queryKeys.academicYears.list({ page: 1, limit: 10, search: undefined, sortBy: 'startDate', sortOrder: 'desc' }, tenantId),
-          queryFn: ({ signal }) => academicYearsApi.getAcademicYears({ page: 1, limit: 10, search: undefined, sortBy: 'startDate', sortOrder: 'desc' }, { signal, skipGlobalToast: true }),
+          queryKey: queryKeys.academicYears.list(
+            { page: 1, limit: 10, search: undefined, sortBy: 'startDate', sortOrder: 'desc' },
+            tenantId,
+          ),
+          queryFn: ({ signal }) =>
+            academicYearsApi.getAcademicYears(
+              { page: 1, limit: 10, search: undefined, sortBy: 'startDate', sortOrder: 'desc' },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.MASTERS,
         }),
 
         // 6. Students Directory (/dashboard/students)
         queryClient.prefetchQuery({
-          queryKey: studentServiceKeys.list({ page: 1, perPage: 10, sortBy: 'createdAt', sortOrder: 'desc', status: 'ALL' }),
-          queryFn: ({ signal }) => studentService.getStudents({ page: 1, perPage: 10, sortBy: 'createdAt', sortOrder: 'desc', status: 'ALL' }, { signal, skipGlobalToast: true }),
+          queryKey: studentServiceKeys.list({
+            page: 1,
+            perPage: 10,
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+            status: 'ALL',
+          }),
+          queryFn: ({ signal }) =>
+            studentService.getStudents(
+              { page: 1, perPage: 10, sortBy: 'createdAt', sortOrder: 'desc', status: 'ALL' },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.STUDENTS,
         }),
         queryClient.prefetchQuery({
           queryKey: studentServiceKeys.stats(),
-          queryFn: ({ signal }) => studentService.getStudentStats({ signal, skipGlobalToast: true }),
+          queryFn: ({ signal }) =>
+            studentService.getStudentStats({ signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.STUDENTS,
         }),
 
         // 7. Tutors Directory (/dashboard/tutors)
         queryClient.prefetchQuery({
-          queryKey: tutorService.keys.list({ search: undefined, subjectId: undefined, branchId: undefined, tutorStatus: undefined, page: 1, limit: 10 }),
-          queryFn: ({ signal }) => tutorService.findAll({ search: undefined, subjectId: undefined, branchId: undefined, tutorStatus: undefined, page: 1, limit: 10 }, { signal, skipGlobalToast: true }),
+          queryKey: tutorService.keys.list({
+            search: undefined,
+            subjectId: undefined,
+            branchId: undefined,
+            tutorStatus: undefined,
+            page: 1,
+            limit: 10,
+          }),
+          queryFn: ({ signal }) =>
+            tutorService.findAll(
+              {
+                search: undefined,
+                subjectId: undefined,
+                branchId: undefined,
+                tutorStatus: undefined,
+                page: 1,
+                limit: 10,
+              },
+              { signal, skipGlobalToast: true },
+            ),
           staleTime: STALE_TIMES.STUDENTS,
         }),
 
         // 8. Class Recordings Library (/dashboard/recordings)
         queryClient.prefetchQuery({
-          queryKey: ['recordings', 'list', { search: '', status: 'ALL', subjectId: 'ALL', batchId: 'ALL' }, 1],
-          queryFn: ({ signal }) => api.get('/recordings', { params: { page: 1, limit: 12 }, signal, skipGlobalToast: true }),
+          queryKey: [
+            'recordings',
+            'list',
+            { search: '', status: 'ALL', subjectId: 'ALL', batchId: 'ALL' },
+            1,
+          ],
+          queryFn: ({ signal }) =>
+            api.get('/recordings', {
+              params: { page: 1, limit: 12 },
+              signal,
+              skipGlobalToast: true,
+            }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
 

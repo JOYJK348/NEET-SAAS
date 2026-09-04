@@ -17,7 +17,6 @@ import {
   GraduationCap,
   ClipboardCheck,
   Clock,
-  Sparkles,
   RefreshCw,
 } from 'lucide-react';
 
@@ -49,33 +48,32 @@ function AttendanceOverviewContent() {
   const { overview, batches } = data;
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Signature Violet Gradient Banner Header */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Academic Attendance Dashboard
-            </span>
+    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+      {/* Header Banner - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Management Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Attendance Overview</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white flex items-center gap-2">
-            Attendance Overview 📋
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+            Academic Attendance Overview
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
+          <p className="text-xs text-slate-600 font-medium">
             Monitor real-time batch attendance metrics, daily sessions marking, and low attendance
             alerts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            className="px-4 gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold transition-all"
+            className="px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 shadow-2xs rounded-xl text-xs"
           >
-            <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <RefreshCw className="h-3.5 w-3.5 shrink-0 text-[#0052CC]" aria-hidden="true" />
             <span>Refresh Data</span>
           </Button>
         </div>
@@ -84,20 +82,20 @@ function AttendanceOverviewContent() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Overall Attendance Rate */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-violet-300">
+        <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <BarChart3 className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Overall Attendance
               </p>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900">
+                <span className="text-xl sm:text-2xl font-extrabold text-[#0B2447]">
                   {overview.overallRate}%
                 </span>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
                   Active
                 </span>
               </div>
@@ -106,20 +104,20 @@ function AttendanceOverviewContent() {
         </Card>
 
         {/* Today's Sessions */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-emerald-300">
+        <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+            <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
               <CalendarCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Today's Sessions
               </p>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900">
+                <span className="text-xl sm:text-2xl font-extrabold text-[#0B2447]">
                   {overview.totalSessions}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-500">
+                <span className="text-[11px] font-bold text-slate-500">
                   ({overview.markedSessions} marked)
                 </span>
               </div>
@@ -128,16 +126,16 @@ function AttendanceOverviewContent() {
         </Card>
 
         {/* Pending Marking */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-amber-300">
+        <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-amber-100 bg-amber-50 text-amber-600 shrink-0">
+            <div className="p-2.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
               <Clock className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Pending Marking
               </p>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
+              <p className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5">
                 {overview.pendingSessions}
               </p>
             </div>
@@ -145,20 +143,20 @@ function AttendanceOverviewContent() {
         </Card>
 
         {/* Low Attendance Alert */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs transition-all hover:-translate-y-0.5 hover:border-rose-300">
+        <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-rose-100 bg-rose-50 text-rose-600 shrink-0">
+            <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 shrink-0">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Low Attendance (&lt;75%)
               </p>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-black text-rose-600">
+                <span className="text-xl sm:text-2xl font-extrabold text-rose-600">
                   {overview.lowAttendanceStudents}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-500">Students</span>
+                <span className="text-[11px] font-bold text-slate-500">Students</span>
               </div>
             </div>
           </div>
@@ -169,21 +167,21 @@ function AttendanceOverviewContent() {
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4 px-1">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Users className="w-4 h-4 text-violet-600" />
+            <Users className="w-4 h-4 text-[#0052CC]" />
             <span>Batch-wise Attendance Roster</span>
           </div>
-          <span className="text-xs font-semibold text-slate-500 bg-white px-3 py-1 rounded-xl border border-slate-200">
+          <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-xl border border-blue-200">
             {batches.length} Batches
           </span>
         </div>
 
         {batches.length === 0 ? (
-          <Card className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-            <div className="h-12 w-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mx-auto mb-3">
-              <ClipboardCheck className="w-6 h-6 text-violet-600" />
+          <Card className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center shadow-2xs">
+            <div className="h-12 w-12 rounded-2xl bg-blue-50 text-[#0052CC] flex items-center justify-center mx-auto mb-3 border border-blue-200">
+              <ClipboardCheck className="w-6 h-6 text-[#0052CC]" />
             </div>
-            <p className="text-base font-bold text-slate-900">No Attendance Records Yet</p>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <p className="text-base font-extrabold text-[#0B2447]">No Attendance Records Yet</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto font-medium">
               Attendance statistics will automatically populate as daily class sessions are marked
               by tutors.
             </p>
@@ -202,49 +200,52 @@ function AttendanceOverviewContent() {
                 <Card
                   key={batch.batchId}
                   onClick={() => router.push(`/dashboard/attendance/batches/${batch.batchId}`)}
-                  className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs hover:shadow-md hover:border-violet-300 transition-all cursor-pointer group"
+                  className="rounded-2xl border-slate-200 bg-white p-5 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                      <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm shadow-purple-500/20 shrink-0">
-                        <GraduationCap className="w-6 h-6 text-white" />
+                      <div className="h-11 w-11 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0052CC] font-bold shrink-0">
+                        <GraduationCap className="w-6 h-6 text-[#0052CC]" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900 text-base group-hover:text-violet-700 transition-colors flex items-center gap-2">
+                        <h3 className="font-extrabold text-[#0B2447] text-base group-hover:text-[#0052CC] transition-colors flex items-center gap-2">
                           {batch.batchName}
                         </h3>
-                        <span className="inline-block text-[11px] font-mono font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-1">
+                        <span className="inline-block text-[10px] font-mono font-extrabold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 mt-1 uppercase">
                           {batch.batchCode}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <span
-                        className={cn('text-xs font-bold px-2.5 py-1 rounded-lg border', rateColor)}
+                        className={cn(
+                          'text-xs font-extrabold px-2.5 py-1 rounded-lg border',
+                          rateColor,
+                        )}
                       >
                         {batch.overallRate}% Avg
                       </span>
-                      <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-[#0052CC] group-hover:translate-x-0.5 transition-all shrink-0" />
                     </div>
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Students</p>
-                      <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                      <p className="text-sm font-extrabold text-[#0B2447] mt-0.5">
                         {batch.totalStudents}
                       </p>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Marked</p>
-                      <p className="text-sm font-extrabold text-slate-900 mt-0.5">
+                      <p className="text-sm font-extrabold text-[#0B2447] mt-0.5">
                         {batch.sessionsMarked} / {batch.sessionsConducted}
                       </p>
                     </div>
 
-                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                       <p className="text-[10px] font-bold text-slate-400 uppercase">
                         Alert (&lt;75%)
                       </p>

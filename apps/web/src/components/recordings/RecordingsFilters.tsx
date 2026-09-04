@@ -35,7 +35,7 @@ const STATUS_OPTIONS = [
 ];
 
 const selectClass =
-  'w-full sm:w-44 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-violet-600 transition-colors appearance-none cursor-pointer';
+  'w-full sm:w-44 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:bg-white focus:outline-none focus:border-[#0052CC] transition-colors appearance-none cursor-pointer';
 
 export function RecordingsFilters({
   filters,
@@ -51,7 +51,7 @@ export function RecordingsFilters({
     filters.batchId !== 'ALL';
 
   return (
-    <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+    <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-2xs">
       <div className="flex flex-col lg:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -60,7 +60,7 @@ export function RecordingsFilters({
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
             placeholder="Search by class title…"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 font-bold focus:bg-white focus:outline-none focus:border-[#0052CC] transition-all"
           />
         </div>
 
@@ -106,7 +106,7 @@ export function RecordingsFilters({
           {hasFilters && (
             <button
               onClick={onClear}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-extrabold text-slate-600 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" /> Clear
             </button>

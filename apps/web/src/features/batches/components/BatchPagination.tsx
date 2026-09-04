@@ -35,23 +35,23 @@ export function BatchPagination({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-gray-200 dark:border-gray-700',
+        'flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-slate-200 text-xs font-medium text-slate-600',
         className,
       )}
     >
-      <div className="text-sm text-gray-500 dark:text-gray-400">
-        Showing <span className="font-medium">{startItem}</span> to{' '}
-        <span className="font-medium">{endItem}</span> of{' '}
-        <span className="font-medium">{totalItems}</span> results
+      <div className="text-xs text-slate-500">
+        Showing <span className="font-extrabold text-[#0B2447]">{startItem}</span> to{' '}
+        <span className="font-extrabold text-[#0B2447]">{endItem}</span> of{' '}
+        <span className="font-extrabold text-[#0B2447]">{totalItems}</span> results
       </div>
 
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400">Rows per page:</span>
+          <span className="text-xs text-slate-500 font-bold">Rows per page:</span>
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-2.5 py-1 text-xs border border-slate-200 rounded-xl bg-white text-[#0B2447] font-bold focus:outline-none focus:ring-2 focus:ring-blue-100"
             aria-label="Items per page"
           >
             {[10, 25, 50, 100].map((size) => (
@@ -69,6 +69,7 @@ export function BatchPagination({
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
             aria-label="First page"
+            className="rounded-xl border-slate-200 h-8 w-8 text-slate-600 hover:text-[#0052CC] hover:bg-blue-50"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -78,6 +79,7 @@ export function BatchPagination({
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
             aria-label="Previous page"
+            className="rounded-xl border-slate-200 h-8 w-8 text-slate-600 hover:text-[#0052CC] hover:bg-blue-50"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -88,7 +90,12 @@ export function BatchPagination({
               variant={page === currentPage ? 'default' : 'outline'}
               size="icon"
               onClick={() => onPageChange(page)}
-              className={cn('h-8 w-8', page === currentPage && 'bg-purple-600 hover:bg-purple-700')}
+              className={cn(
+                'h-8 w-8 rounded-xl font-bold text-xs',
+                page === currentPage
+                  ? 'bg-[#0052CC] hover:bg-blue-700 text-white shadow-2xs'
+                  : 'border-slate-200 text-slate-700 hover:text-[#0052CC] hover:bg-blue-50',
+              )}
               aria-label={`Page ${page}`}
               aria-current={page === currentPage ? 'page' : undefined}
             >
@@ -102,6 +109,7 @@ export function BatchPagination({
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             aria-label="Next page"
+            className="rounded-xl border-slate-200 h-8 w-8 text-slate-600 hover:text-[#0052CC] hover:bg-blue-50"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -111,6 +119,7 @@ export function BatchPagination({
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
             aria-label="Last page"
+            className="rounded-xl border-slate-200 h-8 w-8 text-slate-600 hover:text-[#0052CC] hover:bg-blue-50"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

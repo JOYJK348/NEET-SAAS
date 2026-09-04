@@ -8,12 +8,12 @@ import { Card } from '@/components/ui/card';
 import {
   Plus,
   Search,
-  Sparkles,
   BookMarked,
   CheckCircle2,
   Layers,
   X,
   BookOpen,
+  ChevronRight,
 } from 'lucide-react';
 import {
   useCourses,
@@ -126,78 +126,86 @@ export default function CoursesPage() {
 
   const totalCourses = data?.meta?.total ?? allCourses.length;
   const activeCount = allCourses.filter((c) => c.isActive !== false).length;
-  const neetCount = allCourses.filter((c) => c.name?.toUpperCase().includes('NEET') || c.code?.toUpperCase().includes('NEET')).length;
+  const neetCount = allCourses.filter(
+    (c) => c.name?.toUpperCase().includes('NEET') || c.code?.toUpperCase().includes('NEET'),
+  ).length;
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner - Signature Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Academic Course Management
-              </span>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Management Portal</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Academic Courses</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Courses & Academic Programs 📚
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+              Courses & Academic Programs
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Manage courses, syllabus descriptions, subjects mapping, and dynamic curriculum structures.
+            <p className="text-xs text-slate-600">
+              Manage courses, syllabus descriptions, subjects mapping, and dynamic curriculum
+              structures.
             </p>
           </div>
 
           <Button
             onClick={handleCreate}
-            className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
+            className="w-full sm:w-auto px-4 gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs shrink-0 self-end sm:self-auto"
           >
-            <Plus className="h-4 w-4 text-violet-600 shrink-0" aria-hidden="true" />
+            <Plus className="h-3.5 w-3.5 text-white shrink-0" aria-hidden="true" />
             <span>Add New Course</span>
           </Button>
         </div>
 
         {/* KPI Cards Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <BookMarked className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Total Programs
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{totalCourses}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {totalCourses}
+              </p>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Active Courses
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{activeCount}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {activeCount}
+              </p>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <Layers className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 NEET Programs
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{neetCount}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {neetCount}
+              </p>
             </div>
           </Card>
         </div>
 
         {/* Toolbar & Filter Bar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
@@ -208,7 +216,7 @@ export default function CoursesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full"
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
             />
             {search && (
               <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
@@ -218,7 +226,7 @@ export default function CoursesPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-row w-full sm:w-auto">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1 hidden lg:inline">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1 hidden lg:inline">
               Filter Status:
             </span>
             {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((st) => (
@@ -228,7 +236,7 @@ export default function CoursesPage() {
                 className={cn(
                   'flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center',
                   statusFilter === st
-                    ? 'bg-violet-600 text-white shadow-xs'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
                     : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200',
                 )}
               >
@@ -244,29 +252,29 @@ export default function CoursesPage() {
         ) : error ? (
           <div className="p-10 text-center border border-rose-200 rounded-2xl bg-rose-50/50 text-rose-700">
             <p className="font-bold text-sm">Failed to load courses</p>
-            <p className="text-xs mt-1 text-rose-500">
+            <p className="text-xs mt-1 text-rose-500 font-medium">
               Please check network or backend connectivity.
             </p>
           </div>
         ) : filteredCourses.length === 0 ? (
-          <div className="p-12 text-center border border-dashed rounded-2xl border-slate-200 bg-white shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 mx-auto flex items-center justify-center border border-violet-100">
+          <Card className="p-12 text-center border border-dashed rounded-3xl border-slate-200 bg-white shadow-2xs space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] mx-auto flex items-center justify-center border border-blue-200">
               <BookOpen className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">No courses found</h3>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <h3 className="text-base font-extrabold text-[#0B2447]">No courses found</h3>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto font-medium">
               No matching course records found. Get started by creating your first academic course.
             </p>
             <Button
               onClick={handleCreate}
-              className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+              className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
             >
               <Plus className="h-4 w-4" /> Add Course
             </Button>
-          </div>
+          </Card>
         ) : (
           <div className="space-y-4">
-            <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+            <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
               <CourseTable
                 courses={filteredCourses}
                 sortBy={sortBy}
@@ -279,13 +287,13 @@ export default function CoursesPage() {
 
             {/* Pagination Controls */}
             {data?.meta && data.meta.lastPage > 1 && (
-              <div className="flex justify-between items-center bg-white border border-[#E5E7EB] rounded-2xl px-5 py-3 shadow-xs">
+              <div className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-2xs">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="rounded-xl text-xs font-bold text-slate-700"
+                  className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
                 >
                   Previous
                 </Button>
@@ -297,7 +305,7 @@ export default function CoursesPage() {
                   size="sm"
                   disabled={page >= data.meta.lastPage}
                   onClick={() => setPage(page + 1)}
-                  className="rounded-xl text-xs font-bold text-slate-700"
+                  className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
                 >
                   Next
                 </Button>

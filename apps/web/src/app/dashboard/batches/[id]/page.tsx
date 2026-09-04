@@ -7,6 +7,14 @@ import { LoadingSpinner } from '@/components/ui/loading';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
   ArrowLeft,
   BookOpen,
   MapPin,
@@ -19,12 +27,14 @@ import {
   UserPlus,
   UserCheck,
   Layers,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   FileText,
   Activity,
-  Award,
+  ChevronRight,
+  AlertTriangle,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import {
   useBatch,
@@ -45,6 +55,7 @@ import { MapStudentsSection } from '@/features/batches/components/MapStudentsSec
 import { MapTutorSection } from '@/features/batches/components/MapTutorSection';
 import { formatBatchDate, calculateUtilizationRate } from '@/features/batches/utils/batch-utils';
 import { BATCH_ATTENDANCE_MODE_LABELS } from '@/features/batches/types/batch';
+import type { BatchStaffAssignment } from '@/features/batches/types/batch';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +68,9 @@ function BatchDetailContent() {
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(new Set(['info']));
   const [showMapStudents, setShowMapStudents] = useState(false);
   const [showMapTutor, setShowMapTutor] = useState(false);
+
+  // State for Tutor Unassign Confirmation Modal
+  const [unassignTarget, setUnassignTarget] = useState<BatchStaffAssignment | null>(null);
 
   const { batch, isLoading, error } = useBatch(id);
   const { events: timelineEvents, isLoading: timelineLoading } = useBatchTimeline(id);
@@ -76,25 +90,27 @@ function BatchDetailContent() {
     setVisitedTabs((prev) => new Set(prev).add(tab));
   }, []);
 
-  const handleUnassignStaff = useCallback(
-    async (assignmentId: string) => {
-      if (!confirm('Are you sure you want to remove this tutor assignment?')) return;
-      try {
-        await unassignMutation.mutateAsync({ batchId: id, assignmentId });
-        toast({
-          title: 'Tutor Removed',
-          description: 'Tutor assignment has been successfully removed.',
-        });
-      } catch (err: any) {
-        toast({
-          title: 'Error',
-          description: err?.message || 'Failed to remove tutor assignment.',
-          variant: 'destructive',
-        });
-      }
-    },
-    [id, unassignMutation],
-  );
+  const handlePromptUnassign = useCallback((assignment: BatchStaffAssignment) => {
+    setUnassignTarget(assignment);
+  }, []);
+
+  const handleConfirmUnassign = useCallback(async () => {
+    if (!unassignTarget) return;
+    try {
+      await unassignMutation.mutateAsync({ batchId: id, assignmentId: unassignTarget.id });
+      toast({
+        title: 'Tutor Removed',
+        description: `Tutor assignment for ${unassignTarget.staffName} (${unassignTarget.subject}) has been removed.`,
+      });
+      setUnassignTarget(null);
+    } catch (err: any) {
+      toast({
+        title: 'Error',
+        description: err?.message || 'Failed to remove tutor assignment.',
+        variant: 'destructive',
+      });
+    }
+  }, [id, unassignTarget, unassignMutation]);
 
   if (isLoading) {
     return (
@@ -110,10 +126,10 @@ function BatchDetailContent() {
         <BatchEmptyState hasFilters={false} variant="default" />
         <Button
           variant="outline"
-          className="rounded-xl h-11 mt-4 border-gray-200 hover:bg-gray-50"
+          className="rounded-xl h-11 mt-4 border-slate-200 hover:bg-slate-50"
           onClick={() => router.push('/dashboard/batches')}
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-2 text-[#0052CC]" />
           Back to Batches
         </Button>
       </div>
@@ -141,82 +157,78 @@ function BatchDetailContent() {
   ];
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 p-6 lg:p-8 text-white shadow-xl shadow-purple-500/10">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-12 w-48 h-48 bg-purple-400/20 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-2xl bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-all border border-white/20"
-                onClick={() => router.push('/dashboard/batches')}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold text-purple-100 border border-white/20">
-                <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                Batch Details
-              </div>
-              <BatchStatusBadge status={batch.status} />
-            </div>
-
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
-                {batch.name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-purple-100/90 font-medium">
-                <span className="bg-white/10 px-2.5 py-0.5 rounded-lg border border-white/10 font-mono text-xs">
-                  {batch.code}
-                </span>
-                <span>&bull;</span>
-                <span className="flex items-center gap-1">
-                  <BookOpen className="h-3.5 w-3.5 text-purple-200" />
-                  {batch.courseName}
-                </span>
-                <span>&bull;</span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-purple-200" />
-                  {batch.branchName}
-                </span>
-              </div>
-            </div>
-          </div>
-
+    <div className="w-full space-y-6 pb-12 text-[#0F172A] font-sans">
+      {/* Header Banner - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs border border-blue-200 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-3">
           <div className="flex items-center gap-3">
-            {!isTerminal && (
-              <Button
-                onClick={() => router.push(`/dashboard/batches/${batch.id}/edit`)}
-                className="rounded-2xl h-11 px-6 bg-white text-purple-700 hover:bg-purple-50 font-semibold shadow-lg shadow-black/10 transition-all gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit Batch Details
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
+              onClick={() => router.push('/dashboard/batches')}
+            >
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
+            </Button>
+            <div className="flex items-center gap-1.5 text-xs font-mono text-[#0052CC]">
+              <span>Batches & Sections</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Batch Details</span>
+            </div>
+            <BatchStatusBadge status={batch.status} />
           </div>
+
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-3">
+              {batch.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-600 font-medium">
+              <span className="bg-blue-50 text-[#0052CC] px-2.5 py-0.5 rounded-md border border-blue-200 font-mono font-extrabold">
+                {batch.code}
+              </span>
+              <span>&bull;</span>
+              <span className="flex items-center gap-1">
+                <BookOpen className="h-3.5 w-3.5 text-[#0052CC]" />
+                {batch.courseName}
+              </span>
+              <span>&bull;</span>
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 text-[#0052CC]" />
+                {batch.branchName}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {!isTerminal && (
+            <Button
+              onClick={() => router.push(`/dashboard/batches/${batch.id}/edit`)}
+              className="rounded-xl h-10 px-5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs transition-all gap-2 text-xs"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit Batch Details
+            </Button>
+          )}
         </div>
       </div>
 
       {/* KPI Highlight Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
-              <Users className="h-6 w-6" />
+        <Card className="border border-slate-200 bg-white shadow-2xs rounded-2xl overflow-hidden hover:border-blue-300 transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0">
+              <Users className="h-5 w-5 text-[#0052CC]" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Enrolled Capacity
               </p>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-xl font-bold text-gray-900">
+              <div className="flex items-baseline gap-2 mt-0.5">
+                <span className="text-lg font-extrabold text-[#0B2447]">
                   {batch.enrolledCount} / {batch.maxStudents}
                 </span>
-                <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                   {utilizationRate}%
                 </span>
               </div>
@@ -224,51 +236,51 @@ function BatchDetailContent() {
           </CardContent>
         </Card>
 
-        <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <GraduationCap className="h-6 w-6" />
+        <Card className="border border-slate-200 bg-white shadow-2xs rounded-2xl overflow-hidden hover:border-blue-300 transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0">
+              <GraduationCap className="h-5 w-5 text-[#0052CC]" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Academic Year
               </p>
-              <p className="text-lg font-bold text-gray-900 mt-1 truncate max-w-[140px]">
+              <p className="text-base font-extrabold text-[#0B2447] mt-0.5 truncate max-w-[140px]">
                 {batch.academicYearName || 'N/A'}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
-              <Monitor className="h-6 w-6" />
+        <Card className="border border-slate-200 bg-white shadow-2xs rounded-2xl overflow-hidden hover:border-blue-300 transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center shrink-0">
+              <Monitor className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Delivery Mode
               </p>
-              <p className="text-lg font-bold text-gray-900 mt-1 truncate max-w-[140px]">
+              <p className="text-base font-extrabold text-[#0B2447] mt-0.5 truncate max-w-[140px]">
                 {batch.deliveryType?.name ?? 'Standard'}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-              <CalendarDays className="h-6 w-6" />
+        <Card className="border border-slate-200 bg-white shadow-2xs rounded-2xl overflow-hidden hover:border-blue-300 transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shrink-0">
+              <CalendarDays className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Batch Duration
               </p>
-              <p className="text-sm font-bold text-gray-900 mt-1">
+              <p className="text-sm font-extrabold text-[#0B2447] mt-0.5">
                 {formatBatchDate(batch.startDate)}
               </p>
-              <p className="text-xs text-gray-500 font-medium">
+              <p className="text-xs text-slate-500 font-medium">
                 to {formatBatchDate(batch.endDate)}
               </p>
             </div>
@@ -279,7 +291,7 @@ function BatchDetailContent() {
       {/* Tabs & Content */}
       <div className="space-y-6">
         {/* Custom Modern Tabs */}
-        <div className="flex items-center gap-2 p-1.5 bg-gray-100/80 backdrop-blur-md rounded-2xl border border-gray-200/60 overflow-x-auto">
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 rounded-2xl border border-slate-200 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -288,19 +300,19 @@ function BatchDetailContent() {
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  'flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap',
+                  'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap',
                   isActive
-                    ? 'bg-white text-purple-700 shadow-sm border border-purple-100/50 scale-[1.02]'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50',
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-[#0B2447] hover:bg-white/60',
                 )}
               >
-                <Icon className={cn('h-4 w-4', isActive ? 'text-purple-600' : 'text-gray-400')} />
+                <Icon className={cn('h-4 w-4', isActive ? 'text-white' : 'text-slate-400')} />
                 <span>{tab.label}</span>
                 {typeof tab.count === 'number' && (
                   <span
                     className={cn(
-                      'px-2 py-0.5 text-xs rounded-full font-bold',
-                      isActive ? 'bg-purple-100 text-purple-700' : 'bg-gray-200 text-gray-700',
+                      'px-2 py-0.5 text-[10px] rounded-full font-extrabold',
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700',
                     )}
                   >
                     {tab.count}
@@ -320,21 +332,21 @@ function BatchDetailContent() {
                 {
                   label: 'Course Name',
                   value: batch.courseName,
-                  icon: <BookOpen className="h-4 w-4 text-purple-500" />,
+                  icon: <BookOpen className="h-4 w-4 text-[#0052CC]" />,
                 },
                 {
                   label: 'Campus Branch',
                   value: batch.branchName,
-                  icon: <MapPin className="h-4 w-4 text-emerald-500" />,
+                  icon: <MapPin className="h-4 w-4 text-emerald-600" />,
                 },
                 {
                   label: 'Academic Year',
                   value: batch.academicYearName,
-                  icon: <CalendarDays className="h-4 w-4 text-blue-500" />,
+                  icon: <CalendarDays className="h-4 w-4 text-blue-600" />,
                 },
               ]}
               columns={1}
-              className="rounded-2xl border-purple-100/80 shadow-sm hover:shadow-md transition-all"
+              className="rounded-2xl border-slate-200 shadow-2xs hover:border-blue-200 transition-all"
             />
             <BatchInfoCard
               title="Delivery & Admission Settings"
@@ -343,26 +355,26 @@ function BatchDetailContent() {
                 {
                   label: 'Delivery Mode',
                   value: batch.deliveryType?.name ?? 'Standard Classroom',
-                  icon: <Monitor className="h-4 w-4 text-indigo-500" />,
+                  icon: <Monitor className="h-4 w-4 text-[#0052CC]" />,
                 },
                 {
                   label: 'Attendance Tracking',
                   value: batch.deliveryType
                     ? BATCH_ATTENDANCE_MODE_LABELS[batch.deliveryType.attendanceMode]
                     : 'Standard Attendance',
-                  icon: <GraduationCap className="h-4 w-4 text-purple-500" />,
+                  icon: <GraduationCap className="h-4 w-4 text-[#0052CC]" />,
                 },
                 {
                   label: 'Student Capacity',
                   value: `${batch.enrolledCount} / ${batch.maxStudents} Enrolled (${utilizationRate}%)`,
-                  icon: <Users className="h-4 w-4 text-amber-500" />,
+                  icon: <Users className="h-4 w-4 text-amber-600" />,
                 },
                 {
                   label: 'New Admissions Status',
                   value: (
                     <span
                       className={cn(
-                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold',
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold',
                         batch.allowNewAdmissions
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-rose-50 text-rose-700 border border-rose-200',
@@ -380,7 +392,7 @@ function BatchDetailContent() {
                 },
               ]}
               columns={1}
-              className="rounded-2xl border-purple-100/80 shadow-sm hover:shadow-md transition-all"
+              className="rounded-2xl border-slate-200 shadow-2xs hover:border-blue-200 transition-all"
             />
             <BatchInfoCard
               title="Batch Timeline Schedule"
@@ -389,7 +401,7 @@ function BatchDetailContent() {
                 {
                   label: 'Official Start Date',
                   value: formatBatchDate(batch.startDate),
-                  icon: <CalendarDays className="h-4 w-4 text-teal-500" />,
+                  icon: <CalendarDays className="h-4 w-4 text-teal-600" />,
                 },
                 {
                   label: 'Expected End Date',
@@ -398,7 +410,7 @@ function BatchDetailContent() {
                 },
               ]}
               columns={2}
-              className="rounded-2xl border-purple-100/80 shadow-sm hover:shadow-md transition-all"
+              className="rounded-2xl border-slate-200 shadow-2xs hover:border-blue-200 transition-all"
             />
             <BatchInfoCard
               title="Batch Overview & Notes"
@@ -409,11 +421,11 @@ function BatchDetailContent() {
                   value:
                     batch.description ||
                     'No additional description or notes specified for this batch.',
-                  icon: <FileText className="h-4 w-4 text-gray-500" />,
+                  icon: <FileText className="h-4 w-4 text-slate-400" />,
                 },
               ]}
               columns={1}
-              className="rounded-2xl border-purple-100/80 shadow-sm hover:shadow-md transition-all"
+              className="rounded-2xl border-slate-200 shadow-2xs hover:border-blue-200 transition-all"
             />
           </div>
         )}
@@ -434,7 +446,7 @@ function BatchDetailContent() {
               />
             )}
 
-            <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden">
+            <Card className="border border-slate-200 bg-white rounded-2xl shadow-2xs overflow-hidden">
               <CardContent className="p-5 lg:p-6">
                 <BatchSectionHeader
                   title="Enrolled Students Roster"
@@ -442,7 +454,7 @@ function BatchDetailContent() {
                 >
                   <Button
                     onClick={() => setShowMapStudents((prev) => !prev)}
-                    className="rounded-2xl h-11 px-5 bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 shadow-md shadow-purple-500/20 font-semibold transition-all gap-2 text-xs"
+                    className="rounded-xl h-10 px-4 bg-[#0052CC] text-white hover:bg-blue-700 shadow-2xs font-extrabold transition-all gap-2 text-xs"
                   >
                     <UserPlus className="h-4 w-4" />
                     {showMapStudents ? 'Close Mapping Panel' : 'Map New Students'}
@@ -471,7 +483,7 @@ function BatchDetailContent() {
               />
             )}
 
-            <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden">
+            <Card className="border border-slate-200 bg-white rounded-2xl shadow-2xs overflow-hidden">
               <CardContent className="p-5 lg:p-6">
                 <BatchSectionHeader
                   title="Assigned Tutors & Faculty"
@@ -479,7 +491,7 @@ function BatchDetailContent() {
                 >
                   <Button
                     onClick={() => setShowMapTutor((prev) => !prev)}
-                    className="rounded-2xl h-11 px-5 bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-700 hover:to-purple-700 shadow-md shadow-purple-500/20 font-semibold transition-all gap-2 text-xs"
+                    className="rounded-xl h-10 px-4 bg-[#0052CC] text-white hover:bg-blue-700 shadow-2xs font-extrabold transition-all gap-2 text-xs"
                   >
                     <UserCheck className="h-4 w-4" />
                     {showMapTutor ? 'Close Assignment Panel' : 'Map New Tutor'}
@@ -489,7 +501,7 @@ function BatchDetailContent() {
                   <BatchStaffAssignmentTable
                     assignments={staffAssignments}
                     isLoading={staffLoading}
-                    onUnassign={handleUnassignStaff}
+                    onUnassign={handlePromptUnassign}
                   />
                 </div>
               </CardContent>
@@ -498,7 +510,7 @@ function BatchDetailContent() {
         )}
 
         {activeTab === 'timeline' && (
-          <Card className="border border-purple-100/80 bg-white/80 backdrop-blur-md rounded-2xl shadow-sm overflow-hidden">
+          <Card className="border border-slate-200 bg-white rounded-2xl shadow-2xs overflow-hidden">
             <CardContent className="p-5 lg:p-6">
               <BatchSectionHeader
                 title="Batch Audit & Activity Logs"
@@ -511,6 +523,71 @@ function BatchDetailContent() {
           </Card>
         )}
       </div>
+
+      {/* Delete / Unassign Tutor Custom Modal Confirmation Dialog */}
+      <Dialog open={!!unassignTarget} onOpenChange={(open) => !open && setUnassignTarget(null)}>
+        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border border-slate-200 shadow-2xl bg-white text-[#0F172A] font-sans">
+          <div className="p-6 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 mx-auto flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-7 w-7 text-rose-600" />
+            </div>
+
+            <div className="space-y-1">
+              <DialogTitle className="text-lg font-extrabold text-[#0B2447]">
+                Remove Tutor Assignment?
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 font-medium leading-relaxed">
+                Are you sure you want to unassign{' '}
+                <span className="font-extrabold text-[#0B2447]">{unassignTarget?.staffName}</span>{' '}
+                from teaching{' '}
+                <span className="font-extrabold text-[#0052CC]">{unassignTarget?.subject}</span> in
+                this batch?
+              </DialogDescription>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-left text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Tutor Name:</span>
+                <span className="font-bold text-[#0B2447]">{unassignTarget?.staffName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Subject:</span>
+                <span className="font-bold text-[#0052CC]">{unassignTarget?.subject}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 font-medium">Effective From:</span>
+                <span className="font-bold text-slate-700">
+                  {unassignTarget?.effectiveFrom
+                    ? formatBatchDate(unassignTarget.effectiveFrom)
+                    : '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setUnassignTarget(null)}
+              className="rounded-xl h-10 px-4 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmUnassign}
+              disabled={unassignMutation.isPending}
+              className="rounded-xl h-10 px-5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-2xs gap-1.5 border-none transition-all disabled:opacity-50"
+            >
+              {unassignMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Remove Tutor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

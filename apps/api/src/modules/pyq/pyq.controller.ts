@@ -9,12 +9,15 @@ import {
   Query,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PyqService } from './pyq.service';
 import { CreatePyqDto } from './dto/create-pyq.dto';
 import { VerifyPyqPaymentDto } from './dto/verify-pyq-payment.dto';
+
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('PYQ (Previous Year Question Papers)')
 @Controller({ path: 'pyq', version: '1' })
@@ -42,6 +45,48 @@ export class PyqController {
       userRole,
       userId,
     });
+  }
+
+  @Public()
+  @Get(':id/file')
+  @ApiOperation({ summary: 'Stream Question Paper PDF directly to browser (Zero Expiration / No JWT Error)' })
+  async streamPaperFile(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Res() res: any,
+  ) {
+    const tenantId = req.user?.tenantId || 'review-academy';
+    const userRole = req.user?.roleCode || 'STUDENT';
+    const userId = req.user?.sub || req.user?.id;
+
+    const { buffer, mimeType, fileName } = await this.pyqService.getPaperFileBuffer(tenantId, userId, userRole, id, 'PAPER');
+
+    res.setHeader('Content-Type', mimeType || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    return res.send(buffer);
+  }
+
+  @Public()
+  @Get(':id/solution')
+  @ApiOperation({ summary: 'Stream Solution PDF directly to browser (Zero Expiration / No JWT Error)' })
+  async streamSolutionFile(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Res() res: any,
+  ) {
+    const tenantId = req.user?.tenantId || 'review-academy';
+    const userRole = req.user?.roleCode || 'STUDENT';
+    const userId = req.user?.sub || req.user?.id;
+
+    const { buffer, mimeType, fileName } = await this.pyqService.getPaperFileBuffer(tenantId, userId, userRole, id, 'SOLUTION');
+
+    res.setHeader('Content-Type', mimeType || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    return res.send(buffer);
   }
 
   @Post()

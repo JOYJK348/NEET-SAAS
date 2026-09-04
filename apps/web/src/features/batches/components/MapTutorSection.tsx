@@ -14,15 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Loader2,
-  UserCheck,
-  BookOpen,
-  GraduationCap,
-  X,
-  CheckCircle2,
-  Sparkles,
-} from 'lucide-react';
+import { Loader2, UserCheck, BookOpen, GraduationCap, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MapTutorSectionProps {
@@ -92,92 +84,85 @@ export function MapTutorSection({ batchId, courseId, onClose, onSuccess }: MapTu
   const isLoading = tutorsLoading || subjectsLoading;
 
   return (
-    <Card className="border border-violet-100/80 bg-white/90 backdrop-blur-md rounded-3xl shadow-lg overflow-hidden transition-all">
-      {/* Modern Premium Banner Header */}
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 p-5 sm:p-6 text-white relative">
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
-              <UserCheck className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                Assign Tutor / Faculty Member
-              </h3>
-              <p className="text-xs sm:text-sm text-violet-100/90 font-medium mt-0.5">
-                Link a faculty tutor to teach a specific subject in this batch
-              </p>
-            </div>
+    <Card className="border border-slate-200 bg-white rounded-2xl shadow-2xs overflow-hidden transition-all text-[#0F172A] font-sans">
+      {/* ISML LMS Light Blue Header Banner */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 p-5 border-b border-blue-200 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+            <UserCheck className="h-5 w-5 text-[#0052CC]" />
           </div>
-
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-all border border-white/20 shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          <div>
+            <h3 className="text-base font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2">
+              Assign Faculty Tutor
+            </h3>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">
+              Link a faculty tutor to teach a specific subject in this batch section.
+            </p>
+          </div>
         </div>
+
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-all shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <CardContent className="p-5 sm:p-6 space-y-6">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin text-violet-600 mb-3" />
-            <p className="text-sm font-semibold text-gray-600">
-              Loading tutors and subjects data...
+          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+            <Loader2 className="h-7 w-7 animate-spin text-[#0052CC] mb-2" />
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Loading faculty tutors & subjects...
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tutor Selection Card */}
-            <div className="space-y-2.5 p-4 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50/80 transition-all">
-              <Label className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                <GraduationCap className="h-4 w-4 text-violet-600" />
+            <div className="space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-[#0052CC]" />
                 Select Faculty Tutor *
               </Label>
               <Select value={selectedTutorId} onValueChange={handleTutorChange}>
-                <SelectTrigger className="h-12 rounded-2xl border-gray-200 focus-visible:ring-violet-600 bg-white text-sm">
+                <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 bg-white text-xs font-semibold text-[#0B2447]">
                   <SelectValue placeholder="Choose tutor from faculty list..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl max-h-60">
+                <SelectContent className="rounded-xl max-h-60 bg-white">
                   {tutors.map((tutor) => (
-                    <SelectItem
-                      key={tutor.id}
-                      value={tutor.id}
-                      className="rounded-xl my-0.5 text-sm"
-                    >
+                    <SelectItem key={tutor.id} value={tutor.id} className="text-xs font-medium">
                       {tutor.firstName} {tutor.lastName}{' '}
                       {tutor.employeeCode ? `(${tutor.employeeCode})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-slate-400 font-medium">
                 Choose the registered tutor faculty for this assignment.
               </p>
             </div>
 
             {/* Subject Selection Card */}
-            <div className="space-y-2.5 p-4 rounded-2xl border border-gray-100 bg-gray-50/50 hover:bg-gray-50/80 transition-all">
-              <Label className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-purple-600" />
+            <div className="space-y-2 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-[#0052CC]" />
                 Select Subject / Syllabus *
               </Label>
               <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
-                <SelectTrigger className="h-12 rounded-2xl border-gray-200 focus-visible:ring-violet-600 bg-white text-sm">
+                <SelectTrigger className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 bg-white text-xs font-semibold text-[#0B2447]">
                   <SelectValue placeholder="Choose subject taught in this course..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl max-h-60">
+                <SelectContent className="rounded-xl max-h-60 bg-white">
                   {courseSubjects.map((cs: any) => (
                     <SelectItem
                       key={cs.subjectId}
                       value={cs.subjectId}
-                      className="rounded-xl my-0.5 text-sm"
+                      className="text-xs font-medium"
                     >
                       {cs.subject?.name || 'Subject'}{' '}
                       {cs.subject?.code ? `(${cs.subject.code})` : ''}
@@ -185,7 +170,7 @@ export function MapTutorSection({ batchId, courseId, onClose, onSuccess }: MapTu
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-slate-400 font-medium">
                 Subject mapped from this batch's course curriculum.
               </p>
             </div>
@@ -193,18 +178,17 @@ export function MapTutorSection({ batchId, courseId, onClose, onSuccess }: MapTu
         )}
 
         {/* Footer Bar with Action Buttons */}
-        <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50/50 p-4 rounded-2xl">
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-            <Sparkles className="h-4 w-4 text-violet-600" />
-            <span>Fill in both Faculty Tutor and Subject to complete assignment</span>
+        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 p-4 rounded-xl">
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+            <span>Fill in both Faculty Tutor and Subject to complete assignment.</span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             {onClose && (
               <Button
                 variant="outline"
                 type="button"
-                className="flex-1 sm:flex-initial rounded-2xl h-11 px-5 text-sm font-semibold border-gray-200 hover:bg-gray-100"
+                className="flex-1 sm:flex-initial rounded-xl h-10 px-4 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-100"
                 onClick={onClose}
               >
                 Cancel
@@ -213,9 +197,13 @@ export function MapTutorSection({ batchId, courseId, onClose, onSuccess }: MapTu
             <Button
               onClick={handleMapTutor}
               disabled={!selectedTutorId || !selectedSubjectId || assignMutation.isPending}
-              className="flex-1 sm:flex-initial rounded-2xl h-11 px-6 shadow-lg shadow-violet-600/25 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold gap-2 border-none transition-all disabled:opacity-50"
+              className="flex-1 sm:flex-initial rounded-xl h-10 px-5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs gap-1.5 transition-all disabled:opacity-50"
             >
-              {assignMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {assignMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Assign Tutor to Batch
             </Button>
           </div>

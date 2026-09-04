@@ -9,7 +9,15 @@ import {
   useTracks,
 } from '@livekit/components-react';
 import { ConnectionState, Track, RoomEvent } from 'livekit-client';
-import { Activity, ChevronDown, ChevronUp, RefreshCw, Volume2, ShieldCheck, ShieldAlert } from 'lucide-react';
+import {
+  Activity,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Volume2,
+  ShieldCheck,
+  ShieldAlert,
+} from 'lucide-react';
 
 interface Props {
   classId: string;
@@ -33,7 +41,11 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
   const [eventLogs, setEventLogs] = useState<Array<{ time: string; msg: string }>>([]);
 
   const addLog = (msg: string) => {
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const time = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
     setEventLogs((prev) => [{ time, msg }, ...prev.slice(0, 7)]);
   };
 
@@ -61,8 +73,7 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
       addLog(`Subscribed: ${track.kind} (${pub.source}) from ${p.identity}`);
     const onTrackUnsubscribed = (track: any, pub: any, p: any) =>
       addLog(`Unsubscribed: ${track.kind} from ${p.identity}`);
-    const onLocalPublished = (pub: any) =>
-      addLog(`Local published: ${pub.kind} (${pub.source})`);
+    const onLocalPublished = (pub: any) => addLog(`Local published: ${pub.kind} (${pub.source})`);
     const onAudioStatus = () => {
       checkAudio();
       addLog(`AudioPlayback: canPlay=${room.canPlaybackAudio}`);
@@ -94,7 +105,7 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
   const localScreenPub = localParticipant.getTrackPublication(Track.Source.ScreenShare);
 
   return (
-    <div className="fixed bottom-2 left-2 z-50 font-mono text-[11px] select-text">
+    <div className="hidden sm:block fixed bottom-2 left-2 z-50 font-mono text-[11px] select-text">
       {/* Floating Toggle Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -153,10 +164,14 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
               <span className="text-slate-400">Camera:</span>{' '}
               <span
                 className={
-                  isCameraEnabled && localCamPub?.track ? 'text-emerald-400 font-bold' : 'text-rose-400'
+                  isCameraEnabled && localCamPub?.track
+                    ? 'text-emerald-400 font-bold'
+                    : 'text-rose-400'
                 }
               >
-                {isCameraEnabled ? `PUB (SID: ${localCamPub?.trackSid?.slice(-6) || 'active'})` : 'MUTED / OFF'}
+                {isCameraEnabled
+                  ? `PUB (SID: ${localCamPub?.trackSid?.slice(-6) || 'active'})`
+                  : 'MUTED / OFF'}
               </span>
             </p>
             <p>
@@ -168,13 +183,19 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
                     : 'text-rose-400'
                 }
               >
-                {isMicrophoneEnabled ? `PUB (SID: ${localMicPub?.trackSid?.slice(-6) || 'active'})` : 'MUTED / OFF'}
+                {isMicrophoneEnabled
+                  ? `PUB (SID: ${localMicPub?.trackSid?.slice(-6) || 'active'})`
+                  : 'MUTED / OFF'}
               </span>
             </p>
             <p>
               <span className="text-slate-400">Screen Share:</span>{' '}
-              <span className={isScreenShareEnabled ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
-                {isScreenShareEnabled ? `ACTIVE (SID: ${localScreenPub?.trackSid?.slice(-6) || 'active'})` : 'OFF'}
+              <span
+                className={isScreenShareEnabled ? 'text-emerald-400 font-bold' : 'text-slate-400'}
+              >
+                {isScreenShareEnabled
+                  ? `ACTIVE (SID: ${localScreenPub?.trackSid?.slice(-6) || 'active'})`
+                  : 'OFF'}
               </span>
             </p>
           </div>
@@ -192,10 +213,16 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
               <div className="space-y-1 max-h-32 overflow-y-auto pr-0.5">
                 {remoteParticipants.map((rp) => {
                   const camTrack = cameraTracks.find(
-                    (t) => t.participant.sid === rp.sid && t.publication?.track && !t.publication.isMuted
+                    (t) =>
+                      t.participant.sid === rp.sid &&
+                      t.publication?.track &&
+                      !t.publication.isMuted,
                   );
                   const micTrack = micTracks.find(
-                    (t) => t.participant.sid === rp.sid && t.publication?.track && !t.publication.isMuted
+                    (t) =>
+                      t.participant.sid === rp.sid &&
+                      t.publication?.track &&
+                      !t.publication.isMuted,
                   );
                   const isSpeaking = rp.isSpeaking;
 
@@ -205,9 +232,7 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
                       className="p-1.5 rounded bg-slate-950/70 border border-slate-800 text-[10px] space-y-0.5"
                     >
                       <p className="font-bold text-white flex items-center justify-between">
-                        <span className="truncate max-w-[180px]">
-                          {rp.name || rp.identity}
-                        </span>
+                        <span className="truncate max-w-[180px]">{rp.name || rp.identity}</span>
                         {isSpeaking && (
                           <span className="text-[9px] px-1 bg-emerald-500/20 text-emerald-400 font-black rounded">
                             SPEAKING
@@ -216,13 +241,21 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
                       </p>
                       <p className="text-slate-400">
                         Cam:{' '}
-                        <span className={camTrack ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                          {camTrack ? `SUB (SID: ${camTrack.publication?.trackSid?.slice(-6)})` : 'OFF'}
+                        <span
+                          className={camTrack ? 'text-emerald-400 font-bold' : 'text-slate-500'}
+                        >
+                          {camTrack
+                            ? `SUB (SID: ${camTrack.publication?.trackSid?.slice(-6)})`
+                            : 'OFF'}
                         </span>
                         {' | '}
                         Mic:{' '}
-                        <span className={micTrack ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
-                          {micTrack ? `SUB (SID: ${micTrack.publication?.trackSid?.slice(-6)})` : 'OFF'}
+                        <span
+                          className={micTrack ? 'text-emerald-400 font-bold' : 'text-slate-500'}
+                        >
+                          {micTrack
+                            ? `SUB (SID: ${micTrack.publication?.trackSid?.slice(-6)})`
+                            : 'OFF'}
                         </span>
                       </p>
                     </div>
@@ -238,7 +271,11 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
             <div className="flex items-center justify-between">
               <span>
                 Playback Status:{' '}
-                <span className={canPlayAudio ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                <span
+                  className={
+                    canPlayAudio ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'
+                  }
+                >
                   {canPlayAudio ? 'UNLOCKED / ACTIVE' : 'BLOCKED (Need Gesture)'}
                 </span>
               </span>
@@ -252,7 +289,10 @@ export default function LivekitDebugPanel({ classId, role }: Props) {
               )}
             </div>
             <p className="text-slate-400">
-              Remote Audio Tracks Subscribed: <span className="text-white font-bold">{micTracks.filter(t => !t.participant.isLocal).length}</span>
+              Remote Audio Tracks Subscribed:{' '}
+              <span className="text-white font-bold">
+                {micTracks.filter((t) => !t.participant.isLocal).length}
+              </span>
             </p>
           </div>
 

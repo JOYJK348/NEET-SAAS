@@ -213,8 +213,22 @@ export class LiveClassController {
   async checkJoinStatus(
     @Param('id') id: string,
     @Query('studentId') studentId: string,
+    @Query('studentName') studentName?: string,
   ) {
-    return this.liveClassService.checkJoinStatus(id, studentId || 'unknown');
+    return this.liveClassService.checkJoinStatus(id, studentId || 'unknown', studentName);
+  }
+
+  /** Student: Cancel join request */
+  @Public()
+  @Post(':id/cancel-join-request')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Student: Cancel pending join request' })
+  async cancelJoinRequest(
+    @Param('id') id: string,
+    @Body() body: { studentId: string; studentName?: string },
+  ) {
+    await this.liveClassService.cancelJoinRequest(id, body.studentId || 'unknown', body.studentName);
+    return { success: true };
   }
 
   /** Tutor: Remove/admit a specific student */

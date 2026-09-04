@@ -11,7 +11,6 @@ import {
   Plus,
   Layers,
   Search,
-  Sparkles,
   BookMarked,
   CheckCircle2,
   X,
@@ -19,6 +18,8 @@ import {
   RefreshCw,
   DollarSign,
   Pencil,
+  ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -144,7 +145,9 @@ function FeePlansContent() {
     }));
 
     setPlanItems(updated);
-    toast.success(`Auto-distributed ₹${total.toLocaleString('en-IN')} equally across ${count} installments!`);
+    toast.success(
+      `Auto-distributed ₹${total.toLocaleString('en-IN')} equally across ${count} installments!`,
+    );
   };
 
   const addInstallmentRow = () => {
@@ -255,79 +258,98 @@ function FeePlansContent() {
   });
 
   const totalFeePlans = plans.length;
-  const totalInstallmentSchedules = plans.reduce((acc, p) => acc + (p.installmentPlans?.length || 0), 0);
+  const totalInstallmentSchedules = plans.reduce(
+    (acc, p) => acc + (p.installmentPlans?.length || 0),
+    0,
+  );
   const totalValue = plans.reduce((acc, p) => acc + Number(p.totalAmount || 0), 0);
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner - Signature Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Financial Fee Architecture
-              </span>
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
+              onClick={() => router.push('/tenant-admin/fees')}
+            >
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
+            </Button>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+                <span>Financial Operations</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+                <span>Fee Plans & Schedules</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+                Fee Plans & Installment Schedules
+              </h1>
+              <p className="text-xs text-slate-600 font-medium">
+                Configure course fee structures, component line items, and student installment due
+                dates.
+              </p>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Fee Plans & Installment Schedules 💳
-            </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Configure course fee structures, component line items, and student installment due dates.
-            </p>
           </div>
 
           <Button
             onClick={() => router.push('/tenant-admin/fees/plans/new')}
-            className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
+            className="w-full sm:w-auto gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs shrink-0 rounded-xl text-xs self-end sm:self-auto"
           >
-            <Plus className="h-4 w-4 text-violet-600 shrink-0" />
+            <Plus className="h-4 w-4 text-white shrink-0" />
             <span>Create New Fee Plan</span>
           </Button>
         </div>
 
         {/* KPI Cards Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <BookMarked className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Total Fee Plans
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{totalFeePlans}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {totalFeePlans}
+              </p>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
               <Layers className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Configured Schedules
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{totalInstallmentSchedules}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {totalInstallmentSchedules}
+              </p>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-            <div className="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50 text-indigo-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <DollarSign className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Combined Course Value
               </p>
-              <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">{formatRupees(totalValue)}</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                {formatRupees(totalValue)}
+              </p>
             </div>
           </Card>
         </div>
 
         {/* Toolbar & Filter Bar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
@@ -335,7 +357,7 @@ function FeePlansContent() {
               placeholder="Search fee plans by code or name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full"
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs font-bold text-slate-800 placeholder:text-slate-400 w-full"
             />
             {search && (
               <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
@@ -347,37 +369,46 @@ function FeePlansContent() {
 
         {/* Fee Plans List */}
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Loading fee plans...</div>
+          <div className="text-center py-12 text-slate-500 font-medium">Loading fee plans...</div>
         ) : filteredPlans.length === 0 ? (
-          <Card className="p-12 text-center border-dashed rounded-2xl border-slate-200 bg-white shadow-xs">
+          <Card className="p-12 text-center border-dashed rounded-2xl border-slate-200 bg-white shadow-2xs">
             <Layers className="w-12 h-12 mx-auto text-slate-400 mb-3" />
-            <h3 className="text-base font-bold text-slate-900">No Fee Plans Configured</h3>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1 mb-4">
-              Get started by creating your first fee structure to manage student tuition & installment plans.
+            <h3 className="text-base font-extrabold text-[#0B2447]">No Fee Plans Configured</h3>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 mb-4 font-medium">
+              Get started by creating your first fee structure to manage student tuition &
+              installment plans.
             </p>
-            <Button onClick={() => router.push('/tenant-admin/fees/plans/new')} className="bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs">
+            <Button
+              onClick={() => router.push('/tenant-admin/fees/plans/new')}
+              className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs"
+            >
               <Plus className="w-4 h-4 mr-2" /> Create Fee Plan
             </Button>
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {filteredPlans.map((plan) => (
-              <Card key={plan.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-6">
+              <Card
+                key={plan.id}
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-6"
+              >
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
                   <div>
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 border border-violet-100">
+                      <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-blue-50 text-[#0052CC] border border-blue-200 font-mono">
                         {plan.code}
                       </span>
-                      <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
+                      <h2 className="text-xl font-extrabold text-[#0B2447]">{plan.name}</h2>
                     </div>
                     {plan.description && (
-                      <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">{plan.description}</p>
                     )}
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] uppercase text-slate-400 font-bold block tracking-wider">Total Fee Amount</span>
-                    <span className="text-2xl font-black text-emerald-600">
+                    <span className="text-[10px] uppercase text-slate-400 font-bold block tracking-wider">
+                      Total Fee Amount
+                    </span>
+                    <span className="text-2xl font-extrabold text-emerald-600">
                       {formatRupees(plan.totalAmount)}
                     </span>
                   </div>
@@ -392,12 +423,10 @@ function FeePlansContent() {
                     {plan.items.map((item) => (
                       <div
                         key={item.id}
-                        className="p-3 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between"
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between"
                       >
-                        <span className="text-xs font-semibold text-slate-700">
-                          {item.itemName}
-                        </span>
-                        <span className="text-xs font-bold text-slate-900">
+                        <span className="text-xs font-bold text-slate-700">{item.itemName}</span>
+                        <span className="text-xs font-extrabold text-[#0B2447]">
                           {formatRupees(Number(item.amount))}
                         </span>
                       </div>
@@ -411,46 +440,55 @@ function FeePlansContent() {
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       Configured Installment Schedules
                     </h4>
-                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-none">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => router.push(`/tenant-admin/fees/plans/new?id=${plan.id}`)}
                         className="rounded-xl text-xs font-bold text-slate-700 border-slate-200 hover:bg-slate-50 flex-1 sm:flex-none"
                       >
-                        <Pencil className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                        <Pencil className="w-3.5 h-3.5 mr-1 text-[#0052CC]" />
                         Edit Plan
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => openInstallmentPanel(plan)}
-                        className="rounded-xl text-xs font-bold text-violet-600 border-violet-200 hover:bg-violet-50 flex-1 sm:flex-none"
+                        className="rounded-xl text-xs font-bold text-[#0052CC] border-blue-200 hover:bg-blue-50 flex-1 sm:flex-none"
                       >
                         <Plus className="w-3.5 h-3.5 mr-1" />
-                        {activeInstallmentPlanId === plan.id ? 'Close Panel' : 'Add Installment Schedule'}
+                        {activeInstallmentPlanId === plan.id
+                          ? 'Close Panel'
+                          : 'Add Installment Schedule'}
                       </Button>
                     </div>
                   </div>
 
                   {/* INLINE INSTALLMENT CREATION FORM PANEL */}
                   {activeInstallmentPlanId === plan.id && (
-                    <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-violet-50/50 border border-violet-200 space-y-4 animate-in fade-in slide-in-from-top-2">
-                      <div className="flex items-center justify-between border-b border-violet-200/60 pb-2">
-                        <h4 className="text-sm font-bold text-violet-900">Configure Installment Schedule for {plan.name}</h4>
-                        <button onClick={() => setActiveInstallmentPlanId(null)} className="text-violet-400 hover:text-violet-600">
+                    <div className="mb-4 p-4 sm:p-5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-4">
+                      <div className="flex items-center justify-between border-b border-blue-200 pb-2">
+                        <h4 className="text-sm font-extrabold text-[#0B2447]">
+                          Configure Installment Schedule for {plan.name}
+                        </h4>
+                        <button
+                          onClick={() => setActiveInstallmentPlanId(null)}
+                          className="text-slate-400 hover:text-slate-600"
+                        >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
 
                       <div className="space-y-4">
                         <div>
-                          <label className="text-xs font-bold text-slate-600 block mb-1">Schedule Plan Name</label>
+                          <label className="text-xs font-bold text-slate-600 block mb-1">
+                            Schedule Plan Name
+                          </label>
                           <Input
                             placeholder="3 Installments Plan"
                             value={planName}
                             onChange={(e) => setPlanName(e.target.value)}
-                            className="rounded-xl text-xs bg-white"
+                            className="rounded-xl text-xs bg-white font-bold text-slate-800 border-slate-200"
                           />
                         </div>
 
@@ -465,16 +503,17 @@ function FeePlansContent() {
                                 variant="outline"
                                 size="sm"
                                 onClick={autoDistributeEqually}
-                                className="text-xs text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 rounded-xl flex-1 sm:flex-none"
+                                className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 rounded-xl flex-1 sm:flex-none"
                               >
-                                <RefreshCw className="w-3 h-3 mr-1" /> Auto-Split Equally
+                                <RefreshCw className="w-3 h-3 mr-1 text-emerald-600" /> Auto-Split
+                                Equally
                               </Button>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={addInstallmentRow}
-                                className="text-xs text-violet-700 font-bold hover:bg-violet-100 rounded-xl flex-1 sm:flex-none"
+                                className="text-xs text-[#0052CC] font-extrabold hover:bg-blue-100 rounded-xl flex-1 sm:flex-none"
                               >
                                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Row
                               </Button>
@@ -483,11 +522,14 @@ function FeePlansContent() {
 
                           <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                             {planItems.map((pi, idx) => (
-                              <div key={idx} className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center text-xs p-3 sm:p-0 rounded-2xl bg-white sm:bg-transparent border sm:border-0 border-violet-100">
+                              <div
+                                key={idx}
+                                className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center text-xs p-3 sm:p-0 rounded-2xl bg-white sm:bg-transparent border sm:border-0 border-blue-200"
+                              >
                                 <Input
                                   placeholder="Label (e.g. 1st Installment)"
                                   value={pi.label}
-                                  className="flex-1 rounded-xl text-xs bg-white"
+                                  className="flex-1 rounded-xl text-xs bg-white font-bold"
                                   onChange={(e) => {
                                     const newItems = [...planItems];
                                     newItems[idx].label = e.target.value;
@@ -497,7 +539,7 @@ function FeePlansContent() {
                                 <Input
                                   type="date"
                                   value={pi.dueDate}
-                                  className="w-full sm:w-36 rounded-xl text-xs bg-white"
+                                  className="w-full sm:w-36 rounded-xl text-xs bg-white font-bold"
                                   onChange={(e) => {
                                     const newItems = [...planItems];
                                     newItems[idx].dueDate = e.target.value;
@@ -508,7 +550,7 @@ function FeePlansContent() {
                                   type="number"
                                   placeholder="Amount ₹"
                                   value={pi.amountFixed || ''}
-                                  className="w-full sm:w-32 font-bold text-slate-900 rounded-xl text-xs bg-white"
+                                  className="w-full sm:w-32 font-extrabold text-[#0B2447] rounded-xl text-xs bg-white"
                                   onChange={(e) => {
                                     const newItems = [...planItems];
                                     newItems[idx].amountFixed = Number(e.target.value);
@@ -532,22 +574,30 @@ function FeePlansContent() {
 
                           {(() => {
                             const targetTotal = Number(plan.totalAmount) || 0;
-                            const currentSum = planItems.reduce((acc, i) => acc + Number(i.amountFixed || 0), 0);
+                            const currentSum = planItems.reduce(
+                              (acc, i) => acc + Number(i.amountFixed || 0),
+                              0,
+                            );
                             const matches = Math.abs(currentSum - targetTotal) < 0.01;
 
                             return (
-                              <div className="mt-3 p-3 rounded-xl bg-white border border-violet-100 flex items-center justify-between text-xs">
-                                <span className="text-slate-500 font-medium">
-                                  Total Course Fee: <strong className="text-slate-900">₹{targetTotal.toLocaleString('en-IN')}</strong>
+                              <div className="mt-3 p-3 rounded-xl bg-white border border-blue-200 flex items-center justify-between text-xs font-bold">
+                                <span className="text-slate-600">
+                                  Total Course Fee:{' '}
+                                  <strong className="text-[#0B2447]">
+                                    ₹{targetTotal.toLocaleString('en-IN')}
+                                  </strong>
                                 </span>
                                 <div className="flex items-center gap-2">
                                   {matches ? (
-                                    <span className="font-bold text-emerald-600 flex items-center gap-1">
-                                      <CheckCircle2 className="w-3.5 h-3.5" /> Sum Matches (₹{currentSum.toLocaleString('en-IN')})
+                                    <span className="font-extrabold text-emerald-600 flex items-center gap-1">
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Sum Matches (₹
+                                      {currentSum.toLocaleString('en-IN')})
                                     </span>
                                   ) : (
-                                    <span className="font-bold text-amber-600">
-                                      ⚠️ Sum: ₹{currentSum.toLocaleString('en-IN')} (Diff: ₹{(targetTotal - currentSum).toLocaleString('en-IN')})
+                                    <span className="font-extrabold text-amber-600">
+                                      Sum: ₹{currentSum.toLocaleString('en-IN')} (Diff: ₹
+                                      {(targetTotal - currentSum).toLocaleString('en-IN')})
                                     </span>
                                   )}
                                 </div>
@@ -556,14 +606,19 @@ function FeePlansContent() {
                           })()}
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-violet-200/60">
-                          <Button type="button" variant="outline" onClick={() => setActiveInstallmentPlanId(null)} className="rounded-xl text-xs">
+                        <div className="flex justify-end gap-2 pt-2 border-t border-blue-200">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setActiveInstallmentPlanId(null)}
+                            className="rounded-xl text-xs font-bold"
+                          >
                             Cancel
                           </Button>
                           <Button
                             type="button"
                             onClick={() => handleCreateInstallmentPlan(plan.id)}
-                            className="bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+                            className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
                           >
                             Save Installment Schedule
                           </Button>
@@ -573,8 +628,8 @@ function FeePlansContent() {
                   )}
 
                   {plan.installmentPlans.length === 0 ? (
-                    <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200">
-                      ⚠️ No installment plan attached. Students assigned to this fee will pay full ₹
+                    <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 font-bold">
+                      No installment plan attached. Students assigned to this fee will pay full ₹
                       {plan.totalAmount} up front.
                     </p>
                   ) : (
@@ -582,14 +637,12 @@ function FeePlansContent() {
                       {plan.installmentPlans.map((ip) => (
                         <div
                           key={ip.id}
-                          className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
+                          className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-violet-700">
-                              {ip.name}
-                            </span>
+                            <span className="text-xs font-extrabold text-[#0052CC]">{ip.name}</span>
                             {ip.isDefault && (
-                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200">
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 Default Plan
                               </span>
                             )}
@@ -599,14 +652,12 @@ function FeePlansContent() {
                             {(ip.items || []).map((item) => (
                               <div
                                 key={item.id}
-                                className="p-2.5 rounded-xl bg-white border border-slate-200/70 text-xs flex flex-col justify-between"
+                                className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs flex flex-col justify-between"
                               >
-                                <span className="font-semibold text-slate-700">
-                                  {item.label}
-                                </span>
-                                <div className="mt-1 flex items-center justify-between text-slate-500">
+                                <span className="font-extrabold text-[#0B2447]">{item.label}</span>
+                                <div className="mt-1 flex items-center justify-between text-slate-500 font-medium">
                                   <span>Due: {new Date(item.dueDate).toLocaleDateString()}</span>
-                                  <span className="font-bold text-slate-900">
+                                  <span className="font-extrabold text-[#0B2447]">
                                     {formatRupees(Number(item.amountFixed || 0))}
                                   </span>
                                 </div>

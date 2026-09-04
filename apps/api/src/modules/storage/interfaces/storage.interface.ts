@@ -51,6 +51,15 @@ export interface IStorageService {
     download?: boolean;
   }): Promise<BatchSignedUrlResult[]>;
 
+  createBucketSignedUrl(params: {
+    bucketName: string;
+    path: string;
+    expiresInSeconds?: number;
+    download?: boolean;
+  }): Promise<string>;
+
+  downloadDirectStream(bucketName: string, storagePath: string): Promise<Buffer>;
+
   deleteFile(params: {
     tenantId: string;
     fileUploadId: string;

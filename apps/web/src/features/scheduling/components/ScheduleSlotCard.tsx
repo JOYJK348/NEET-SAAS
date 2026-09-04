@@ -10,7 +10,6 @@ import {
   Ban,
   History,
   MoreVertical,
-  Sparkles,
   Calendar,
 } from 'lucide-react';
 import { ScheduleDetail } from '../types/schedule.types';
@@ -23,54 +22,46 @@ const SUBJECT_COLORS: Record<
   { bg: string; border: string; text: string; badgeBg: string; badgeText: string; accent: string }
 > = {
   Physics: {
-    bg: 'bg-gradient-to-br from-indigo-50/90 to-blue-50/40',
-    border: 'border-indigo-100/90 hover:border-indigo-300',
-    text: 'text-indigo-950',
-    badgeBg: 'bg-indigo-100/80',
-    badgeText: 'text-indigo-800',
-    accent: 'bg-indigo-600',
+    bg: 'bg-blue-50/80',
+    border: 'border-blue-200 hover:border-blue-300',
+    text: 'text-[#0B2447]',
+    badgeBg: 'bg-blue-100',
+    badgeText: 'text-[#0052CC]',
+    accent: 'bg-[#0052CC]',
   },
   Chemistry: {
-    bg: 'bg-gradient-to-br from-emerald-50/90 to-teal-50/40',
-    border: 'border-emerald-100/90 hover:border-emerald-300',
-    text: 'text-emerald-950',
-    badgeBg: 'bg-emerald-100/80',
+    bg: 'bg-emerald-50/80',
+    border: 'border-emerald-200 hover:border-emerald-300',
+    text: 'text-[#0B2447]',
+    badgeBg: 'bg-emerald-100',
     badgeText: 'text-emerald-800',
     accent: 'bg-emerald-600',
   },
   Biology: {
-    bg: 'bg-gradient-to-br from-amber-50/90 to-orange-50/40',
-    border: 'border-amber-100/90 hover:border-amber-300',
-    text: 'text-amber-950',
-    badgeBg: 'bg-amber-100/80',
+    bg: 'bg-amber-50/80',
+    border: 'border-amber-200 hover:border-amber-300',
+    text: 'text-[#0B2447]',
+    badgeBg: 'bg-amber-100',
     badgeText: 'text-amber-800',
     accent: 'bg-amber-600',
   },
   Maths: {
-    bg: 'bg-gradient-to-br from-rose-50/90 to-pink-50/40',
-    border: 'border-rose-100/90 hover:border-rose-300',
-    text: 'text-rose-950',
-    badgeBg: 'bg-rose-100/80',
+    bg: 'bg-rose-50/80',
+    border: 'border-rose-200 hover:border-rose-300',
+    text: 'text-[#0B2447]',
+    badgeBg: 'bg-rose-100',
     badgeText: 'text-rose-800',
     accent: 'bg-rose-600',
-  },
-  English: {
-    bg: 'bg-gradient-to-br from-violet-50/90 to-purple-50/40',
-    border: 'border-violet-100/90 hover:border-violet-300',
-    text: 'text-violet-950',
-    badgeBg: 'bg-violet-100/80',
-    badgeText: 'text-violet-800',
-    accent: 'bg-violet-600',
   },
 };
 
 const DEFAULT_COLOR = {
-  bg: 'bg-gradient-to-br from-slate-50 to-slate-100/50',
-  border: 'border-slate-200/80 hover:border-slate-300',
-  text: 'text-slate-900',
-  badgeBg: 'bg-slate-200/70',
+  bg: 'bg-blue-50/50',
+  border: 'border-slate-200 hover:border-blue-300',
+  text: 'text-[#0B2447]',
+  badgeBg: 'bg-slate-200/80',
   badgeText: 'text-slate-700',
-  accent: 'bg-slate-600',
+  accent: 'bg-[#0052CC]',
 };
 
 function getSubjectColor(subjectName?: string) {
@@ -154,10 +145,10 @@ export function ScheduleSlotCard({
     icon: React.ComponentType<any>;
     danger?: boolean;
   }[] = [
-    { action: 'reschedule', label: 'Edit / Reschedule ✏️', icon: RefreshCw },
-    { action: 'change_tutor', label: 'Change Tutor 👨‍🏫', icon: User },
-    { action: 'cancel', label: 'Cancel Class 🚫', icon: Ban, danger: true },
-    { action: 'history', label: 'View History 📜', icon: History },
+    { action: 'reschedule', label: 'Edit / Reschedule', icon: RefreshCw },
+    { action: 'change_tutor', label: 'Change Tutor', icon: User },
+    { action: 'cancel', label: 'Cancel Class', icon: Ban, danger: true },
+    { action: 'history', label: 'View History', icon: History },
   ];
 
   const handleMenuAction = (action: SessionAction | 'history') => {
@@ -184,23 +175,22 @@ export function ScheduleSlotCard({
       onClick={onClick}
       className={`
         group relative rounded-2xl border p-4 cursor-pointer select-none
-        transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 backdrop-blur-xs
-        ${colors.bg} ${colors.border} space-y-3
+        transition-all duration-200 hover:shadow-md hover:border-blue-300
+        ${colors.bg} ${colors.border} space-y-3 bg-white
       `}
     >
       {/* Top Bar: Subject Badge + Edit / Actions */}
       <div className="flex items-center justify-between gap-1 flex-wrap">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span
-            className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
+            className={`px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${colors.badgeBg} ${colors.badgeText}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${colors.accent}`} />
             {subjectName ?? 'Subject'}
           </span>
 
           {(sessionType === 'ONE_TO_ONE' || studentName) && (
-            <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-violet-600 text-white flex items-center gap-1 shadow-2xs">
-              <Sparkles className="w-3 h-3 text-white" />
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#0052CC] text-white flex items-center gap-1 shadow-2xs">
               1:1 Class {studentName ? `(${studentName})` : ''}
             </span>
           )}
@@ -215,10 +205,10 @@ export function ScheduleSlotCard({
                 e.stopPropagation();
                 onAction?.('reschedule', schedule);
               }}
-              className="px-2.5 py-1 rounded-xl bg-white/90 border border-slate-200/80 shadow-2xs hover:bg-violet-600 hover:text-white text-slate-700 text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer"
+              className="px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-slate-700 hover:text-[#0052CC] text-[11px] font-extrabold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
               title="Edit / Reschedule Class"
             >
-              <RefreshCw className="w-3 h-3 text-violet-600 group-hover:text-white transition-colors" />
+              <RefreshCw className="w-3 h-3 text-[#0052CC]" />
               <span>Edit</span>
             </button>
           )}
@@ -232,81 +222,85 @@ export function ScheduleSlotCard({
                   e.stopPropagation();
                   setMenuOpen((v) => !v);
                 }}
-                className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/80 border border-slate-200/80 shadow-2xs hover:bg-white text-slate-600 transition-all cursor-pointer"
+                className="w-7 h-7 flex items-center justify-center rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-all cursor-pointer shadow-2xs"
                 title="Class Options"
               >
                 <MoreVertical className="w-4 h-4" />
               </button>
 
-            {/* Dropdown Menu */}
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-48 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-100 overflow-hidden p-1 space-y-0.5">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.action}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMenuAction(item.action);
-                      }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-left transition-colors ${
-                        item.danger
-                          ? 'text-rose-600 hover:bg-rose-50'
-                          : 'text-slate-700 hover:bg-slate-100/80'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-3.5 h-3.5 flex-shrink-0 ${item.danger ? 'text-rose-500' : 'text-slate-500'}`}
-                      />
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+              {/* Dropdown Menu */}
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-50 w-44 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden p-1 space-y-0.5">
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.action}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuAction(item.action);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-left transition-colors ${
+                          item.danger
+                            ? 'text-rose-600 hover:bg-rose-50'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-3.5 h-3.5 flex-shrink-0 ${item.danger ? 'text-rose-500' : 'text-[#0052CC]'}`}
+                        />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Batch & Tutor Info */}
       <div className="space-y-1">
-        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug">
+        <h4 className="text-sm font-extrabold text-[#0B2447] tracking-tight leading-snug">
           {batchName ?? 'Batch Schedule'}
         </h4>
-        <p className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+        <p className="text-xs font-medium text-slate-600 flex items-center gap-1.5">
           <User className="w-3.5 h-3.5 text-slate-400" />
           <span>
-            Tutor: <strong className="text-slate-900 font-bold">{tutorName ?? 'Unassigned'}</strong>
+            Tutor:{' '}
+            <strong className="text-[#0B2447] font-extrabold">{tutorName ?? 'Unassigned'}</strong>
           </span>
         </p>
       </div>
 
       {/* Time & Delivery Mode Chips */}
-      <div className="pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5 bg-white/90 px-2.5 py-1 rounded-xl border border-slate-200/70 text-slate-800 font-bold shadow-2xs">
-          <Clock className="w-3.5 h-3.5 text-violet-600" />
+      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-[#0B2447] font-extrabold">
+          <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
           <span>
             {schedule.startTime}–{schedule.endTime}
           </span>
         </div>
 
-        <div className="flex items-center gap-1 bg-white/90 px-2 py-1 rounded-xl border border-slate-200/70 text-slate-600 font-semibold shadow-2xs">
+        <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-xl border border-slate-200 text-slate-600 font-semibold">
           {isOnline ? (
             <Wifi className="w-3 h-3 text-emerald-600" />
           ) : (
-            <MapPin className="w-3 h-3 text-violet-600" />
+            <MapPin className="w-3 h-3 text-[#0052CC]" />
           )}
-          <span className="capitalize text-[11px]">{schedule.deliveryMode.toLowerCase()}</span>
+          <span className="capitalize text-[11px] font-bold">
+            {schedule.deliveryMode.toLowerCase()}
+          </span>
         </div>
       </div>
 
       {/* Upcoming Date & 1-Click Calendar Add Footer */}
-      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 pt-1 border-t border-slate-200/50">
+      <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 pt-1 border-t border-slate-100">
         <span className="flex items-center gap-1 text-slate-600">
-          📅 {formatOccurrenceDate(schedule.dayOfWeek)}
+          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          {formatOccurrenceDate(schedule.dayOfWeek)}
         </span>
 
         <a
@@ -321,11 +315,11 @@ export function ScheduleSlotCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="px-2.5 py-1 rounded-xl bg-white hover:bg-violet-50 text-violet-700 font-extrabold text-[10.5px] border border-violet-200 shadow-2xs hover:border-violet-300 transition-all flex items-center gap-1 cursor-pointer"
+          className="px-2.5 py-1 rounded-xl bg-white hover:bg-blue-50 text-[#0052CC] font-extrabold text-[10.5px] border border-blue-200 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
           title="Add this class to Google Calendar with 15-min reminder alert"
         >
-          <Calendar className="w-3 h-3 text-violet-600 shrink-0" />
-          <span>Add to Calendar 📅</span>
+          <Calendar className="w-3 h-3 text-[#0052CC] shrink-0" />
+          <span>Add to Calendar</span>
         </a>
       </div>
     </div>

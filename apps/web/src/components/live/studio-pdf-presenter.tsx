@@ -194,7 +194,7 @@ export default function StudioPdfPresenter({
         }
       }
     },
-    [totalPages]
+    [totalPages],
   );
 
   // Load and Parse PDF Document ONLY when document ID/URL changes
@@ -341,7 +341,9 @@ export default function StudioPdfPresenter({
         };
 
         handleSelectDocument(customDoc);
-        toast.success(`📄 "${file.name}" loaded (${detectedPages} page${detectedPages > 1 ? 's' : ''})!`);
+        toast.success(
+          `📄 "${file.name}" loaded (${detectedPages} page${detectedPages > 1 ? 's' : ''})!`,
+        );
       } catch (err) {
         toast.error('Failed to parse uploaded document.');
       } finally {
@@ -394,7 +396,7 @@ export default function StudioPdfPresenter({
       ref={containerRef}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      className="w-full h-full bg-slate-950 flex flex-col relative overflow-hidden text-slate-100 select-none"
+      className="w-full h-full bg-slate-950 flex flex-col relative overflow-hidden text-slate-100 select-none studio-pdf-container"
     >
       {/* ── Top Header Toolbar ── */}
       <div className="h-12 sm:h-14 bg-slate-900/95 border-b border-slate-800 px-3 sm:px-4 flex items-center justify-between shrink-0 z-20 backdrop-blur-md">
@@ -464,9 +466,7 @@ export default function StudioPdfPresenter({
               >
                 <ZoomOut className="w-3.5 h-3.5" />
               </button>
-              <span className="text-[10px] font-mono font-bold px-1.5 text-slate-300">
-                {zoom}%
-              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 text-slate-300">{zoom}%</span>
               <button
                 onClick={() => setZoom((z) => Math.min(160, z + 15))}
                 className="p-1 text-slate-400 hover:text-white rounded-lg transition"
@@ -503,7 +503,9 @@ export default function StudioPdfPresenter({
           <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-black text-slate-200">Select Presentation Material</span>
+              <span className="text-xs font-black text-slate-200">
+                Select Presentation Material
+              </span>
             </div>
             <button
               onClick={() => setShowPicker(false)}

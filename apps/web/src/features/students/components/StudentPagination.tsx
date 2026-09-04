@@ -61,7 +61,7 @@ export function StudentPagination({
           <select
             value={itemsPerPage}
             onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-            className="px-2 py-1 text-xs border border-[#E5E7EB] rounded-lg bg-slate-50 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+            className="px-2 py-1 text-xs border border-slate-200 rounded-lg bg-slate-50 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#0052CC]"
             aria-label="Items per page"
           >
             {[10, 25, 50, 100].map((size) => (
@@ -78,7 +78,7 @@ export function StudentPagination({
             size="icon"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40"
             aria-label="First page"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -88,7 +88,7 @@ export function StudentPagination({
             size="icon"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40"
             aria-label="Previous page"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -112,8 +112,8 @@ export function StudentPagination({
                 className={cn(
                   'h-8 min-w-[32px] px-2 rounded-lg text-xs font-extrabold transition-all',
                   isCurrent
-                    ? 'bg-violet-600 text-white shadow-xs'
-                    : 'bg-white border border-[#E5E7EB] text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900',
                 )}
                 aria-label={`Page ${pageNum}`}
                 aria-current={isCurrent ? 'page' : undefined}

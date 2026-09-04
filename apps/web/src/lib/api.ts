@@ -18,11 +18,7 @@ export function isCancellationError(error: unknown): boolean {
   if (axios.isCancel(error)) return true;
   const err = error as any;
   // NOTE: ECONNABORTED is a *timeout* error, NOT a user cancellation - do not suppress it here
-  if (
-    err.name === 'CanceledError' ||
-    err.name === 'AbortError' ||
-    err.code === 'ERR_CANCELED'
-  ) {
+  if (err.name === 'CanceledError' || err.name === 'AbortError' || err.code === 'ERR_CANCELED') {
     return true;
   }
   const msg = (err.message || '').toString().toLowerCase();
@@ -40,6 +36,78 @@ export function isCancellationError(error: unknown): boolean {
     return true;
   }
   return false;
+}
+
+export function sanitizeErrorMessage(msg: unknown, status?: number): string {
+  if (!msg) {
+    if (status === 401) return 'Unable to sign you in. Please check your details and try again.';
+    if (status === 403) return "You don't have permission to perform this action.";
+    if (status === 404) return 'The requested information could not be found.';
+    return 'Something went wrong. Please try again later.';
+  }
+
+  const str = typeof msg === 'string' ? msg : String(msg);
+  const lower = str.toLowerCase();
+
+  const techKeywords = [
+    'prisma',
+    'this.prisma',
+    'findfirst',
+    'findmany',
+    'findunique',
+    'findraw',
+    'aggregate',
+    'groupby',
+    "can't reach database",
+    'database server',
+    'supabase.co',
+    'connection pool',
+    'econnrefused',
+    'etimedout',
+    'invocation in',
+    'at object.',
+    'invalid `',
+    'prismaclient',
+    'clientknownrequesterror',
+    'clientinitializationerror',
+    'sqlstate',
+    'd:\\',
+    'c:\\',
+    'node_modules',
+    '.ts:',
+    '.js:',
+    'select ',
+    'insert into',
+    'update ',
+    'delete from',
+  ];
+
+  const uploadKeywords = ['upload', 'multipart', 'storage', 's3', 'supabase storage'];
+
+  if (techKeywords.some((keyword) => lower.includes(keyword))) {
+    return 'Something went wrong. Please try again in a few moments.';
+  }
+
+  if (uploadKeywords.some((keyword) => lower.includes(keyword)) && status === 400) {
+    return 'Unable to upload the file. Please try again.';
+  }
+
+  if (
+    status === 401 &&
+    (lower.includes('unauthorized') || lower.includes('jwt') || lower.includes('token'))
+  ) {
+    return 'Unable to sign you in. Please check your details and try again.';
+  }
+
+  if (status === 403 && (lower.includes('forbidden') || lower.includes('permission'))) {
+    return "You don't have permission to perform this action.";
+  }
+
+  if (status === 404 && (lower.includes('not found') || lower.includes('cannot find'))) {
+    return 'The requested information could not be found.';
+  }
+
+  return str;
 }
 
 function getApiBaseUrl(): string {
@@ -62,7 +130,9 @@ function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
   }
-  return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'https://neet-saas.onrender.com/api/v1';
+  return (
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || 'https://neet-saas.onrender.com/api/v1'
+  );
 }
 
 class ApiClient {
@@ -133,8 +203,16 @@ class ApiClient {
           originalRequest.url?.includes('/login') ||
           originalRequest.url?.includes('/register');
 
-        // Handle 401 Unauthorized - attempt token refresh (except for login/register requests)
-        if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
+        const resData = error.response?.data as any;
+        const isInvalidJwt =
+          error.response?.status === 401 ||
+          (error.response?.status === 400 &&
+            (resData?.error === 'InvalidJWT' ||
+              resData?.code === 'InvalidJWT' ||
+              (typeof resData?.message === 'string' && resData.message.includes('"exp" claim'))));
+
+        // Handle 401 Unauthorized / InvalidJWT - attempt token refresh (except for login/register requests)
+        if (isInvalidJwt && !originalRequest._retry && !isAuthRequest) {
           if (this.isRefreshing) {
             // Queue the request while token is being refreshed
             return new Promise((resolve, reject) => {
@@ -223,7 +301,8 @@ class ApiClient {
     }
 
     const status = error.response?.status;
-    const message = (error.response?.data as { message?: string })?.message || error.message;
+    const rawMessage = (error.response?.data as { message?: string })?.message || error.message;
+    const message = sanitizeErrorMessage(rawMessage, status);
 
     // Don't show toast for 401 (handled by refresh), 422 (validation errors handled by forms),
     // or 400 VALIDATION_ERROR (handled by forms inline)

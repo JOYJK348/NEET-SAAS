@@ -20,13 +20,12 @@ import {
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/features/students/utils/student-utils';
 
+import { ChevronRight } from 'lucide-react';
+
 export default function ParentAttendancePage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
 
-  const {
-    data,
-    isLoading: isAttendanceLoading,
-  } = useQuery<ParentAttendanceData>({
+  const { data, isLoading: isAttendanceLoading } = useQuery<ParentAttendanceData>({
     queryKey: ['parent', 'attendance', selectedChildId],
     queryFn: () => parentPortalService.getAttendance(selectedChildId!),
     enabled: Boolean(selectedChildId),
@@ -38,7 +37,7 @@ export default function ParentAttendancePage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#FAFAFA]">
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#F8FAFC]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -54,106 +53,115 @@ export default function ParentAttendancePage() {
   const recentRecords = data?.recentRecords || [];
 
   return (
-    <div className="space-y-6 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Welcome Progress Hero Banner - Signature Violet Theme */}
-      <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-3xl p-6 sm:p-8 text-white shadow-md shadow-violet-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md border border-white/20 text-white">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            <span>Attendance & Classroom Participation Tracker</span>
-          </div>
+    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+      {/* ── ISML LMS Light Blue Header Banner ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200">
+        <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+          <span>Parent Portal</span>
+          <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+          <span>Attendance Tracker</span>
+        </div>
 
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-xl shadow-inner border border-white/30 shrink-0 text-white">
+            <div className="h-12 w-12 rounded-xl bg-[#0052CC] text-white flex items-center justify-center font-extrabold text-xl shadow-2xs shrink-0">
               {studentName.charAt(0)}
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447]">
                 {studentName}&apos;s Attendance Record
               </h1>
-              <p className="text-violet-200 text-xs mt-0.5 font-medium">
+              <p className="text-xs text-slate-600 font-medium">
                 Live attendance logs, subject participation rates, and absence history
               </p>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 text-center shrink-0 self-start md:self-auto">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Overall Attendance</p>
-          <p className="text-2xl sm:text-3xl font-black text-white mt-0.5">{overallRate}</p>
+          <div className="bg-white px-5 py-3 rounded-xl border border-blue-200 text-center shrink-0 self-start md:self-auto shadow-2xs">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0052CC]">
+              Overall Attendance
+            </p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2447] mt-0.5">
+              {overallRate}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* KPI Metric Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0">
+      {/* ── KPI Metric Strip ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Attendance Rate */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-blue-300 transition-all">
+          <div className="p-3 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
             <TrendingUp className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Attendance Rate
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{overallRate}</p>
+            <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">{overallRate}</p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+        {/* Attended */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-emerald-300 transition-all">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Attended
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Sessions Attended
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{presentClasses} Sessions</p>
+            <p className="text-2xl font-extrabold text-emerald-600 mt-0.5">{presentClasses}</p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shrink-0">
+        {/* Absences */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-rose-300 transition-all">
+          <div className="p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 shrink-0">
             <XCircle className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Absences
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{absentClasses} Sessions</p>
+            <p className="text-2xl font-extrabold text-rose-600 mt-0.5">{absentClasses}</p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm flex items-center gap-3 transition-all duration-150 hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+        {/* Total Conducted */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs flex items-center gap-3 hover:border-indigo-300 transition-all">
+          <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
             <Calendar className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
               Total Conducted
             </p>
-            <p className="text-2xl font-bold text-[#111827] mt-0.5">{totalClasses} Sessions</p>
+            <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">{totalClasses}</p>
           </div>
         </Card>
       </div>
 
-      {/* Subject-Wise Attendance Breakdown */}
+      {/* ── Subject-Wise Attendance Breakdown ── */}
       <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-violet-600" />
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-[#0052CC]" />
           Subject-Wise Attendance Breakdown
         </h3>
 
         {subjectBreakdown.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {subjectBreakdown.map((item) => (
               <Card
                 key={item.subject}
-                className="p-5 rounded-2xl bg-white border border-[#E5E7EB] shadow-sm space-y-3"
+                className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3 hover:border-blue-300 transition-all"
               >
                 <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-[#111827]">{item.subject}</h4>
+                  <h4 className="font-extrabold text-sm text-[#0B2447]">{item.subject}</h4>
                   <span
                     className={cn(
-                      'px-2.5 py-0.5 rounded-full text-[10px] font-bold border',
+                      'px-2.5 py-0.5 rounded-md text-[10px] font-extrabold border',
                       item.percentage >= 85
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : item.percentage >= 70
@@ -166,9 +174,9 @@ export default function ParentAttendancePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs text-slate-500 font-semibold">
+                  <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
                     <span>Attended Sessions</span>
-                    <span className="font-mono text-slate-900 font-bold">
+                    <span className="font-mono text-[#0B2447] font-bold">
                       {item.presentClasses} / {item.totalClasses}
                     </span>
                   </div>
@@ -190,24 +198,24 @@ export default function ParentAttendancePage() {
             ))}
           </div>
         ) : (
-          <Card className="p-6 rounded-2xl bg-white border border-[#E5E7EB] text-center text-xs text-slate-400">
+          <Card className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs text-slate-400 font-medium shadow-2xs">
             No subject-wise attendance logs available yet.
           </Card>
         )}
       </div>
 
-      {/* Recent Attendance Logs Table */}
+      {/* ── Recent Attendance Logs Table ── */}
       <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-          <UserCheck className="h-4 w-4 text-violet-600" />
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+          <UserCheck className="h-4 w-4 text-[#0052CC]" />
           Recent Session Logs History ({recentRecords.length})
         </h3>
 
-        <Card className="rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden">
+        <Card className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
           {recentRecords.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-[#E5E7EB] text-slate-500 font-bold uppercase tracking-wider">
+                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-extrabold uppercase tracking-wider">
                   <tr>
                     <th className="p-4">Date</th>
                     <th className="p-4">Subject</th>
@@ -216,16 +224,14 @@ export default function ParentAttendancePage() {
                     <th className="p-4">Remarks</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E5E7EB]">
+                <tbody className="divide-y divide-slate-100">
                   {recentRecords.map((record) => {
                     const st = (record.status || 'PRESENT').toUpperCase();
                     const isPresent = st === 'PRESENT' || st === 'LATE';
                     return (
                       <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 font-semibold text-slate-800">
-                          {formatDate(record.date)}
-                        </td>
-                        <td className="p-4 font-bold text-[#111827]">
+                        <td className="p-4 font-bold text-slate-700">{formatDate(record.date)}</td>
+                        <td className="p-4 font-extrabold text-[#0B2447]">
                           {record.subject || 'Class Session'}
                         </td>
                         <td className="p-4 font-medium text-slate-600">
@@ -234,7 +240,7 @@ export default function ParentAttendancePage() {
                         <td className="p-4">
                           <span
                             className={cn(
-                              'inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[11px]',
+                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-extrabold text-[11px]',
                               isPresent
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : 'bg-rose-50 text-rose-700 border border-rose-200',
@@ -248,7 +254,7 @@ export default function ParentAttendancePage() {
                             {st}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-500 italic">
+                        <td className="p-4 text-slate-500 font-medium italic">
                           {record.remarks || 'No remarks recorded'}
                         </td>
                       </tr>

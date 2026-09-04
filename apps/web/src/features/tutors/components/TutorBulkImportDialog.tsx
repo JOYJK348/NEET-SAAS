@@ -28,12 +28,10 @@ import {
   Loader2,
   X,
   BookOpen,
+  Check,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useCourseSubjects } from '@/features/master-data/hooks/use-course-subjects';
-
-// For multi-select checkmarks styling
-import { Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BulkImportResult {
@@ -95,12 +93,12 @@ export function TutorBulkImportDialog({
   const filteredBatches = batches.filter(
     (b) =>
       (!selectedCourse || b.courseId === selectedCourse) &&
-      (!selectedBranch || b.branchId === selectedBranch)
+      (!selectedBranch || b.branchId === selectedBranch),
   );
 
   const toggleSubjectSelection = (subjectId: string) => {
     setSelectedSubjects((prev) =>
-      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId]
+      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId],
     );
   };
 
@@ -131,7 +129,7 @@ export function TutorBulkImportDialog({
 
   const toggleBatchSelection = (batchId: string) => {
     setSelectedBatches((prev) =>
-      prev.includes(batchId) ? prev.filter((id) => id !== batchId) : [...prev, batchId]
+      prev.includes(batchId) ? prev.filter((id) => id !== batchId) : [...prev, batchId],
     );
   };
 
@@ -158,10 +156,10 @@ export function TutorBulkImportDialog({
       const res = await api.getAxiosInstance().post(url, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       const payload = res.data?.data ?? res.data;
       setResult(payload);
-      
+
       if (onImportComplete) {
         onImportComplete(payload);
       }
@@ -170,12 +168,17 @@ export function TutorBulkImportDialog({
         toast.success(`Import Completed! Successfully imported ${payload.importedCount} tutor(s).`);
         onSuccess();
       } else if (payload.errors.length > 0) {
-        toast.error(`Import completed with errors! ${payload.errors.length} row(s) failed validation.`);
+        toast.error(
+          `Import completed with errors! ${payload.errors.length} row(s) failed validation.`,
+        );
       } else {
         toast.info('Spreadsheet processed with empty rows.');
       }
     } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Failed to upload and parse Excel template.';
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to upload and parse Excel template.';
       setUploadError(errMsg);
       toast.error(`Upload Failed: ${errMsg}`);
     } finally {
@@ -198,68 +201,109 @@ export function TutorBulkImportDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { handleReset(); onClose(); } }}>
-      <DialogContent className="max-w-3xl bg-white text-[#111827] rounded-[28px] p-8 border-[#E5E7EB] shadow-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100 shrink-0">
-              <FileSpreadsheet className="h-6 w-6 text-purple-600 animate-pulse" />
-            </div>
-            <div>
-              <DialogTitle className="text-2xl font-extrabold tracking-tight text-gray-900">
-                Bulk Tutor Registration
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-sm font-medium mt-0.5">
-                Register multiple teaching faculty members, specify designational details and assign batches.
-              </DialogDescription>
-            </div>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleReset();
+          onClose();
+        }
+      }}
+    >
+      <DialogContent className="max-w-3xl bg-white text-[#0B2447] rounded-2xl p-0 border-slate-200 shadow-xl overflow-y-auto max-h-[90vh]">
+        {/* ISML LMS Style Light Blue Header */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-5 border-b border-blue-200 flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+            <FileSpreadsheet className="w-5 h-5 text-[#0052CC]" />
           </div>
-        </DialogHeader>
+          <div>
+            <span className="text-[10px] font-mono font-extrabold text-[#0052CC] uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 inline-block mb-0.5">
+              BULK FACULTY REGISTRATION
+            </span>
+            <DialogTitle className="text-base font-extrabold text-[#0B2447] leading-snug">
+              Bulk Faculty Import
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 font-medium mt-0.5">
+              Register multiple teaching faculty members, specify designational details, and assign
+              batches.
+            </DialogDescription>
+          </div>
+        </div>
 
-        <div className="space-y-6 py-6 border-t border-gray-100 mt-4">
-          
+        <div className="p-5 sm:p-6 space-y-6">
           {/* Section 1: Batch Assignment */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center">1</span>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Batch Assignment</h3>
+              <span className="w-6 h-6 rounded-full bg-blue-100 text-[#0052CC] text-xs font-extrabold flex items-center justify-center">
+                1
+              </span>
+              <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                Batch Assignment & Mapping
+              </h3>
             </div>
-            
-            <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100/85 grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="year" className="text-xs font-bold text-gray-600 uppercase tracking-wider">Academic Year *</Label>
+                <Label
+                  htmlFor="year"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
+                  Academic Year *
+                </Label>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger id="year" className="bg-white border-[#E5E7EB] hover:border-purple-300 rounded-xl h-11 transition-colors">
+                  <SelectTrigger
+                    id="year"
+                    className="bg-white border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 rounded-xl h-10 text-xs font-medium transition-colors"
+                  >
                     <SelectValue placeholder="Select Academic Year" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     {academicYears.map((y) => (
-                      <SelectItem key={y.id} value={y.id}>{y.name}</SelectItem>
+                      <SelectItem key={y.id} value={y.id}>
+                        {y.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="branch" className="text-xs font-bold text-gray-600 uppercase tracking-wider">Branch *</Label>
+                <Label
+                  htmlFor="branch"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
+                  Branch *
+                </Label>
                 <Select
                   value={selectedBranch}
                   onValueChange={setSelectedBranch}
                   disabled={!selectedYear}
                 >
-                  <SelectTrigger id="branch" className="bg-white border-[#E5E7EB] hover:border-purple-300 rounded-xl h-11 transition-colors">
-                    <SelectValue placeholder={selectedYear ? "Select Branch" : "Select Year first"} />
+                  <SelectTrigger
+                    id="branch"
+                    className="bg-white border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 rounded-xl h-10 text-xs font-medium transition-colors"
+                  >
+                    <SelectValue
+                      placeholder={selectedYear ? 'Select Branch' : 'Select Year first'}
+                    />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="course" className="text-xs font-bold text-gray-600 uppercase tracking-wider">Course *</Label>
+                <Label
+                  htmlFor="course"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
+                  Course *
+                </Label>
                 <Select
                   value={selectedCourse}
                   onValueChange={(val) => {
@@ -269,21 +313,36 @@ export function TutorBulkImportDialog({
                   }}
                   disabled={!selectedBranch}
                 >
-                  <SelectTrigger id="course" className="bg-white border-[#E5E7EB] hover:border-purple-300 rounded-xl h-11 transition-colors">
-                    <SelectValue placeholder={selectedBranch ? "Select Course" : "Select Branch first"} />
+                  <SelectTrigger
+                    id="course"
+                    className="bg-white border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 rounded-xl h-10 text-xs font-medium transition-colors"
+                  >
+                    <SelectValue
+                      placeholder={selectedBranch ? 'Select Course' : 'Select Branch first'}
+                    />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     {filteredCourses.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="createLogin" className="text-xs font-bold text-gray-600 uppercase tracking-wider">Create Login Access *</Label>
+                <Label
+                  htmlFor="createLogin"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
+                  Create Login Access *
+                </Label>
                 <Select value={createLogin} onValueChange={setCreateLogin}>
-                  <SelectTrigger id="createLogin" className="bg-white border-[#E5E7EB] hover:border-purple-300 rounded-xl h-11 transition-colors">
+                  <SelectTrigger
+                    id="createLogin"
+                    className="bg-white border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 rounded-xl h-10 text-xs font-medium transition-colors"
+                  >
                     <SelectValue placeholder="Allow access?" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
@@ -295,17 +354,19 @@ export function TutorBulkImportDialog({
 
               {/* Multi-Select Batches Dropdown Container */}
               <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider">Assigned Batches (Select Multiple) *</Label>
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Assigned Batches (Select Multiple) *
+                </Label>
                 {!selectedCourse ? (
-                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-500 bg-white border border-slate-200 rounded-xl p-3 text-center font-medium">
                     Select a course first to view and assign batches.
                   </p>
                 ) : filteredBatches.length === 0 ? (
-                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-500 bg-white border border-slate-200 rounded-xl p-3 text-center font-medium">
                     No active batches found for the selected course/branch.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 bg-white border border-gray-200 rounded-xl p-3 max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2 bg-white border border-slate-200 rounded-xl p-3 max-h-32 overflow-y-auto">
                     {filteredBatches.map((b) => {
                       const isSelected = selectedBatches.includes(b.id);
                       return (
@@ -315,12 +376,14 @@ export function TutorBulkImportDialog({
                           onClick={() => toggleBatchSelection(b.id)}
                           className={`flex items-center justify-between text-left text-xs px-3 py-2 rounded-lg border transition-all ${
                             isSelected
-                              ? 'border-purple-500 bg-purple-50/30 text-purple-900 font-bold'
-                              : 'border-gray-100 hover:border-gray-300 bg-gray-50/10 text-gray-700'
+                              ? 'border-[#0052CC] bg-blue-50/60 text-[#0052CC] font-bold'
+                              : 'border-slate-100 hover:border-slate-300 bg-slate-50 text-slate-700'
                           }`}
                         >
                           <span>{b.name}</span>
-                          {isSelected && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0 ml-1.5" />}
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 text-[#0052CC] shrink-0 ml-1.5" />
+                          )}
                         </button>
                       );
                     })}
@@ -330,20 +393,20 @@ export function TutorBulkImportDialog({
 
               {/* Subject Multi-Select */}
               <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                <Label className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5 text-purple-500" />
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5 text-[#0052CC]" />
                   Subjects (Select Multiple)
                 </Label>
                 {!selectedCourse ? (
-                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-500 bg-white border border-slate-200 rounded-xl p-3 text-center font-medium">
                     Select a course first to view available subjects.
                   </p>
                 ) : filteredSubjects.length === 0 ? (
-                  <p className="text-xs text-muted-foreground bg-white border border-gray-200 rounded-xl p-3 text-center">
+                  <p className="text-xs text-slate-500 bg-white border border-slate-200 rounded-xl p-3 text-center font-medium">
                     No subjects found for the selected course.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-white border border-gray-200 rounded-xl p-3 max-h-36 overflow-y-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-white border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto">
                     {filteredSubjects.map((s) => {
                       const isSelected = selectedSubjects.includes(s.id);
                       return (
@@ -351,26 +414,25 @@ export function TutorBulkImportDialog({
                           key={s.id}
                           type="button"
                           onClick={() => toggleSubjectSelection(s.id)}
-                          className={`flex items-center justify-between text-left text-xs px-3 py-2.5 rounded-lg border transition-all ${
+                          className={`flex items-center justify-between text-left text-xs px-3 py-2 rounded-lg border transition-all ${
                             isSelected
-                              ? 'border-purple-500 bg-purple-50/40 text-purple-900 font-bold'
-                              : 'border-gray-100 hover:border-gray-300 bg-gray-50/10 text-gray-700'
+                              ? 'border-[#0052CC] bg-blue-50/60 text-[#0052CC] font-bold'
+                              : 'border-slate-100 hover:border-slate-300 bg-slate-50 text-slate-700'
                           }`}
                         >
                           <div className="min-w-0">
                             <span className="block truncate font-semibold">{s.name}</span>
-                            {s.code && <span className="text-[10px] text-gray-400 font-mono">{s.code}</span>}
+                            {s.code && (
+                              <span className="text-[10px] text-slate-400 font-mono">{s.code}</span>
+                            )}
                           </div>
-                          {isSelected && <Check className="h-3.5 w-3.5 text-purple-600 shrink-0 ml-1.5" />}
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 text-[#0052CC] shrink-0 ml-1.5" />
+                          )}
                         </button>
                       );
                     })}
                   </div>
-                )}
-                {selectedSubjects.length > 0 && (
-                  <p className="text-[10px] text-purple-600 font-semibold">
-                    {selectedSubjects.length} subject{selectedSubjects.length > 1 ? 's' : ''} selected
-                  </p>
                 )}
               </div>
             </div>
@@ -379,20 +441,29 @@ export function TutorBulkImportDialog({
           {/* Section 2: Download Template */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center">2</span>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Get Template Sheet</h3>
+              <span className="w-6 h-6 rounded-full bg-blue-100 text-[#0052CC] text-xs font-extrabold flex items-center justify-center">
+                2
+              </span>
+              <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                Get Template Sheet
+              </h3>
             </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-[#E5E7EB] bg-white">
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-white">
               <div className="space-y-0.5">
-                <span className="text-sm font-bold text-gray-800">Tutors Template Spreadsheet</span>
-                <p className="text-xs text-muted-foreground font-medium">Download the standard CSV/Excel template with mapped data validation column structures.</p>
+                <span className="text-sm font-bold text-[#0B2447]">
+                  Tutors Template Spreadsheet
+                </span>
+                <p className="text-xs text-slate-500 font-medium">
+                  Download the standard Excel template with mapped data validation column
+                  structures.
+                </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownloadTemplate} 
-                className="w-full sm:w-auto gap-2 border-purple-200 text-purple-700 hover:bg-purple-50 rounded-xl h-11 font-semibold shrink-0"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                className="w-full sm:w-auto gap-2 border-blue-200 text-[#0052CC] bg-blue-50 hover:bg-blue-100 rounded-xl h-10 font-bold shrink-0 text-xs"
               >
                 <Download className="h-4 w-4" />
                 Download Template
@@ -403,13 +474,17 @@ export function TutorBulkImportDialog({
           {/* Section 3: Upload Spreadsheet */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center">3</span>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Upload & Parse Spreadsheet</h3>
+              <span className="w-6 h-6 rounded-full bg-blue-100 text-[#0052CC] text-xs font-extrabold flex items-center justify-center">
+                3
+              </span>
+              <h3 className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                Upload & Parse Spreadsheet
+              </h3>
             </div>
 
             <div
-              className={`border-2 border-dashed border-[#D1D5DB] hover:border-purple-500 rounded-2xl p-10 flex flex-col items-center justify-center gap-3 bg-[#FAFAFA] cursor-pointer transition-all hover:bg-purple-50/5 ${
-                file ? 'border-purple-500 bg-purple-50/10' : ''
+              className={`border-2 border-dashed border-slate-300 hover:border-[#0052CC] rounded-xl p-8 flex flex-col items-center justify-center gap-2.5 bg-slate-50/50 cursor-pointer transition-all hover:bg-blue-50/20 ${
+                file ? 'border-[#0052CC] bg-blue-50/20' : ''
               }`}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -422,19 +497,25 @@ export function TutorBulkImportDialog({
               />
               {file ? (
                 <>
-                  <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-purple-700">
-                    <FileSpreadsheet className="h-6 w-6" />
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-[#0052CC]">
+                    <FileSpreadsheet className="h-5 w-5" />
                   </div>
-                  <span className="text-sm font-extrabold text-gray-850">{file.name}</span>
-                  <span className="text-xs text-muted-foreground font-semibold">{(file.size / 1024).toFixed(1)} KB</span>
+                  <span className="text-xs font-extrabold text-[#0B2447]">{file.name}</span>
+                  <span className="text-[11px] text-slate-500 font-semibold">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </span>
                 </>
               ) : (
                 <>
-                  <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400">
-                    <Upload className="h-6 w-6" />
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Upload className="h-5 w-5" />
                   </div>
-                  <span className="text-sm text-gray-600 font-semibold">Click to browse or drag Excel template here</span>
-                  <span className="text-xs text-muted-foreground font-medium">Excel workbook (.xlsx) formats only</span>
+                  <span className="text-xs text-slate-600 font-bold">
+                    Click to browse or drag Excel template here
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-medium">
+                    Excel workbook (.xlsx) formats only
+                  </span>
                 </>
               )}
             </div>
@@ -442,24 +523,24 @@ export function TutorBulkImportDialog({
 
           {/* Error displays */}
           {uploadError && (
-            <Alert variant="destructive" className="rounded-2xl border-red-200">
-              <AlertTriangle className="h-4 w-4 text-red-655" />
-              <AlertTitle className="font-extrabold">Import failed</AlertTitle>
+            <Alert variant="destructive" className="rounded-xl border-rose-200 bg-rose-50">
+              <AlertTriangle className="h-4 w-4 text-rose-600" />
+              <AlertTitle className="font-extrabold text-xs">Import failed</AlertTitle>
               <AlertDescription className="text-xs font-medium">{uploadError}</AlertDescription>
             </Alert>
           )}
 
-          {/* Success summary results & structured Error Logs Tabs */}
+          {/* Success summary results */}
           {result && (
             <div className="space-y-4">
-              <div className="flex gap-4 border-b border-[#E5E7EB] pb-2">
+              <div className="flex gap-4 border-b border-slate-200 pb-2">
                 <button
                   type="button"
                   onClick={() => setActiveTab('summary')}
-                  className={`text-sm font-bold pb-1.5 transition-colors relative ${
+                  className={`text-xs font-extrabold pb-1.5 transition-colors relative ${
                     activeTab === 'summary'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'text-[#0052CC] border-b-2 border-[#0052CC]'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Import Summary
@@ -467,15 +548,15 @@ export function TutorBulkImportDialog({
                 <button
                   type="button"
                   onClick={() => setActiveTab('logs')}
-                  className={`text-sm font-bold pb-1.5 transition-colors relative flex items-center gap-1.5 ${
+                  className={`text-xs font-extrabold pb-1.5 transition-colors relative flex items-center gap-1.5 ${
                     activeTab === 'logs'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
-                      : 'text-gray-500 hover:text-gray-800'
+                      ? 'text-[#0052CC] border-b-2 border-[#0052CC]'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
                   Error Logs
                   {result.errors.length > 0 && (
-                    <span className="bg-red-100 text-red-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">
+                    <span className="bg-rose-100 text-rose-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">
                       {result.errors.length}
                     </span>
                   )}
@@ -483,54 +564,40 @@ export function TutorBulkImportDialog({
               </div>
 
               {activeTab === 'summary' ? (
-                <div className="space-y-4 p-5 bg-green-50/20 rounded-2xl border border-green-100">
-                  <div className="flex items-center gap-2.5 text-green-700 font-bold text-sm">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="space-y-4 p-4 bg-emerald-50/50 rounded-xl border border-emerald-200">
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold text-xs">
+                    <CheckCircle className="h-4 w-4 text-emerald-600" />
                     Import Completed Successfully!
                   </div>
-                  <p className="text-xs text-gray-600 font-medium">
-                    Successfully loaded and registered <strong>{result.importedCount}</strong> new tutor profiles. 
-                    {result.errors.length > 0 && ` However, ${result.errors.length} rows failed validation rules. Check the "Error Logs" tab for details.`}
+                  <p className="text-xs text-slate-600 font-medium">
+                    Successfully loaded and registered <strong>{result.importedCount}</strong> new
+                    tutor profiles.
+                    {result.errors.length > 0 &&
+                      ` However, ${result.errors.length} rows failed validation rules. Check the "Error Logs" tab for details.`}
                   </p>
-
-                  {result.loginCredentials && result.loginCredentials.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Login Credentials</p>
-                      <div className="max-h-48 overflow-y-auto space-y-1.5">
-                        {result.loginCredentials.map((cred, idx) => (
-                          <div key={idx} className="flex items-center justify-between bg-white border border-green-200 rounded-xl px-4 py-2.5">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-gray-800 truncate">{cred.email}</p>
-                              <p className="text-xs font-mono text-green-700 font-bold mt-0.5">{cred.password}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-amber-600 font-medium flex items-center gap-1">
-                        ⚠ Copy these passwords now. They won&apos;t be shown again.
-                      </p>
-                    </div>
-                  )}
                 </div>
               ) : (
-                <div className="space-y-3 p-4 bg-[#F9FAFB] rounded-2xl border border-[#E5E7EB]">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
                   {result.errors.length > 0 ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-red-600 font-bold text-xs uppercase tracking-wider">
+                      <div className="flex items-center gap-1.5 text-rose-600 font-bold text-xs uppercase tracking-wider">
                         <AlertTriangle className="h-4 w-4" />
                         Row Validation Errors List
                       </div>
-                      <div className="max-h-40 overflow-y-auto space-y-1.5 bg-red-50/20 p-3 rounded-xl border border-red-100">
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 bg-rose-50/50 p-3 rounded-xl border border-rose-200">
                         {result.errors.map((err, idx) => (
-                          <div key={idx} className="text-xs text-red-700 font-medium flex gap-2 items-start">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                          <div
+                            key={idx}
+                            className="text-xs text-rose-700 font-medium flex gap-2 items-start"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                             <span>{err}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500 font-medium text-center py-4">
+                    <p className="text-xs text-slate-500 font-medium text-center py-4">
                       Clean import! No errors found.
                     </p>
                   )}
@@ -540,15 +607,24 @@ export function TutorBulkImportDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-[#E5E7EB] pt-4">
-          <Button variant="ghost" size="sm" onClick={() => { handleReset(); onClose(); }} disabled={isUploading} className="rounded-xl h-10">
+        <DialogFooter className="gap-2 border-t border-slate-100 pt-4 p-5 sm:p-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              handleReset();
+              onClose();
+            }}
+            disabled={isUploading}
+            className="rounded-xl h-10 border-slate-200 font-bold text-xs"
+          >
             Cancel
           </Button>
           <Button
             size="sm"
             onClick={handleUpload}
             disabled={!file || isUploading}
-            className="rounded-xl h-10 bg-purple-600 hover:bg-purple-700 text-white gap-2"
+            className="rounded-xl h-10 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs gap-2 shadow-2xs"
           >
             {isUploading ? (
               <>

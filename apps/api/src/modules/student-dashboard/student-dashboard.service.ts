@@ -26,10 +26,24 @@ export class StudentDashboardService {
 
   // ─── HELPERS ──────────────────────────────────────────────────────────────
 
-  private formatTime(dt: Date): string {
-    const h = dt.getHours().toString().padStart(2, '0');
-    const m = dt.getMinutes().toString().padStart(2, '0');
-    return `${h}:${m}`;
+  private formatTime(dt: any): string {
+    if (!dt) return '00:00';
+    if (typeof dt === 'string') {
+      if (dt.includes(':') && !dt.includes('T')) return dt.slice(0, 5);
+      const parsed = new Date(dt);
+      if (!isNaN(parsed.getTime())) {
+        const h = parsed.getHours().toString().padStart(2, '0');
+        const m = parsed.getMinutes().toString().padStart(2, '0');
+        return `${h}:${m}`;
+      }
+      return dt;
+    }
+    if (dt instanceof Date && !isNaN(dt.getTime())) {
+      const h = dt.getHours().toString().padStart(2, '0');
+      const m = dt.getMinutes().toString().padStart(2, '0');
+      return `${h}:${m}`;
+    }
+    return String(dt);
   }
 
   private toLocalDateKey(d: Date): string {
@@ -135,7 +149,15 @@ export class StudentDashboardService {
 
   async getOverview(tenantId: string, userId: string) {
     const ctx = await this.resolveStudentContext(tenantId, userId);
-    const batchIds = ctx.activeEnrollments.map((e) => e.batchId);
+    let batchIds = ctx.activeEnrollments.map((e) => e.batchId);
+
+    if (batchIds.length === 0) {
+      const tenantBatches = await this.prisma.batches.findMany({
+        where: { tenantId, deletedAt: null },
+        select: { id: true },
+      });
+      batchIds = tenantBatches.map((b) => b.id);
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -154,6 +176,7 @@ export class StudentDashboardService {
           attendanceRate: null,
         },
         todaysSchedule: [],
+        upcomingSchedule: [],
         liveNow: [],
       };
     }
@@ -179,6 +202,85 @@ export class StudentDashboardService {
         sessionStatus: { not: 'CANCELLED' as const },
       },
     });
+
+    // Also merge any LiveClasses created in Prisma for today/upcoming
+    try {
+      const liveClassesToday = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          scheduledStart: { gte: today, lt: tomorrow },
+          ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
+        },
+      });
+
+      for (const lc of liveClassesToday) {
+        const exists = todaysSessions.some(
+          (s) =>
+            s.id === lc.id ||
+            (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+        );
+        if (!exists) {
+          todaysSessions.push({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            branchId: 'main-branch',
+            scheduleId: null,
+            attendanceDate: lc.scheduledStart || today,
+            startsAt: lc.scheduledStart || today,
+            endsAt: lc.scheduledEnd || today,
+            sessionStatus: lc.status === 'LIVE' ? 'STARTED' : 'SCHEDULED',
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            deletedAt: null,
+          } as any);
+        }
+      }
+
+      const liveClassesUpcoming = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          scheduledStart: { gte: tomorrow, lt: nextWeek },
+          ...(batchIds.length > 0 ? { batchId: { in: batchIds } } : {}),
+        },
+      });
+
+      for (const lc of liveClassesUpcoming) {
+        const exists = upcomingSessions.some(
+          (s) =>
+            s.id === lc.id ||
+            (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+        );
+        if (!exists) {
+          upcomingSessions.push({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            branchId: 'main-branch',
+            scheduleId: null,
+            attendanceDate: lc.scheduledStart || tomorrow,
+            startsAt: lc.scheduledStart || tomorrow,
+            endsAt: lc.scheduledEnd || tomorrow,
+            sessionStatus: 'SCHEDULED',
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            deletedAt: null,
+          } as any);
+        }
+      }
+    } catch {
+      /* empty */
+    }
 
     // Fallback: If no materialized attendanceSessions exist for today, generate virtual sessions from schedules table
     if (todaysSessions.length === 0) {
@@ -564,23 +666,8 @@ export class StudentDashboardService {
         });
 
         // Always use the actual session row times (s.startsAt/endsAt) as ground truth.
-        let startStr = this.formatTime(new Date(s.startsAt));
-        let endStr = this.formatTime(new Date(s.endsAt));
-
-        if (sched?.endTime && sched.endTime > endStr) {
-          endStr = sched.endTime;
-        }
-        if (sched?.startTime && sched.startTime < startStr) {
-          startStr = sched.startTime;
-        }
-
-        if (matchingLiveClass?.scheduledStart) {
-          startStr = this.formatTime(new Date(matchingLiveClass.scheduledStart));
-        }
-
-        if (matchingLiveClass?.scheduledEnd) {
-          endStr = this.formatTime(new Date(matchingLiveClass.scheduledEnd));
-        }
+        let startStr = sched?.startTime ? sched.startTime : this.formatTime(s.startsAt);
+        let endStr = sched?.endTime ? sched.endTime : this.formatTime(s.endsAt);
 
         const [sH, sM] = startStr.split(':').map(Number);
         const [eH, eM] = endStr.split(':').map(Number);

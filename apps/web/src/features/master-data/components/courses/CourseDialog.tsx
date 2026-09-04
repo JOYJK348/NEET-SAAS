@@ -18,7 +18,15 @@ import {
 import { courseSchema } from '../../validation/schemas';
 import type { Course, CreateCourseInput } from '../../types';
 import { useAcademicYears } from '../../hooks/use-academic-years';
-import { ArrowLeft, GraduationCap, Save, Calendar, Building2, BookOpen, CreditCard } from 'lucide-react';
+import {
+  ArrowLeft,
+  GraduationCap,
+  Save,
+  Calendar,
+  Building2,
+  BookOpen,
+  CreditCard,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -45,7 +53,9 @@ export function CourseDialog({
   const { data: yearsRes } = useAcademicYears({ limit: 100, status: 'ACTIVE' } as any);
   const academicYears = yearsRes?.data || [];
 
-  const [feePlans, setFeePlans] = useState<Array<{ id: string; name: string; code: string; totalAmount: number }>>([]);
+  const [feePlans, setFeePlans] = useState<
+    Array<{ id: string; name: string; code: string; totalAmount: number }>
+  >([]);
   const [selectedFeePlanId, setSelectedFeePlanId] = useState<string>('');
 
   const {
@@ -169,34 +179,34 @@ export function CourseDialog({
   if (!open) return null;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-4 lg:px-0 pb-12 animate-in fade-in duration-200">
+    <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-4 lg:px-0 pb-12 animate-in fade-in duration-200 text-[#0F172A] font-sans">
       {/* Top Bar with Back Action */}
       <div className="flex items-center justify-between">
         <Button
           type="button"
           variant="outline"
           onClick={() => onOpenChange(false)}
-          className="gap-2 rounded-xl border-gray-200 bg-white hover:bg-gray-50 shadow-2xs text-xs sm:text-sm"
+          className="gap-2 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shadow-2xs text-xs sm:text-sm font-extrabold text-slate-700"
         >
-          <ArrowLeft className="h-4 w-4 text-gray-600" />
-          Back to Curriculum
+          <ArrowLeft className="h-4 w-4 text-[#0052CC]" />
+          Back to Courses
         </Button>
       </div>
 
-      {/* Banner Header Card - Primary Theme */}
-      <div className="relative overflow-hidden rounded-2xl bg-primary p-6 sm:p-8 text-primary-foreground shadow-lg">
+      {/* Banner Header Card - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-5 sm:p-6 rounded-2xl shadow-2xs border border-blue-200 relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0">
-            <GraduationCap className="h-6 w-6 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0 text-[#0052CC] shadow-2xs">
+            <GraduationCap className="h-6 w-6 text-[#0052CC]" />
           </div>
           <div>
-            <span className="text-2xs font-mono uppercase tracking-wider text-primary-foreground/80 bg-white/10 px-2.5 py-1 rounded-full border border-white/10">
+            <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-[#0052CC] bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200">
               {course ? 'Course Specification' : 'New Program Setup'}
             </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-white mt-2">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-1.5">
               {course ? `Edit: ${course.displayName || course.name}` : 'Create New Course Program'}
             </h1>
-            <p className="text-xs sm:text-sm text-primary-foreground/90 mt-1 max-w-xl">
+            <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1 max-w-xl">
               {course
                 ? 'Update syllabus parameters, duration, start dates, and campus allocations.'
                 : 'Configure course credentials, syllabus timeline, and associate initial campus branches.'}
@@ -208,22 +218,25 @@ export function CourseDialog({
       {/* Main Form */}
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
         {/* SECTION 1: Basic Information */}
-        <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
-          <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+        <Card className="rounded-2xl border-slate-200 shadow-2xs overflow-hidden bg-white">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-4">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm sm:text-base font-semibold">
+              <BookOpen className="h-4 w-4 text-[#0052CC]" />
+              <CardTitle className="text-sm sm:text-base font-extrabold text-[#0B2447]">
                 Basic Course Information
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-muted-foreground">
+            <CardDescription className="text-xs text-slate-500 font-medium">
               Core identification codes and syllabus titles
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1.5">
-                <Label htmlFor="code" className="text-xs font-semibold">
+                <Label
+                  htmlFor="code"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   Course Code *
                 </Label>
                 <Input
@@ -231,103 +244,125 @@ export function CourseDialog({
                   placeholder="e.g. NEET-PREMIUM-2026"
                   {...register('code')}
                   disabled={!!course}
-                  className="h-10 sm:h-11 rounded-xl font-mono"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-mono font-extrabold text-[#0052CC]"
                 />
-                {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
+                {errors.code && (
+                  <p className="text-xs text-rose-600 font-bold">{errors.code.message}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="displayName" className="text-xs font-semibold">
+                <Label
+                  htmlFor="displayName"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   Display Name *
                 </Label>
                 <Input
                   id="displayName"
                   placeholder="e.g. NEET Premium 1-Year"
                   {...register('displayName')}
-                  className="h-10 sm:h-11 rounded-xl"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                 />
                 {errors.displayName && (
-                  <p className="text-xs text-destructive">{errors.displayName.message}</p>
+                  <p className="text-xs text-rose-600 font-bold">{errors.displayName.message}</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-semibold">
+              <Label
+                htmlFor="name"
+                className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+              >
                 Full Course Title *
               </Label>
               <Input
                 id="name"
                 placeholder="e.g. NEET Complete Year Medical Preparation Master Course"
                 {...register('name')}
-                className="h-10 sm:h-11 rounded-xl"
+                className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
               />
-              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              {errors.name && (
+                <p className="text-xs text-rose-600 font-bold">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-xs font-semibold">
+              <Label
+                htmlFor="description"
+                className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+              >
                 Course Description
               </Label>
               <Input
                 id="description"
                 placeholder="Brief summary of target audience, syllabus coverage, and objectives..."
                 {...register('description')}
-                className="h-10 sm:h-11 rounded-xl"
+                className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* SECTION 2: Timeline & Schedule */}
-        <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
-          <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+        <Card className="rounded-2xl border-slate-200 shadow-2xs overflow-hidden bg-white">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-4">
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm sm:text-base font-semibold">
+              <Calendar className="h-4 w-4 text-[#0052CC]" />
+              <CardTitle className="text-sm sm:text-base font-extrabold text-[#0B2447]">
                 Timeline & Schedule Settings
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-muted-foreground">
+            <CardDescription className="text-xs text-slate-500 font-medium">
               Duration calculations and academic operational window
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1.5">
-                <Label htmlFor="startDate" className="text-xs font-semibold">
+                <Label
+                  htmlFor="startDate"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   Start Date
                 </Label>
                 <Input
                   id="startDate"
                   type="date"
                   {...register('startDate')}
-                  className="h-10 sm:h-11 rounded-xl"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-medium"
                 />
                 {errors.startDate && (
-                  <p className="text-xs text-destructive">{errors.startDate.message}</p>
+                  <p className="text-xs text-rose-600 font-bold">{errors.startDate.message}</p>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="endDate" className="text-xs font-semibold">
+                <Label
+                  htmlFor="endDate"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   End Date
                 </Label>
                 <Input
                   id="endDate"
                   type="date"
                   {...register('endDate')}
-                  className="h-10 sm:h-11 rounded-xl"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-medium"
                 />
                 {errors.endDate && (
-                  <p className="text-xs text-destructive">{errors.endDate.message}</p>
+                  <p className="text-xs text-rose-600 font-bold">{errors.endDate.message}</p>
                 )}
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 pt-2">
               <div className="space-y-1.5">
-                <Label htmlFor="durationMonths" className="text-xs font-semibold">
+                <Label
+                  htmlFor="durationMonths"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   Calculated Duration (Months)
                 </Label>
                 <Input
@@ -335,32 +370,37 @@ export function CourseDialog({
                   type="number"
                   {...register('durationMonths')}
                   readOnly
-                  className="h-10 sm:h-11 rounded-xl bg-muted font-semibold cursor-not-allowed"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-100 font-bold text-[#0052CC] cursor-not-allowed text-xs"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="displayOrder" className="text-xs font-semibold">
+                <Label
+                  htmlFor="displayOrder"
+                  className="text-xs font-bold text-slate-700 uppercase tracking-wider block"
+                >
                   Display Order
                 </Label>
                 <Input
                   id="displayOrder"
                   type="number"
                   {...register('displayOrder')}
-                  className="h-10 sm:h-11 rounded-xl"
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-medium"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Active Status</Label>
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Active Status
+                </Label>
                 <Select
                   value={isActive ? 'true' : 'false'}
                   onValueChange={(val) => setValue('isActive', val === 'true')}
                 >
-                  <SelectTrigger className="h-10 sm:h-11 rounded-xl">
+                  <SelectTrigger className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 text-xs font-bold text-[#0B2447]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     <SelectItem value="true">Active Program</SelectItem>
                     <SelectItem value="false">Inactive / Draft</SelectItem>
                   </SelectContent>
@@ -372,30 +412,32 @@ export function CourseDialog({
 
         {/* SECTION 3: Initial Branch & Academic Allocation */}
         {!course && (
-          <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
-            <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+          <Card className="rounded-2xl border-slate-200 shadow-2xs overflow-hidden bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-4">
               <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm sm:text-base font-semibold">
+                <Building2 className="h-4 w-4 text-[#0052CC]" />
+                <CardTitle className="text-sm sm:text-base font-extrabold text-[#0B2447]">
                   Campus Branch Allocation
                 </CardTitle>
               </div>
-              <CardDescription className="text-xs text-muted-foreground">
+              <CardDescription className="text-xs text-slate-500 font-medium">
                 Associate this course directly with a campus branch and academic year
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Target Branch Campus</Label>
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Target Branch Campus
+                  </Label>
                   <Select
                     value={selectedBranchId}
                     onValueChange={(val) => setValue('branchId', val)}
                   >
-                    <SelectTrigger className="rounded-xl h-10 sm:h-11">
+                    <SelectTrigger className="rounded-xl h-10 sm:h-11 bg-slate-50 border-slate-200 text-xs font-medium">
                       <SelectValue placeholder="Select campus branch" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {branches.map((b) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.name}
@@ -406,15 +448,17 @@ export function CourseDialog({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Academic Year Track</Label>
+                  <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                    Academic Year Track
+                  </Label>
                   <Select
                     value={selectedYearId}
                     onValueChange={(val) => setValue('academicYearId', val)}
                   >
-                    <SelectTrigger className="rounded-xl h-10 sm:h-11">
+                    <SelectTrigger className="rounded-xl h-10 sm:h-11 bg-slate-50 border-slate-200 text-xs font-medium">
                       <SelectValue placeholder="Select academic year" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       {academicYears.map((y) => (
                         <SelectItem key={y.id} value={y.id}>
                           {y.name}
@@ -429,29 +473,29 @@ export function CourseDialog({
         )}
 
         {/* SECTION 4: Fee Structure Mapping */}
-        <Card className="rounded-2xl border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden bg-card">
-          <CardHeader className="border-b border-border bg-muted/40 px-4 sm:px-6 py-4">
+        <Card className="rounded-2xl border-slate-200 shadow-2xs overflow-hidden bg-white">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/50 px-4 sm:px-6 py-4">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm sm:text-base font-semibold">
+              <CreditCard className="h-4 w-4 text-[#0052CC]" />
+              <CardTitle className="text-sm sm:text-base font-extrabold text-[#0B2447]">
                 Fee Structure & Plan Mapping
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-muted-foreground">
-              Map default tuition & installment fee structure for students enrolling in this course program
+            <CardDescription className="text-xs text-slate-500 font-medium">
+              Map default tuition & installment fee structure for students enrolling in this course
+              program
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-rose-600">Target Fee Structure Plan * (Mandatory)</Label>
-              <Select
-                value={selectedFeePlanId}
-                onValueChange={(val) => setSelectedFeePlanId(val)}
-              >
-                <SelectTrigger className="rounded-xl h-10 sm:h-11">
-                  <SelectValue placeholder="Select fee structure plan (optional)" />
+              <Label className="text-xs font-bold text-rose-600 uppercase tracking-wider block">
+                Target Fee Structure Plan * (Mandatory)
+              </Label>
+              <Select value={selectedFeePlanId} onValueChange={(val) => setSelectedFeePlanId(val)}>
+                <SelectTrigger className="rounded-xl h-10 sm:h-11 bg-slate-50 border-slate-200 text-xs font-medium">
+                  <SelectValue placeholder="Select fee structure plan" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   {feePlans.length === 0 ? (
                     <SelectItem value="none" disabled>
                       No Fee Plans Configured Yet
@@ -459,7 +503,8 @@ export function CourseDialog({
                   ) : (
                     feePlans.map((fp: any) => (
                       <SelectItem key={fp.id} value={fp.id}>
-                        {fp.name} ({fp.code}) — ₹{Number(fp.totalAmount || 0).toLocaleString('en-IN')}
+                        {fp.name} ({fp.code}) — ₹
+                        {Number(fp.totalAmount || 0).toLocaleString('en-IN')}
                       </SelectItem>
                     ))
                   )}
@@ -470,19 +515,19 @@ export function CourseDialog({
         </Card>
 
         {/* Action Controls Footer Bar */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-border">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-200">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto rounded-xl h-11 px-6"
+            className="w-full sm:w-auto rounded-xl h-11 px-6 font-bold text-xs border-slate-200 text-slate-700"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto btn-primary rounded-xl h-11 px-8 shadow-md gap-2"
+            className="w-full sm:w-auto bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl h-11 px-8 shadow-2xs gap-2 text-xs"
           >
             <Save className="h-4 w-4" />
             {isSubmitting

@@ -3,6 +3,7 @@
 import { AlertCircle, RefreshCw, Home, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { sanitizeErrorMessage } from '@/lib/api';
 
 interface ErrorStateProps {
   title?: string;
@@ -19,6 +20,7 @@ export function ErrorState({
   className,
   variant = 'default',
 }: ErrorStateProps) {
+  const cleanMessage = sanitizeErrorMessage(message);
   const variants = {
     default: 'flex flex-col items-center justify-center p-8 text-center',
     inline: 'flex flex-col items-center justify-center p-4 text-center',
@@ -29,7 +31,7 @@ export function ErrorState({
     <div className={cn(variants[variant], className)} role="alert">
       <AlertCircle className="h-12 w-12 text-red-500 mb-4" aria-hidden="true" />
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{message}</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{cleanMessage}</p>
       {onRetry && (
         <Button onClick={onRetry} className="gap-2">
           <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -51,6 +53,7 @@ export function NotFoundState({
   onGoHome?: () => void;
   className?: string;
 }) {
+  const cleanMessage = sanitizeErrorMessage(message, 404);
   return (
     <div
       className={cn(
@@ -61,7 +64,7 @@ export function NotFoundState({
     >
       <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" aria-hidden="true" />
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{message}</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{cleanMessage}</p>
       {onGoHome && (
         <Button onClick={onGoHome} className="gap-2">
           <Home className="h-4 w-4" aria-hidden="true" />
@@ -83,6 +86,7 @@ export function ForbiddenState({
   onGoHome?: () => void;
   className?: string;
 }) {
+  const cleanMessage = sanitizeErrorMessage(message, 403);
   return (
     <div
       className={cn(
@@ -93,7 +97,7 @@ export function ForbiddenState({
     >
       <AlertTriangle className="h-12 w-12 text-red-500 mb-4" aria-hidden="true" />
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{message}</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">{cleanMessage}</p>
       {onGoHome && (
         <Button onClick={onGoHome} className="gap-2">
           <Home className="h-4 w-4" aria-hidden="true" />

@@ -13,7 +13,6 @@ import {
   Lock,
   Unlock,
   IndianRupee,
-  Sparkles,
   CheckCircle,
   ShieldCheck,
   Upload,
@@ -21,6 +20,7 @@ import {
   X,
   File,
   Link2,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -215,53 +215,64 @@ export default function CreatePyqPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-4 sm:p-6 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827] space-y-6">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => router.push('/dashboard/pyq')}
-            className="flex items-center gap-2 text-xs font-extrabold text-slate-600 hover:text-violet-700 transition-colors bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to PYQ Library</span>
-          </button>
-        </div>
-
-        {/* Page Banner */}
-        <div className="bg-gradient-to-br from-violet-700 via-indigo-700 to-purple-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-900/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-white/20">
-                Official Content Publishing
-              </span>
-              <Sparkles className="w-4 h-4 text-amber-300 animate-bounce" />
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
+              onClick={() => router.push('/dashboard/pyq')}
+            >
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+                <span>PYQ Library</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+                <span>Upload Paper</span>
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+                Publish New Question Paper (PYQ)
+              </h1>
+              <p className="text-xs text-slate-600 font-medium">
+                Upload Previous Year Question Papers, set course targeting & paid unlock pricing.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Publish New Question Paper (PYQ)
-            </h1>
-            <p className="text-violet-200 text-xs sm:text-sm font-medium max-w-xl">
-              Create a dedicated Previous Year Question Paper, assign target courses & batches, and configure Razorpay paid unlock pricing.
-            </p>
           </div>
+
+          <Button
+            variant="outline"
+            onClick={() => router.push('/dashboard/pyq')}
+            className="px-4 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 rounded-xl text-xs shrink-0 shadow-2xs"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 text-[#0052CC]" />
+            Back to Library
+          </Button>
         </div>
 
         {/* Form Container */}
         <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
           {/* 1. Basic Details */}
-          <Card className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+          <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center font-bold">
-                <FileText className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center font-bold">
+                <FileText className="w-5 h-5 text-[#0052CC]" />
               </div>
               <div>
-                <h2 className="text-base font-black text-slate-900">1. Question Paper Overview</h2>
-                <p className="text-xs text-slate-500 font-medium">Enter paper title, year, and target exam type</p>
+                <h2 className="text-base font-extrabold text-[#0B2447]">
+                  1. Question Paper Overview
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Enter paper title, year, and target exam type
+                </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Paper Title *
                 </label>
                 <input
@@ -270,13 +281,13 @@ export default function CreatePyqPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. NEET 2024 Physics Main Question Paper with Detailed Solutions"
-                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Target Exam Year *
                   </label>
                   <input
@@ -286,18 +297,18 @@ export default function CreatePyqPage() {
                     max={2030}
                     value={year}
                     onChange={(e) => setYear(Number(e.target.value))}
-                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white"
+                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Exam Category *
                   </label>
                   <select
                     value={examType}
                     onChange={(e) => setExamType(e.target.value)}
-                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white"
+                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium"
                   >
                     <option value="NEET">NEET UG</option>
                     <option value="JEE_MAIN">JEE Main</option>
@@ -311,26 +322,30 @@ export default function CreatePyqPage() {
           </Card>
 
           {/* 2. Course, Batch & Subject Targeting */}
-          <Card className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+          <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                <BookOpen className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center font-bold">
+                <BookOpen className="w-5 h-5 text-[#0052CC]" />
               </div>
               <div>
-                <h2 className="text-base font-black text-slate-900">2. Course & Batch Targeting</h2>
-                <p className="text-xs text-slate-500 font-medium">Assign which course, batch & subject this paper belongs to</p>
+                <h2 className="text-base font-extrabold text-[#0B2447]">
+                  2. Course & Batch Targeting
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Assign which course, batch & subject this paper belongs to
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Select Course
                 </label>
                 <select
                   value={selectedCourseId}
                   onChange={(e) => setSelectedCourseId(e.target.value)}
-                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white"
+                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium"
                 >
                   <option value="">All Courses (General Access)</option>
                   {courses.map((c) => (
@@ -342,13 +357,13 @@ export default function CreatePyqPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Target Batch
                 </label>
                 <select
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
-                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white"
+                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium"
                 >
                   <option value="">All Batches</option>
                   {batches.map((b) => (
@@ -360,13 +375,13 @@ export default function CreatePyqPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Subject *
                 </label>
                 <select
                   value={subjectName}
                   onChange={(e) => setSubjectName(e.target.value)}
-                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white font-bold text-violet-700"
+                  className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-extrabold text-[#0052CC]"
                 >
                   <option value="Physics">Physics</option>
                   <option value="Chemistry">Chemistry</option>
@@ -378,26 +393,30 @@ export default function CreatePyqPage() {
           </Card>
 
           {/* 3. Document Attachments */}
-          <Card className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+          <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-5">
             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-                  <ShieldCheck className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center font-bold">
+                  <ShieldCheck className="w-5 h-5 text-[#0052CC]" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black text-slate-900">3. Document Attachments</h2>
-                  <p className="text-xs text-slate-500 font-medium">Upload PDF documents directly to Supabase storage bucket</p>
+                  <h2 className="text-base font-extrabold text-[#0B2447]">
+                    3. Document Attachments
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Upload PDF documents directly to Supabase storage bucket
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setUploadMode('FILE')}
                   className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                     uploadMode === 'FILE'
-                      ? 'bg-violet-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#0052CC] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#0B2447]'
                   }`}
                 >
                   <Upload className="w-3.5 h-3.5" />
@@ -408,8 +427,8 @@ export default function CreatePyqPage() {
                   onClick={() => setUploadMode('URL')}
                   className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                     uploadMode === 'URL'
-                      ? 'bg-violet-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-[#0052CC] text-white shadow-2xs'
+                      : 'text-slate-600 hover:text-[#0B2447]'
                   }`}
                 >
                   <Link2 className="w-3.5 h-3.5" />
@@ -421,7 +440,7 @@ export default function CreatePyqPage() {
             <div className="space-y-5">
               {/* Question Paper PDF */}
               <div className="space-y-2">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
                   <span>Question Paper PDF *</span>
                   {paperUrl && (
                     <span className="text-emerald-600 text-[11px] font-bold flex items-center gap-1">
@@ -433,7 +452,7 @@ export default function CreatePyqPage() {
                 {uploadMode === 'FILE' ? (
                   <div
                     onClick={() => paperInputRef.current?.click()}
-                    className="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:border-violet-400 hover:bg-violet-50/30 cursor-pointer transition-all"
+                    className="relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40 cursor-pointer transition-all"
                   >
                     <input
                       ref={paperInputRef}
@@ -448,14 +467,18 @@ export default function CreatePyqPage() {
 
                     {isUploadingPaper ? (
                       <div className="flex flex-col items-center py-2">
-                        <Loader2 className="w-6 h-6 text-violet-600 animate-spin mb-2" />
-                        <p className="text-xs font-bold text-slate-700">Uploading Question Paper to Supabase Bucket...</p>
-                        <p className="text-[10px] text-slate-400">Please wait while the PDF is uploaded</p>
+                        <Loader2 className="w-6 h-6 text-[#0052CC] animate-spin mb-2" />
+                        <p className="text-xs font-bold text-slate-700">
+                          Uploading Question Paper to Supabase Bucket...
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Please wait while the PDF is uploaded
+                        </p>
                       </div>
                     ) : paperFile || paperUrl ? (
-                      <div className="flex items-center gap-3 w-full max-w-md bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="w-10 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
-                          <File className="w-5 h-5 text-red-500" />
+                      <div className="flex items-center gap-3 w-full max-w-md bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="w-10 h-12 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0">
+                          <File className="w-5 h-5 text-[#0052CC]" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-slate-800 truncate">
@@ -472,18 +495,22 @@ export default function CreatePyqPage() {
                             setPaperFile(null);
                             setPaperUrl('');
                           }}
-                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
                       <div className="text-center space-y-1">
-                        <div className="w-12 h-12 rounded-2xl bg-violet-100 text-violet-600 flex items-center justify-center mx-auto mb-2">
-                          <Upload className="w-6 h-6" />
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center mx-auto mb-2">
+                          <Upload className="w-6 h-6 text-[#0052CC]" />
                         </div>
-                        <p className="text-xs font-bold text-slate-700">Click or Drag & Drop Question Paper PDF</p>
-                        <p className="text-[10px] text-slate-400">PDF files up to 50MB directly stored in Supabase Storage</p>
+                        <p className="text-xs font-bold text-slate-700">
+                          Click or Drag & Drop Question Paper PDF
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          PDF files up to 50MB directly stored in Supabase Storage
+                        </p>
                       </div>
                     )}
                   </div>
@@ -494,14 +521,14 @@ export default function CreatePyqPage() {
                     value={paperUrl}
                     onChange={(e) => setPaperUrl(e.target.value)}
                     placeholder="https://your-supabase-url.storage.supabase.co/object/public/papers/paper.pdf"
-                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none font-mono text-xs bg-slate-50/50 focus:bg-white"
+                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none font-mono text-xs bg-slate-50 focus:bg-white"
                   />
                 )}
               </div>
 
               {/* Solution PDF (Optional) */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
-                <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
                   <span>Solution / Answer Key PDF (Optional)</span>
                   {solutionUrl && (
                     <span className="text-emerald-600 text-[11px] font-bold flex items-center gap-1">
@@ -513,7 +540,7 @@ export default function CreatePyqPage() {
                 {uploadMode === 'FILE' ? (
                   <div
                     onClick={() => solutionInputRef.current?.click()}
-                    className="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:border-emerald-400 hover:bg-emerald-50/30 cursor-pointer transition-all"
+                    className="relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:border-emerald-300 hover:bg-emerald-50/40 cursor-pointer transition-all"
                   >
                     <input
                       ref={solutionInputRef}
@@ -529,12 +556,16 @@ export default function CreatePyqPage() {
                     {isUploadingSolution ? (
                       <div className="flex flex-col items-center py-2">
                         <Loader2 className="w-6 h-6 text-emerald-600 animate-spin mb-2" />
-                        <p className="text-xs font-bold text-slate-700">Uploading Solution PDF to Supabase Bucket...</p>
-                        <p className="text-[10px] text-slate-400">Please wait while the PDF is uploaded</p>
+                        <p className="text-xs font-bold text-slate-700">
+                          Uploading Solution PDF to Supabase Bucket...
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Please wait while the PDF is uploaded
+                        </p>
                       </div>
                     ) : solutionFile || solutionUrl ? (
-                      <div className="flex items-center gap-3 w-full max-w-md bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="w-10 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 w-full max-w-md bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="w-10 h-12 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
                           <File className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -552,18 +583,22 @@ export default function CreatePyqPage() {
                             setSolutionFile(null);
                             setSolutionUrl('');
                           }}
-                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
                       <div className="text-center space-y-1">
-                        <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-2">
                           <Upload className="w-6 h-6" />
                         </div>
-                        <p className="text-xs font-bold text-slate-700">Click or Drag & Drop Solution PDF</p>
-                        <p className="text-[10px] text-slate-400">Optional answer key file stored in Supabase Storage</p>
+                        <p className="text-xs font-bold text-slate-700">
+                          Click or Drag & Drop Solution PDF
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          Optional answer key file stored in Supabase Storage
+                        </p>
                       </div>
                     )}
                   </div>
@@ -573,7 +608,7 @@ export default function CreatePyqPage() {
                     value={solutionUrl}
                     onChange={(e) => setSolutionUrl(e.target.value)}
                     placeholder="https://your-supabase-url.storage.supabase.co/object/public/papers/solution.pdf"
-                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none font-mono text-xs bg-slate-50/50 focus:bg-white"
+                    className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none font-mono text-xs bg-slate-50 focus:bg-white"
                   />
                 )}
               </div>
@@ -581,15 +616,19 @@ export default function CreatePyqPage() {
           </Card>
 
           {/* 4. Razorpay Paid Unlock Settings */}
-          <Card className="rounded-3xl border border-amber-200 bg-amber-50/50 p-6 shadow-sm space-y-4">
+          <Card className="rounded-2xl border border-amber-200 bg-amber-50/50 p-6 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center font-bold">
                   <Lock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black text-amber-950">4. Paid Student Unlock (Razorpay)</h2>
-                  <p className="text-xs text-amber-700 font-medium">Require students to pay via Razorpay to unlock this paper</p>
+                  <h2 className="text-base font-extrabold text-amber-950">
+                    4. Paid Student Unlock (Razorpay)
+                  </h2>
+                  <p className="text-xs text-amber-700 font-medium">
+                    Require students to pay via Razorpay to unlock this paper
+                  </p>
                 </div>
               </div>
 
@@ -606,7 +645,7 @@ export default function CreatePyqPage() {
 
             {isPaid ? (
               <div className="space-y-2 pt-2 border-t border-amber-200/60">
-                <label className="text-xs font-black text-amber-900 uppercase">
+                <label className="text-xs font-bold text-amber-900 uppercase">
                   Unlock Price (₹ INR)
                 </label>
                 <div className="relative max-w-xs">
@@ -618,26 +657,31 @@ export default function CreatePyqPage() {
                     value={price}
                     onChange={(e) => setPrice(Number(e.target.value))}
                     placeholder="99"
-                    className="w-full pl-10 pr-4 py-2.5 text-sm font-extrabold rounded-2xl border border-amber-300 bg-white focus:border-amber-600 outline-none text-slate-900"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm font-extrabold rounded-xl border border-amber-300 bg-white focus:border-amber-600 outline-none text-slate-900"
                   />
                 </div>
                 <p className="text-xs text-amber-800 font-medium">
-                  Students will see a <strong>🔒 Locked (₹{price})</strong> button and must complete Razorpay payment to view the PDF.
+                  Students will see a <strong>Locked (₹{price})</strong> button and must complete
+                  Razorpay payment to view the PDF.
                 </p>
               </div>
             ) : (
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-medium flex items-center gap-2">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-medium flex items-center gap-2">
                 <Unlock className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Paper is <strong>FREE</strong> for all students to view and download immediately.</span>
+                <span>
+                  Paper is <strong>FREE</strong> for all students to view and download immediately.
+                </span>
               </div>
             )}
           </Card>
 
           {/* 5. Paper Status & Approval */}
-          <Card className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <Card className="rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs space-y-5">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-900">Publish Status (Visible to Students)</h3>
+                <h3 className="text-sm font-extrabold text-[#0B2447]">
+                  Publish Status (Visible to Students)
+                </h3>
                 <p className="text-xs text-slate-500 font-medium">
                   {isActive
                     ? 'Active: Paper will be visible to targeted students immediately upon publishing.'
@@ -657,7 +701,7 @@ export default function CreatePyqPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Paper Instructions / Syllabus Details (Optional)
               </label>
               <textarea
@@ -665,7 +709,7 @@ export default function CreatePyqPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Specify marking scheme, total marks, chapter weightages, or special instructions..."
-                className="w-full px-4 py-3 text-xs sm:text-sm rounded-2xl border border-slate-200 focus:border-violet-600 outline-none bg-slate-50/50 focus:bg-white"
+                className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 focus:border-[#0052CC] outline-none bg-slate-50 focus:bg-white font-medium"
               />
             </div>
 
@@ -674,7 +718,7 @@ export default function CreatePyqPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.push('/dashboard/pyq')}
-                className="rounded-2xl text-xs font-bold h-12 px-6"
+                className="rounded-xl text-xs font-bold h-11 px-6 border-slate-200 text-slate-700"
               >
                 Cancel
               </Button>
@@ -682,10 +726,14 @@ export default function CreatePyqPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm h-12 px-8 gap-2 shadow-lg shadow-violet-500/25 active:scale-95 transition-all cursor-pointer"
+                className="rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm h-11 px-8 gap-2 shadow-2xs transition-all cursor-pointer"
               >
-                <CheckCircle className="w-5 h-5" />
-                <span>{submitting ? 'Publishing...' : 'Publish & Approve PYQ Paper 🚀'}</span>
+                {submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                <span>{submitting ? 'Publishing...' : 'Publish & Approve PYQ Paper'}</span>
               </Button>
             </div>
           </Card>

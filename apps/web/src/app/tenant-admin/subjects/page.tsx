@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Bookmark,
-  Sparkles,
   Edit2,
   Trash2,
   X,
@@ -23,6 +22,10 @@ import {
   ChevronRight,
   BookOpen,
   ListPlus,
+  Atom,
+  FlaskConical,
+  Dna,
+  Calculator,
 } from 'lucide-react';
 import {
   useSubjects,
@@ -33,6 +36,44 @@ import { SubjectDialog } from '@/features/master-data/components/subjects/Subjec
 import { toast } from 'sonner';
 import type { Subject, CreateSubjectInput } from '@/features/master-data/types';
 import { cn } from '@/lib/utils';
+
+// Helper to determine subject thumbnail style based on subject name or code
+function getSubjectThumbnailStyle(subject: Subject) {
+  const text = `${subject.name} ${subject.code}`.toLowerCase();
+  if (text.includes('phys') || text.includes('phy')) {
+    return {
+      gradient: 'from-blue-600 via-indigo-600 to-sky-600',
+      icon: Atom,
+      accentBg: 'bg-blue-500/20',
+    };
+  }
+  if (text.includes('chem') || text.includes('che')) {
+    return {
+      gradient: 'from-indigo-600 via-purple-600 to-blue-600',
+      icon: FlaskConical,
+      accentBg: 'bg-indigo-500/20',
+    };
+  }
+  if (text.includes('bio') || text.includes('bot') || text.includes('zoo')) {
+    return {
+      gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
+      icon: Dna,
+      accentBg: 'bg-emerald-500/20',
+    };
+  }
+  if (text.includes('math') || text.includes('mat')) {
+    return {
+      gradient: 'from-sky-600 via-blue-600 to-indigo-600',
+      icon: Calculator,
+      accentBg: 'bg-sky-500/20',
+    };
+  }
+  return {
+    gradient: 'from-blue-600 to-indigo-700',
+    icon: BookOpen,
+    accentBg: 'bg-blue-500/20',
+  };
+}
 
 function SubjectsContent() {
   const router = useRouter();
@@ -82,7 +123,10 @@ function SubjectsContent() {
     try {
       const cleanName = newChName.trim();
       const codePrefix =
-        cleanName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'CH';
+        cleanName
+          .replace(/[^a-zA-Z0-9]/g, '')
+          .substring(0, 4)
+          .toUpperCase() || 'CH';
       const existing = masterCourseSubject.chapters || [];
       const order = existing.length + 1;
 
@@ -113,7 +157,12 @@ function SubjectsContent() {
     try {
       const lines = bulkChaptersText
         .split('\n')
-        .map((l) => l.trim().replace(/^[0-9]+\.\s*/, '').replace(/^[-*]\s*/, ''))
+        .map((l) =>
+          l
+            .trim()
+            .replace(/^[0-9]+\.\s*/, '')
+            .replace(/^[-*]\s*/, ''),
+        )
         .filter(Boolean);
 
       const existing = masterCourseSubject.chapters || [];
@@ -122,7 +171,10 @@ function SubjectsContent() {
       for (const name of lines) {
         const cleanName = name.trim();
         const codePrefix =
-          cleanName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'CH';
+          cleanName
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .substring(0, 4)
+            .toUpperCase() || 'CH';
         await api.post('/master/chapters', {
           courseSubjectId: masterCourseSubject.id,
           name: cleanName,
@@ -159,7 +211,11 @@ function SubjectsContent() {
     }
   };
 
-  const { data: subjectsData, isLoading, refetch } = useSubjects({
+  const {
+    data: subjectsData,
+    isLoading,
+    refetch,
+  } = useSubjects({
     page,
     limit: 12,
     search: search || undefined,
@@ -233,7 +289,7 @@ function SubjectsContent() {
         const parsed = JSON.parse(bulkImportText);
         if (Array.isArray(parsed)) {
           subjectsPayload = parsed.map((item) =>
-            typeof item === 'string' ? { name: item.trim() } : { name: item.name || item.title }
+            typeof item === 'string' ? { name: item.trim() } : { name: item.name || item.title },
           );
         }
       } catch {
@@ -282,42 +338,46 @@ function SubjectsContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Master Repository
-              </span>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Management Portal</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Subjects Repository</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Master Subjects & Chapters Library 📚
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+              Master Subjects & Chapters Library
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Create core subjects (Physics, Chemistry, Botany, Zoology...), add chapters & topics, or bulk import.
+            <p className="text-xs text-slate-600">
+              Create core subjects (Physics, Chemistry, Botany, Zoology), add chapters & topics, or
+              bulk import.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
             <Button
+              variant="outline"
+              size="sm"
               onClick={() => setBulkImportOpen(true)}
-              className="w-full sm:w-auto gap-2 bg-white/20 hover:bg-white/30 text-white font-bold border border-white/20 shadow-xs shrink-0 rounded-xl text-xs"
+              className="w-full sm:w-auto px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
             >
-              <Upload className="h-4 w-4 text-violet-100" /> Bulk Import 📥
+              <Upload className="h-3.5 w-3.5 text-[#0052CC] shrink-0" />
+              <span className="truncate">Bulk Import</span>
             </Button>
             <Button
               onClick={handleCreate}
-              className="w-full sm:w-auto gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs shrink-0 rounded-xl text-xs"
+              className="w-full sm:w-auto px-4 gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs"
             >
-              <Plus className="h-4 w-4 text-violet-600" /> Add Master Subject
+              <Plus className="h-3.5 w-3.5 text-white shrink-0" />
+              <span className="truncate">Add Master Subject</span>
             </Button>
           </div>
         </div>
 
         {/* Toolbar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-3.5 sm:p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-1 max-w-md bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200">
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
@@ -328,7 +388,7 @@ function SubjectsContent() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full"
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
             />
             {search && (
               <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600">
@@ -338,7 +398,7 @@ function SubjectsContent() {
           </div>
 
           <span className="text-xs font-bold text-slate-500 self-end sm:self-auto">
-            Total Subjects: <strong className="text-violet-700">{totalCount}</strong>
+            Total Subjects: <strong className="text-[#0052CC] font-extrabold">{totalCount}</strong>
           </span>
         </div>
 
@@ -346,147 +406,158 @@ function SubjectsContent() {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 rounded-2xl bg-gray-100 animate-pulse" />
+              <div key={i} className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
             ))}
           </div>
         ) : !subjectsData?.data || subjectsData.data.length === 0 ? (
-          <div className="p-12 text-center border border-dashed rounded-2xl border-slate-200 bg-white shadow-xs space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 mx-auto flex items-center justify-center border border-violet-100">
+          <Card className="p-12 text-center border border-dashed rounded-3xl border-slate-200 bg-white shadow-2xs space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] mx-auto flex items-center justify-center border border-blue-200">
               <Bookmark className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">No master subjects found</h3>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto">
+            <h3 className="text-base font-extrabold text-[#0B2447]">No master subjects found</h3>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto font-medium">
               Get started by adding your first subject or bulk importing syllabus subjects.
             </p>
             <div className="flex items-center justify-center gap-2 pt-2">
               <Button
                 onClick={() => setBulkImportOpen(true)}
                 variant="outline"
-                className="gap-2 text-xs font-bold rounded-xl"
+                className="gap-2 text-xs font-bold rounded-xl border-slate-200"
               >
-                <Upload className="h-4 w-4" /> Bulk Import
+                <Upload className="h-4 w-4 text-[#0052CC]" /> Bulk Import
               </Button>
               <Button
                 onClick={handleCreate}
-                className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+                className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
               >
                 <Plus className="h-4 w-4" /> Add Master Subject
               </Button>
             </div>
-          </div>
+          </Card>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {subjectsData.data.map((s) => (
-                <Card
-                  key={s.id}
-                  className="group relative rounded-2xl overflow-hidden border-[#E5E7EB] bg-white shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between"
-                >
-                  {/* Header Strip */}
-                  <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-4 text-white relative">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(s)}
-                          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors"
-                          title="Edit subject"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(s.id)}
-                          className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500/80 flex items-center justify-center text-white transition-colors"
-                          title="Delete subject"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+              {subjectsData.data.map((s) => {
+                const thumbStyle = getSubjectThumbnailStyle(s);
+                const ThumbnailIcon = thumbStyle.icon;
 
-                    <div className="mt-3">
-                      <span className="text-[10px] font-black tracking-widest uppercase text-violet-200 bg-white/10 px-2 py-0.5 rounded-md">
-                        {s.code}
-                      </span>
-                      <h3 className="text-base font-bold text-white mt-1.5 leading-snug line-clamp-1">
-                        {s.name}
-                      </h3>
-                    </div>
-                  </div>
-
-                  {/* Subject Body */}
-                  <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                      {s.displayName || 'No display name configured.'}
-                    </p>
-
-                    <div className="space-y-3 pt-2 border-t border-slate-100">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-100 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
-                          <Layers className="w-3 h-3 text-violet-600" />
-                          {(s as any)._count?.chapters ?? 0} Chapters • {(s as any)._count?.topics ?? 0} Topics
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">
-                          Type: {s.subjectType}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
-                        <div className="flex items-center gap-2">
+                return (
+                  <Card
+                    key={s.id}
+                    className="group relative rounded-2xl overflow-hidden border-slate-200 bg-white shadow-2xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between"
+                  >
+                    {/* Visual Subject Thumbnail Header Banner */}
+                    <div
+                      className={cn(
+                        'bg-gradient-to-r p-4.5 text-white relative',
+                        thumbStyle.gradient,
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3 relative z-10">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md border border-white/25 flex items-center justify-center shrink-0 shadow-2xs">
+                          <ThumbnailIcon className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={() => handleToggleStatus(s)}
-                            className={cn(
-                              'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out',
-                              s.isActive ? 'bg-emerald-500' : 'bg-slate-300',
-                            )}
-                            title="Toggle status"
+                            onClick={() => handleEdit(s)}
+                            className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/30 backdrop-blur-md flex items-center justify-center text-white transition-colors"
+                            title="Edit subject"
                           >
-                            <span
-                              className={cn(
-                                'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out',
-                                s.isActive ? 'translate-x-3' : 'translate-x-0',
-                              )}
-                            />
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                          <span
-                            className={cn(
-                              'text-[10px] font-bold uppercase tracking-wider',
-                              s.isActive ? 'text-emerald-600' : 'text-slate-400',
-                            )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(s.id)}
+                            className="w-7 h-7 rounded-lg bg-white/15 hover:bg-rose-500/80 backdrop-blur-md flex items-center justify-center text-white transition-colors"
+                            title="Delete subject"
                           >
-                            {s.isActive ? 'Active' : 'Inactive'}
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 relative z-10">
+                        <span className="text-[10px] font-mono font-extrabold tracking-wider uppercase text-white/90 bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/20">
+                          {s.code}
+                        </span>
+                        <h3 className="text-base font-extrabold text-white mt-1.5 leading-snug line-clamp-1">
+                          {s.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Subject Body */}
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                        {s.displayName || 'No display name configured.'}
+                      </p>
+
+                      <div className="space-y-3 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg uppercase flex items-center gap-1">
+                            <Layers className="w-3 h-3 text-[#0052CC]" />
+                            {(s as any)._count?.chapters ?? 0} Chapters &bull;{' '}
+                            {(s as any)._count?.topics ?? 0} Topics
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">
+                            Type: {s.subjectType}
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/tenant-admin/subjects/${s.id}`)}
-                          className="text-[11px] font-bold text-white bg-violet-600 hover:bg-violet-700 px-3.5 py-1.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 shrink-0"
-                        >
-                          <BookOpen className="w-3.5 h-3.5" />
-                          Manage Syllabus & Chapters 📚
-                        </button>
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(s)}
+                              className={cn(
+                                'relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out',
+                                s.isActive ? 'bg-emerald-500' : 'bg-slate-300',
+                              )}
+                              title="Toggle status"
+                            >
+                              <span
+                                className={cn(
+                                  'pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-2xs transition duration-200 ease-in-out',
+                                  s.isActive ? 'translate-x-3' : 'translate-x-0',
+                                )}
+                              />
+                            </button>
+                            <span
+                              className={cn(
+                                'text-[10px] font-bold uppercase tracking-wider',
+                                s.isActive ? 'text-emerald-600' : 'text-slate-400',
+                              )}
+                            >
+                              {s.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/tenant-admin/subjects/${s.id}`)}
+                            className="text-[11px] font-extrabold text-white bg-[#0052CC] hover:bg-blue-700 px-3.5 py-1.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 shrink-0"
+                          >
+                            <BookOpen className="w-3.5 h-3.5 text-white" />
+                            Manage Syllabus & Chapters
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
 
             {/* Pagination Controls */}
             {subjectsData.meta && subjectsData.meta.lastPage > 1 && (
-              <div className="flex justify-between items-center bg-white border border-[#E5E7EB] rounded-2xl px-5 py-3 shadow-xs">
+              <div className="flex justify-between items-center bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-2xs">
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
-                  className="rounded-xl text-xs font-bold text-slate-700"
+                  className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
                 >
                   Previous
                 </Button>
@@ -498,7 +569,7 @@ function SubjectsContent() {
                   size="sm"
                   disabled={page >= subjectsData.meta.lastPage}
                   onClick={() => setPage(page + 1)}
-                  className="rounded-xl text-xs font-bold text-slate-700"
+                  className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
                 >
                   Next
                 </Button>
@@ -509,76 +580,86 @@ function SubjectsContent() {
 
         {/* Bulk Import Subjects Modal */}
         {bulkImportOpen && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-2xl w-full border border-slate-200 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
-                    <FileSpreadsheet className="w-5 h-5" />
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-0 max-w-2xl w-full border border-slate-200 shadow-xl space-y-0 overflow-hidden animate-in fade-in zoom-in duration-150">
+              {/* Light Blue Modal Header */}
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-5 border-b border-blue-200 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-2xs">
+                    <FileSpreadsheet className="w-5 h-5 text-[#0052CC]" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">
+                    <span className="text-[10px] font-mono font-extrabold text-[#0052CC] uppercase tracking-wider bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 inline-block mb-0.5">
+                      BULK IMPORT
+                    </span>
+                    <h3 className="text-base font-extrabold text-[#0B2447] leading-snug">
                       Bulk Import Master Subjects
                     </h3>
-                    <p className="text-xs text-slate-400">
-                      Paste list of master subjects to create them all at once!
-                    </p>
                   </div>
                 </div>
-                <button onClick={() => setBulkImportOpen(false)} className="text-slate-400 hover:text-slate-600 p-1">
+                <button
+                  onClick={() => setBulkImportOpen(false)}
+                  className="text-slate-400 hover:text-slate-700 p-1"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Paste Format (One Subject per line or Comma list):
-                  </label>
-                  <span className="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-md">
-                    Bulk Master Subjects List
-                  </span>
-                </div>
+              <div className="p-5 sm:p-6 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                      Paste Format (One Subject per line or Comma list):
+                    </label>
+                    <span className="text-[10px] text-[#0052CC] font-extrabold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                      Bulk Master Subjects List
+                    </span>
+                  </div>
 
-                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-[11px] text-slate-600 font-mono space-y-1">
-                  <p className="font-bold text-slate-700">Sample Format:</p>
-                  <pre className="text-[10px] text-slate-500 overflow-x-auto">
-{`Physics
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 font-mono space-y-1">
+                    <p className="font-bold text-[#0B2447]">Sample Format:</p>
+                    <pre className="text-[10px] text-slate-500 overflow-x-auto">
+                      {`Physics
 Chemistry
 Biology
 Botany
 Zoology
 Mathematics`}
-                  </pre>
+                    </pre>
+                  </div>
+
+                  <textarea
+                    value={bulkImportText}
+                    onChange={(e) => setBulkImportText(e.target.value)}
+                    rows={7}
+                    placeholder={`Physics\nChemistry\nBiology\nBotany\nZoology\nMathematics`}
+                    className="w-full p-3 rounded-xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
+                  />
                 </div>
 
-                <textarea
-                  value={bulkImportText}
-                  onChange={(e) => setBulkImportText(e.target.value)}
-                  rows={8}
-                  placeholder={`Physics\nChemistry\nBiology\nBotany\nZoology\nMathematics`}
-                  className="w-full p-3 rounded-2xl border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setBulkImportOpen(false)}
-                  className="rounded-xl text-xs font-bold text-slate-600"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isImporting}
-                  onClick={handleBulkImportSubmit}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs px-5"
-                >
-                  {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  Import Master Subjects
-                </Button>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setBulkImportOpen(false)}
+                    className="rounded-xl text-xs font-bold text-slate-700 border-slate-200"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={isImporting}
+                    onClick={handleBulkImportSubmit}
+                    className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs px-5 shadow-2xs"
+                  >
+                    {isImporting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    Import Master Subjects
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -586,69 +667,71 @@ Mathematics`}
 
         {/* Master Subject Chapters & Topics Modal */}
         {chaptersModalOpen && activeSubject && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-3xl w-full border border-slate-200 shadow-2xl space-y-4 max-h-[85vh] flex flex-col animate-in fade-in zoom-in duration-150">
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-0 max-w-3xl w-full border border-slate-200 shadow-xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
               {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-5 border-b border-blue-200 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center font-bold shrink-0">
-                    <BookOpen className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                    <BookOpen className="w-5 h-5 text-[#0052CC]" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-base font-bold text-slate-900">{activeSubject.name}</h3>
-                      <span className="text-[10px] font-black bg-violet-100 text-violet-700 px-2 py-0.5 rounded-md">
+                      <h3 className="text-base font-extrabold text-[#0B2447]">
+                        {activeSubject.name}
+                      </h3>
+                      <span className="text-[10px] font-mono font-extrabold bg-blue-50 text-[#0052CC] px-2 py-0.5 rounded-md border border-blue-200">
                         {activeSubject.code}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Manage master chapters & topics. All course programs auto-clone these chapters!
+                    <p className="text-xs text-slate-600 font-medium">
+                      Manage master chapters & topics for this subject.
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setChaptersModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 p-1"
+                  className="text-slate-400 hover:text-slate-700 p-1"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Modal Body */}
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              <div className="flex-1 overflow-y-auto space-y-4 p-5 sm:p-6">
                 {loadingSubjectDetails ? (
                   <div className="py-12 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-violet-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0052CC]" />
                     Loading master chapters...
                   </div>
                 ) : (
                   <>
                     {/* Inline Add Chapter & Bulk Paste Header */}
-                    <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <Plus className="w-3.5 h-3.5 text-violet-600" /> Add New Master Chapter
+                        <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5 text-[#0052CC]" /> Add New Master Chapter
                         </label>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowBulkPasteDrawer(!showBulkPasteDrawer)}
-                          className="text-xs font-bold text-violet-700 hover:bg-violet-100/60 gap-1.5 h-7 px-2.5 rounded-lg"
+                          className="text-xs font-extrabold text-[#0052CC] hover:bg-blue-100/60 gap-1.5 h-7 px-2.5 rounded-lg"
                         >
-                          <ListPlus className="w-3.5 h-3.5 text-violet-600" />
+                          <ListPlus className="w-3.5 h-3.5 text-[#0052CC]" />
                           {showBulkPasteDrawer ? 'Hide Bulk Paste' : 'Quick Bulk Paste'}
                         </Button>
                       </div>
 
                       {showBulkPasteDrawer && (
-                        <div className="p-3 bg-white rounded-xl border border-violet-200 space-y-2">
+                        <div className="p-3 bg-white rounded-xl border border-blue-200 space-y-2">
                           <textarea
                             value={bulkChaptersText}
                             onChange={(e) => setBulkChaptersText(e.target.value)}
                             rows={4}
                             placeholder={`1. Physical World and Measurement\n2. Kinematics & Motion\n3. Laws of Motion`}
-                            className="w-full p-2.5 rounded-lg border border-violet-200 text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            className="w-full p-2.5 rounded-lg border border-slate-200 text-xs font-mono bg-white focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
                           />
                           <div className="flex justify-end gap-2">
                             <Button
@@ -656,9 +739,13 @@ Mathematics`}
                               size="sm"
                               disabled={isSubmittingCh}
                               onClick={handleProcessBulkChapters}
-                              className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl"
+                              className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-2xs"
                             >
-                              {isSubmittingCh ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                              {isSubmittingCh ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
                               Add Bulk Chapters
                             </Button>
                           </div>
@@ -677,11 +764,13 @@ Mathematics`}
                             }
                           }}
                           placeholder="Chapter name (e.g. Laws of Motion)..."
-                          className="w-full h-9 px-3 text-xs font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1"
+                          className="w-full h-9 px-3 text-xs font-medium rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 flex-1"
                         />
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                           <div className="flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-slate-200 text-xs shrink-0">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Hours:</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">
+                              Hours:
+                            </span>
                             <input
                               type="number"
                               min={1}
@@ -694,9 +783,13 @@ Mathematics`}
                             type="button"
                             disabled={isSubmittingCh}
                             onClick={handleAddSingleChapter}
-                            className="bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl h-9 px-4 shrink-0 gap-1"
+                            className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl h-9 px-4 shrink-0 gap-1 shadow-2xs"
                           >
-                            {isSubmittingCh ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                            {isSubmittingCh ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5" />
+                            )}
                             Add Chapter
                           </Button>
                         </div>
@@ -711,26 +804,31 @@ Mathematics`}
                         </span>
                       </div>
 
-                      {!masterCourseSubject?.chapters || masterCourseSubject.chapters.length === 0 ? (
+                      {!masterCourseSubject?.chapters ||
+                      masterCourseSubject.chapters.length === 0 ? (
                         <div className="p-8 text-center border border-dashed rounded-2xl border-slate-200 bg-white">
-                          <p className="text-xs font-bold text-slate-400">No chapters added yet.</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">Use the box above to add chapters.</p>
+                          <p className="text-xs font-bold text-slate-500">No chapters added yet.</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5 font-medium">
+                            Use the box above to add chapters.
+                          </p>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           {masterCourseSubject.chapters.map((ch: any, idx: number) => (
                             <div
                               key={ch.id}
-                              className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-violet-300 transition-all space-y-2"
+                              className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-300 transition-all space-y-2"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2.5">
-                                  <span className="w-6 h-6 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-black shrink-0">
+                                  <span className="w-6 h-6 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center text-xs font-extrabold shrink-0 border border-blue-200">
                                     {idx + 1}
                                   </span>
                                   <div>
-                                    <h4 className="text-xs font-bold text-slate-900">{ch.name}</h4>
-                                    <span className="text-[10px] font-mono text-slate-400">
+                                    <h4 className="text-xs font-extrabold text-[#0B2447]">
+                                      {ch.name}
+                                    </h4>
+                                    <span className="text-[10px] font-mono text-slate-400 font-semibold">
                                       {ch.code}
                                     </span>
                                   </div>
@@ -755,11 +853,11 @@ Mathematics`}
               </div>
 
               {/* Modal Footer */}
-              <div className="flex justify-end pt-3 border-t border-slate-100 shrink-0">
+              <div className="flex justify-end p-5 border-t border-slate-100 shrink-0">
                 <Button
                   type="button"
                   onClick={() => setChaptersModalOpen(false)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs px-5"
+                  className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs px-5 shadow-2xs"
                 >
                   Done & Close
                 </Button>

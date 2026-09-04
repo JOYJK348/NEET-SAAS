@@ -6,6 +6,7 @@ export function useStudentAttendanceDetail(studentAdmissionId: string) {
     queryKey: ['attendance', 'admin', 'student', studentAdmissionId],
     queryFn: () => attendanceApi.getStudentDetail(studentAdmissionId),
     enabled: !!studentAdmissionId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }

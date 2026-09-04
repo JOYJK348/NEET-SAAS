@@ -19,6 +19,7 @@ import {
   Eye,
   Clock,
   BookOpen,
+  ChevronRight,
 } from 'lucide-react';
 import {
   useAcademicYears,
@@ -102,7 +103,7 @@ function AcademicYearDetailContent() {
     return (
       <DashboardLayout>
         <div className="min-h-screen p-6 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#0052CC]" />
           <p className="text-sm font-semibold text-slate-600">Loading academic year info...</p>
         </div>
       </DashboardLayout>
@@ -120,7 +121,7 @@ function AcademicYearDetailContent() {
           </p>
           <Button
             onClick={() => router.push('/tenant-admin/academic-years')}
-            className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+            className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-bold rounded-xl text-xs"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Academic Years
           </Button>
@@ -133,113 +134,111 @@ function AcademicYearDetailContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Back & Edit Action Buttons */}
-        <div className="flex flex-row items-center justify-between gap-2 w-full">
-          <button
-            onClick={() => router.push('/tenant-admin/academic-years')}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
-            <span className="hidden sm:inline">Back to Academic Years</span>
-            <span className="sm:hidden">Back</span>
-          </button>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Breadcrumb & Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <button
+              onClick={() => router.push('/tenant-admin/academic-years')}
+              className="hover:underline flex items-center gap-1 font-bold text-slate-600"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-[#0052CC]" /> Academic Sessions
+            </button>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-extrabold text-[#0B2447]">{year.name}</span>
+          </div>
 
           <Button
             onClick={() => setIsEditing(!isEditing)}
             variant={isEditing ? 'outline' : 'default'}
             className={cn(
-              'gap-1.5 rounded-xl text-xs font-bold transition-all shadow-xs shrink-0 px-3 sm:px-4 py-2',
+              'gap-1.5 rounded-xl text-xs font-extrabold transition-all shadow-2xs shrink-0 px-4 py-2 self-end sm:self-auto',
               isEditing
                 ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                : 'bg-violet-600 hover:bg-violet-700 text-white',
+                : 'bg-[#0052CC] hover:bg-blue-700 text-white',
             )}
           >
             {isEditing ? (
               <>
                 <Eye className="w-4 h-4 text-slate-500 shrink-0" />
-                <span className="hidden sm:inline">Cancel Editing</span>
-                <span className="sm:hidden">Cancel</span>
+                <span>Cancel Editing</span>
               </>
             ) : (
               <>
                 <Edit2 className="w-4 h-4 text-white shrink-0" />
-                <span className="hidden sm:inline">Edit Academic Year</span>
-                <span className="sm:hidden">Edit</span>
+                <span>Edit Academic Session</span>
               </>
             )}
           </Button>
         </div>
 
-        {/* Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <Calendar className="w-5 h-5 sm:w-7 sm:h-7 text-violet-100" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] sm:text-xs font-mono font-bold text-white border border-white/20">
-                    {year.code}
+        {/* ISML LMS Light Blue Header Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs border border-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+              <Calendar className="w-6 h-6 sm:w-7 sm:h-7" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200">
+                  {year.code}
+                </span>
+                {year.isCurrent && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+                    Current Active Session
                   </span>
-                  {year.isCurrent && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-amber-400/30 text-amber-100 border border-amber-300/40">
-                      ★ Current Active Session
-                    </span>
+                )}
+                <span
+                  className={cn(
+                    'px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1',
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200',
                   )}
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border',
-                      isActive
-                        ? 'bg-emerald-400/20 text-emerald-100 border-emerald-300/30'
-                        : 'bg-rose-400/20 text-rose-100 border-rose-300/30',
-                    )}
-                  >
-                    {isActive ? (
-                      <>
-                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        Active Status
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-3 h-3 text-rose-200" />
-                        Inactive
-                      </>
-                    )}
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight truncate">
-                  {year.name}
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5 truncate">
-                  {year.description || 'Regular academic session cycle.'}
-                </p>
+                >
+                  {isActive ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active Status
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                      Inactive
+                    </>
+                  )}
+                </span>
               </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] leading-snug truncate">
+                {year.name}
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">
+                {year.description || 'Regular academic session cycle.'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Section 1: Overview & Session Parameters (or Edit Form) */}
+        {/* Section 1: Overview & Parameters (or Edit Form) */}
         <div className="space-y-4">
           {isEditing ? (
             <form
               onSubmit={handleSave}
-              className="bg-white border border-[#E5E7EB] rounded-3xl p-6 shadow-sm space-y-6"
+              className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-6"
             >
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <Edit2 className="w-4 h-4 text-violet-600" /> Edit Academic Session Parameters
+                  <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2">
+                    <Edit2 className="w-4 h-4 text-[#0052CC]" /> Edit Academic Session Details
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Update academic year name, duration dates, and default session flags.
                   </p>
                 </div>
                 <Button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs shadow-sm"
+                  className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -329,7 +328,7 @@ function AcademicYearDetailContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, isActive: e.target.value === 'ACTIVE' })
                     }
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-[#0052CC]"
                   >
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
@@ -344,7 +343,7 @@ function AcademicYearDetailContent() {
                       onChange={(e) => setFormData({ ...formData, isCurrent: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0052CC]"></div>
                     <span className="text-xs font-bold text-slate-700">
                       Set as Current Active Session
                     </span>
@@ -364,7 +363,7 @@ function AcademicYearDetailContent() {
                 <Button
                   type="submit"
                   disabled={updateMutation.isPending}
-                  className="gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl text-xs"
+                  className="gap-2 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
                 >
                   {updateMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -376,53 +375,53 @@ function AcademicYearDetailContent() {
               </div>
             </form>
           ) : (
-            /* Overview & Details Info Cards */
+            /* Overview Info Cards */
             <div className="space-y-3">
-              <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-violet-600" /> Duration & Calendar Info
+              <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#0052CC]" /> Duration & Calendar Info
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-violet-50 text-violet-600 border border-violet-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Start Date
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : 'Not set'}
                     </p>
                   </div>
-                </Card>
+                </div>
 
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       End Date
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : 'Not set'}
                     </p>
                   </div>
-                </Card>
+                </div>
 
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-xs flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                       Active Configuration
                     </p>
-                    <p className="text-xs font-bold text-slate-900 mt-0.5 truncate">
+                    <p className="text-xs font-bold text-[#0B2447] mt-0.5 truncate">
                       {year.isCurrent ? 'Default Active Session' : 'Standard Year'}
                     </p>
                   </div>
-                </Card>
+                </div>
               </div>
             </div>
           )}

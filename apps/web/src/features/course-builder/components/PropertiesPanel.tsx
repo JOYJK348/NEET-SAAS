@@ -28,6 +28,9 @@ interface PropertiesPanelProps {
   topicData?: any;
   chapterData?: any;
   onSave?: (data: any) => void;
+  onAddBlock?: (blockType: any) => void;
+  activeTab?: TabId;
+  onTabChange?: (tab: TabId) => void;
 }
 
 function ToggleField({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -37,12 +40,12 @@ function ToggleField({ value, onChange }: { value: boolean; onChange: (v: boolea
       onClick={() => onChange(!value)}
       className={cn(
         'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none',
-        value ? 'bg-emerald-500' : 'bg-gray-200',
+        value ? 'bg-emerald-500' : 'bg-slate-200',
       )}
     >
       <span
         className={cn(
-          'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+          'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-2xs ring-0 transition duration-200 ease-in-out',
           value ? 'translate-x-4' : 'translate-x-0',
         )}
       />
@@ -53,7 +56,7 @@ function ToggleField({ value, onChange }: { value: boolean; onChange: (v: boolea
 function FormField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
+      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
         {label}
       </label>
       {children}
@@ -66,8 +69,8 @@ function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={cn(
-        'w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all',
-        'focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10',
+        'w-full h-9 px-3 text-xs rounded-xl border border-slate-200 bg-white outline-none transition-all font-medium',
+        'focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100',
         props.className,
       )}
     />
@@ -79,8 +82,8 @@ function Textarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement
     <textarea
       {...props}
       className={cn(
-        'w-full px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all resize-none',
-        'focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10',
+        'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white outline-none transition-all resize-none font-medium',
+        'focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100',
         props.className,
       )}
     />
@@ -92,8 +95,8 @@ function Select({ ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
     <select
       {...props}
       className={cn(
-        'w-full h-9 px-3 text-xs rounded-xl border border-gray-200 bg-white outline-none transition-all',
-        'focus:border-violet-600/30 focus:ring-2 focus:ring-violet-600/10',
+        'w-full h-9 px-3 text-xs rounded-xl border border-slate-200 bg-white outline-none transition-all font-bold text-[#0B2447]',
+        'focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100',
         props.className,
       )}
     />
@@ -117,10 +120,10 @@ function RadioGroup({
           type="button"
           onClick={() => onChange(opt.value)}
           className={cn(
-            'flex-1 px-2 py-1.5 text-[10px] font-bold rounded-lg border transition-all',
+            'flex-1 px-2 py-1.5 text-[10px] font-extrabold rounded-xl border transition-all',
             value === opt.value
-              ? 'bg-violet-600 text-white border-violet-600'
-              : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300',
+              ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300',
           )}
         >
           {opt.label}
@@ -133,11 +136,11 @@ function RadioGroup({
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center h-full py-16 px-4 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-violet-100 flex items-center justify-center mb-3">
-        <Info className="h-6 w-6 text-violet-600" />
+      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center mb-3">
+        <Info className="h-6 w-6 text-[#0052CC]" />
       </div>
-      <p className="text-sm font-bold text-gray-500">Select an item...</p>
-      <p className="text-[10px] text-gray-400 mt-1">
+      <p className="text-sm font-extrabold text-[#0B2447]">Select an item...</p>
+      <p className="text-[10px] text-slate-400 font-medium mt-1">
         Choose a topic or chapter to edit its properties
       </p>
     </div>
@@ -150,10 +153,10 @@ function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }
   const [isActive, setIsActive] = useState(data?.isActive ?? true);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-[#0F172A] font-sans">
       <div className="flex items-center gap-2 px-4 pt-4 pb-2">
         <Layers className="h-4 w-4 text-amber-500" />
-        <span className="text-xs font-bold text-gray-800">Chapter Properties</span>
+        <span className="text-xs font-extrabold text-[#0B2447]">Chapter Properties</span>
       </div>
       <div className="px-4 space-y-3">
         <FormField label="Name">
@@ -171,8 +174,8 @@ function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }
             <ToggleField value={isActive} onChange={setIsActive} />
             <span
               className={cn(
-                'text-[10px] font-bold',
-                isActive ? 'text-emerald-600' : 'text-gray-400',
+                'text-[10px] font-extrabold',
+                isActive ? 'text-emerald-600' : 'text-slate-400',
               )}
             >
               {isActive ? 'Active' : 'Inactive'}
@@ -183,7 +186,7 @@ function ChapterForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }
       <div className="px-4 pb-4">
         <button
           onClick={() => onSave?.({ name, code, isActive })}
-          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-lg shadow-violet-600/20"
+          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-2xs"
         >
           <Save className="h-3.5 w-3.5" />
           Save Changes
@@ -201,10 +204,10 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
   const [isActive, setIsActive] = useState(data?.isActive ?? true);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-[#0F172A] font-sans">
       <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-        <FileText className="h-4 w-4 text-violet-500" />
-        <span className="text-xs font-bold text-gray-800">Topic Properties</span>
+        <FileText className="h-4 w-4 text-[#0052CC]" />
+        <span className="text-xs font-extrabold text-[#0B2447]">Topic Properties</span>
       </div>
       <div className="px-4 space-y-3">
         <FormField label="Name">
@@ -237,8 +240,8 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
             <ToggleField value={isActive} onChange={setIsActive} />
             <span
               className={cn(
-                'text-[10px] font-bold',
-                isActive ? 'text-emerald-600' : 'text-gray-400',
+                'text-[10px] font-extrabold',
+                isActive ? 'text-emerald-600' : 'text-slate-400',
               )}
             >
               {isActive ? 'Active' : 'Inactive'}
@@ -257,7 +260,7 @@ function TopicForm({ data, onSave }: { data?: any; onSave?: (d: any) => void }) 
               isActive,
             })
           }
-          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-lg shadow-violet-600/20"
+          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-2xs"
         >
           <Save className="h-3.5 w-3.5" />
           Save Changes
@@ -272,10 +275,10 @@ function TopicItemForm({ data, onSave }: { data?: any; onSave?: (d: any) => void
   const [completionRule, setCompletionRule] = useState(data?.completionRule ?? 'NONE');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-[#0F172A] font-sans">
       <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-        <ClipboardList className="h-4 w-4 text-sky-500" />
-        <span className="text-xs font-bold text-gray-800">Item Properties</span>
+        <ClipboardList className="h-4 w-4 text-[#0052CC]" />
+        <span className="text-xs font-extrabold text-[#0B2447]">Item Properties</span>
       </div>
       <div className="px-4 space-y-3">
         <FormField label="Status">
@@ -296,16 +299,16 @@ function TopicItemForm({ data, onSave }: { data?: any; onSave?: (d: any) => void
       </div>
 
       {data && (
-        <div className="border-t border-gray-100 mx-4 pt-3 space-y-2">
-          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+        <div className="border-t border-slate-100 mx-4 pt-3 space-y-2">
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
             <Calendar className="h-3 w-3" />
             <span>Created {new Date(data.createdAt).toLocaleDateString()}</span>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
             <User className="h-3 w-3" />
             <span>By {data.createdBy ?? 'Unknown'}</span>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-gray-400">
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
             <Calendar className="h-3 w-3" />
             <span>Updated {new Date(data.updatedAt).toLocaleDateString()}</span>
           </div>
@@ -315,7 +318,7 @@ function TopicItemForm({ data, onSave }: { data?: any; onSave?: (d: any) => void
       <div className="px-4 pb-4">
         <button
           onClick={() => onSave?.({ status, completionRule })}
-          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-all shadow-lg shadow-violet-600/20"
+          className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition-all shadow-2xs"
         >
           <Save className="h-3.5 w-3.5" />
           Save Changes
@@ -406,11 +409,11 @@ const mediaBlockOptions: BlockTypeOption[] = [
 
 function AddBlocksTab({ onSelectBlock }: { onSelectBlock?: (blockType: string) => void }) {
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 text-[#0F172A] font-sans">
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <Plus className="h-3.5 w-3.5 text-violet-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+          <Plus className="h-3.5 w-3.5 text-[#0052CC]" />
+          <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-wider">
             Content Blocks
           </span>
         </div>
@@ -419,14 +422,14 @@ function AddBlocksTab({ onSelectBlock }: { onSelectBlock?: (blockType: string) =
             <button
               key={opt.blockType}
               onClick={() => onSelectBlock?.(opt.blockType)}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/50 transition-all text-left shadow-sm"
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left shadow-2xs"
             >
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-50 text-gray-500 shrink-0">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] shrink-0">
                 {opt.icon}
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold text-gray-700 block">{opt.label}</span>
-                <span className="text-[9px] text-gray-400">{opt.description}</span>
+                <span className="text-xs font-bold text-[#0B2447] block">{opt.label}</span>
+                <span className="text-[9px] text-slate-400 font-medium">{opt.description}</span>
               </div>
             </button>
           ))}
@@ -435,7 +438,7 @@ function AddBlocksTab({ onSelectBlock }: { onSelectBlock?: (blockType: string) =
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Plus className="h-3.5 w-3.5 text-amber-500" />
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+          <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-wider">
             Media & Resources
           </span>
         </div>
@@ -444,14 +447,14 @@ function AddBlocksTab({ onSelectBlock }: { onSelectBlock?: (blockType: string) =
             <button
               key={opt.blockType}
               onClick={() => onSelectBlock?.(opt.blockType)}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 transition-all text-left shadow-sm"
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-xl bg-white border border-slate-200 hover:border-amber-300 hover:bg-amber-50/50 transition-all text-left shadow-2xs"
             >
-              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gray-50 text-gray-500 shrink-0">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-50 text-amber-600 shrink-0">
                 {opt.icon}
               </div>
               <div className="min-w-0">
-                <span className="text-xs font-bold text-gray-700 block">{opt.label}</span>
-                <span className="text-[9px] text-gray-400">{opt.description}</span>
+                <span className="text-xs font-bold text-[#0B2447] block">{opt.label}</span>
+                <span className="text-[9px] text-slate-400 font-medium">{opt.description}</span>
               </div>
             </button>
           ))}
@@ -465,15 +468,15 @@ function BlockSettingsTab({ topicData }: { topicData?: any }) {
   if (!topicData) {
     return (
       <div className="p-4 text-center">
-        <p className="text-xs text-gray-400">Select a block to edit its settings</p>
+        <p className="text-xs text-slate-400 font-medium">Select a block to edit its settings</p>
       </div>
     );
   }
   return (
     <div className="p-4">
       <div className="flex items-center gap-2 mb-3">
-        <Settings className="h-3.5 w-3.5 text-gray-500" />
-        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+        <Settings className="h-3.5 w-3.5 text-slate-500" />
+        <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-wider">
           Block Settings
         </span>
       </div>
@@ -486,7 +489,7 @@ function TopicSettingsTab({ topicData, onSave }: { topicData?: any; onSave?: (d:
   if (!topicData) {
     return (
       <div className="p-4 text-center">
-        <p className="text-xs text-gray-400">No topic selected</p>
+        <p className="text-xs text-slate-400 font-medium">No topic selected</p>
       </div>
     );
   }
@@ -494,16 +497,6 @@ function TopicSettingsTab({ topicData, onSave }: { topicData?: any; onSave?: (d:
 }
 
 export type TabId = 'add-blocks' | 'block-settings' | 'topic-settings';
-
-interface PropertiesPanelProps {
-  selection: { type: string | null; id: string | null };
-  topicData?: any;
-  chapterData?: any;
-  onSave?: (data: any) => void;
-  onAddBlock?: (blockType: any) => void;
-  activeTab?: TabId;
-  onTabChange?: (tab: TabId) => void;
-}
 
 export function PropertiesPanel({
   selection,
@@ -525,7 +518,7 @@ export function PropertiesPanel({
   // If chapter selected, show chapter form directly (no tabs)
   if (selection.type === 'chapter') {
     return (
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-slate-100">
         <ChapterForm data={chapterData} onSave={onSave} />
       </div>
     );
@@ -534,7 +527,7 @@ export function PropertiesPanel({
   // If topic-item selected, show item form directly (no tabs for now)
   if (selection.type === 'topic-item') {
     return (
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-slate-100">
         <TopicItemForm data={topicData} onSave={onSave} />
       </div>
     );
@@ -546,7 +539,6 @@ export function PropertiesPanel({
   }
 
   // Topic selected - show tabbed interface
-  // Only show topic-settings if we have topicData
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     { id: 'add-blocks', label: 'Blocks', icon: <Plus className="h-3 w-3" /> },
     { id: 'block-settings', label: 'Block', icon: <Settings className="h-3 w-3" /> },
@@ -554,17 +546,17 @@ export function PropertiesPanel({
   ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex border-b border-gray-100 shrink-0">
+    <div className="flex flex-col h-full bg-white text-[#0F172A] font-sans">
+      <div className="flex border-b border-slate-200 shrink-0">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
             className={cn(
-              'flex items-center gap-1.5 flex-1 px-3 py-2.5 text-[10px] font-bold transition-all',
+              'flex items-center gap-1.5 flex-1 px-3 py-2.5 text-[10px] font-extrabold transition-all',
               activeTab === tab.id
-                ? 'text-[#7c3aed] border-b-2 border-[#7c3aed] bg-violet-50/50'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+                ? 'text-[#0052CC] border-b-2 border-[#0052CC] bg-blue-50/60'
+                : 'text-slate-500 hover:text-[#0B2447] hover:bg-slate-50',
             )}
           >
             {tab.icon}

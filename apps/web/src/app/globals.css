@@ -1,8 +1,12 @@
 @import 'tailwindcss';
 
-
 @theme {
   --color-background: #ffffff;
+  --color-[#0B2447]: #0b2447;
+  --color-[#071730]: #071730;
+  --color-[#0052CC]: #0052cc;
+  --color-[#0D9488]: #0d9488;
+  --color-[#06B6D4]: #06b6d4;
   --color-foreground: #111827;
   --color-card: #ffffff;
   --color-card-foreground: #111827;
@@ -26,17 +30,71 @@
   --color-error: #ef4444;
   --color-warning: #f59e0b;
   --radius: 0.75rem;
-  --color-sidebar-background: #f8f7fc;
-  --color-sidebar-foreground: #111827;
-  --color-sidebar-primary: #7c3aed;
+  --color-sidebar-background: #0b2447;
+  --color-sidebar-foreground: #ffffff;
+  --color-sidebar-primary: #0052cc;
   --color-sidebar-primary-foreground: #ffffff;
-  --color-sidebar-accent: #ede9fe;
-  --color-sidebar-accent-foreground: #7c3aed;
-  --color-sidebar-border: #e5e7eb;
-  --color-sidebar-ring: #7c3aed;
-  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --color-sidebar-accent: #1e3a8a;
+  --color-sidebar-accent-foreground: #ffffff;
+  --color-sidebar-border: #1e3a8a;
+  --font-sans:
+    var(--font-sans), 'Plus Jakarta Sans', 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   --animate-slide-in-left: slide-in-left 0.25s ease-out;
   --animate-slide-in-right: slide-in-right 0.25s ease-out;
+}
+
+body {
+  font-family:
+    var(--font-sans),
+    'Plus Jakarta Sans',
+    'Outfit',
+    'Inter',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Live Pulse animation */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.08);
+  }
+}
+
+.animate-live-pulse {
+  animation: live-pulse 1.8s infinite ease-in-out;
+}
+
+/* Glassmorphism utilities */
+.isml-glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @keyframes slide-in-left {
@@ -362,14 +420,11 @@
 .tlui-debug-panel,
 .tlui-helper-buttons,
 .tlui-layout__bottom__right,
-[class*="watermark"],
-[class*="helper-button"],
-a[href*="tldraw"] {
+[class*='watermark'],
+[class*='helper-button'],
+a[href*='tldraw'] {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
-
-
-

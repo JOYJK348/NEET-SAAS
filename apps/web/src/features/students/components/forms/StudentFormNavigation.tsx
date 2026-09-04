@@ -41,9 +41,9 @@ export function StudentFormNavigation({
         variant="outline"
         onClick={onPrevious}
         disabled={isFirstStep || isSubmitting}
-        className="gap-1.5"
+        className="gap-1.5 rounded-xl border-slate-200 text-slate-700 font-bold hover:bg-slate-50 text-xs"
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft className="h-4 w-4 text-[#0052CC]" />
         Previous
       </Button>
 
@@ -51,7 +51,7 @@ export function StudentFormNavigation({
         type="button"
         disabled={isSubmitting}
         onClick={handleClick}
-        className="gap-1.5"
+        className="gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs px-5"
       >
         {isSubmitting ? (
           <>

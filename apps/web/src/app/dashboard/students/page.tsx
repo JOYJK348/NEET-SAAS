@@ -20,6 +20,7 @@ import {
   GraduationCap,
   Clock,
   Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -148,9 +149,7 @@ function StudentsContent() {
     [setPage],
   );
 
-  const handlePageSizeChange = useCallback(() => {
-    // page size changes not currently exposed through the hook
-  }, []);
+  const handlePageSizeChange = useCallback(() => {}, []);
 
   const handleStatusUpdate = useCallback(
     async (student: any, status: StudentStatus) => {
@@ -262,13 +261,13 @@ function StudentsContent() {
   if (isLoading && !meta) {
     return (
       <DashboardLayout>
-        <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+        <div className="w-full space-y-6 text-[#0F172A] font-sans">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Students</h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                Manage student records and enrollments
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+                Students
+              </h1>
+              <p className="text-slate-500 mt-1 text-sm">Manage student records and enrollments</p>
             </div>
           </div>
           <StudentSkeleton variant="table" count={5} />
@@ -280,13 +279,13 @@ function StudentsContent() {
   if (error && students.length === 0 && !meta) {
     return (
       <DashboardLayout>
-        <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+        <div className="w-full space-y-6 text-[#0F172A] font-sans">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Students</h1>
-              <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-                Manage student records and enrollments
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+                Students
+              </h1>
+              <p className="text-slate-500 mt-1 text-sm">Manage student records and enrollments</p>
             </div>
           </div>
           <StudentErrorState
@@ -302,13 +301,13 @@ function StudentsContent() {
     {
       label: 'Total Students',
       value: counts.total,
-      bg: 'bg-violet-50 text-violet-600 border-violet-100',
+      bg: 'bg-blue-50 text-[#0052CC] border-blue-200',
       icon: GraduationCap,
     },
     {
       label: 'Active',
       value: counts.active,
-      bg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      bg: 'bg-emerald-50 text-emerald-600 border-emerald-200',
       icon: CheckCircle,
     },
     {
@@ -318,130 +317,119 @@ function StudentsContent() {
       icon: X,
     },
     {
-      label: 'Graduated',
-      value: counts.graduated,
-      bg: 'bg-sky-50 text-sky-600 border-sky-100',
-      icon: GraduationCap,
-    },
-    {
-      label: 'Dropped Out',
-      value: counts.droppedOut,
-      bg: 'bg-rose-50 text-rose-600 border-rose-100',
-      icon: AlertTriangle,
-    },
-    {
       label: 'Pending',
       value: counts.pending,
-      bg: 'bg-amber-50 text-amber-600 border-amber-100',
+      bg: 'bg-amber-50 text-amber-600 border-amber-200',
       icon: Clock,
     },
   ];
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Welcome Header Banner - Signature Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Student Directory & Enrollments
-              </span>
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Management Portal</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Student Directory</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Student Directory & Admissions 🎓
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+              Student Directory & Admissions
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
+            <p className="text-xs text-slate-600">
               Manage student profiles, active enrollments, course assignments, and batch transfers.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
+          <div className="grid grid-cols-3 sm:flex sm:flex-row gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={handleExport}
-              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-[11px] sm:text-xs font-bold"
+              className="w-full sm:w-auto px-2 sm:px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
             >
-              <Download className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <Download className="h-3.5 w-3.5 text-[#0052CC] shrink-0" aria-hidden="true" />
               <span className="truncate">Export</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push('/dashboard/students/import')}
-              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-[11px] sm:text-xs font-bold"
+              className="w-full sm:w-auto px-2 sm:px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
             >
-              <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <Upload className="h-3.5 w-3.5 text-[#0052CC] shrink-0" aria-hidden="true" />
               <span className="truncate">Import</span>
             </Button>
             <Button
               onClick={handleAddStudent}
-              className="w-full sm:w-auto px-1.5 sm:px-3 gap-1 sm:gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-[11px] sm:text-xs"
+              className="w-full sm:w-auto px-2 sm:px-3.5 gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold border-0 shadow-2xs rounded-xl text-xs"
             >
-              <Plus className="h-3.5 w-3.5 text-violet-600 shrink-0" aria-hidden="true" />
+              <Plus className="h-3.5 w-3.5 text-white shrink-0" aria-hidden="true" />
               <span className="truncate sm:hidden">Add</span>
               <span className="hidden sm:inline">Add Student</span>
             </Button>
           </div>
         </div>
 
-        {/* Mild KPI Cards Strip - Mobile Responsive Grid */}
+        {/* Mild KPI Cards Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {statCards.map((stat) => {
             const IconComp = stat.icon;
             return (
-              <Card
+              <div
                 key={stat.label}
-                className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-2.5 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50"
+                className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 shadow-2xs flex items-center gap-2.5 transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className={`p-2 rounded-xl border shrink-0 ${stat.bg}`}>
                   <IconComp className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                     {stat.label}
                   </p>
-                  <p className="text-lg sm:text-xl font-black text-[#111827] mt-0.5">
+                  <p className="text-lg sm:text-xl font-extrabold text-[#0B2447] mt-0.5">
                     {stat.value}
                   </p>
                 </div>
-              </Card>
+              </div>
             );
           })}
         </div>
 
-        {/* Persistent Import Validation Log with Dismiss Action */}
+        {/* Import Validation Log Banner */}
         {lastImportLog && (
-          <Card className="rounded-2xl border-purple-100 bg-purple-50/10 p-5 shadow-sm relative space-y-4">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs relative space-y-4">
             <button
               onClick={() => setLastImportLog(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
               aria-label="Dismiss logs"
             >
               <X className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-purple-600" />
-              <h3 className="font-bold text-sm text-gray-800">Last Bulk Import Operation Logs</h3>
+              <FileSpreadsheet className="h-5 w-5 text-[#0052CC]" />
+              <h3 className="font-extrabold text-sm text-[#0B2447]">
+                Last Bulk Import Operation Logs
+              </h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
-                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              <div className="space-y-1 bg-emerald-50/60 p-4 rounded-xl border border-emerald-200">
+                <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
                   Status
                 </span>
-                <p className="text-sm font-semibold text-green-700 flex items-center gap-1.5 mt-1">
+                <p className="text-sm font-bold text-emerald-700 flex items-center gap-1.5 mt-1">
                   <CheckCircle className="h-4 w-4" />
                   Successfully Imported: {lastImportLog.importedCount} Student(s)
                 </p>
               </div>
-              <div className="space-y-1 bg-white p-4 rounded-xl border border-gray-100">
-                <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+              <div className="space-y-1 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
                   Validation Errors count
                 </span>
                 <p
-                  className={`text-sm font-semibold mt-1 ${lastImportLog.errors.length > 0 ? 'text-red-700' : 'text-gray-600'}`}
+                  className={`text-sm font-bold mt-1 ${lastImportLog.errors.length > 0 ? 'text-rose-600' : 'text-slate-700'}`}
                 >
                   {lastImportLog.errors.length} row(s) failed validation rules
                 </p>
@@ -449,29 +437,29 @@ function StudentsContent() {
             </div>
 
             {lastImportLog.errors.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-purple-100">
-                <div className="flex items-center gap-1.5 text-red-600 font-bold text-xs uppercase tracking-wider">
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-rose-600 font-bold text-xs uppercase tracking-wider">
                   <AlertTriangle className="h-4 w-4" />
                   Detailed Error log messages
                 </div>
-                <div className="max-h-40 overflow-y-auto space-y-1.5 bg-red-50/30 p-4 rounded-xl border border-red-100">
+                <div className="max-h-40 overflow-y-auto space-y-1.5 bg-rose-50/50 p-4 rounded-xl border border-rose-200">
                   {lastImportLog.errors.map((err, idx) => (
                     <div
                       key={idx}
-                      className="text-xs text-red-700 font-medium flex gap-2 items-start"
+                      className="text-xs text-rose-700 font-medium flex gap-2 items-start"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                       <span>{err}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         )}
 
         {/* Search & Filters Toolbar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 min-w-0">
               <StudentSearch
@@ -495,7 +483,7 @@ function StudentsContent() {
           </div>
           {hasActiveFilters && (
             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-violet-600">Active filters applied</span>
+              <span className="text-xs font-bold text-[#0052CC]">Active filters applied</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -519,15 +507,15 @@ function StudentsContent() {
               records
             </span>
             {hasActiveFilters && (
-              <span className="bg-violet-50 text-violet-700 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-violet-100">
+              <span className="bg-blue-50 text-[#0052CC] text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-blue-200">
                 Filtered
               </span>
             )}
           </div>
         </div>
 
-        {/* Mobile View: Rich Cards List (block sm:hidden) */}
-        <div className="block sm:hidden">
+        {/* Mobile View: Cards List */}
+        <div className="block sm:hidden space-y-3">
           <StudentList
             students={students}
             onView={handleView}
@@ -539,9 +527,9 @@ function StudentsContent() {
           />
         </div>
 
-        {/* Desktop View: Rich Table Layout (hidden sm:block) */}
+        {/* Desktop View: Table Layout */}
         <div className="hidden sm:block">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
             <StudentTable
               students={students}
               sortBy={filters.sortBy ?? 'admissionDate'}
@@ -565,19 +553,19 @@ function StudentsContent() {
                 onItemsPerPageChange={handlePageSizeChange}
               />
             )}
-          </Card>
+          </div>
         </div>
 
         {/* Empty State */}
         {students.length === 0 && !isLoading && (
-          <Card className="rounded-3xl border border-dashed border-slate-200 bg-white p-8">
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8">
             <StudentEmptyState
               variant={hasActiveFilters ? 'filter' : 'default'}
               hasFilters={hasActiveFilters}
               onClearFilters={handleClearFilters}
               onAddStudent={handleAddStudent}
             />
-          </Card>
+          </div>
         )}
 
         <BulkImportDialog

@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { StudentLoginCredentialsDialog } from '@/features/students/components/StudentLoginCredentialsDialog';
 import { useCreateStudent, useBatches, useCourses } from '@/features/students/hooks/use-students';
 import {
@@ -232,7 +232,10 @@ function AddStudentContent() {
         }
       } catch (err: any) {
         console.error('[STUDENT CREATE] API Error caught:', err);
-        console.error('[STUDENT CREATE] Full 400 error response:', JSON.stringify(err.response?.data, null, 2));
+        console.error(
+          '[STUDENT CREATE] Full 400 error response:',
+          JSON.stringify(err.response?.data, null, 2),
+        );
         const responseData = err.response?.data;
         if (
           responseData &&
@@ -358,35 +361,33 @@ function AddStudentContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
         {/* Top Back Action Bar */}
         <div className="flex flex-row items-center justify-between gap-2 w-full">
           <button
             onClick={() => router.push('/dashboard/students')}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-[#E5E7EB] text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-xs shrink-0"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition shadow-2xs shrink-0"
           >
-            <ArrowLeft className="w-4 h-4 text-violet-600 shrink-0" />
+            <ArrowLeft className="w-4 h-4 text-[#0052CC] shrink-0" />
             <span className="hidden sm:inline">Back to Student Directory</span>
             <span className="sm:hidden">Back</span>
           </button>
         </div>
 
-        {/* Dedicated Screen Header Banner */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-700 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                <span className="text-xl sm:text-2xl font-black">🎓</span>
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight">
-                  Student Registration & Admission Setup 🎓
-                </h1>
-                <p className="text-xs text-violet-200 font-medium mt-0.5">
-                  Register new candidate profiles, assign default course track, and configure parent
-                  credentials.
-                </p>
-              </div>
+        {/* Dedicated ISML LMS Style Light Blue Hero Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-xs border border-blue-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start md:items-center gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0 shadow-xs">
+              <User className="w-6 h-6 sm:w-7 sm:h-7" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#0B2447] leading-snug">
+                Student Registration & Admission Setup
+              </h1>
+              <p className="text-xs text-slate-600 font-medium mt-0.5">
+                Register new candidate profiles, assign default course track, and configure parent
+                credentials.
+              </p>
             </div>
           </div>
         </div>
@@ -412,16 +413,16 @@ function AddStudentContent() {
           </div>
         </div>
 
-      {credentials && (
-        <StudentLoginCredentialsDialog
-          open={true}
-          onOpenChange={handleCredentialsClose}
-          studentName={credentials.name}
-          studentEmail={credentials.email}
-          studentPassword={credentials.password}
-          parentPortalInfo={credentials.parentPortalInfo}
-        />
-      )}
+        {credentials && (
+          <StudentLoginCredentialsDialog
+            open={true}
+            onOpenChange={handleCredentialsClose}
+            studentName={credentials.name}
+            studentEmail={credentials.email}
+            studentPassword={credentials.password}
+            parentPortalInfo={credentials.parentPortalInfo}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
@@ -431,7 +432,17 @@ import { ProtectedRoute } from '@/components/auth/protected-route';
 
 export default function AddStudentPage() {
   return (
-    <ProtectedRoute allowedRoles={['TENANT_ADMIN', 'SUPER_ADMIN']}>
+    <ProtectedRoute
+      allowedRoles={[
+        'TENANT_ADMIN',
+        'SUPER_ADMIN',
+        'BRANCH_ADMIN',
+        'CAMPUS_ADMIN',
+        'ACADEMIC_ADMIN',
+        'STAFF',
+        'ADMIN',
+      ]}
+    >
       <Suspense
         fallback={
           <DashboardLayout>

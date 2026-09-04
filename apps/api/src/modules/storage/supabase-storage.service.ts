@@ -796,4 +796,21 @@ export class SupabaseStorageService implements IStorageService {
 
     return { blob: data, record };
   }
+
+  /**
+   * Downloads raw file buffer directly from Supabase Storage by bucket + path,
+   * using the administrative Service Role Key to bypass ALL public/private bucket & token checks.
+   */
+  async downloadDirectStream(bucketName: string, storagePath: string): Promise<Buffer> {
+    const { data, error } = await this.supabaseClient.storage
+      .from(bucketName)
+      .download(storagePath);
+
+    if (error || !data) {
+      throw new InternalServerErrorException(
+        `Failed to download object from storage bucket '${bucketName}': ${error?.message || 'Unknown storage error'}`,
+      );
+    }
+    return Buffer.from(await data.arrayBuffer());
+  }
 }

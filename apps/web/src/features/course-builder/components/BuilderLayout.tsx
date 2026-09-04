@@ -144,28 +144,28 @@ export function BuilderLayout({
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-50 h-[56px] shrink-0 bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] flex items-center justify-between px-4 border-b border-white/10 shadow-lg backdrop-blur-md">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50 text-[#0F172A] font-sans">
+      {/* Top Header Bar - ISML LMS Deep Navy Theme */}
+      <header className="sticky top-0 z-50 h-[56px] shrink-0 bg-[#0B2447] flex items-center justify-between px-4 border-b border-[#1E3A8A] shadow-md text-white">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/tenant-admin/curriculum"
-            className="flex items-center justify-center w-8 h-8 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all shrink-0 border border-white/10"
+            className="flex items-center justify-center w-8 h-8 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-all shrink-0 border border-white/10"
             title="Back to Curriculum Builder"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 text-white border border-white/20">
+              <span className="text-[9px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-blue-50/15 text-cyan-300 border border-cyan-400/30">
                 Course Builder
               </span>
-              <h1 className="text-white font-bold text-sm truncate">{courseName}</h1>
+              <h1 className="text-white font-extrabold text-sm truncate">{courseName}</h1>
             </div>
             {selectedTopicName && (
-              <p className="text-[10px] text-white/80 truncate flex items-center gap-1">
+              <p className="text-[10px] text-slate-300 truncate flex items-center gap-1">
                 <span>Selected Topic:</span>
-                <span className="font-semibold text-white">{selectedTopicName}</span>
+                <span className="font-bold text-cyan-300">{selectedTopicName}</span>
               </p>
             )}
           </div>
@@ -175,11 +175,11 @@ export function BuilderLayout({
           <div className="relative">
             <button
               onClick={() => setStatusOpen(!statusOpen)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-semibold transition-all border border-white/20 shadow-xs"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/15 shadow-2xs"
             >
               <span className="text-xs leading-none">{status.icon}</span>
               <span className="hidden sm:inline">{status.label}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-white/70" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-300" />
             </button>
             {statusOpen && (
               <>
@@ -192,8 +192,8 @@ export function BuilderLayout({
                       className={cn(
                         'flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-left transition-colors',
                         key === courseStatus
-                          ? 'bg-violet-50 text-[#7c3aed] font-bold'
-                          : 'text-slate-600 hover:bg-slate-50',
+                          ? 'bg-blue-50 text-[#0052CC] font-extrabold'
+                          : 'text-slate-700 hover:bg-slate-50',
                       )}
                     >
                       <span className="text-xs leading-none">{s.icon}</span>
@@ -211,9 +211,9 @@ export function BuilderLayout({
             className={cn(
               'flex items-center gap-1.5 h-8 px-3.5 rounded-xl border text-xs font-bold transition-all',
               previewOpen
-                ? 'bg-white text-[#7c3aed] border-white shadow-md'
+                ? 'bg-white text-[#0052CC] border-white shadow-2xs'
                 : selectedTopicId
-                  ? 'bg-white/15 text-white hover:bg-white/25 border-white/25'
+                  ? 'bg-white/10 text-white hover:bg-white/20 border-white/20'
                   : 'text-white/40 border-white/10 cursor-not-allowed opacity-50',
             )}
             title={!selectedTopicId ? 'Select a topic to preview' : 'Preview current topic'}
@@ -226,7 +226,7 @@ export function BuilderLayout({
 
           <button
             onClick={() => setPublishOpen(true)}
-            className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-extrabold transition-all shadow-lg shadow-emerald-500/30 transform hover:scale-[1.02] active:scale-[0.98]"
+            className="flex items-center gap-1.5 h-8 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition-all shadow-2xs transform hover:scale-[1.02] active:scale-[0.98]"
           >
             <Send className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Publish</span>
@@ -243,17 +243,17 @@ export function BuilderLayout({
         {/* Desktop left sidebar */}
         <aside
           className={cn(
-            'w-[280px] border-r border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+            'w-[280px] border-r border-slate-200 bg-white shrink-0 overflow-y-auto',
             'hidden lg:block',
           )}
         >
           {leftPanel}
         </aside>
 
-        {/* Tablet left sidebar — visible on md but not overlapping */}
+        {/* Tablet left sidebar */}
         <aside
           className={cn(
-            'hidden md:block lg:hidden w-[240px] border-r border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+            'hidden md:block lg:hidden w-[240px] border-r border-slate-200 bg-white shrink-0 overflow-y-auto',
           )}
         >
           {leftPanel}
@@ -263,17 +263,17 @@ export function BuilderLayout({
         {mobilePanel === 'left' && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs"
               onClick={() => setMobilePanel(null)}
             />
-            <div className="fixed left-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-r border-gray-200 shadow-2xl overflow-y-auto animate-slide-in-left">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  Outline
+            <div className="fixed left-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-r border-slate-200 shadow-2xl overflow-y-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Course Outline
                 </span>
                 <button
                   onClick={() => setMobilePanel(null)}
-                  className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -283,22 +283,22 @@ export function BuilderLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto min-w-0 bg-white">{centerPanel}</main>
+        <main className="flex-1 overflow-y-auto min-w-0 bg-slate-50">{centerPanel}</main>
 
         {/* Desktop right sidebar */}
         <aside
           className={cn(
-            'w-[280px] border-l border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+            'w-[280px] border-l border-slate-200 bg-white shrink-0 overflow-y-auto',
             'hidden lg:block',
           )}
         >
           {rightPanel}
         </aside>
 
-        {/* Tablet right sidebar — hidden by default, toggleable */}
+        {/* Tablet right sidebar */}
         <aside
           className={cn(
-            'hidden md:block lg:hidden w-[240px] border-l border-gray-200 bg-violet-50/30 shrink-0 overflow-y-auto',
+            'hidden md:block lg:hidden w-[240px] border-l border-slate-200 bg-white shrink-0 overflow-y-auto',
             mobilePanel === 'right' && '!block',
           )}
         >
@@ -309,17 +309,17 @@ export function BuilderLayout({
         {mobilePanel === 'right' && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs"
               onClick={() => setMobilePanel(null)}
             />
-            <div className="fixed right-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-l border-gray-200 shadow-2xl overflow-y-auto animate-slide-in-right">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <div className="fixed right-0 top-[52px] bottom-0 w-[85vw] max-w-[320px] bg-white border-l border-slate-200 shadow-2xl overflow-y-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Properties
                 </span>
                 <button
                   onClick={() => setMobilePanel(null)}
-                  className="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -341,14 +341,15 @@ export function BuilderLayout({
         />
       )}
 
-      <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-violet-700 rounded-2xl px-3 py-2 shadow-2xl border border-white/10">
+      {/* Floating mobile toggle bar */}
+      <div className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#0B2447] rounded-2xl px-3 py-2 shadow-2xl border border-blue-900">
         <button
           onClick={() => toggleMobilePanel('left')}
           className={cn(
-            'flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold transition-all',
+            'flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition-all',
             mobilePanel === 'left'
-              ? 'bg-violet-600 text-white'
-              : 'text-white/60 hover:text-white hover:bg-white/10',
+              ? 'bg-[#0052CC] text-white'
+              : 'text-slate-300 hover:text-white hover:bg-white/10',
           )}
         >
           <PanelRightOpen className="h-3.5 w-3.5" />
@@ -357,10 +358,10 @@ export function BuilderLayout({
         <button
           onClick={() => toggleMobilePanel('right')}
           className={cn(
-            'flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold transition-all',
+            'flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold transition-all',
             mobilePanel === 'right'
-              ? 'bg-violet-600 text-white'
-              : 'text-white/60 hover:text-white hover:bg-white/10',
+              ? 'bg-[#0052CC] text-white'
+              : 'text-slate-300 hover:text-white hover:bg-white/10',
           )}
         >
           <PanelRight className="h-3.5 w-3.5" />

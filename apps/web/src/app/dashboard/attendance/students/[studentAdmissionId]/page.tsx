@@ -6,6 +6,7 @@ import { useStudentAttendanceDetail } from '@/features/attendance/hooks/use-stud
 import { LoadingSpinner } from '@/components/ui/loading';
 import { ErrorState } from '@/components/ui/error-state';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   ArrowLeft,
@@ -17,23 +18,24 @@ import {
   GraduationCap,
   CalendarDays,
   BookOpen,
+  ChevronRight,
 } from 'lucide-react';
 
 const STATUS_CFG: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
   PRESENT: {
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
     label: 'Present',
-    cls: 'text-emerald-600 bg-emerald-50',
+    cls: 'text-emerald-600 bg-emerald-50 border-emerald-200',
   },
   ABSENT: {
     icon: <XCircle className="w-3.5 h-3.5" />,
     label: 'Absent',
-    cls: 'text-rose-600 bg-rose-50',
+    cls: 'text-rose-600 bg-rose-50 border-rose-200',
   },
   LATE: {
     icon: <Timer className="w-3.5 h-3.5" />,
     label: 'Late',
-    cls: 'text-amber-600 bg-amber-50',
+    cls: 'text-amber-600 bg-amber-50 border-amber-200',
   },
 };
 
@@ -46,7 +48,7 @@ export default function StudentAttendancePage() {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 flex items-center justify-center">
+        <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 flex items-center justify-center">
           <LoadingSpinner />
         </div>
       </DashboardLayout>
@@ -56,7 +58,7 @@ export default function StudentAttendancePage() {
   if (error) {
     return (
       <DashboardLayout>
-        <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6">
+        <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6">
           <ErrorState
             title="Failed to load student attendance"
             message={error.message}
@@ -74,36 +76,46 @@ export default function StudentAttendancePage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 pb-24 space-y-5">
-        {/* Back + Header */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
-            className="w-9 h-9 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-600" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-violet-500" />
-            </div>
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
+            </Button>
             <div>
-              <h1 className="text-base font-black text-slate-900">{studentName}</h1>
-              <p className="text-xs text-slate-400 font-mono">{studentCode}</p>
+              <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+                <span>Attendance Roster</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+                <span>Student Log ({studentCode})</span>
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+                {studentName}
+              </h1>
+              <p className="text-xs text-slate-600 font-medium">
+                Individual student attendance history and session logs.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4 col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-violet-500" />
-              <span className="text-xs font-semibold text-slate-400">Attendance</span>
+              <BarChart3 className="w-4 h-4 text-[#0052CC]" />
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Attendance Rate
+              </span>
             </div>
             <p
               className={cn(
-                'text-2xl font-black mt-1',
+                'text-2xl font-extrabold mt-1',
                 (summary.rate ?? 0) >= 75
                   ? 'text-emerald-600'
                   : (summary.rate ?? 0) >= 60
@@ -114,38 +126,42 @@ export default function StudentAttendancePage() {
               {summary.rate != null ? `${summary.rate}%` : 'N/A'}
             </p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase">Total</p>
-            <p className="text-lg font-black text-slate-900 mt-1">{summary.total}</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <p className="text-[10px] font-semibold text-emerald-600 uppercase flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Present
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Total Sessions
             </p>
-            <p className="text-lg font-black text-emerald-600 mt-1">{summary.present}</p>
+            <p className="text-lg font-extrabold text-[#0B2447] mt-1">{summary.total}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <p className="text-[10px] font-semibold text-rose-600 uppercase flex items-center gap-1">
-              <XCircle className="w-3 h-3" /> Absent
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4">
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Present
             </p>
-            <p className="text-lg font-black text-rose-600 mt-1">{summary.absent}</p>
+            <p className="text-lg font-extrabold text-emerald-600 mt-1">{summary.present}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
-            <p className="text-[10px] font-semibold text-amber-600 uppercase flex items-center gap-1">
-              <Timer className="w-3 h-3" /> Late
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4">
+            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-wider flex items-center gap-1">
+              <XCircle className="w-3.5 h-3.5" /> Absent
             </p>
-            <p className="text-lg font-black text-amber-600 mt-1">{summary.late}</p>
+            <p className="text-lg font-extrabold text-rose-600 mt-1">{summary.absent}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-4">
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+              <Timer className="w-3.5 h-3.5" /> Late
+            </p>
+            <p className="text-lg font-extrabold text-amber-600 mt-1">{summary.late}</p>
           </div>
         </div>
 
         {/* Records */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-slate-400" />
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <Clock className="w-4 h-4 text-[#0052CC]" />
+            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
               Attendance Records
             </p>
-            <span className="text-xs text-slate-400 ml-auto">Last {records.length} sessions</span>
+            <span className="text-xs text-slate-500 font-bold ml-auto">
+              Last {records.length} sessions
+            </span>
           </div>
 
           {records.length === 0 ? (
@@ -155,21 +171,21 @@ export default function StudentAttendancePage() {
               description="Records appear once attendance is marked for this student"
             />
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-2">
               {records.map((r) => {
                 const cfg = STATUS_CFG[r.attendanceStatus] ?? {
                   icon: null,
                   label: r.attendanceStatus,
-                  cls: 'text-slate-600 bg-slate-50',
+                  cls: 'text-slate-600 bg-slate-50 border-slate-200',
                 };
                 return (
                   <div
                     key={r.id}
-                    className="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-3 flex items-center gap-3"
+                    className="bg-white rounded-xl border border-slate-200 shadow-2xs px-4 py-3 flex items-center gap-3"
                   >
                     <div
                       className={cn(
-                        'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                        'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border',
                         cfg.cls,
                       )}
                     >
@@ -177,20 +193,22 @@ export default function StudentAttendancePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">{r.date ?? '—'}</span>
+                        <span className="text-xs font-extrabold text-[#0B2447]">
+                          {r.date ?? '—'}
+                        </span>
                         {r.subject && (
-                          <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                            <BookOpen className="w-3 h-3" /> {r.subject.name}
+                          <span className="text-[10px] text-[#0052CC] font-extrabold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                            <BookOpen className="w-3 h-3 text-[#0052CC]" /> {r.subject.name}
                           </span>
                         )}
                       </div>
                       {r.remarks && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">{r.remarks}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 font-medium">{r.remarks}</p>
                       )}
                     </div>
                     <span
                       className={cn(
-                        'text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0',
+                        'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border shrink-0',
                         cfg.cls,
                       )}
                     >

@@ -6,22 +6,21 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
 import { useCreateExam } from '@/features/offline-exams/hooks/use-admin-exams';
 import type { SectionConfigItem } from '@/features/offline-exams/types/admin-exams';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ArrowLeft,
-  Calendar,
   Clock,
   FileText,
   Layers,
   Plus,
-  Sparkles,
   Trash2,
   CheckCircle2,
   Loader2,
   AlertCircle,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -80,9 +79,9 @@ function CreateExamContent() {
 
   const isStep3Valid = Boolean(
     totalMarks > 0 &&
-      passingMarks >= 0 &&
-      sections.length > 0 &&
-      sections.every((s) => s.name.trim() !== ''),
+    passingMarks >= 0 &&
+    sections.length > 0 &&
+    sections.every((s) => s.name.trim() !== ''),
   );
 
   const canGoToStep = (targetStep: number): boolean => {
@@ -171,31 +170,29 @@ function CreateExamContent() {
   };
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Header Banner - Signature Violet Gradient */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-6 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+      {/* Header Banner - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
+            className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
             onClick={() => router.push('/dashboard/exams')}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
           </Button>
           <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Exam Creation Workflow &bull; Step {step} of 4
-              </span>
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+              <span>Exams Schedule</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Step {step} of 4</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white flex items-center gap-2">
-              Create New Exam 📝
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+              Create New Exam
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Set up test schedules, target batches, total marks, negative marking, and section
-              configs.
+            <p className="text-xs text-slate-600 font-medium">
+              Configure exam schedules, target batches, total marks, and dynamic subject sections.
             </p>
           </div>
         </div>
@@ -203,17 +200,17 @@ function CreateExamContent() {
         <Button
           variant="outline"
           onClick={() => router.push('/dashboard/exams')}
-          className="px-4 gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold shrink-0"
+          className="px-4 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 rounded-xl text-xs shrink-0 shadow-2xs"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-3.5 w-3.5 text-[#0052CC]" />
           Cancel & Exit
         </Button>
       </div>
 
-      {/* Main Page Card Form - Full Width */}
+      {/* Main Page Card Form */}
       <div className="w-full space-y-6">
         {/* Wizard Step Indicator Bar */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-2 shadow-xs">
+        <Card className="rounded-2xl border-slate-200 bg-white p-2 shadow-2xs">
           <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold">
             {[
               { num: 1, label: 'Basic Info' },
@@ -239,11 +236,11 @@ function CreateExamContent() {
                       }
                     }
                   }}
-                  className={`py-2.5 px-3 rounded-xl transition-all font-bold ${
+                  className={`py-2.5 px-3 rounded-xl transition-all font-extrabold ${
                     step === s.num
-                      ? 'bg-violet-600 text-white shadow-sm'
+                      ? 'bg-[#0052CC] text-white shadow-2xs'
                       : step > s.num
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : allowed
                           ? 'text-slate-700 hover:bg-slate-100'
                           : 'text-slate-300 bg-slate-50 cursor-not-allowed opacity-60'
@@ -257,11 +254,11 @@ function CreateExamContent() {
         </Card>
 
         {/* Wizard Form Sections */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs p-6 space-y-6">
+        <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs p-6 space-y-6">
           {step === 1 && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <FileText className="w-5 h-5 text-violet-600" />
+              <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2 border-b border-slate-100 pb-3">
+                <FileText className="w-5 h-5 text-[#0052CC]" />
                 Step 1: Exam Basic Information
               </h3>
 
@@ -282,7 +279,7 @@ function CreateExamContent() {
                   className={`rounded-xl h-11 text-xs font-medium ${
                     !title.trim()
                       ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
-                      : 'border-slate-200 focus:border-violet-500'
+                      : 'border-slate-200 focus:border-[#0052CC]'
                   }`}
                 />
               </div>
@@ -314,7 +311,7 @@ function CreateExamContent() {
                     className={`w-full bg-white border rounded-xl h-11 px-3 text-xs font-medium focus:outline-none ${
                       !courseId
                         ? 'border-amber-300 bg-amber-50/20 focus:border-amber-500'
-                        : 'border-slate-200 focus:border-violet-500'
+                        : 'border-slate-200 focus:border-[#0052CC]'
                     }`}
                   >
                     <option value="">Select Course...</option>
@@ -341,7 +338,7 @@ function CreateExamContent() {
                             setSelectedBatchIds(availableBatches.map((b) => b.id));
                           }
                         }}
-                        className="text-[11px] text-violet-600 font-bold hover:underline"
+                        className="text-[11px] text-[#0052CC] font-bold hover:underline"
                       >
                         {selectedBatchIds.length === availableBatches.length
                           ? 'Deselect All'
@@ -352,7 +349,7 @@ function CreateExamContent() {
 
                   {!courseId ? (
                     <div className="flex flex-col items-center justify-center p-5 bg-amber-50/40 border border-dashed border-amber-200 rounded-xl text-center min-h-[110px]">
-                      <Layers className="w-6 h-6 text-amber-500/80 mb-1" />
+                      <Layers className="w-6 h-6 text-amber-500 mb-1" />
                       <p className="text-xs font-bold text-slate-700">Select a Course First</p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         Batches linked to the chosen course will appear here.
@@ -372,7 +369,7 @@ function CreateExamContent() {
                           key={b.id}
                           className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-medium cursor-pointer transition ${
                             selectedBatchIds.includes(b.id)
-                              ? 'bg-violet-50 border-violet-200 text-violet-900 font-bold shadow-xs'
+                              ? 'bg-blue-50 border-blue-200 text-[#0052CC] font-extrabold shadow-2xs'
                               : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                           }`}
                         >
@@ -386,7 +383,7 @@ function CreateExamContent() {
                                 setSelectedBatchIds(selectedBatchIds.filter((id) => id !== b.id));
                               }
                             }}
-                            className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                            className="w-4 h-4 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
                           />
                           <span>{b.name}</span>
                         </label>
@@ -405,7 +402,7 @@ function CreateExamContent() {
                   placeholder="e.g. Darken bubbles completely using black ballpoint pen only..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-violet-500 font-medium"
+                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 focus:outline-none focus:border-[#0052CC] font-medium"
                 />
               </div>
 
@@ -415,7 +412,7 @@ function CreateExamContent() {
                   <select
                     value={examType}
                     onChange={(e) => setExamType(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-violet-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-[#0052CC]"
                   >
                     <option value="WEEKLY">Weekly Test</option>
                     <option value="MONTHLY">Monthly Test</option>
@@ -430,7 +427,7 @@ function CreateExamContent() {
                   <select
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-violet-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-[#0052CC]"
                   >
                     <option value="OFFLINE">Offline OMR</option>
                     <option value="HYBRID">Hybrid</option>
@@ -443,16 +440,16 @@ function CreateExamContent() {
 
           {step === 2 && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Clock className="w-5 h-5 text-violet-600" />
+              <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Clock className="w-5 h-5 text-[#0052CC]" />
                 Step 2: Schedule & Exam Window
               </h3>
 
-              <div className="p-4 bg-violet-50/70 border border-violet-100 rounded-xl text-xs text-violet-900 flex items-start gap-3">
-                <Clock className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
+              <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-[#0052CC] flex items-start gap-3">
+                <Clock className="w-5 h-5 text-[#0052CC] shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold mb-0.5">Exam Window vs Duration Explanation</p>
-                  <p className="text-violet-700">
+                  <p className="font-extrabold mb-0.5">Exam Window vs Duration Explanation</p>
+                  <p className="text-slate-600 font-medium">
                     Students can click "Ready to Start" anytime during the Exam Window. The
                     countdown timer starts only when the student opens the exam.
                   </p>
@@ -468,7 +465,7 @@ function CreateExamContent() {
                     type="datetime-local"
                     value={examWindowStart}
                     onChange={(e) => setExamWindowStart(e.target.value)}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
 
@@ -480,7 +477,7 @@ function CreateExamContent() {
                     type="datetime-local"
                     value={examWindowEnd}
                     onChange={(e) => setExamWindowEnd(e.target.value)}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
               </div>
@@ -494,7 +491,7 @@ function CreateExamContent() {
                     type="number"
                     value={durationMinutes}
                     onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
 
@@ -506,17 +503,17 @@ function CreateExamContent() {
                     type="number"
                     value={graceMinutes}
                     onChange={(e) => setGraceMinutes(Number(e.target.value))}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
-                  <p className="text-xs font-bold text-slate-900">
+                  <p className="text-xs font-bold text-[#0B2447]">
                     Require Full Duration Available
                   </p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 font-medium">
                     If enabled, blocks student start if remaining window time is less than duration
                     minutes.
                   </p>
@@ -525,7 +522,7 @@ function CreateExamContent() {
                   type="checkbox"
                   checked={requireFullDurationWindow}
                   onChange={(e) => setRequireFullDurationWindow(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="w-5 h-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
                 />
               </div>
             </div>
@@ -533,8 +530,8 @@ function CreateExamContent() {
 
           {step === 3 && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <Layers className="w-5 h-5 text-violet-600" />
+              <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Layers className="w-5 h-5 text-[#0052CC]" />
                 Step 3: Marks & Dynamic Section Breakdown
               </h3>
 
@@ -547,7 +544,7 @@ function CreateExamContent() {
                     type="number"
                     value={totalMarks}
                     onChange={(e) => setTotalMarks(Number(e.target.value))}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
 
@@ -559,7 +556,7 @@ function CreateExamContent() {
                     type="number"
                     value={passingMarks}
                     onChange={(e) => setPassingMarks(Number(e.target.value))}
-                    className="rounded-xl h-11 border-slate-200 focus:border-violet-500 text-xs font-medium"
+                    className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
               </div>
@@ -567,18 +564,18 @@ function CreateExamContent() {
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-violet-600" />
+                    <h4 className="text-xs font-extrabold text-[#0B2447] flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#0052CC]" />
                       Dynamic Section Breakdown
                     </h4>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[11px] text-slate-500 font-medium">
                       Tutor evaluation form will dynamically build input fields from these sections.
                     </p>
                   </div>
                   <Button
                     type="button"
                     onClick={handleAddSection}
-                    className="h-9 px-3 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-bold border border-violet-200"
+                    className="h-9 px-3 bg-blue-50 hover:bg-blue-100 text-[#0052CC] rounded-xl text-xs font-bold border border-blue-200"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" />
                     Add Section
@@ -589,7 +586,7 @@ function CreateExamContent() {
                   {sections.map((sec, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs"
+                      className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-2xs"
                     >
                       <Input
                         type="text"
@@ -625,16 +622,16 @@ function CreateExamContent() {
 
           {step === 4 && (
             <div className="space-y-5">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                <CheckCircle2 className="w-5 h-5 text-violet-600" />
+              <h3 className="text-base font-extrabold text-[#0B2447] flex items-center gap-2 border-b border-slate-100 pb-3">
+                <CheckCircle2 className="w-5 h-5 text-[#0052CC]" />
                 Step 4: Rules & Final Summary
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-xs font-bold text-slate-900">Allow Replace Upload</p>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs font-bold text-[#0B2447]">Allow Replace Upload</p>
+                    <p className="text-[11px] text-slate-500 font-medium">
                       Students can re-upload before window ends
                     </p>
                   </div>
@@ -642,59 +639,63 @@ function CreateExamContent() {
                     type="checkbox"
                     checked={allowReplaceUpload}
                     onChange={(e) => setAllowReplaceUpload(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                    className="w-5 h-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
                   />
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
-                    <p className="text-xs font-bold text-slate-900">Allow Late Upload</p>
-                    <p className="text-[11px] text-slate-500">Allow uploads during grace period</p>
+                    <p className="text-xs font-bold text-[#0B2447]">Allow Late Upload</p>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Allow uploads during grace period
+                    </p>
                   </div>
                   <input
                     type="checkbox"
                     checked={allowLateUpload}
                     onChange={(e) => setAllowLateUpload(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                    className="w-5 h-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
                   />
                 </div>
               </div>
 
               {/* Final Summary Card */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <h4 className="font-bold text-slate-900 text-sm mb-2">
+                <h4 className="font-extrabold text-[#0B2447] text-sm mb-2">
                   Exam Configuration Summary
                 </h4>
-                <div className="grid grid-cols-2 gap-3 text-slate-600">
+                <div className="grid grid-cols-2 gap-3 text-slate-600 font-medium">
                   <p>
                     Title:{' '}
-                    <span className="text-slate-900 font-bold">{title || 'Untitled Exam'}</span>
+                    <span className="text-[#0B2447] font-extrabold">
+                      {title || 'Untitled Exam'}
+                    </span>
                   </p>
                   <p>
                     Type/Mode:{' '}
-                    <span className="text-slate-900 font-bold">
+                    <span className="text-[#0B2447] font-extrabold">
                       {examType} / {mode}
                     </span>
                   </p>
                   <p>
                     Duration:{' '}
-                    <span className="text-slate-900 font-bold">{durationMinutes} mins</span>
+                    <span className="text-[#0B2447] font-extrabold">{durationMinutes} mins</span>
                   </p>
                   <p>
                     Marks:{' '}
-                    <span className="text-slate-900 font-bold">
+                    <span className="text-[#0B2447] font-extrabold">
                       {totalMarks} (Pass: {passingMarks})
                     </span>
                   </p>
                   <p>
                     Sections:{' '}
-                    <span className="text-slate-900 font-bold">
+                    <span className="text-[#0B2447] font-extrabold">
                       {sections.map((s) => s.name).join(', ')}
                     </span>
                   </p>
                   <p>
                     Selected Batches:{' '}
-                    <span className="text-violet-700 font-bold">
+                    <span className="text-[#0052CC] font-extrabold">
                       {selectedBatchIds.length} Batches
                     </span>
                   </p>
@@ -709,7 +710,7 @@ function CreateExamContent() {
               variant="outline"
               disabled={step === 1}
               onClick={() => setStep((step - 1) as any)}
-              className="rounded-xl h-11 px-5 text-xs font-semibold border-slate-200"
+              className="rounded-xl h-11 px-5 text-xs font-bold border-slate-200 text-slate-700"
             >
               Previous
             </Button>
@@ -718,15 +719,21 @@ function CreateExamContent() {
               <Button
                 onClick={() => {
                   if (step === 1 && !isStep1Valid) {
-                    toast.error('Please enter the Exam Title and select Course & Batches before proceeding.');
+                    toast.error(
+                      'Please enter the Exam Title and select Course & Batches before proceeding.',
+                    );
                     return;
                   }
                   if (step === 2 && !isStep2Valid) {
-                    toast.error('Please select both Exam Window Start and End dates before proceeding.');
+                    toast.error(
+                      'Please select both Exam Window Start and End dates before proceeding.',
+                    );
                     return;
                   }
                   if (step === 3 && !isStep3Valid) {
-                    toast.error('Please enter valid Total Marks and Section names before proceeding.');
+                    toast.error(
+                      'Please enter valid Total Marks and Section names before proceeding.',
+                    );
                     return;
                   }
                   setStep((step + 1) as any);
@@ -736,15 +743,17 @@ function CreateExamContent() {
                   (step === 2 && !isStep2Valid) ||
                   (step === 3 && !isStep3Valid)
                 }
-                className="rounded-xl h-11 px-6 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-xl h-11 px-6 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next Step
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={createExamMutation.isPending || !isStep1Valid || !isStep2Valid || !isStep3Valid}
-                className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-2 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={
+                  createExamMutation.isPending || !isStep1Valid || !isStep2Valid || !isStep3Valid
+                }
+                className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs gap-2 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {createExamMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Confirm & Save Exam (Draft)

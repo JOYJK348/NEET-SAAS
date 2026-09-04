@@ -2,20 +2,20 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/providers/auth-provider';
 import { useStudentOverview } from '@/features/student-dashboard/hooks/use-student-overview';
-import { useJoinSession } from '@/features/student-dashboard/hooks/use-student-timetable';
 import type { StudentSessionDto } from '@/features/student-dashboard/types/student-dashboard.types';
 import { api } from '@/lib/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   BookOpen,
   CalendarCheck2,
   ClipboardList,
   GraduationCap,
   Layers,
-  Loader2,
   Radio,
   Sparkles,
   Video,
@@ -24,22 +24,32 @@ import {
   Search,
   X,
   Calendar,
+  Clock,
+  FileText,
+  PlayCircle,
+  CreditCard,
+  ChevronRight,
+  ArrowRight,
+  Building2,
+  Users,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Skeleton Loading ─────────────────────────────────────────────────────────
 function OverviewSkeleton() {
   return (
-    <div className="animate-pulse space-y-5 p-4 sm:p-6 pb-24">
-      <div className="h-28 bg-slate-100 rounded-2xl" />
+    <div className="animate-pulse space-y-5 p-4 sm:p-6 pb-24 font-sans">
+      <div className="h-16 bg-white border border-slate-200 rounded-2xl" />
+      <div className="h-44 bg-blue-50/70 border border-blue-100 rounded-3xl" />
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
         ))}
       </div>
-      <div className="h-56 bg-slate-100 rounded-2xl" />
+      <div className="h-64 bg-slate-100 rounded-3xl" />
     </div>
   );
 }
@@ -49,26 +59,30 @@ function DeliveryBadge({ mode }: { mode: string | null }) {
   if (!mode) return null;
   const config = {
     ONLINE: {
-      label: 'Online',
-      cls: 'bg-sky-100 text-sky-700',
-      icon: <Video className="w-3 h-3" />,
+      label: 'Online Live',
+      cls: 'bg-blue-50 text-[#0052CC] border border-blue-200',
+      icon: <Video className="w-3 h-3 text-[#0052CC]" />,
     },
     CLASSROOM: {
-      label: 'Classroom',
-      cls: 'bg-amber-100 text-amber-700',
-      icon: <MapPin className="w-3 h-3" />,
+      label: 'Campus Classroom',
+      cls: 'bg-amber-50 text-amber-700 border border-amber-200',
+      icon: <MapPin className="w-3 h-3 text-amber-600" />,
     },
     HYBRID: {
-      label: 'Hybrid',
-      cls: 'bg-violet-100 text-violet-700',
-      icon: <Radio className="w-3 h-3" />,
+      label: 'Hybrid Mode',
+      cls: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+      icon: <Radio className="w-3 h-3 text-indigo-600" />,
     },
-  }[mode] ?? { label: mode, cls: 'bg-slate-100 text-slate-600', icon: null };
+  }[mode] ?? {
+    label: mode,
+    cls: 'bg-slate-100 text-slate-600 border border-slate-200',
+    icon: null,
+  };
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+        'inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-2xs',
         config.cls,
       )}
     >
@@ -82,27 +96,27 @@ function DeliveryBadge({ mode }: { mode: string | null }) {
 function LiveStatusBadge({ status }: { status: string }) {
   if (status === 'LIVE_NOW') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        LIVE
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs uppercase tracking-wider">
+        <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+        LIVE NOW
       </span>
     );
   }
   if (status === 'COMPLETED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-        Done
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+        Completed
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200">
       Upcoming
     </span>
   );
 }
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
+// ─── KPI Stat Card ─────────────────────────────────────────────────────────────
 function KpiCard({
   icon,
   label,
@@ -119,7 +133,7 @@ function KpiCard({
   iconColor: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 flex items-start gap-3 hover:-translate-y-0.5 transition-all duration-200">
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 flex items-start gap-3 hover:-translate-y-0.5 hover:border-blue-300 transition-all duration-200">
       <div
         className={cn(
           'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-100 shadow-2xs',
@@ -129,17 +143,15 @@ function KpiCard({
         <span className={iconColor}>{icon}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider leading-none">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">
           {label}
         </p>
-        <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1 leading-none">{value}</p>
-        {sub && <p className="text-[11px] font-semibold text-slate-400 mt-1.5">{sub}</p>}
+        <p className="text-xl sm:text-2xl font-black text-[#0B2447] mt-1 leading-none">{value}</p>
+        {sub && <p className="text-[11px] font-bold text-slate-500 mt-1.5">{sub}</p>}
       </div>
     </div>
   );
 }
-
-import { useRouter } from 'next/navigation';
 
 function formatTime(startsAt: string, endsAt: string): string {
   const fmt = (t: string) => {
@@ -153,8 +165,18 @@ function formatTime(startsAt: string, endsAt: string): string {
   return `${fmt(startsAt)} – ${fmt(endsAt)}`;
 }
 
-// ─── Session Card ─────────────────────────────────────────────────────────────
-function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessionDto; showDate?: boolean; isFeeLocked?: boolean }) {
+import { getClassStatus } from '@/lib/class-status';
+
+// ─── Session Card Component ───────────────────────────────────────────────────
+function SessionCard({
+  session,
+  showDate,
+  isFeeLocked,
+}: {
+  session: StudentSessionDto;
+  showDate?: boolean;
+  isFeeLocked?: boolean;
+}) {
   const router = useRouter();
 
   const handleJoin = async () => {
@@ -163,67 +185,53 @@ function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessi
       router.push('/dashboard/student/fees');
       return;
     }
-    router.push(`/dashboard/student/live/${session.id || 'demo-class-1'}`);
+    const targetUrl = `/dashboard/student/live/${session.id || 'demo-class-1'}`;
+    router.push(targetUrl);
+    if (typeof window !== 'undefined') {
+      window.location.href = targetUrl;
+    }
   };
 
   const subjectName = session.subject?.name ?? 'Subject Session';
   const initial = subjectName.charAt(0).toUpperCase();
-  const isLive = session.liveStatus === 'LIVE_NOW' || session.sessionStatus === 'STARTED';
-  const isCancelled = session.sessionStatus === 'CANCELLED';
 
-  const canJoinNow = useMemo(() => {
-    if (isCancelled) return false;
-    if (session.canJoin || isLive) return true;
-    if (session.sessionStatus === 'COMPLETED' || session.liveStatus === 'COMPLETED') return false;
+  // Tick every 30 seconds so button state auto-updates when class time expires
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-    if (session.date && session.startsAt && session.endsAt) {
-      try {
-        const now = new Date();
-        const dateStr = session.date.includes('T') ? session.date.split('T')[0] : session.date;
-        const todayStr = new Date().toLocaleDateString('en-CA');
-
-        if (dateStr === todayStr) {
-          const [startH, startM] = session.startsAt.split(':').map(Number);
-          const [endH, endM] = session.endsAt.split(':').map(Number);
-
-          const start = new Date();
-          start.setHours(startH, startM, 0, 0);
-
-          const end = new Date();
-          end.setHours(endH, endM, 0, 0);
-
-          // Allow joining 15 mins before start until 15 mins past end time
-          const windowStart = new Date(start.getTime() - 15 * 60 * 1000);
-          const windowEnd = new Date(end.getTime() + 15 * 60 * 1000);
-          return now >= windowStart && now <= windowEnd;
-        }
-      } catch {}
-    }
-
-    return false;
-  }, [isLive, isCancelled, session]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const statusInfo = useMemo(() => getClassStatus(session), [session, tick]);
+  const isCancelled = statusInfo.isCancelled;
+  const isLive = statusInfo.isLive;
+  const canJoinNow = statusInfo.canJoin;
 
   return (
     <div
       className={cn(
-        'bg-white rounded-2xl border border-slate-200/90 p-4 space-y-3.5 shadow-2xs transition-all hover:border-slate-300 hover:shadow-xs',
-        isLive && 'border-emerald-300 bg-gradient-to-r from-emerald-50/60 via-teal-50/30 to-white ring-2 ring-emerald-400/20',
+        'bg-white rounded-2xl border border-slate-200/90 p-3.5 sm:p-4 space-y-3 shadow-2xs transition-all hover:border-blue-300 hover:shadow-xs',
+        isLive &&
+          'border-emerald-300 bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-white ring-2 ring-emerald-400/30',
       )}
     >
-      {/* Card Header: Subject Icon Avatar, Title & Live Status Badge */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-violet-100 border border-violet-200 text-violet-700 flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+      {/* Card Header: Subject, Live Status, Date & Time */}
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC] flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
             {initial}
           </div>
           <div className="min-w-0">
-            <h4 className="font-black text-slate-900 text-sm sm:text-base leading-snug truncate">
+            <h4 className="font-black text-[#0B2447] text-xs sm:text-base leading-tight truncate">
               {subjectName}
             </h4>
-            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-500 font-bold font-mono">
-              <span>{formatTime(session.startsAt, session.endsAt)}</span>
+            <div className="flex flex-wrap items-center gap-1 mt-1 text-[11px] font-bold font-mono">
+              <span className="text-[#0052CC] bg-blue-50/90 px-2 py-0.5 rounded-md border border-blue-100/90">
+                {formatTime(session.startsAt, session.endsAt)}
+              </span>
               {showDate && session.date && (
-                <span className="text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md font-extrabold ml-1">
+                <span className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                   {new Date(session.date).toLocaleDateString('en-IN', {
                     weekday: 'short',
                     day: '2-digit',
@@ -236,59 +244,57 @@ function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessi
         </div>
 
         <div className="shrink-0">
-          <LiveStatusBadge status={session.liveStatus} />
+          <LiveStatusBadge status={statusInfo.isEnded ? 'COMPLETED' : session.liveStatus} />
         </div>
       </div>
 
-      {/* Meta Details Row: Batch, Tutor Name & Delivery Mode */}
-      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      {/* Meta Chips Row */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {(session.sessionType === 'ONE_TO_ONE' || session.studentName) && (
-          <span className="inline-flex items-center gap-1 bg-violet-600 text-white border border-violet-600 px-2.5 py-1 rounded-xl text-[11px] font-black shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
-            <span>1:1 Live Class {session.studentName ? `(${session.studentName})` : ''}</span>
+          <span className="inline-flex items-center gap-1 bg-[#0052CC] text-white border border-[#0052CC] px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black shadow-xs">
+            <Sparkles className="w-3 h-3 shrink-0 text-white" />
+            <span>1:1 Live</span>
           </span>
         )}
         {session.batch?.name && (
-          <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
-            <Layers className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-            <span className="truncate max-w-[150px] sm:max-w-none">{session.batch.name}</span>
+          <span className="inline-flex items-center gap-1 bg-blue-50/60 border border-blue-200/80 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-extrabold text-[#0B2447]">
+            <Layers className="w-3 h-3 text-[#0052CC] shrink-0" />
+            <span className="truncate max-w-[120px] sm:max-w-none">{session.batch.name}</span>
           </span>
         )}
-        <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-slate-700">
-          <span className="text-slate-400">👤 Tutor:</span>
-          <strong className="text-slate-900 font-black">
+        <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-extrabold text-slate-700">
+          <span className="text-slate-400">👤</span>
+          <strong className="text-[#0B2447] font-black truncate max-w-[100px] sm:max-w-none">
             {session.tutorName || 'Faculty'}
           </strong>
         </span>
         <DeliveryBadge mode={session.deliveryMode} />
       </div>
 
-      {/* Action Button & 1-Click Google Calendar Link */}
+      {/* Action Buttons Row */}
       {!isCancelled && (
-        <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
           <button
             onClick={handleJoin}
             disabled={!canJoinNow}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all duration-150 min-h-[38px] shadow-2xs text-center',
+              'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-black transition-all duration-150 min-h-[36px] shadow-2xs text-center truncate',
               canJoinNow
                 ? isFeeLocked
                   ? 'bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white shadow-rose-500/20 active:scale-98 cursor-pointer'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/20 active:scale-98 cursor-pointer'
+                  : 'bg-[#0052CC] hover:bg-blue-700 text-white shadow-blue-500/20 active:scale-98 cursor-pointer'
                 : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed',
             )}
           >
             {isFeeLocked && canJoinNow ? (
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1 truncate">
                 <span>🔒</span>
-                <span>Fee Payment Required 💳</span>
+                <span>Fee Due 💳</span>
               </span>
             ) : (
               <>
-                <Video className="w-4 h-4" />
-                <span>
-                  {canJoinNow ? 'Join Live Class 🚀' : `Upcoming Class (${session.startsAt}) ⏳`}
-                </span>
+                <Video className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{statusInfo.buttonLabel}</span>
               </>
             )}
           </button>
@@ -305,11 +311,11 @@ function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessi
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 font-extrabold text-xs border border-violet-200 shadow-2xs transition cursor-pointer shrink-0"
-            title="Add this class to Google Calendar with 15-min reminder alert"
+            className="flex items-center justify-center gap-1 px-2.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0052CC] font-extrabold text-xs border border-blue-200 shadow-2xs transition cursor-pointer shrink-0"
+            title="Add this class to Google Calendar"
           >
-            <Calendar className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-            <span>Add to Calendar 📅</span>
+            <Calendar className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
+            <span className="hidden sm:inline">Add Calendar</span>
           </a>
         </div>
       )}
@@ -317,21 +323,26 @@ function SessionCard({ session, showDate, isFeeLocked }: { session: StudentSessi
   );
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptySchedule({ title = 'No classes today', sub = 'Enjoy your free day! 🎉' }: { title?: string; sub?: string }) {
+// ─── Empty State ──────────────────────────────────────────────────────────────
+function EmptySchedule({
+  title = 'No classes today',
+  sub = 'Enjoy your free day! 🎉',
+}: {
+  title?: string;
+  sub?: string;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
-      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-2.5">
-        <CalendarCheck2 className="w-5 h-5 text-slate-400" />
+    <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+      <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-2.5 shadow-2xs">
+        <CalendarCheck2 className="w-5 h-5 text-[#0052CC]" />
       </div>
-      <p className="text-sm font-bold text-slate-700">{title}</p>
-      <p className="text-xs text-slate-400 mt-1 max-w-xs">{sub}</p>
+      <p className="text-sm font-black text-[#0B2447]">{title}</p>
+      <p className="text-xs text-slate-500 font-medium mt-1 max-w-xs">{sub}</p>
     </div>
   );
 }
 
-// ─── Student Upcoming Schedule Section (Bounded Scroll + Search/Filter) ─────
-
+// ─── Upcoming Schedule Section Component ──────────────────────────────────────
 function StudentUpcomingScheduleSection({
   upcomingSchedule,
   isFeeLocked,
@@ -342,7 +353,6 @@ function StudentUpcomingScheduleSection({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
 
-  // Standard NEET curriculum subjects + any extra scheduled subjects
   const subjectList = useMemo(() => {
     const defaultSubjects = ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology', 'Maths'];
     const set = new Set<string>(defaultSubjects);
@@ -352,7 +362,6 @@ function StudentUpcomingScheduleSection({
     return Array.from(set);
   }, [upcomingSchedule]);
 
-  // Filtered upcoming sessions
   const filteredSchedule = useMemo(() => {
     return (upcomingSchedule || []).filter((s) => {
       const subj = (s.subject?.name || '').toLowerCase();
@@ -362,11 +371,7 @@ function StudentUpcomingScheduleSection({
       const q = searchQuery.toLowerCase().trim();
 
       const matchesSearch =
-        !q ||
-        subj.includes(q) ||
-        batch.includes(q) ||
-        tutor.includes(q) ||
-        mode.includes(q);
+        !q || subj.includes(q) || batch.includes(q) || tutor.includes(q) || mode.includes(q);
 
       const matchesSubject =
         selectedSubjectFilter === 'ALL' ||
@@ -377,17 +382,17 @@ function StudentUpcomingScheduleSection({
   }, [upcomingSchedule, searchQuery, selectedSubjectFilter]);
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-3.5 sm:p-5 shadow-2xs space-y-4 flex flex-col justify-between w-full">
       {/* Section Header */}
       <div className="space-y-3 border-b border-slate-100 pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <CalendarCheck2 className="w-4.5 h-4.5 text-sky-600 shrink-0" />
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+            <CalendarCheck2 className="w-4.5 h-4.5 text-[#0052CC] shrink-0" />
+            <h2 className="text-sm font-black text-[#0B2447] uppercase tracking-wider">
               Upcoming Sessions (Next 7 Days)
             </h2>
           </div>
-          <span className="self-start sm:self-auto text-xs font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-full border border-sky-100 shrink-0">
+          <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0">
             {filteredSchedule.length} of {upcomingSchedule?.length || 0} Sessions
           </span>
         </div>
@@ -402,7 +407,7 @@ function StudentUpcomingScheduleSection({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search subject, tutor or batch..."
-              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 transition"
+              className="w-full pl-9 pr-7 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-[#0052CC] transition"
             />
             {searchQuery && (
               <button
@@ -416,12 +421,12 @@ function StudentUpcomingScheduleSection({
 
           {/* Subject Filter Pills */}
           {subjectList.length > 0 && (
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px] font-bold">
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px] font-extrabold">
               <button
                 onClick={() => setSelectedSubjectFilter('ALL')}
                 className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
                   selectedSubjectFilter === 'ALL'
-                    ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                    ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs'
                     : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -433,7 +438,7 @@ function StudentUpcomingScheduleSection({
                   onClick={() => setSelectedSubjectFilter(subj)}
                   className={`px-2.5 py-1.5 rounded-lg border transition shrink-0 cursor-pointer ${
                     selectedSubjectFilter.toLowerCase() === subj.toLowerCase()
-                      ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                      ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs'
                       : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -448,16 +453,21 @@ function StudentUpcomingScheduleSection({
       {/* Fixed Height Scrollable Sessions Container */}
       <div className="max-h-[500px] overflow-y-auto pr-1 space-y-3 scrollbar-thin scrollbar-thumb-slate-200">
         {!upcomingSchedule || upcomingSchedule.length === 0 ? (
-          <EmptySchedule title="No upcoming classes scheduled" sub="Upcoming sessions for the next 7 days will appear here." />
+          <EmptySchedule
+            title="No upcoming classes scheduled"
+            sub="Upcoming sessions for the next 7 days will appear here."
+          />
         ) : filteredSchedule.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40 space-y-2">
-            <p className="text-xs font-bold text-slate-700">No sessions match your search or filter</p>
+            <p className="text-xs font-bold text-slate-700">
+              No sessions match your search or filter
+            </p>
             <button
               onClick={() => {
                 setSearchQuery('');
                 setSelectedSubjectFilter('ALL');
               }}
-              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-bold shadow-2xs hover:bg-violet-700 transition cursor-pointer"
+              className="px-3 py-1.5 rounded-lg bg-[#0052CC] text-white text-xs font-extrabold shadow-2xs hover:bg-blue-700 transition cursor-pointer"
             >
               Clear Filters
             </button>
@@ -479,6 +489,7 @@ function StudentUpcomingScheduleSection({
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 function StudentOverviewContent() {
+  const router = useRouter();
   const { user } = useAuth();
   const { overview, isLoading, error } = useStudentOverview();
   const [isFeeLocked, setIsFeeLocked] = useState(false);
@@ -499,7 +510,7 @@ function StudentOverviewContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 flex items-center justify-center font-sans">
         <div className="text-center">
           <AlertCircle className="w-10 h-10 text-rose-400 mx-auto mb-3" />
           <p className="text-sm font-semibold text-slate-700">Could not load dashboard</p>
@@ -510,60 +521,178 @@ function StudentOverviewContent() {
   }
 
   const stats = overview?.stats;
+  const liveClassToday =
+    overview?.liveNow && overview.liveNow.length > 0
+      ? overview.liveNow[0]
+      : overview?.todaysSchedule && overview.todaysSchedule.length > 0
+        ? overview.todaysSchedule[0]
+        : null;
+
+  const studentName = user?.firstName || 'Student';
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC] p-4 sm:p-6 pb-24 space-y-5">
-      {/* ── Welcome Banner ─────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-5 text-white shadow-md shadow-violet-200">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Student Dashboard
+    <div className="w-full pb-20 space-y-5 font-sans">
+      {/* ── 1. Top Welcome Header Card (Matched with Main ISML LMS Dashboard) ── */}
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3 font-sans">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 border-2 border-[#0052CC] shrink-0 shadow-2xs">
+            <AvatarImage src={user?.avatar || undefined} alt={studentName} />
+            <AvatarFallback className="bg-[#0052CC] text-white font-extrabold text-sm sm:text-base">
+              {studentName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 truncate">
+              <h1 className="text-sm sm:text-base font-extrabold text-[#0B2447] truncate">
+                {greeting}, {studentName}!
+              </h1>
+              <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-xs font-bold bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
+                STUDENT PORTAL
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight">
-              {greeting}, {user?.firstName}! 👋
-            </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              {new Date().toLocaleDateString('en-IN', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
+            <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+              <span className="font-semibold text-slate-700">
+                {overview?.enrolledCourses?.[0] || 'NEET Coaching Academy'}
+              </span>
+              <span className="mx-1">•</span>
+              <span>AY 2026–2027 Academic Session</span>
             </p>
-
-            <div className="flex flex-wrap items-center gap-2 mt-2.5">
-              {overview?.enrolledCourses && overview.enrolledCourses.length > 0 && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
-                  Course: {overview.enrolledCourses.join(', ')}
-                </span>
-              )}
-              {overview?.enrolledBatches && overview.enrolledBatches.length > 0 && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white border border-white/20">
-                  Batches: {overview.enrolledBatches.join(', ')}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0">
-            <GraduationCap className="w-6 h-6 text-white" />
           </div>
         </div>
 
-        {/* Live Now Alert */}
-        {overview && overview.liveNow.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 bg-emerald-500/20 rounded-xl px-3 py-2 border border-emerald-400/30">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-            <span className="text-xs font-bold text-emerald-100">
-              {overview.liveNow[0].subject?.name ?? 'A class'} is LIVE right now!
-            </span>
-          </div>
-        )}
+        <Link
+          href="/dashboard/timetable"
+          className="hidden xs:flex px-3 py-2 bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-2xs items-center gap-1.5 shrink-0 transition-all cursor-pointer"
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>My Timetable</span>
+        </Link>
       </div>
 
-      {/* ── KPI Strip ──────────────────────────────────────────────────── */}
+      {/* 🔴 2. LIVE ACADEMIC SESSION BANNER - SHOWN STRICTLY WHEN LIVE CLASS IS ACTIVE ── */}
+      {overview &&
+        overview.liveNow &&
+        overview.liveNow.length > 0 &&
+        (() => {
+          const activeLiveSession = overview.liveNow[0];
+          return (
+            <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xs space-y-3 border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans animate-in fade-in duration-200">
+              <div className="space-y-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] sm:text-xs font-extrabold rounded-full flex items-center gap-1.5 shrink-0 uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                    LIVE CLASS ACTIVE NOW
+                  </span>
+                  <span className="text-xs text-[#0052CC] bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 rounded-full font-extrabold truncate">
+                    {activeLiveSession.subject?.name || 'NEET Live Batch'}
+                  </span>
+                </div>
+
+                <h2 className="text-lg sm:text-xl font-black text-[#0B2447] tracking-tight leading-snug">
+                  {activeLiveSession.batch?.name
+                    ? `${activeLiveSession.subject?.name || 'Academic Class'} - ${activeLiveSession.batch.name}`
+                    : 'Live NEET Masterclass Session'}
+                </h2>
+
+                <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium pt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[#0052CC] font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs">
+                    <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
+                    {formatTime(activeLiveSession.startsAt, activeLiveSession.endsAt)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-semibold">
+                    <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                    Campus: Main Branch
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-bold text-slate-800">
+                    <Users className="w-3.5 h-3.5 text-[#0052CC]" />
+                    Faculty: {activeLiveSession.tutorName || 'Faculty'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (isFeeLocked) {
+                    toast.error('Live class access is locked due to pending fee dues.');
+                    router.push('/dashboard/student/fees');
+                    return;
+                  }
+                  const targetUrl = `/dashboard/student/live/${activeLiveSession.id || 'demo-class-1'}`;
+                  router.push(targetUrl);
+                  if (typeof window !== 'undefined') {
+                    window.location.href = targetUrl;
+                  }
+                }}
+                className="w-full md:w-auto px-6 py-3.5 bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-black rounded-xl shadow-2xs flex items-center justify-center gap-2 shrink-0 transition-all hover:shadow-md cursor-pointer"
+              >
+                <Video className="w-4.5 h-4.5 text-white" />
+                <span>JOIN LIVE CLASS 🚀</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })()}
+
+      {/* ── 3. Quick Action Shortcuts Strip ─────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Link
+          href="/dashboard/timetable"
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#0052CC] hover:shadow-xs transition group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition">
+            <Clock className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black text-[#0B2447] truncate">My Timetable</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate">Class Schedules</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#0052CC] transition" />
+        </Link>
+
+        <Link
+          href="/dashboard/exams"
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#0052CC] hover:shadow-xs transition group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white transition">
+            <FileText className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black text-[#0B2447] truncate">Exams & PYQ</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate">Mock Test Series</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-600 transition" />
+        </Link>
+
+        <Link
+          href="/dashboard/recordings"
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#0052CC] hover:shadow-xs transition group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-700 group-hover:bg-indigo-600 group-hover:text-white transition">
+            <PlayCircle className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black text-[#0B2447] truncate">Recordings</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate">Class Archives</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition" />
+        </Link>
+
+        <Link
+          href="/dashboard/student/fees"
+          className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:border-[#0052CC] hover:shadow-xs transition group"
+        >
+          <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 group-hover:bg-amber-600 group-hover:text-white transition">
+            <CreditCard className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-black text-[#0B2447] truncate">Fee Accounts</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate">Installments & Dues</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-600 transition" />
+        </Link>
+      </div>
+
+      {/* ── 4. KPI Strip ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiCard
           icon={<CalendarCheck2 className="w-5 h-5" />}
@@ -571,18 +700,18 @@ function StudentOverviewContent() {
           value={stats?.todaysClasses ?? '—'}
           sub={stats?.upcomingClasses ? `+${stats.upcomingClasses} upcoming` : 'No upcoming'}
           iconBg="bg-blue-50"
-          iconColor="text-blue-500"
+          iconColor="text-[#0052CC]"
         />
         <KpiCard
           icon={<Layers className="w-5 h-5" />}
           label="Active Batches"
           value={stats?.activeBatches ?? '—'}
           iconBg="bg-emerald-50"
-          iconColor="text-emerald-500"
+          iconColor="text-emerald-700"
         />
         <KpiCard
           icon={<ClipboardList className="w-5 h-5" />}
-          label="Attendance"
+          label="Attendance Rate"
           value={stats?.attendanceRate != null ? `${stats.attendanceRate}%` : 'Nil'}
           sub={
             stats?.attendanceRate != null
@@ -598,8 +727,8 @@ function StudentOverviewContent() {
           }
           iconColor={
             stats?.attendanceRate != null && stats.attendanceRate < 75
-              ? 'text-rose-500'
-              : 'text-amber-500'
+              ? 'text-rose-600'
+              : 'text-amber-600'
           }
         />
         <KpiCard
@@ -607,21 +736,21 @@ function StudentOverviewContent() {
           label="Upcoming"
           value={stats?.upcomingClasses ?? '—'}
           sub="Next 7 days"
-          iconBg="bg-violet-50"
-          iconColor="text-violet-500"
+          iconBg="bg-blue-50"
+          iconColor="text-[#0052CC]"
         />
       </div>
 
-      {/* ── Today's Schedule & Upcoming Schedule 2-Column Responsive Grid ──── */}
+      {/* ── 5. Today's Schedule & Upcoming Schedule 2-Column Grid ──────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Today's Classes */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-3.5 sm:p-5 shadow-2xs space-y-4 w-full">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-violet-600" />
+            <h2 className="text-sm font-black text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[#0052CC]" />
               Today&apos;s Class Schedule
             </h2>
-            <span className="text-xs font-black text-violet-700 bg-violet-50 px-2.5 py-1 rounded-full border border-violet-100">
+            <span className="text-xs font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
               {overview?.todaysSchedule?.length || 0} Sessions
             </span>
           </div>

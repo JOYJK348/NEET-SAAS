@@ -7,7 +7,7 @@ import { useBatchAttendance } from '@/features/attendance/hooks/use-batch-attend
 import { LoadingSpinner } from '@/components/ui/loading';
 import { ErrorState } from '@/components/ui/error-state';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ import {
   Search,
   ChevronRight,
   GraduationCap,
-  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -78,29 +77,26 @@ export default function BatchAttendancePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* Signature Header Banner - Violet Gradient */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
               onClick={() => router.push('/dashboard/attendance')}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
             </Button>
             <div>
-              <div className="flex items-center gap-1.5 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-                <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                  Batch Attendance &bull; {batchCode}
-                </span>
+              <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+                <span>Attendance Overview</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+                <span>Batch Roster ({batchCode})</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-                {batchName} 📊
-              </h1>
-              <p className="text-violet-200 text-xs mt-0.5">
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">{batchName}</h1>
+              <p className="text-xs text-slate-600 font-medium">
                 Detailed student attendance roster, session metrics, and performance analytics.
               </p>
             </div>
@@ -109,17 +105,17 @@ export default function BatchAttendancePage() {
 
         {/* KPI Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-violet-300">
-            <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <BarChart3 className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Average Attendance
               </p>
               <p
                 className={cn(
-                  'text-xl sm:text-2xl font-black mt-0.5',
+                  'text-xl sm:text-2xl font-extrabold mt-0.5',
                   overallRate >= 75
                     ? 'text-emerald-600'
                     : overallRate >= 60
@@ -132,48 +128,48 @@ export default function BatchAttendancePage() {
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-blue-300">
-            <div className="p-2.5 rounded-xl border border-blue-100 bg-blue-50 text-blue-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
               <Users className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Enrolled Students
               </p>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
+              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
                 {totalStudents}
               </p>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-emerald-300">
-            <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
               <CalendarCheck className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Total Sessions
               </p>
               <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-xl sm:text-2xl font-black text-slate-900">
+                <span className="text-xl sm:text-2xl font-extrabold text-[#0B2447]">
                   {sessionsConducted}
                 </span>
-                <span className="text-[11px] font-semibold text-slate-500">
+                <span className="text-[11px] font-bold text-slate-500">
                   ({sessionsMarked} marked)
                 </span>
               </div>
             </div>
           </Card>
 
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-rose-300">
-            <div className="p-2.5 rounded-xl border border-rose-100 bg-rose-50 text-rose-600 shrink-0">
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+            <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 shrink-0">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Low Attendance (&lt;75%)
               </p>
-              <p className="text-xl sm:text-2xl font-black text-rose-600 mt-0.5">
+              <p className="text-xl sm:text-2xl font-extrabold text-rose-600 mt-0.5">
                 {students.filter((s) => (s.rate ?? 0) < 75).length}
               </p>
             </div>
@@ -181,7 +177,7 @@ export default function BatchAttendancePage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative flex-1 w-full max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
@@ -189,7 +185,7 @@ export default function BatchAttendancePage() {
               placeholder="Search student by name or code..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 rounded-xl h-11 border-slate-200 bg-white focus:border-violet-500 text-xs font-medium"
+              className="pl-10 rounded-xl h-11 border-slate-200 bg-white focus:border-[#0052CC] text-xs font-bold"
             />
           </div>
 
@@ -197,7 +193,7 @@ export default function BatchAttendancePage() {
             variant="outline"
             onClick={() => setFilterBelow75(!filterBelow75)}
             className={cn(
-              'rounded-xl h-11 px-4 text-xs font-bold transition-all w-full sm:w-auto',
+              'rounded-xl h-11 px-4 text-xs font-extrabold transition-all w-full sm:w-auto',
               filterBelow75
                 ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                 : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50',
@@ -220,24 +216,24 @@ export default function BatchAttendancePage() {
             />
           </Card>
         ) : (
-          <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+          <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3.5">
+                  <tr className="border-b border-slate-100 bg-slate-50">
+                    <th className="text-left text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-4 py-3.5">
                       Student Details
                     </th>
-                    <th className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-3.5">
+                    <th className="text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 py-3.5">
                       Present
                     </th>
-                    <th className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-3.5">
+                    <th className="text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 py-3.5">
                       Absent
                     </th>
-                    <th className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-3.5">
+                    <th className="text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 py-3.5">
                       Late
                     </th>
-                    <th className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-3.5">
+                    <th className="text-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider px-3 py-3.5">
                       Attendance Rate
                     </th>
                     <th className="text-right px-4 py-3.5">Action</th>
@@ -247,40 +243,40 @@ export default function BatchAttendancePage() {
                   {filtered.map((s) => (
                     <tr
                       key={s.studentAdmissionId}
-                      className="hover:bg-slate-50/60 transition-colors"
+                      className="hover:bg-slate-50/80 transition-colors"
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center flex-shrink-0 text-violet-600">
+                          <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0 text-[#0052CC]">
                             <GraduationCap className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-slate-900">{s.studentName}</p>
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            <p className="text-xs font-extrabold text-[#0B2447]">{s.studentName}</p>
+                            <p className="text-[10px] text-[#0052CC] font-mono font-bold mt-0.5">
                               {s.studentCode}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="text-center px-3 py-3.5">
-                        <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md">
+                        <span className="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
                           {s.present}
                         </span>
                       </td>
                       <td className="text-center px-3 py-3.5">
-                        <span className="text-xs font-extrabold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md">
+                        <span className="text-xs font-extrabold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200">
                           {s.absent}
                         </span>
                       </td>
                       <td className="text-center px-3 py-3.5">
-                        <span className="text-xs font-extrabold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md">
+                        <span className="text-xs font-extrabold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
                           {s.late}
                         </span>
                       </td>
                       <td className="text-center px-3 py-3.5">
                         <span
                           className={cn(
-                            'text-xs font-black px-3 py-1 rounded-lg border inline-block',
+                            'text-xs font-extrabold px-3 py-1 rounded-lg border inline-block',
                             (s.rate ?? 0) >= 75
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : (s.rate ?? 0) >= 60
@@ -294,7 +290,7 @@ export default function BatchAttendancePage() {
                       <td className="text-right px-4 py-3.5">
                         <Link
                           href={`/dashboard/attendance/students/${s.studentAdmissionId}`}
-                          className="text-xs font-bold text-violet-600 hover:text-violet-800 hover:underline inline-flex items-center gap-1"
+                          className="text-xs font-extrabold text-[#0052CC] hover:underline inline-flex items-center gap-1"
                         >
                           View Log <ChevronRight className="w-3.5 h-3.5" />
                         </Link>

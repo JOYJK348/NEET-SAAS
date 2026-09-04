@@ -6,6 +6,7 @@ export function useBatchAttendance(batchId: string) {
     queryKey: ['attendance', 'admin', 'batch', batchId],
     queryFn: () => attendanceApi.getBatchDetail(batchId),
     enabled: !!batchId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }

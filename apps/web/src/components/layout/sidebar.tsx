@@ -37,7 +37,15 @@ import {
   FolderTree,
   ClipboardCheck,
 } from 'lucide-react';
+import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
 import { useAuth } from '@/providers/auth-provider';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  studentDashboardKeys,
+  studentDashboardApi,
+} from '@/features/student-dashboard/api/student-dashboard.api';
+import { api } from '@/lib/api';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChildSwitcher } from '@/features/parent-portal/components/ChildSwitcher';
@@ -106,37 +114,43 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       name: 'Overview',
       href: '/dashboard/tutor',
       icon: LayoutDashboard,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Timetable',
       href: '/dashboard/tutor/timetable',
       icon: Calendar,
-      iconColor: 'text-violet-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Classes',
       href: '/dashboard/tutor/classes',
       icon: BookOpen,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Batches',
       href: '/dashboard/tutor/batches',
       icon: Layers,
-      iconColor: 'text-indigo-500',
+      iconColor: 'text-[#0052CC]',
+    },
+    {
+      name: 'Class Attendance',
+      href: '/dashboard/tutor/attendance',
+      icon: ClipboardCheck,
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Exams & Evaluation',
       href: '/dashboard/tutor/exams',
       icon: FileText,
-      iconColor: 'text-emerald-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Recordings Library',
       href: '/dashboard/tutor/recordings',
       icon: Video,
-      iconColor: 'text-rose-500',
+      iconColor: 'text-[#0052CC]',
     },
   ];
 
@@ -145,43 +159,43 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       name: 'Dashboard Overview',
       href: '/dashboard/student',
       icon: LayoutDashboard,
-      iconColor: 'text-violet-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Schedule',
       href: '/dashboard/student/timetable',
       icon: Clock,
-      iconColor: 'text-indigo-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Enrolled Courses',
       href: '/dashboard/student/courses',
       icon: BookOpen,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Exams & Mock Tests',
       href: '/dashboard/student/exams',
       icon: FileText,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Video Recordings',
       href: '/dashboard/student/recordings',
       icon: PlayCircle,
-      iconColor: 'text-rose-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Question Papers (PYQ)',
       href: '/dashboard/student/pyq',
       icon: FileText,
-      iconColor: 'text-amber-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Fees & Receipts',
       href: '/dashboard/student/fees',
       icon: DollarSign,
-      iconColor: 'text-emerald-500',
+      iconColor: 'text-[#0052CC]',
     },
   ];
 
@@ -190,37 +204,37 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       name: 'Academic Progress',
       href: '/dashboard/parent/academics',
       icon: GraduationCap,
-      iconColor: 'text-indigo-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Student Attendance',
       href: '/dashboard/parent/attendance',
       icon: Calendar,
-      iconColor: 'text-violet-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Exam Performance',
       href: '/dashboard/parent/exams',
       icon: FileText,
-      iconColor: 'text-emerald-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Enrolled Courses',
       href: '/dashboard/parent/courses',
       icon: BookOpen,
-      iconColor: 'text-blue-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'Assigned Batches',
       href: '/dashboard/parent/batches',
       icon: Layers,
-      iconColor: 'text-cyan-500',
+      iconColor: 'text-[#0052CC]',
     },
     {
       name: 'My Fee Account',
       href: '/dashboard/parent/fees',
       icon: DollarSign,
-      iconColor: 'text-emerald-500',
+      iconColor: 'text-[#0052CC]',
     },
   ];
 
@@ -238,43 +252,39 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           name: 'Dashboard',
           href: '/dashboard',
           icon: LayoutDashboard,
-          iconColor: 'text-violet-500',
         },
         {
           name: 'Branches & Campuses',
           href: '/tenant-admin/branches',
           icon: Building2,
-          iconColor: 'text-blue-500',
         },
         {
           name: 'Academic Years',
           href: '/tenant-admin/academic-years',
           icon: Calendar,
-          iconColor: 'text-emerald-500',
         },
 
-      ],
-    },
-    {
-      category: 'People',
-      items: [
         {
-          name: 'Students & Admissions',
-          href: '/dashboard/students',
-          icon: GraduationCap,
-          iconColor: 'text-indigo-500',
-        },
-        {
-          name: 'Faculty / Tutors',
-          href: '/dashboard/tutors',
+          name: 'People & Accounts',
+          href: '#',
           icon: Users,
-          iconColor: 'text-cyan-500',
-        },
-        {
-          name: 'Parents Directory',
-          href: '/tenant-admin/parents',
-          icon: Contact,
-          iconColor: 'text-teal-500',
+          children: [
+            {
+              name: 'Students & Admissions',
+              href: '/dashboard/students',
+              icon: GraduationCap,
+            },
+            {
+              name: 'Teachers & Faculty',
+              href: '/dashboard/tutors',
+              icon: Contact,
+            },
+            {
+              name: 'Parents Directory',
+              href: '/tenant-admin/parents',
+              icon: Users,
+            },
+          ],
         },
       ],
     },
@@ -282,51 +292,36 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Academics',
       items: [
         {
-          name: 'Subjects Directory',
-          href: '/tenant-admin/subjects',
+          name: 'Courses & Master Subjects',
+          href: '#',
           icon: BookOpen,
-          iconColor: 'text-blue-600',
+          children: [
+            {
+              name: 'Course Programs',
+              href: '/tenant-admin/courses',
+              icon: BookMarked,
+            },
+            {
+              name: 'Curriculum & Subjects',
+              href: '/tenant-admin/curriculum',
+              icon: FolderTree,
+            },
+          ],
         },
         {
-          name: 'Courses & Programs',
-          href: '/tenant-admin/courses',
-          icon: BookMarked,
-          iconColor: 'text-purple-600',
-        },
-        {
-          name: 'Batches',
+          name: 'Batches & Classrooms',
           href: '/dashboard/batches',
           icon: Layers,
-          iconColor: 'text-indigo-600',
         },
-        {
-          name: 'Curriculum Builder',
-          href: '/tenant-admin/curriculum',
-          icon: FolderTree,
-          iconColor: 'text-emerald-600',
-        },
-    {
-      name: 'Examinations',
-      href: '/dashboard/exams',
-      icon: Target,
-      iconColor: 'text-red-500',
-    },
-    {
-      name: 'Question Papers (PYQ)',
-      href: '/dashboard/pyq',
-      icon: FileText,
-      iconColor: 'text-amber-500',
-    },
       ],
     },
     {
       category: 'Schedule',
       items: [
         {
-          name: 'Timetable Schedule',
+          name: 'Class Timetable',
           href: '/dashboard/timetable',
           icon: Clock,
-          iconColor: 'text-amber-600',
         },
       ],
     },
@@ -334,16 +329,25 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Operations',
       items: [
         {
-          name: 'Attendance',
+          name: 'Student Attendance',
           href: '/dashboard/attendance',
-          icon: ClipboardCheck,
-          iconColor: 'text-teal-500',
+          icon: UserCheck,
         },
         {
-          name: 'Recordings Library',
+          name: 'Class Recordings',
           href: '/dashboard/recordings',
+          icon: PlayCircle,
+        },
+        {
+          name: 'Exams & Test Papers',
+          href: '/dashboard/exams',
           icon: FileText,
-          iconColor: 'text-purple-500',
+        },
+
+        {
+          name: 'Question Bank & PYQ',
+          href: '/dashboard/pyq',
+          icon: FileText,
         },
       ],
     },
@@ -351,45 +355,219 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       category: 'Finance',
       items: [
         {
-          name: 'Fees & Billing',
+          name: 'Fee Management',
           href: '/tenant-admin/fees',
           icon: DollarSign,
-          iconColor: 'text-emerald-500',
         },
       ],
     },
-
-
-
   ];
 
-  // Auto prefetch all sidebar routes into Next.js router cache in background
-  useEffect(() => {
-    const handlePrefetch = (href?: string) => {
-      if (href && href !== '#' && !href.startsWith('http')) {
-        router.prefetch(href);
-      }
-    };
-
-    const prefetchList = (items: NavItem[]) => {
-      items.forEach((item) => {
-        handlePrefetch(item.href);
-        if (item.children) prefetchList(item.children);
-      });
-    };
-
-    prefetchList(platformNavigation);
-    prefetchList(tutorNavigation);
-    prefetchList(studentNavigation);
-    prefetchList(parentNavigation);
-    tenantNavigation.forEach((g) => prefetchList(g.items));
-  }, [router]);
+  const queryClient = useQueryClient();
 
   const handleLinkHover = (href: string) => {
-    if (href && href !== '#' && !href.startsWith('http')) {
+    if (href && href !== '#') {
       router.prefetch(href);
+      try {
+        if (href === '/dashboard/student') {
+          queryClient.prefetchQuery({
+            queryKey: studentDashboardKeys.overview(),
+            queryFn: () => studentDashboardApi.getOverview(),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/timetable' || href === '/dashboard/timetable') {
+          queryClient.prefetchQuery({
+            queryKey: studentDashboardKeys.timetable(),
+            queryFn: () => studentDashboardApi.getTimetable(),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/courses') {
+          queryClient.prefetchQuery({
+            queryKey: studentDashboardKeys.courses(),
+            queryFn: () => studentDashboardApi.getCourses(),
+            staleTime: STALE_TIMES.MASTERS,
+          });
+        } else if (href === '/dashboard/student/exams' || href === '/dashboard/exams') {
+          queryClient.prefetchQuery({
+            queryKey: ['student-exams'],
+            queryFn: ({ signal }) =>
+              api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/recordings' || href === '/dashboard/recordings') {
+          queryClient.prefetchQuery({
+            queryKey: ['student-recordings-all'],
+            queryFn: ({ signal }) =>
+              api.get('/recordings', {
+                params: { page: 1, limit: 100 },
+                signal,
+                skipGlobalToast: true,
+              }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/pyq' || href === '/dashboard/pyq') {
+          queryClient.prefetchQuery({
+            queryKey: ['student-pyq-all'],
+            queryFn: ({ signal }) => api.get('/pyq', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/fees' || href === '/tenant-admin/fees') {
+          const studentAdmissionId =
+            (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
+          queryClient.prefetchQuery({
+            queryKey: ['student-fee-account', studentAdmissionId],
+            queryFn: ({ signal }) =>
+              api.get(`/billing/fee-assignments/${studentAdmissionId}`, {
+                signal,
+                skipGlobalToast: true,
+              }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/parent/fees') {
+          const childId =
+            typeof window !== 'undefined'
+              ? localStorage.getItem('parent_portal_selected_child_id')
+              : null;
+          if (childId) {
+            queryClient.prefetchQuery({
+              queryKey: ['parent', 'fees', childId],
+              queryFn: () => parentPortalService.getFees(childId),
+              staleTime: STALE_TIMES.DEFAULT,
+            });
+          }
+        } else if (
+          href === '/dashboard/parent/academics' ||
+          href === '/dashboard/parent/courses' ||
+          href === '/dashboard/parent/batches'
+        ) {
+          const childId =
+            typeof window !== 'undefined'
+              ? localStorage.getItem('parent_portal_selected_child_id')
+              : null;
+          if (childId) {
+            queryClient.prefetchQuery({
+              queryKey: ['parent', 'academics', childId],
+              queryFn: () => parentPortalService.getAcademics(childId),
+              staleTime: STALE_TIMES.DEFAULT,
+            });
+          }
+        } else if (href === '/dashboard/parent/attendance') {
+          const childId =
+            typeof window !== 'undefined'
+              ? localStorage.getItem('parent_portal_selected_child_id')
+              : null;
+          if (childId) {
+            queryClient.prefetchQuery({
+              queryKey: ['parent', 'attendance', childId],
+              queryFn: () => parentPortalService.getAttendance(childId),
+              staleTime: STALE_TIMES.DEFAULT,
+            });
+          }
+        } else if (href === '/dashboard/parent/exams') {
+          const childId =
+            typeof window !== 'undefined'
+              ? localStorage.getItem('parent_portal_selected_child_id')
+              : null;
+          if (childId) {
+            queryClient.prefetchQuery({
+              queryKey: ['parent', 'exams', childId],
+              queryFn: () => parentPortalService.getExams(childId),
+              staleTime: STALE_TIMES.DEFAULT,
+            });
+          }
+        }
+      } catch {}
     }
   };
+
+  useEffect(() => {
+    const rawRole = (user?.roleCode || (user as any)?.role || '').toUpperCase();
+    if (rawRole === 'STUDENT') {
+      try {
+        const studentAdmissionId =
+          (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
+        queryClient.prefetchQuery({
+          queryKey: studentDashboardKeys.overview(),
+          queryFn: () => studentDashboardApi.getOverview(),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: studentDashboardKeys.timetable(),
+          queryFn: () => studentDashboardApi.getTimetable(),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: studentDashboardKeys.courses(),
+          queryFn: () => studentDashboardApi.getCourses(),
+          staleTime: STALE_TIMES.MASTERS,
+        });
+        queryClient.prefetchQuery({
+          queryKey: ['student-exams'],
+          queryFn: ({ signal }) =>
+            api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: ['student-recordings-all'],
+          queryFn: ({ signal }) =>
+            api.get('/recordings', {
+              params: { page: 1, limit: 100 },
+              signal,
+              skipGlobalToast: true,
+            }),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: ['student-pyq-all'],
+          queryFn: ({ signal }) => api.get('/pyq', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: ['student-fee-account', studentAdmissionId],
+          queryFn: ({ signal }) =>
+            api.get(`/billing/fee-assignments/${studentAdmissionId}`, {
+              signal,
+              skipGlobalToast: true,
+            }),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+      } catch {}
+    } else if (rawRole === 'PARENT') {
+      try {
+        const childId =
+          typeof window !== 'undefined'
+            ? localStorage.getItem('parent_portal_selected_child_id')
+            : null;
+        queryClient.prefetchQuery({
+          queryKey: ['parent', 'linked-students'],
+          queryFn: () => parentPortalService.getLinkedStudents(),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        if (childId) {
+          queryClient.prefetchQuery({
+            queryKey: ['parent', 'fees', childId],
+            queryFn: () => parentPortalService.getFees(childId),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['parent', 'academics', childId],
+            queryFn: () => parentPortalService.getAcademics(childId),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['parent', 'attendance', childId],
+            queryFn: () => parentPortalService.getAttendance(childId),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['parent', 'exams', childId],
+            queryFn: () => parentPortalService.getExams(childId),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        }
+      } catch {}
+    }
+  }, [user, queryClient]);
 
   // Helper component to render nested submenus recursively
   const renderNavItems = (items: NavItem[], depth = 0) => {
@@ -410,22 +588,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 href={item.href}
                 onMouseEnter={() => handleLinkHover(item.href)}
                 onFocus={() => handleLinkHover(item.href)}
+                onClick={() => isMobile && setIsMobileOpen(false)}
                 className={cn(
-                  'flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'flex-1 flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
                   isActive
-                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                    ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
+                    : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
                 )}
               >
                 <Icon
                   className={cn(
-                    depth === 0 ? 'h-5 w-5' : 'h-4 w-4',
+                    depth === 0 ? 'h-4 w-4' : 'h-3.5 w-3.5',
                     'flex-shrink-0 transition-colors',
-                    isActive ? 'text-primary-foreground' : item.iconColor || 'text-slate-400',
+                    isActive ? 'text-white' : 'text-[#0052CC]',
                   )}
                   aria-hidden="true"
                 />
-                <span className="font-semibold">{item.name}</span>
+                <span className="truncate">{item.name}</span>
               </Link>
 
               <button
@@ -435,12 +614,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                   e.stopPropagation();
                   toggleSubMenu(item.name);
                 }}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="p-2 text-slate-500 hover:text-[#0B2447] transition-colors cursor-pointer"
               >
                 <ChevronDown
                   className={cn(
-                    'h-4 w-4 transition-transform duration-200',
-                    isSubOpen && 'rotate-180',
+                    'h-3.5 w-3.5 transition-transform duration-200 text-slate-500',
+                    isSubOpen && 'rotate-180 text-[#0052CC]',
                   )}
                 />
               </button>
@@ -449,7 +628,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             {isSubOpen && (
               <div
                 className={cn(
-                  'space-y-1 border-l-2 border-violet-100 dark:border-gray-800/80 ml-5 pl-4 transition-all duration-200',
+                  'space-y-1 border-l border-blue-200/80 ml-4 pl-3 transition-all duration-200',
                 )}
               >
                 {renderNavItems(item.children!, depth + 1)}
@@ -465,15 +644,16 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           href={item.href}
           onMouseEnter={() => handleLinkHover(item.href)}
           onFocus={() => handleLinkHover(item.href)}
+          onClick={() => isMobile && setIsMobileOpen(false)}
           className={cn(
             'flex items-center transition-all duration-150',
             depth > 0
-              ? 'relative py-1.5 px-3.5 text-[13px] text-gray-500 hover:text-violet-600 dark:text-gray-400 hover:bg-violet-50/50 dark:hover:bg-violet-950/20 rounded-md font-medium'
-              : 'gap-3 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+              ? 'relative py-1.5 px-3 text-xs text-slate-700 hover:text-[#0052CC] hover:bg-white/80 rounded-xl font-bold'
+              : 'gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
             isActive &&
               (depth > 0
-                ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-semibold'
-                : 'bg-primary text-primary-foreground shadow-sm'),
+                ? 'text-[#0052CC] bg-white font-black rounded-xl border-l-2 border-[#0052CC] shadow-2xs'
+                : 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'),
           )}
           aria-current={isActive ? 'page' : undefined}
         >
@@ -482,23 +662,21 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               <span
                 className={cn(
                   'w-1.5 h-1.5 rounded-full transition-all duration-200',
-                  isActive
-                    ? 'bg-violet-500 scale-125'
-                    : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-violet-400',
+                  isActive ? 'bg-[#0052CC] scale-125' : 'bg-slate-400 group-hover:bg-[#0052CC]',
                 )}
               />
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
             </div>
           ) : (
             <>
               <Icon
                 className={cn(
-                  'h-5 w-5 flex-shrink-0 transition-colors',
-                  isActive ? 'text-primary-foreground' : item.iconColor || 'text-slate-400',
+                  'h-4 w-4 flex-shrink-0 transition-colors',
+                  isActive ? 'text-white' : 'text-[#0052CC]',
                 )}
                 aria-hidden="true"
               />
-              <span>{item.name}</span>
+              <span className="truncate">{item.name}</span>
             </>
           )}
         </Link>
@@ -511,31 +689,75 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       {/* Mobile overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs transition-opacity lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar sidebar */}
+      {/* Sidebar sidebar (Matches Section 1 Hero Light Blue Gradient) */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-transform duration-300 ease-in-out lg:translate-x-0',
+          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-gradient-to-b from-blue-50/95 via-indigo-50/50 to-sky-50/90 text-slate-900 border-r border-blue-200/80 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xs overflow-hidden font-sans',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+        {/* Top Institution / Brand Header */}
+        <div className="p-4 border-b border-blue-200/70 flex items-center justify-between bg-white/70 backdrop-blur-md">
           <Link
             href="/dashboard"
+            onClick={() => isMobile && setIsMobileOpen(false)}
             onMouseEnter={() => handleLinkHover('/dashboard')}
-            className="flex items-center gap-2.5 font-bold text-xl text-primary"
+            className="flex items-center gap-2.5 min-w-0"
           >
-            <span>NEET Platform</span>
+            <div className="w-9 h-9 rounded-xl bg-[#0052CC] flex items-center justify-center text-white shadow-2xs font-extrabold text-sm shrink-0">
+              ⚡
+            </div>
+            <div className="truncate">
+              <h2 className="font-extrabold text-sm text-[#0B2447] truncate leading-tight tracking-tight">
+                NEET Platform
+              </h2>
+              <p className="text-[10px] text-[#0052CC] font-mono font-extrabold truncate">
+                Coaching SaaS Portal
+              </p>
+            </div>
           </Link>
+
+          {isMobileOpen && (
+            <button
+              onClick={() => setIsMobileOpen(false)}
+              className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-slate-700 lg:hidden cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Institution Badge Bar */}
+        <div className="px-4 py-2.5 bg-blue-100/50 border-b border-blue-200/60 flex items-center gap-2">
+          <Shield className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
+          <div className="truncate">
+            <p className="text-[10px] text-[#0052CC] uppercase tracking-wider font-black">
+              Institution Campus
+            </p>
+            <p className="text-xs font-extrabold text-[#0B2447] truncate">
+              {(() => {
+                const instName = (user as any)?.instituteName;
+                if (
+                  !instName ||
+                  instName.toLowerCase().startsWith('tenant_admin') ||
+                  instName.toLowerCase().startsWith('tenant_') ||
+                  instName.includes('_fa3a')
+                ) {
+                  return 'NEET Premier Academy';
+                }
+                return instName;
+              })()}
+            </p>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-6 overflow-y-auto" aria-label="Main navigation">
+        <nav className="flex-1 p-3 space-y-4 overflow-y-auto" aria-label="Main navigation">
           {(() => {
             const rawRole = user?.roleCode || (user as any)?.role || '';
             const currentRole = rawRole.toUpperCase();
@@ -543,6 +765,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             if (currentRole === 'SUPER_ADMIN' || currentRole === 'PLATFORM_ADMIN') {
               return (
                 <div className="space-y-1">
+                  <p className="px-3 text-[10px] font-black text-[#0052CC] uppercase tracking-wider mb-2">
+                    Platform Management
+                  </p>
                   {platformNavigation.map((item) => {
                     const isActive =
                       item.href === '/dashboard'
@@ -555,16 +780,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         href={item.href}
                         onMouseEnter={() => handleLinkHover(item.href)}
                         onFocus={() => handleLinkHover(item.href)}
+                        onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
                           isActive
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white',
+                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
+                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
-                        <Icon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-                        <span>{item.name}</span>
+                        <Icon
+                          className={cn(
+                            'h-4 w-4 flex-shrink-0',
+                            isActive ? 'text-white' : 'text-[#0052CC]',
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     );
                   })}
@@ -574,6 +806,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             if (currentRole === 'TUTOR' || currentRole === 'FACULTY') {
               return (
                 <div className="space-y-1">
+                  <p className="px-3 text-[10px] font-black text-[#0052CC] uppercase tracking-wider mb-2">
+                    Faculty Portal
+                  </p>
                   {tutorNavigation.map((item) => {
                     const isActive =
                       item.href === '/dashboard/tutor'
@@ -588,22 +823,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         href={item.href}
                         onMouseEnter={() => handleLinkHover(item.href)}
                         onFocus={() => handleLinkHover(item.href)}
+                        onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
                           isActive
-                            ? 'bg-purple-600 text-white shadow-sm shadow-purple-200 dark:shadow-none'
-                            : 'text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-950/30 hover:text-purple-700 dark:hover:text-purple-400',
+                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
+                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
                         <Icon
                           className={cn(
-                            'h-5 w-5 flex-shrink-0 transition-colors',
-                            isActive ? 'text-white' : item.iconColor,
+                            'h-4 w-4 flex-shrink-0 transition-colors',
+                            isActive ? 'text-white' : 'text-[#0052CC]',
                           )}
                           aria-hidden="true"
                         />
-                        <span>{item.name}</span>
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     );
                   })}
@@ -613,6 +849,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             if (currentRole === 'STUDENT') {
               return (
                 <div className="space-y-1">
+                  <p className="px-3 text-[10px] font-black text-[#0052CC] uppercase tracking-wider mb-2">
+                    Student Portal
+                  </p>
                   {studentNavigation.map((item) => {
                     const isActive =
                       item.href === '/dashboard/student'
@@ -625,22 +864,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         href={item.href}
                         onMouseEnter={() => handleLinkHover(item.href)}
                         onFocus={() => handleLinkHover(item.href)}
+                        onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
                           isActive
-                            ? 'bg-violet-600 text-white shadow-sm shadow-violet-200'
-                            : 'text-gray-600 hover:bg-violet-50 hover:text-violet-700',
+                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
+                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
                         <Icon
                           className={cn(
-                            'h-5 w-5 flex-shrink-0 transition-colors',
-                            isActive ? 'text-white' : item.iconColor,
+                            'h-4 w-4 flex-shrink-0 transition-colors',
+                            isActive ? 'text-white' : 'text-[#0052CC]',
                           )}
                           aria-hidden="true"
                         />
-                        <span>{item.name}</span>
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     );
                   })}
@@ -651,7 +891,10 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               return (
                 <div className="space-y-4">
                   <ChildSwitcher isCollapsed={false} />
-                  <div className="space-y-1 border-t border-slate-100 dark:border-slate-800/80 pt-3">
+                  <div className="space-y-1 border-t border-blue-200/70 pt-3">
+                    <p className="px-3 text-[10px] font-black text-[#0052CC] uppercase tracking-wider mb-2">
+                      Parent Dashboard
+                    </p>
                     {parentNavigation.map((item) => {
                       const isActive =
                         item.href === '/dashboard/parent/overview'
@@ -665,22 +908,23 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                           href={item.href}
                           onMouseEnter={() => handleLinkHover(item.href)}
                           onFocus={() => handleLinkHover(item.href)}
+                          onClick={() => isMobile && setIsMobileOpen(false)}
                           className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150',
+                            'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
                             isActive
-                              ? 'bg-violet-600 text-white shadow-sm shadow-violet-200 dark:shadow-none'
-                              : 'text-gray-600 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-950/30 hover:text-violet-700 dark:hover:text-violet-400',
+                              ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
+                              : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
                           )}
                           aria-current={isActive ? 'page' : undefined}
                         >
                           <Icon
                             className={cn(
-                              'h-5 w-5 flex-shrink-0 transition-colors',
-                              isActive ? 'text-white' : item.iconColor,
+                              'h-4 w-4 flex-shrink-0 transition-colors',
+                              isActive ? 'text-white' : 'text-[#0052CC]',
                             )}
                             aria-hidden="true"
                           />
-                          <span>{item.name}</span>
+                          <span className="truncate">{item.name}</span>
                         </Link>
                       );
                     })}
@@ -691,7 +935,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
 
             // TENANT_ADMIN / SYSTEM_ADMIN / Default Tenant Menu
             return (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {tenantNavigation.map((group, groupIdx) => {
                   const isGroupOpen = group.category
                     ? (openCategories[group.category] ?? true)
@@ -701,12 +945,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       {group.category ? (
                         <button
                           onClick={() => toggleCategory(group.category)}
-                          className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider hover:text-gray-900 dark:hover:text-white transition-colors"
+                          className="w-full flex items-center justify-between px-3 py-1 text-[10px] font-black text-[#0052CC] uppercase tracking-wider hover:text-[#0B2447] transition-colors cursor-pointer"
                         >
                           <span>{group.category}</span>
                           <ChevronDown
                             className={cn(
-                              'h-3.5 w-3.5 transition-transform duration-200',
+                              'h-3 w-3 transition-transform duration-200 text-slate-500',
                               !isGroupOpen && '-rotate-90',
                             )}
                           />
@@ -724,79 +968,84 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           })()}
         </nav>
 
-        {/* User section */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          {user && (
-            <div className="flex items-center gap-3 px-3 py-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage
-                  src={user.avatar || undefined}
-                  alt={`${user.firstName} ${user.lastName}`}
-                />
-                <AvatarFallback>{user.firstName.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">
-                  {user.firstName} {user.lastName}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                  {user.roleCode.toLowerCase()}
-                </p>
-              </div>
-            </div>
-          )}
+        {/* User Profile Section Footer */}
+        <div className="p-3 border-t border-blue-200/70 bg-white/70 backdrop-blur-md">
+          {user &&
+            (() => {
+              const first = (user.firstName || '').trim();
+              const last = (user.lastName || '').trim();
+              const fullName = `${first} ${last}`.trim();
+              const displayName =
+                !fullName ||
+                fullName.toLowerCase().startsWith('tenant_admin') ||
+                fullName.toLowerCase().startsWith('admin_')
+                  ? 'Review Admin'
+                  : fullName;
 
-          <div className="space-y-1 mt-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 px-3 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden="true" />
-                  <span>Sign out</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Are you sure?</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => logout()}
-                  className="text-red-600 focus:text-red-600"
-                >
-                  Yes, sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              const roleCodeUpper = (user.roleCode || '').toUpperCase();
+              const roleLabel = roleCodeUpper.startsWith('TENANT_ADMIN')
+                ? 'Tenant Administrator'
+                : roleCodeUpper.startsWith('SUPER_ADMIN') ||
+                    roleCodeUpper.startsWith('PLATFORM_ADMIN')
+                  ? 'Platform Super Admin'
+                  : roleCodeUpper.startsWith('TUTOR') || roleCodeUpper.startsWith('FACULTY')
+                    ? 'Faculty Tutor'
+                    : roleCodeUpper.startsWith('STUDENT')
+                      ? 'Student Account'
+                      : roleCodeUpper.startsWith('PARENT')
+                        ? 'Parent Account'
+                        : 'Tenant Administrator';
+
+              return (
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5 truncate min-w-0">
+                    <Avatar className="h-8 w-8 border border-blue-300 shrink-0 shadow-2xs">
+                      <AvatarImage src={user.avatar || undefined} alt={displayName} />
+                      <AvatarFallback className="bg-[#0052CC] text-white font-extrabold text-xs">
+                        {displayName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 truncate">
+                      <p className="text-xs font-black text-[#0B2447] truncate leading-snug">
+                        {displayName}
+                      </p>
+                      <p className="text-[10px] text-[#0052CC] font-mono truncate font-extrabold">
+                        {roleLabel}
+                      </p>
+                    </div>
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                        title="Sign out"
+                      >
+                        <LogOut className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-52 bg-white text-slate-900 border-slate-200"
+                    >
+                      <DropdownMenuLabel className="text-xs font-bold">
+                        Sign out from session?
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => logout()}
+                        className="text-rose-600 focus:text-rose-600 cursor-pointer text-xs font-bold flex items-center gap-2"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>Confirm Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })()}
         </div>
       </aside>
-
-      {/* Mobile menu button - only show on mobile */}
-      {isMobile && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed bottom-4 left-4 z-50 lg:hidden"
-          onClick={() => setIsMobileOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6" aria-hidden="true" />
-        </Button>
-      )}
-
-      {/* Close button for mobile */}
-      {isMobileOpen && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-16 z-50 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-          aria-label="Close menu"
-        >
-          <X className="h-6 w-6" aria-hidden="true" />
-        </Button>
-      )}
     </>
   );
 }

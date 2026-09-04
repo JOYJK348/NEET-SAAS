@@ -21,13 +21,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import {
   ArrowLeft,
   Save,
-  Sparkles,
   Layers,
   GraduationCap,
   Users,
   Calendar,
   Clock,
   Activity,
+  ChevronRight,
 } from 'lucide-react';
 import {
   useBatch,
@@ -182,29 +182,28 @@ function EditBatchContent() {
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Header Banner - Signature Violet Gradient */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="w-full space-y-6 text-[#0F172A] font-sans">
+      {/* Header Banner - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
+            className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
             onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Batch Management &bull; {batch.code}
-              </span>
+            <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC] mb-1">
+              <span>Batches & Sections</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Edit Batch</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Edit Batch Details ✏️
+            <h1 className="text-xl sm:text-2xl font-extrabold leading-tight text-[#0B2447]">
+              Edit Batch Details
             </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
+            <p className="text-slate-600 text-xs mt-0.5 font-medium">
               Update capacity, course mappings, schedule timings, and lifecycle status for{' '}
               {batch.name}.
             </p>
@@ -217,7 +216,7 @@ function EditBatchContent() {
             variant="outline"
             size="sm"
             onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
-            className="px-4 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold"
+            className="px-4 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
           >
             Cancel
           </Button>
@@ -231,7 +230,7 @@ function EditBatchContent() {
             })}
             disabled={isUpdating}
             size="sm"
-            className="px-4 bg-white text-violet-700 hover:bg-violet-50 font-bold rounded-xl text-xs shadow-sm border-0"
+            className="px-4 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-2xs"
           >
             <Save className="h-3.5 w-3.5 mr-1.5" />
             {isUpdating ? 'Saving...' : 'Save Changes'}
@@ -250,17 +249,17 @@ function EditBatchContent() {
         className="space-y-6"
       >
         {/* Section 1: Basic Information & Status */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+        <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+              <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200">
                 <Layers className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-slate-900">
+                <CardTitle className="text-base font-extrabold text-[#0B2447]">
                   Basic Information & Status
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+                <CardDescription className="text-xs text-slate-500 font-medium">
                   Manage the identity, code, and operational status of this batch.
                 </CardDescription>
               </div>
@@ -282,13 +281,17 @@ function EditBatchContent() {
                     <Select value={field.value || ''} onValueChange={field.onChange}>
                       <SelectTrigger
                         id="status"
-                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-semibold"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 text-xs font-bold text-[#0B2447]"
                       >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         {BATCH_STATUS_OPTIONS.filter((o) => o.value !== 'ALL').map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="font-medium">
+                          <SelectItem
+                            key={opt.value}
+                            value={opt.value}
+                            className="text-xs font-medium"
+                          >
                             {opt.label}
                           </SelectItem>
                         ))}
@@ -311,7 +314,7 @@ function EditBatchContent() {
                 <Input
                   id="code"
                   placeholder="e.g. NEET26A"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-mono font-extrabold text-[#0052CC] uppercase text-xs"
                   {...register('code')}
                 />
                 {errors.code ? (
@@ -331,7 +334,7 @@ function EditBatchContent() {
                 <Input
                   id="name"
                   placeholder="e.g. NEET 2026 Foundation Batch A"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs text-[#0B2447]"
                   {...register('name')}
                 />
                 {errors.name && (
@@ -348,7 +351,7 @@ function EditBatchContent() {
                 id="description"
                 rows={3}
                 placeholder="Add special notes, classroom numbers, target objectives..."
-                className="rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium text-sm"
+                className="rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs"
                 {...register('description')}
               />
               {errors.description && (
@@ -359,17 +362,17 @@ function EditBatchContent() {
         </Card>
 
         {/* Section 2: Academic & Branch Mapping */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+        <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+              <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200">
                 <GraduationCap className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-slate-900">
+                <CardTitle className="text-base font-extrabold text-[#0B2447]">
                   Academic & Branch Association
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+                <CardDescription className="text-xs text-slate-500 font-medium">
                   Link batch to specific academic year, branch location, course stream, and delivery
                   mode.
                 </CardDescription>
@@ -400,13 +403,13 @@ function EditBatchContent() {
                     >
                       <SelectTrigger
                         id="academicYearId"
-                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 text-xs font-medium"
                       >
                         <SelectValue placeholder="Select academic year" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         {years.map((y) => (
-                          <SelectItem key={y.id} value={y.id}>
+                          <SelectItem key={y.id} value={y.id} className="text-xs font-medium">
                             {y.name}
                           </SelectItem>
                         ))}
@@ -453,13 +456,13 @@ function EditBatchContent() {
                       >
                         <SelectTrigger
                           id="branchId"
-                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 text-xs font-medium"
                         >
                           <SelectValue placeholder="Select branch" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           {displayBranches.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
+                            <SelectItem key={b.id} value={b.id} className="text-xs font-medium">
                               {b.name}
                             </SelectItem>
                           ))}
@@ -502,13 +505,13 @@ function EditBatchContent() {
                       <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger
                           id="courseId"
-                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                          className="h-11 rounded-xl border-slate-200 bg-white focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 text-xs font-medium"
                         >
                           <SelectValue placeholder="Select course" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           {displayCourses.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
+                            <SelectItem key={c.id} value={c.id} className="text-xs font-medium">
                               {c.name}
                             </SelectItem>
                           ))}
@@ -537,13 +540,13 @@ function EditBatchContent() {
                     <Select value={field.value || ''} onValueChange={field.onChange}>
                       <SelectTrigger
                         id="deliveryTypeId"
-                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                        className="h-11 rounded-xl border-slate-200 bg-white focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 text-xs font-medium"
                       >
                         <SelectValue placeholder="Select delivery mode" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white">
                         {deliveryTypes.map((dt) => (
-                          <SelectItem key={dt.id} value={dt.id}>
+                          <SelectItem key={dt.id} value={dt.id} className="text-xs font-medium">
                             {dt.name}
                           </SelectItem>
                         ))}
@@ -562,17 +565,17 @@ function EditBatchContent() {
         </Card>
 
         {/* Section 3: Capacity & Admission Settings */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+        <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+              <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200">
                 <Users className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-slate-900">
+                <CardTitle className="text-base font-extrabold text-[#0B2447]">
                   Capacity & Admission Settings
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+                <CardDescription className="text-xs text-slate-500 font-medium">
                   Configure student intake quota and new student admission availability.
                 </CardDescription>
               </div>
@@ -593,7 +596,7 @@ function EditBatchContent() {
                   min={1}
                   max={500}
                   placeholder="e.g. 60"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-bold text-[#0B2447] text-xs"
                   {...register('maxStudents', { valueAsNumber: true })}
                 />
                 {errors.maxStudents ? (
@@ -605,13 +608,13 @@ function EditBatchContent() {
                 )}
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-4 mt-2 sm:mt-0">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-4 mt-2 sm:mt-0">
                 <div>
-                  <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 text-violet-600" />
+                  <p className="text-xs font-bold text-[#0B2447] flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5 text-[#0052CC]" />
                     Allow New Admissions
                   </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                     Enable or pause enrollment of newly registered students into this batch
                   </p>
                 </div>
@@ -621,7 +624,7 @@ function EditBatchContent() {
                     className="sr-only peer"
                     {...register('allowNewAdmissions')}
                   />
-                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600"></div>
+                  <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0052CC]"></div>
                 </label>
               </div>
             </div>
@@ -629,17 +632,17 @@ function EditBatchContent() {
         </Card>
 
         {/* Section 4: Schedule & Timings */}
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+        <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-4 sm:p-5">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-violet-50 text-violet-600 border border-violet-100">
+              <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200">
                 <Calendar className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base font-bold text-slate-900">
+                <CardTitle className="text-base font-extrabold text-[#0B2447]">
                   Schedule & Daily Timings
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500">
+                <CardDescription className="text-xs text-slate-500 font-medium">
                   Define start/end batch duration dates and daily lecture shift times.
                 </CardDescription>
               </div>
@@ -657,7 +660,7 @@ function EditBatchContent() {
                 <Input
                   id="startDate"
                   type="date"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs"
                   {...register('startDate')}
                 />
                 {errors.startDate && (
@@ -675,7 +678,7 @@ function EditBatchContent() {
                 <Input
                   id="endDate"
                   type="date"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs"
                   {...register('endDate')}
                 />
                 {errors.endDate && (
@@ -690,13 +693,13 @@ function EditBatchContent() {
                   htmlFor="startTime"
                   className="text-xs font-bold text-slate-700 flex items-center gap-1.5"
                 >
-                  <Clock className="w-3.5 h-3.5 text-violet-600" />
+                  <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
                   Daily Start Time (e.g. 09:00 AM)
                 </Label>
                 <Input
                   id="startTime"
                   type="time"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs"
                   {...register('startTime')}
                 />
                 {errors.startTime && (
@@ -709,13 +712,13 @@ function EditBatchContent() {
                   htmlFor="endTime"
                   className="text-xs font-bold text-slate-700 flex items-center gap-1.5"
                 >
-                  <Clock className="w-3.5 h-3.5 text-violet-600" />
+                  <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
                   Daily End Time (e.g. 05:00 PM)
                 </Label>
                 <Input
                   id="endTime"
                   type="time"
-                  className="h-11 rounded-xl border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-medium"
+                  className="h-11 rounded-xl border-slate-200 focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 font-medium text-xs"
                   {...register('endTime')}
                 />
                 {errors.endTime && (
@@ -732,14 +735,14 @@ function EditBatchContent() {
             type="button"
             variant="outline"
             onClick={() => router.push(`/dashboard/batches/${batch.id}`)}
-            className="h-11 px-6 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-bold"
+            className="h-11 px-6 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isUpdating}
-            className="h-11 px-8 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-md shadow-violet-200"
+            className="h-11 px-8 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs text-xs"
           >
             <Save className="h-4 w-4 mr-2" />
             {isUpdating ? 'Saving Changes...' : 'Save Batch Changes'}

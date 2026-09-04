@@ -5,8 +5,8 @@ import type {
   JoinSessionResponseDto,
 } from '../types/student-dashboard.types';
 
-const STALE_TIME = 0;
-const GC_TIME = 5 * 60 * 1000;
+const STALE_TIME = 5 * 60 * 1000; // 5 min cache for instant 0ms navigation
+const GC_TIME = 30 * 60 * 1000;
 
 export interface UseStudentTimetableReturn {
   timetable: StudentTimetableResponseDto | null;

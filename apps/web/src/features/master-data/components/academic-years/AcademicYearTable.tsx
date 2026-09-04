@@ -12,19 +12,10 @@ import {
   Eye,
   CheckCircle2,
   XCircle,
-  Sparkles,
-  ArrowRight,
+  Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { AcademicYear } from '../../types';
-
-interface Column<T> {
-  key: string;
-  header: string;
-  sortable?: boolean;
-  render?: (value: unknown, row: T) => React.ReactNode;
-  className?: string;
-}
 
 interface AcademicYearTableProps {
   years: AcademicYear[];
@@ -48,240 +39,85 @@ export function AcademicYearTable({
   onStatusToggle,
 }: AcademicYearTableProps) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const columns: Column<AcademicYear>[] = [
-    {
-      key: 'code',
-      header: 'Code',
-      sortable: true,
-      render: (_, year) => (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-violet-50 text-violet-700 font-mono font-bold text-xs border border-violet-100 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/40">
-          {year.code}
-        </span>
-      ),
-      className: 'w-28',
-    },
-    {
-      key: 'name',
-      header: 'Academic Year Name & Info',
-      sortable: true,
-      render: (_, year) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 text-violet-600 flex items-center justify-center font-bold shrink-0 border border-violet-200/50">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="font-bold text-sm text-slate-900 truncate">{year.name}</p>
-              {year.isCurrent && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                  ★ Current Active
-                </span>
-              )}
-            </div>
-            {year.description && (
-              <p className="text-xs text-slate-400 truncate mt-0.5">{year.description}</p>
-            )}
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'dates',
-      header: 'Duration Calendar',
-      render: (_, year) => (
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-          <Calendar className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-          <span>
-            {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : ''} &mdash;{' '}
-            {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : ''}
-          </span>
-        </div>
-      ),
-    },
-    {
-      key: 'isActive',
-      header: 'Status',
-      sortable: true,
-      render: (_, year) => {
-        const isActive = year.isActive;
-        const isToggling = togglingId === year.id;
-
-        return (
-          <div className="flex items-center gap-2.5">
-            {/* Interactive iOS Style Toggle Switch */}
-            <button
-              type="button"
-              disabled={isToggling}
-              onClick={async (e) => {
-                e.stopPropagation();
-                if (onStatusToggle) {
-                  setTogglingId(year.id);
-                  try {
-                    await onStatusToggle(year, !isActive);
-                  } finally {
-                    setTogglingId(null);
-                  }
-                }
-              }}
-              title={isActive ? 'Click to deactivate' : 'Click to activate'}
-              className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2',
-                isActive ? 'bg-emerald-500' : 'bg-slate-300',
-                isToggling && 'opacity-60 cursor-wait',
-              )}
-            >
-              <span className="sr-only">Toggle status</span>
-              <span
-                className={cn(
-                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center text-[10px] font-bold text-slate-600',
-                  isActive ? 'translate-x-5' : 'translate-x-0',
-                )}
-              >
-                {isToggling ? (
-                  <span className="w-2 h-2 rounded-full bg-violet-600 animate-ping" />
-                ) : null}
-              </span>
-            </button>
-
-            {/* Status Pill Badge */}
-            <span
-              className={cn(
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border transition-all',
-                isActive
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-rose-50 text-rose-700 border-rose-200',
-              )}
-            >
-              {isActive ? (
-                <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Active
-                </>
-              ) : (
-                <>
-                  <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                  Inactive
-                </>
-              )}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      render: (_, year) => (
-        <div className="flex items-center gap-1 justify-end">
-          <button
-            onClick={() => onView(year)}
-            className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-all"
-            title={`View ${year.name} details`}
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          {!year.isCurrent && (
-            <button
-              onClick={() => onSetCurrent(year.id)}
-              className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
-              title="Set as Current Active Session"
-            >
-              <CalendarCheck className="h-4 w-4" />
-            </button>
-          )}
-          <button
-            onClick={() => onDelete(year.id)}
-            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-            title={`Delete ${year.name}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
-      ),
-      className: 'w-28 text-right',
-    },
-  ];
-
-  const handleSort = (key: string) => {
-    if (onSort && columns.find((c) => c.key === key)?.sortable) {
-      onSort(key);
-    }
-  };
-
-  const SortIcon = ({ columnKey }: { columnKey: string }) => {
-    if (sortBy !== columnKey) {
-      return <ChevronsUpDown className="h-3.5 w-3.5 text-slate-400" />;
-    }
-    return sortOrder === 'asc' ? (
-      <ChevronUp className="h-3.5 w-3.5 text-violet-600" />
-    ) : (
-      <ChevronDown className="h-3.5 w-3.5 text-violet-600" />
-    );
+  const toggleExpand = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
   };
 
   return (
-    <div>
-      {/* ── Ultra-Sleek Mobile Native Card View (<640px) ── */}
-      <div className="block sm:hidden space-y-3">
-        {years.map((year) => {
-          const isActive = year.isActive;
-          const isToggling = togglingId === year.id;
+    <div className="w-full space-y-3.5 font-sans">
+      {years.map((year) => {
+        const isActive = year.isActive;
+        const isToggling = togglingId === year.id;
+        const isExpanded = expandedId === year.id;
 
-          return (
+        return (
+          <div
+            key={year.id}
+            className={cn(
+              'bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden transition-all duration-200',
+              year.isCurrent && 'border-amber-300 ring-1 ring-amber-400/20',
+            )}
+          >
+            {/* Card Header Accordion Bar */}
             <div
-              key={year.id}
-              className={cn(
-                'relative bg-white rounded-3xl border border-slate-200/90 p-4 shadow-sm space-y-3 transition-all active:scale-[0.99] overflow-hidden',
-                year.isCurrent && 'border-amber-300 bg-gradient-to-r from-amber-50/30 via-white to-white ring-1 ring-amber-400/20',
-              )}
+              onClick={() => toggleExpand(year.id)}
+              className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 cursor-pointer hover:bg-slate-50/70 transition-colors"
             >
-              {/* Left Accent Indicator Bar */}
-              <div
-                className={cn(
-                  'absolute left-0 top-0 bottom-0 w-1.5',
-                  year.isCurrent
-                    ? 'bg-amber-500'
-                    : isActive
-                    ? 'bg-emerald-500'
-                    : 'bg-slate-300',
-                )}
-              />
-
-              {/* Card Header: Code Badge, Current Star, and iOS Status Switch */}
-              <div className="flex items-center justify-between pl-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-violet-50 text-violet-700 font-mono font-extrabold text-xs border border-violet-100">
-                    {year.code}
-                  </span>
-                  {year.isCurrent && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
-                      ★ Current
-                    </span>
-                  )}
+              {/* Left Info Box */}
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-[#0052CC]" />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Status Pill Badge */}
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border',
-                      isActive
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200',
-                    )}
-                  >
-                    {isActive ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Active
-                      </>
-                    ) : (
-                      'Inactive'
-                    )}
-                  </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="px-2.5 py-0.5 rounded-md text-xs font-mono font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200">
+                      {year.code}
+                    </span>
 
-                  {/* iOS Toggle Switch */}
+                    {year.isCurrent && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                        Current Active Session
+                      </span>
+                    )}
+
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold border',
+                        isActive
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-rose-50 text-rose-700 border-rose-200',
+                      )}
+                    >
+                      {isActive ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Active
+                        </>
+                      ) : (
+                        'Inactive'
+                      )}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm sm:text-base font-extrabold text-[#0B2447] leading-snug truncate">
+                    {year.name}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Right Controls & Accordion Trigger */}
+              <div
+                className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t border-slate-100 sm:border-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Interactive iOS Toggle Switch */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 hidden md:inline">
+                    Status:
+                  </span>
                   <button
                     type="button"
                     disabled={isToggling}
@@ -298,131 +134,103 @@ export function AcademicYearTable({
                     }}
                     title={isActive ? 'Deactivate' : 'Activate'}
                     className={cn(
-                      'relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
+                      'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#0052CC]',
                       isActive ? 'bg-emerald-500' : 'bg-slate-300',
                       isToggling && 'opacity-60 cursor-wait',
                     )}
                   >
                     <span
                       className={cn(
-                        'pointer-events-none inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out',
-                        isActive ? 'translate-x-4.5' : 'translate-x-0',
+                        'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out',
+                        isActive ? 'translate-x-5' : 'translate-x-0',
                       )}
                     />
                   </button>
                 </div>
-              </div>
 
-              {/* Year Name, Icon & Calendar Dates */}
-              <div className="flex items-start gap-3 pl-2">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center font-black shrink-0 shadow-xs mt-0.5">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <h4 className="font-black text-sm text-slate-900 leading-snug break-words">
-                    {year.name}
-                  </h4>
-                  {year.description && (
-                    <p className="text-xs font-medium text-slate-500 break-words line-clamp-2">
-                      {year.description}
-                    </p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => onView(year)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 text-[#0052CC] hover:bg-blue-100 font-extrabold text-xs border border-blue-200 transition-all shadow-2xs"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> View Details
+                  </button>
+
+                  {!year.isCurrent && (
+                    <button
+                      onClick={() => onSetCurrent(year.id)}
+                      className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                      title="Set as Current Active Session"
+                    >
+                      <CalendarCheck className="w-4 h-4 text-amber-600" />
+                    </button>
                   )}
-                  <p className="text-[11px] font-bold text-slate-600 flex items-center gap-1 pt-1">
-                    <span>🗓</span>
+
+                  <button
+                    onClick={() => onDelete(year.id)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Delete Academic Year"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => toggleExpand(year.id)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4 text-[#0052CC]" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Accordion Expandable Content Body */}
+            {isExpanded && (
+              <div className="p-4 sm:p-5 bg-slate-50/70 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-medium">
+                <div className="space-y-1 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Duration Calendar
+                  </span>
+                  <div className="flex items-center gap-1.5 text-slate-800 font-bold">
+                    <Clock className="w-4 h-4 text-[#0052CC] shrink-0" />
                     <span>
-                      {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : ''} &mdash;{' '}
-                      {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : ''}
+                      {year.startDate ? format(new Date(year.startDate), 'MMM d, yyyy') : 'Not set'}{' '}
+                      &mdash;{' '}
+                      {year.endDate ? format(new Date(year.endDate), 'MMM d, yyyy') : 'Not set'}
                     </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Session Description / Remarks
+                  </span>
+                  <p className="text-slate-800 font-bold truncate">
+                    {year.description || 'Standard academic session cycle.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1 bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Session Status
+                  </span>
+                  <p className="text-slate-800 font-bold">
+                    {year.isCurrent
+                      ? 'Primary Active Academic Session'
+                      : year.isActive
+                        ? 'Active Regular Session'
+                        : 'Inactive / Archived Session'}
                   </p>
                 </div>
               </div>
-
-              {/* Mobile Actions Bar - Touch friendly 44px buttons */}
-              <div className="flex items-center gap-2 pt-2 border-t border-slate-100 pl-2">
-                <button
-                  onClick={() => onView(year)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 rounded-2xl bg-violet-600 text-white font-black text-xs shadow-xs hover:bg-violet-700 transition active:scale-95 cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" /> View Details
-                </button>
-
-                {!year.isCurrent && (
-                  <button
-                    onClick={() => onSetCurrent(year.id)}
-                    className="h-10 px-3 rounded-2xl bg-amber-50 text-amber-700 font-bold text-xs border border-amber-200 hover:bg-amber-100 transition flex items-center justify-center gap-1 shrink-0 active:scale-95 cursor-pointer"
-                    title="Set as Current Active Session"
-                  >
-                    <CalendarCheck className="w-4 h-4 text-amber-600" />
-                    <span className="hidden xs:inline">Set Current</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => onDelete(year.id)}
-                  className="h-10 w-10 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition flex items-center justify-center shrink-0 active:scale-95 cursor-pointer"
-                  title={`Delete ${year.name}`}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Desktop Table View - Shown on medium & large screens (>=640px) */}
-      <div className="hidden sm:block overflow-x-auto rounded-2xl border border-[#E5E7EB] dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-        <table className="w-full min-w-[850px] border-collapse" role="table">
-          <thead>
-            <tr className="border-b border-[#E5E7EB] dark:border-gray-800 bg-slate-50/80 dark:bg-gray-800/50">
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className={cn(
-                    'px-4 py-3.5 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider',
-                    col.sortable &&
-                      'cursor-pointer hover:text-slate-800 dark:hover:text-slate-200 select-none',
-                    col.className,
-                  )}
-                  onClick={() => handleSort(col.key)}
-                >
-                  <div
-                    className={cn(
-                      'flex items-center gap-1.5',
-                      col.className?.includes('text-right') && 'justify-end',
-                    )}
-                  >
-                    {col.header}
-                    {col.sortable && <SortIcon columnKey={col.key} />}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-gray-800 font-medium">
-            {years.map((year) => (
-              <tr
-                key={year.id}
-                className="hover:bg-violet-50/30 dark:hover:bg-gray-800/30 transition-all duration-150"
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={cn(
-                      'px-4 py-4 text-sm text-slate-700 dark:text-slate-200',
-                      col.className,
-                    )}
-                  >
-                    {col.render
-                      ? col.render(year[col.key as keyof AcademicYear], year)
-                      : String(year[col.key as keyof AcademicYear] || '')}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

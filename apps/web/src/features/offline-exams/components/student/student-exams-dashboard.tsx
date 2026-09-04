@@ -18,13 +18,16 @@ import {
   ShieldAlert,
   Sparkles,
   X,
+  CheckCircle2,
+  FileCheck,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const formatExamDateTime = (dateStr?: string | null) => {
   if (!dateStr) return 'N/A';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return 'N/A';
-  return d.toLocaleString('en-US', {
+  return d.toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -106,56 +109,59 @@ export function StudentExamsDashboard() {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 text-slate-800 min-h-screen bg-slate-50 w-full">
-      {/* Top Navigation Action */}
-      <div>
-        <button
-          onClick={() => router.push('/dashboard/student')}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm"
-        >
-          <ArrowLeft className="w-4 h-4 text-indigo-600" />
-          Back to Student Dashboard
-        </button>
-      </div>
-
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-indigo-600" />
-            Student Exam Portal
-          </h1>
-          <p className="text-xs text-slate-500 mt-1 font-medium">
+    <div className="w-full pb-20 space-y-5 font-sans text-[#0F172A]">
+      {/* Top Header Card (Matches ISML LMS Theme) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-[#0B2447] tracking-tight">
+              Student Exam Portal
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
+              NEET Mock & Test Series
+            </span>
+          </div>
+          <p className="text-xs font-semibold text-slate-500">
             Offline OMR & Hybrid Examinations Dashboard — View Schedule, Start Timers & Track
             Results
           </p>
         </div>
+
+        <button
+          onClick={() => router.push('/dashboard/student')}
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0052CC] border border-blue-200 text-xs font-extrabold transition shadow-2xs cursor-pointer shrink-0"
+        >
+          <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
+          <span>Student Dashboard</span>
+        </button>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-slate-200 text-xs font-semibold pb-3">
+      {/* Tab Navigation Switcher Pills */}
+      <div className="flex items-center p-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs text-xs font-extrabold text-[#0B2447] overflow-x-auto scrollbar-none">
         {[
-          { key: 'LIVE', label: 'Live & Active Exams', count: liveCount },
+          { key: 'LIVE', label: 'Live & Active', count: liveCount },
           { key: 'UPCOMING', label: 'Upcoming Exams', count: upcomingCount },
           { key: 'SUBMITTED', label: 'Submitted', count: submittedCount },
-          { key: 'RESULTS', label: 'Results & Scorecards', count: resultsCount },
+          { key: 'RESULTS', label: 'Results & Rank', count: resultsCount },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as any)}
-            className={`py-2 px-3 sm:px-4 rounded-xl font-bold transition flex items-center justify-between sm:justify-start gap-2 border ${
+            className={cn(
+              'flex-1 min-w-[110px] sm:min-w-[140px] py-2.5 px-3 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 text-center truncate',
               activeTab === tab.key
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+                ? 'bg-[#0052CC] text-white shadow-2xs font-black'
+                : 'hover:text-[#0052CC] text-slate-600',
+            )}
           >
-            <span>{tab.label}</span>
+            <span className="truncate">{tab.label}</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              className={cn(
+                'px-2 py-0.5 rounded-full text-[10px] font-black shrink-0',
                 activeTab === tab.key
                   ? 'bg-white/20 text-white'
-                  : 'bg-slate-100 text-slate-700'
-              }`}
+                  : 'bg-blue-50 text-[#0052CC] border border-blue-200',
+              )}
             >
               {tab.count}
             </span>
@@ -164,14 +170,18 @@ export function StudentExamsDashboard() {
       </div>
 
       {/* Exam Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="col-span-full py-16 text-center text-slate-400 font-medium">
-            Loading your exams...
+          <div className="col-span-full py-20 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs space-y-2">
+            <span className="text-slate-500 text-xs font-bold">Loading your exams...</span>
           </div>
         ) : filteredExams.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-slate-400 font-medium">
-            No exams found in this tab category.
+          <div className="col-span-full py-16 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs space-y-2 p-6">
+            <FileCheck className="w-10 h-10 text-slate-300 mx-auto" />
+            <p className="text-xs font-black text-[#0B2447]">No exams found in this category</p>
+            <p className="text-xs text-slate-400 font-medium">
+              Scheduled tests and mock exam series will appear here.
+            </p>
           </div>
         ) : (
           filteredExams.map((exam) => {
@@ -182,43 +192,54 @@ export function StudentExamsDashboard() {
             return (
               <div
                 key={exam.id}
-                className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-slate-300 transition flex flex-col justify-between space-y-4"
+                className="bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xs hover:border-blue-300 transition-all flex flex-col justify-between space-y-4 w-full"
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold rounded-full uppercase">
+                    <span
+                      className={cn(
+                        'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs',
+                        exam.studentExamStatus === 'LIVE'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : exam.studentExamStatus === 'RESULT_PUBLISHED'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-blue-50 text-[#0052CC] border border-blue-200',
+                      )}
+                    >
                       {exam.studentExamStatus}
                     </span>
-                    <span className="text-xs text-slate-500 flex items-center gap-1 font-mono font-medium">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                      <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
                       {exam.durationMinutes} mins
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 leading-tight">{exam.title}</h3>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                      {exam.description || 'No instructions specified.'}
+                    <h3 className="text-base font-black text-[#0B2447] leading-snug">
+                      {exam.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-1 line-clamp-2">
+                      {exam.description || 'Standard NEET Academy Mock Test Series.'}
                     </p>
                   </div>
 
                   {/* Window Details Box */}
-                  <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 space-y-1.5 text-xs text-slate-600">
+                  <div className="bg-blue-50/60 p-3 rounded-2xl border border-blue-100/90 space-y-1.5 text-xs text-slate-700 font-medium">
                     <div className="flex items-center justify-between text-slate-500 gap-2">
-                      <span className="shrink-0 font-medium">Window Start:</span>
-                      <span className="font-semibold text-slate-800 font-mono text-right">
+                      <span className="shrink-0 font-semibold text-slate-600">Window Start:</span>
+                      <span className="font-bold text-[#0B2447] font-mono text-right truncate">
                         {formatExamDateTime(exam.examWindowStart)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-slate-500 gap-2">
-                      <span className="shrink-0 font-medium">Window End:</span>
-                      <span className="font-semibold text-slate-800 font-mono text-right">
+                      <span className="shrink-0 font-semibold text-slate-600">Window End:</span>
+                      <span className="font-bold text-[#0B2447] font-mono text-right truncate">
                         {formatExamDateTime(exam.examWindowEnd)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-slate-500 pt-1 border-t border-slate-200/60">
-                      <span className="font-medium">Grace Period:</span>
-                      <span className="font-bold text-amber-700">
+                    <div className="flex items-center justify-between pt-1 border-t border-blue-100">
+                      <span className="font-semibold text-slate-600">Grace Period:</span>
+                      <span className="font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                         +{exam.graceMinutes} mins
                       </span>
                     </div>
@@ -231,21 +252,21 @@ export function StudentExamsDashboard() {
                   exam.submission?.isResultsPublished ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}/result`}
-                      className="w-full text-center px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                      className="w-full text-center px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Award className="w-4 h-4" /> View Scorecard & Rank
+                      <Award className="w-4 h-4 text-white" /> View Scorecard & Rank
                     </Link>
                   ) : isSubmitted ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}`}
-                      className="w-full text-center px-4 py-2.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-2 hover:bg-amber-100"
+                      className="w-full text-center px-4 py-2.5 bg-blue-50 border border-blue-200 text-[#0052CC] rounded-xl text-xs font-extrabold shadow-2xs transition flex items-center justify-center gap-2 hover:bg-blue-100 cursor-pointer"
                     >
-                      <FileText className="w-4 h-4 text-amber-600" /> Submitted (Under Evaluation)
+                      <FileText className="w-4 h-4 text-[#0052CC]" /> Submitted (Under Evaluation)
                     </Link>
                   ) : isStarted ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}`}
-                      className="w-full text-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-2"
+                      className="w-full text-center px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
                       Enter Exam Room <ArrowRight className="w-4 h-4" />
                     </Link>
@@ -253,10 +274,10 @@ export function StudentExamsDashboard() {
                     <button
                       onClick={() => setStartingExam(exam)}
                       disabled={!exam.canStart && exam.studentExamStatus !== 'LIVE'}
-                      className="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+                      className="w-full px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <Play className="w-4 h-4 fill-white" />
-                      Ready to Start Exam
+                      <Play className="w-4 h-4 fill-white text-white" />
+                      Ready to Start Exam 🚀
                     </button>
                   )}
                 </div>
@@ -268,55 +289,57 @@ export function StudentExamsDashboard() {
 
       {/* Ready to Start Confirmation Modal */}
       {startingExam && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 space-y-5 text-slate-800 shadow-2xl">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 font-sans">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-5 sm:p-6 space-y-4 text-slate-800 shadow-2xl animate-in fade-in duration-200">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Play className="w-5 h-5 text-emerald-600 fill-emerald-600" />
-                Start Exam Timer Confirmation
+              <h3 className="text-base font-black text-[#0B2447] flex items-center gap-2">
+                <Play className="w-4.5 h-4.5 text-[#0052CC] fill-[#0052CC]" />
+                Start Exam Confirmation
               </h3>
               <button
                 onClick={() => setStartingExam(null)}
-                className="text-slate-400 hover:text-slate-600 transition"
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-600">
-              <p>
-                You are about to start <strong className="text-slate-900">{startingExam.title}</strong>.
+            <div className="space-y-3 text-xs text-slate-600 font-medium">
+              <p className="text-slate-800">
+                You are about to start{' '}
+                <strong className="text-[#0B2447] font-black">{startingExam.title}</strong>.
               </p>
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
-                <p className="font-bold flex items-center gap-1.5 text-amber-800">
-                  <ShieldAlert className="w-4 h-4 text-amber-600" /> Important Rules:
+              <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl text-[#0B2447] space-y-1.5">
+                <p className="font-black flex items-center gap-1.5 text-[#0052CC]">
+                  <ShieldAlert className="w-4 h-4 text-[#0052CC]" /> Important Exam Rules:
                 </p>
-                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-800">
+                <ul className="list-disc list-inside space-y-1 text-[11px] font-semibold text-slate-700">
                   <li>
                     Your <strong>{startingExam.durationMinutes}-minute timer</strong> will begin
-                    immediately.
+                    immediately upon confirmation.
                   </li>
                   <li>
-                    Timer <strong>cannot be paused or reset</strong> by refreshing or logging out.
+                    Timer <strong>cannot be paused or reset</strong> by refreshing or navigating
+                    away.
                   </li>
-                  <li>Question Paper download unlocks right after starting.</li>
+                  <li>Question Paper & OMR sheet will unlock right after starting.</li>
                 </ul>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setStartingExam(null)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-semibold transition"
+                className="px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl text-xs font-extrabold transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmStart}
                 disabled={startExamMutation.isPending}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2"
+                className="px-5 py-2 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center gap-2 cursor-pointer"
               >
-                {startExamMutation.isPending ? 'Starting...' : 'I am Ready — Start Now'}
+                {startExamMutation.isPending ? 'Starting...' : 'I am Ready — Start Now 🚀'}
               </button>
             </div>
           </div>

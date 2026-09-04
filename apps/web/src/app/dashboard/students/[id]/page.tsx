@@ -58,6 +58,10 @@ function StudentDetailContent() {
   const router = useRouter();
   const id = (params?.id as string) || null;
 
+  if (typeof window !== 'undefined' && id === 'new') {
+    router.replace('/dashboard/students/new');
+  }
+
   const { student, isLoading, error } = useStudent(id);
   const { events: timelineEvents, isLoading: timelineLoading } = useStudentTimeline(id);
   const { archiveStudent, isArchiving } = useArchiveStudent();
@@ -298,7 +302,7 @@ function StudentDetailContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 p-4 lg:p-8 bg-[#FAFAFA] min-h-screen text-[#111827]">
+      <div className="w-full space-y-6 text-[#0F172A] font-sans">
         {/* Profile Header */}
         <StudentProfileHeader student={student} onEdit={handleEdit} />
 
@@ -306,23 +310,23 @@ function StudentDetailContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Consolidated Profile Card (Takes 1 column on desktop) */}
           <div className="lg:col-span-1 space-y-5">
-            <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-sm">
+            <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs">
               <CardContent className="p-5 sm:p-6 space-y-6">
                 <div>
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
                     Contact Info
                   </h3>
                   <div className="space-y-4">
                     {contactDetails.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center shrink-0 mt-0.5 text-primary">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center shrink-0 mt-0.5 border border-blue-200">
                           {item.icon}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             {item.label}
                           </p>
-                          <p className="text-sm font-medium text-[#111827] mt-0.5 break-words">
+                          <p className="text-sm font-extrabold text-[#0B2447] mt-0.5 break-words">
                             {item.value || 'Not provided'}
                           </p>
                         </div>
@@ -331,263 +335,118 @@ function StudentDetailContent() {
                   </div>
                 </div>
 
-                <div className="border-t border-[#E5E7EB] pt-5">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+                <div className="border-t border-slate-100 pt-5">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
                     Parent / Guardian
                   </h3>
                   <div className="space-y-4">
                     {parentDetails.map((item, idx) => (
                       <div key={idx} className="flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-lg bg-primary/5 flex items-center justify-center shrink-0 mt-0.5 text-primary">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center shrink-0 mt-0.5 border border-blue-200">
                           {item.icon}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             {item.label}
                           </p>
-                          <p className="text-sm font-medium text-[#111827] mt-0.5 break-words">
+                          <p className="text-sm font-extrabold text-[#0B2447] mt-0.5 break-words">
                             {item.value || 'Not provided'}
                           </p>
                         </div>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                {/* Parent Portal Account Card */}
-                <div className="border-t border-[#E5E7EB] pt-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>🔐</span> Parent Portal Account
-                    </h3>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500 font-medium">Status</span>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-bold text-[11px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Active Portal
-                      </span>
-                    </div>
-
-                    <div className="space-y-1">
-                      <span className="text-slate-500 font-medium block">Portal Email</span>
-                      <span className="font-semibold font-mono text-slate-800 dark:text-slate-200 block truncate">
-                        {student.parentEmail || 'father@example.com'}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-800 text-[11px]">
-                      <div>
-                        <span className="text-slate-400 block">Last Login</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          Today, 10:42 AM
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block">Linked Children</span>
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          1 Child
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 flex flex-col gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-8 text-xs font-semibold gap-1.5 border-teal-200 text-teal-700 hover:bg-teal-50"
-                        onClick={() => {
-                          const pPhone = student.parentPhone || '';
-                          const last4 = pPhone.replace(/\D/g, '').slice(-4);
-                          const genPass = last4.length === 4 ? `Par@${last4}` : 'Par@4912';
-                          toast({
-                            title: 'Password Reset Triggered',
-                            description:
-                              `New password generated: ${genPass} (Force change on next login)`,
-                          });
-                        }}
-                      >
-                        Reset Parent Password
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full h-8 text-xs font-semibold text-slate-600 hover:text-slate-900"
-                        onClick={() => router.push('/tenant-admin/parents')}
-                      >
-                        Open Parent Profile →
-                      </Button>
-                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Tabbed Details & Activity (Takes 2 columns on desktop) */}
+          {/* Right Column - Academic Details & Enrolled Courses (Takes 2 columns on desktop) */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Custom Tab Switcher */}
-            <div className="flex border-b border-[#E5E7EB] gap-6">
-              {[
-                { id: 'academics', label: 'Academics', icon: BookOpen },
-                { id: 'medical', label: 'Medical & Identity', icon: Heart },
-                { id: 'timeline', label: 'Timeline', icon: Activity },
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={cn(
-                      'flex items-center gap-2 pb-3 text-sm font-bold border-b-2 transition-all',
-                      active
-                        ? 'border-[#7C3AED] text-[#7C3AED]'
-                        : 'border-transparent text-muted-foreground hover:text-[#111827]',
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            <StudentInfoCard
+              title="Academic Record"
+              description="Enrolled courses and admission details"
+              items={academicDetails}
+              columns={2}
+            />
 
-            {/* Tab content areas */}
-            {activeTab === 'academics' && (
-              <div className="space-y-5">
-                <StudentInfoCard
-                  title="Academic Record"
-                  description="Enrolled courses and admission details"
-                  items={academicDetails}
-                  columns={2}
-                />
-
-                {/* Courses and batches track section card */}
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-[#E5E7EB] pb-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-[#111827]">
-                        Enrolled Courses & Batches
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Manage active programs, batches, and delivery modes
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="h-9 px-3 rounded-lg text-xs bg-purple-600 hover:bg-purple-700 text-white"
-                      onClick={() => setShowEnrollModal(true)}
-                    >
-                      Enroll New Course
-                    </Button>
-                  </div>
-
-                  <div className="divide-y divide-gray-100 border rounded-xl overflow-hidden bg-gray-50/50">
-                    {studentAllEnrollments.length > 0 ? (
-                      studentAllEnrollments.map((enrollment) => (
-                        <div
-                          key={enrollment.id}
-                          className="flex items-center justify-between p-3.5 bg-white hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="space-y-1">
-                            <span className="font-semibold text-sm text-gray-900 block">
-                              {enrollment.courseName}
-                            </span>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                              <span>
-                                Batch:{' '}
-                                <span className="font-medium text-gray-700">
-                                  {enrollment.batchName || '—'}
-                                </span>
-                              </span>
-                              <span>
-                                Branch: <span>{enrollment.branchName}</span>
-                              </span>
-                              <span>
-                                Date: <span>{formatAdmissionDate(enrollment.admissionDate)}</span>
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <AdmissionStatusBadge status={enrollment.admissionStatus} />
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-2 rounded-lg text-xs"
-                              onClick={() => {
-                                setSelectedEnrollment(enrollment);
-                                setShowBatchDialog(true);
-                              }}
-                            >
-                              Change Batch
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-5 text-center text-xs text-gray-500 bg-white">
-                        No active enrollments found for this student.
-                      </div>
-                    )}
-                  </div>
-                </Card>
-
-                {/* Academic Highlights placeholder visual */}
-                <Card className="rounded-2xl border-[#E5E7EB] bg-white p-5 shadow-sm">
-                  <div className="flex items-center gap-3 border-b border-[#E5E7EB] pb-3 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-yellow-50 text-yellow-600 flex items-center justify-center">
-                      <Award className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-[#111827]">Performance Highlight</h4>
-                      <p className="text-xs text-muted-foreground">Recent progress evaluations</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-xl bg-slate-50 border border-[#E5E7EB]">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Average Test Score
-                      </span>
-                      <p className="text-xl font-extrabold text-[#7C3AED] mt-1">Nil</p>
-                      <span className="text-[10px] text-slate-400 font-medium">No tests taken yet</span>
-                    </div>
-                    <a
-                      href="/dashboard/attendance"
-                      className="block p-3 rounded-xl bg-slate-50 border border-[#E5E7EB] hover:border-teal-300 hover:bg-teal-50 transition-colors group"
-                    >
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        Attendance Rate
-                        <span className="text-teal-500 opacity-0 group-hover:opacity-100 transition-opacity text-[9px]">
-                          View →
-                        </span>
-                      </span>
-                      <p className="text-xl font-extrabold text-teal-600 mt-1 group-hover:text-teal-700">
-                        Nil
-                      </p>
-                      <span className="text-[10px] text-slate-400 font-medium group-hover:text-teal-600">No records yet</span>
-                    </a>
-                  </div>
-                </Card>
+            {/* Courses and batches track section card */}
+            <Card className="rounded-2xl border-slate-200 bg-white p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h4 className="text-sm font-extrabold text-[#0B2447]">
+                    Enrolled Courses & Batches
+                  </h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Manage active programs, batches, and delivery modes
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-9 px-3.5 rounded-xl text-xs bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs"
+                  onClick={() => setShowEnrollModal(true)}
+                >
+                  Enroll New Course
+                </Button>
               </div>
-            )}
 
-            {activeTab === 'medical' && (
-              <StudentInfoCard
-                title="Medical Info & Identity Verification"
-                description="Identification cards and emergency medical records"
-                items={medicalDetails}
-                columns={2}
-              />
-            )}
+              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+                {studentAllEnrollments.length > 0 ? (
+                  studentAllEnrollments.map((enrollment) => (
+                    <div
+                      key={enrollment.id}
+                      className="flex items-center justify-between p-3.5 bg-white hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="space-y-1">
+                        <span className="font-extrabold text-sm text-[#0B2447] block">
+                          {enrollment.courseName}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
+                          <span>
+                            Batch:{' '}
+                            <span className="font-bold text-slate-800">
+                              {enrollment.batchName || '—'}
+                            </span>
+                          </span>
+                          <span>
+                            Branch:{' '}
+                            <span className="font-bold text-slate-800">
+                              {enrollment.branchName}
+                            </span>
+                          </span>
+                          <span>
+                            Date:{' '}
+                            <span className="font-bold text-slate-800">
+                              {formatAdmissionDate(enrollment.admissionDate)}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
 
-            {activeTab === 'timeline' && (
-              <StudentTimeline events={timelineEvents} isLoading={timelineLoading} />
-            )}
+                      <div className="flex items-center gap-3">
+                        <AdmissionStatusBadge status={enrollment.admissionStatus} />
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 rounded-xl text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50"
+                          onClick={() => {
+                            setSelectedEnrollment(enrollment);
+                            setShowBatchDialog(true);
+                          }}
+                        >
+                          Change Batch
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-5 text-center text-xs text-slate-500 font-medium bg-white">
+                    No active enrollments found for this student.
+                  </div>
+                )}
+              </div>
+            </Card>
           </div>
         </div>
       </div>

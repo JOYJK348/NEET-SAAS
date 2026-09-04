@@ -5,6 +5,7 @@ export function useAttendanceOverview() {
   return useQuery({
     queryKey: ['attendance', 'admin', 'overview'],
     queryFn: () => attendanceApi.getOverview(),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }

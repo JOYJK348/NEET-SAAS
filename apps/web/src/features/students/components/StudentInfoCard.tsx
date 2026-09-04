@@ -34,20 +34,25 @@ export function StudentInfoCard({
   };
 
   return (
-    <Card className={cn('rounded-2xl border-[#E5E7EB] bg-white shadow-sm', className)}>
+    <Card className={cn('rounded-2xl border-slate-200 bg-white shadow-2xs', className)}>
       <CardContent className="p-5 sm:p-6">
         <StudentSectionHeader title={title} description={description} action={action} />
         <div className={cn('grid mt-5 gap-4 sm:gap-6', gridCols[columns])}>
           {items.map((item, index) => (
-            <div key={index} className="space-y-1.5">
+            <div
+              key={index}
+              className="space-y-1 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80"
+            >
               <div className="flex items-center gap-1.5">
-                {item.icon && <span className="text-muted-foreground">{item.icon}</span>}
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {item.icon && <span className="text-[#0052CC] shrink-0">{item.icon}</span>}
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   {item.label}
                 </p>
               </div>
-              <div className="text-sm font-medium text-[#111827]">
-                {item.value || <span className="text-muted-foreground italic">Not provided</span>}
+              <div className="text-sm font-extrabold text-[#0B2447] pt-0.5">
+                {item.value || (
+                  <span className="text-slate-400 italic font-normal">Not provided</span>
+                )}
               </div>
             </div>
           ))}

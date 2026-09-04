@@ -100,7 +100,6 @@ export class AttendanceService {
         for (const sid of enrolledIds) {
           const stats = studentPresentMap.get(sid);
           if (stats) {
-            studentCount += 1;
             batchTotal += stats.total;
             batchPresent += stats.present;
             if ((stats.present / stats.total) * 100 < 75) below75Count += 1;
@@ -115,7 +114,7 @@ export class AttendanceService {
           batchName: b.name,
           batchCode: b.code,
           overallRate: rate,
-          totalStudents: studentCount,
+          totalStudents: enrolledIds.size,
           sessionsConducted,
           sessionsMarked,
           studentsBelow75: below75Count,
@@ -179,31 +178,28 @@ export class AttendanceService {
       where: { batchId, status: 'ACTIVE', deletedAt: null },
       select: { studentAdmissionId: true },
     });
-    const enrollmentIds = new Set(enrollments.map((e) => e.studentAdmissionId));
+    const enrolledAdmissionIds = enrollments.map((e) => e.studentAdmissionId);
 
     const studentStats = new Map<
       string,
       { present: number; absent: number; late: number; total: number }
     >();
+    for (const admId of enrolledAdmissionIds) {
+      studentStats.set(admId, { present: 0, absent: 0, late: 0, total: 0 });
+    }
+
     for (const r of records) {
-      if (!enrollmentIds.has(r.studentAdmissionId)) continue;
-      const cur = studentStats.get(r.studentAdmissionId) ?? {
-        present: 0,
-        absent: 0,
-        late: 0,
-        total: 0,
-      };
+      const cur = studentStats.get(r.studentAdmissionId);
+      if (!cur) continue;
       cur.total += 1;
       if (r.attendanceStatus === 'PRESENT') cur.present += 1;
       else if (r.attendanceStatus === 'ABSENT') cur.absent += 1;
       if (r.lateMinutes > 0) cur.late += 1;
-      studentStats.set(r.studentAdmissionId, cur);
     }
 
-    const admissionIds = Array.from(studentStats.keys());
     const admissions = await this.prisma.studentAdmissions.findMany({
-      where: { id: { in: admissionIds }, tenantId },
-      select: { id: true, studentProfileId: true },
+      where: { id: { in: enrolledAdmissionIds }, tenantId },
+      select: { id: true, studentProfileId: true, admissionNumber: true },
     });
 
     const profileIds = admissions.map((a) => a.studentProfileId);
@@ -216,9 +212,7 @@ export class AttendanceService {
       },
     });
     const profileMap = new Map(profiles.map((p) => [p.userId, p]));
-    const admissionToProfile = new Map(
-      admissions.map((a) => [a.id, a.studentProfileId]),
-    );
+    const admissionMap = new Map(admissions.map((a) => [a.id, a]));
 
     const totalPresent = records.filter(
       (r) => r.attendanceStatus === 'PRESENT',
@@ -228,36 +222,35 @@ export class AttendanceService {
         ? Math.round((totalPresent / records.length) * 100)
         : 0;
 
-    const students = Array.from(studentStats.entries())
-      .map(([admissionId, stats]) => {
-        const profileId = admissionToProfile.get(admissionId);
-        const profile = profileId ? profileMap.get(profileId) : undefined;
-        const name = profile
-          ? `${profile.userIdusers.firstName} ${profile.userIdusers.lastName}`
-          : 'Unknown';
-        const code = profile?.studentCode ?? '--';
-        return {
-          studentAdmissionId: admissionId,
-          studentName: name,
-          studentCode: code,
-          present: stats.present,
-          absent: stats.absent,
-          late: stats.late,
-          total: stats.total,
-          rate:
-            stats.total > 0
-              ? Math.round((stats.present / stats.total) * 100)
-              : null,
-        };
-      })
-      .sort((a, b) => (b.rate ?? 0) - (a.rate ?? 0));
+    const students = enrolledAdmissionIds.map((admissionId) => {
+      const stats = studentStats.get(admissionId) || { present: 0, absent: 0, late: 0, total: 0 };
+      const adm = admissionMap.get(admissionId);
+      const profile = adm ? profileMap.get(adm.studentProfileId) : undefined;
+      const name = profile
+        ? `${profile.userIdusers.firstName} ${profile.userIdusers.lastName || ''}`.trim()
+        : 'Student';
+      const code = adm?.admissionNumber || profile?.studentCode || '--';
+      return {
+        studentAdmissionId: admissionId,
+        studentName: name,
+        studentCode: code,
+        present: stats.present,
+        absent: stats.absent,
+        late: stats.late,
+        total: stats.total,
+        rate:
+          stats.total > 0
+            ? Math.round((stats.present / stats.total) * 100)
+            : null,
+      };
+    }).sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
 
     return {
       batchId: batch.id,
       batchName: batch.name,
       batchCode: batch.code,
       overallRate,
-      totalStudents: studentStats.size,
+      totalStudents: enrolledAdmissionIds.length,
       sessionsConducted,
       sessionsMarked,
       students,

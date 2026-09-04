@@ -28,6 +28,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { ErrorState } from '@/components/ui/error-state';
 import { cn } from '@/lib/utils';
+import { getClassStatus } from '@/lib/class-status';
 
 export function BatchDetailView({ batchId }: { batchId: string }) {
   const { batches, isLoading: isBatchesLoading } = useStudentBatches();
@@ -117,7 +118,8 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
             {batch.name}
           </h1>
           <p className="text-xs font-bold text-slate-500">
-            Batch Code: <span className="font-mono text-slate-700">{batch.code}</span> • Detailed Student Workspace
+            Batch Code: <span className="font-mono text-slate-700">{batch.code}</span> • Detailed
+            Student Workspace
           </p>
         </div>
 
@@ -132,7 +134,9 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
             <MapPin className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Branch</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              Branch
+            </p>
             <p className="text-sm font-black text-slate-900 mt-0.5 truncate">
               {batch.branch?.name || 'Head Office'}
             </p>
@@ -145,7 +149,9 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
             <CalendarDays className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Academic Year</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              Academic Year
+            </p>
             <p className="text-sm font-black text-slate-900 mt-0.5 truncate">
               {batch.academicYear?.name || '2026-2027'}
             </p>
@@ -158,7 +164,9 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
             <GraduationCap className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Assigned Course</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              Assigned Course
+            </p>
             <p className="text-sm font-black text-slate-900 mt-0.5 truncate">
               {batch.course?.name || 'NEET Standard Prep'}
             </p>
@@ -189,50 +197,78 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-center">
             <p className="text-lg font-black text-slate-900">{totalSessions}</p>
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">Total Sessions</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mt-0.5">
+              Total Sessions
+            </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-center">
             <p className="text-lg font-black text-emerald-700">{presentCount}</p>
-            <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider mt-0.5">Present</p>
+            <p className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider mt-0.5">
+              Present
+            </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-100 text-center">
             <p className="text-lg font-black text-rose-700">{absentCount}</p>
-            <p className="text-[10px] font-extrabold text-rose-600 uppercase tracking-wider mt-0.5">Absent</p>
+            <p className="text-[10px] font-extrabold text-rose-600 uppercase tracking-wider mt-0.5">
+              Absent
+            </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-100 text-center">
             <p className="text-lg font-black text-amber-700">{lateCount}</p>
-            <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wider mt-0.5">Late</p>
+            <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-wider mt-0.5">
+              Late
+            </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-purple-50/60 border border-purple-100 text-center col-span-2 sm:col-span-1">
             <p className="text-lg font-black text-purple-700">{pendingAttendanceCount}</p>
-            <p className="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider mt-0.5">Pending Mark ⏳</p>
+            <p className="text-[10px] font-extrabold text-purple-600 uppercase tracking-wider mt-0.5">
+              Pending Mark ⏳
+            </p>
           </div>
         </div>
 
         {/* Attendance Records List */}
         {batchAttendanceRecords.length === 0 ? (
           <div className="p-8 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
-            <p className="text-xs font-bold text-slate-500">No attendance marked for this batch yet.</p>
+            <p className="text-xs font-bold text-slate-500">
+              No attendance marked for this batch yet.
+            </p>
           </div>
         ) : (
           <div className="space-y-2 pt-2">
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Session Log History</p>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+              Session Log History
+            </p>
             <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden bg-white">
               {batchAttendanceRecords.map((r) => (
-                <div key={r.id} className="p-3.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50 transition-colors">
+                <div
+                  key={r.id}
+                  className="p-3.5 flex items-center justify-between gap-3 text-xs hover:bg-slate-50 transition-colors"
+                >
                   <div>
-                    <p className="font-extrabold text-slate-900">{r.subject?.name || 'Class Session'}</p>
+                    <p className="font-extrabold text-slate-900">
+                      {r.subject?.name || 'Class Session'}
+                    </p>
                     <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
-                      {r.date ? new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' }) : 'N/A'} • {r.startsAt || '08:00 AM'}
+                      {r.date
+                        ? new Date(r.date).toLocaleDateString('en-IN', {
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: 'short',
+                          })
+                        : 'N/A'}{' '}
+                      • {r.startsAt || '08:00 AM'}
                     </p>
                   </div>
 
                   <span
                     className={cn(
                       'px-2.5 py-1 rounded-xl text-[10px] font-black',
-                      r.status === 'PRESENT' && 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+                      r.status === 'PRESENT' &&
+                        'bg-emerald-50 text-emerald-700 border border-emerald-200',
                       r.status === 'ABSENT' && 'bg-rose-50 text-rose-700 border border-rose-200',
-                      (r.status === 'LATE' || r.lateMinutes > 0) && 'bg-amber-50 text-amber-700 border border-amber-200',
+                      (r.status === 'LATE' || r.lateMinutes > 0) &&
+                        'bg-amber-50 text-amber-700 border border-amber-200',
                     )}
                   >
                     {r.status} {r.lateMinutes > 0 ? `(${r.lateMinutes}m)` : ''}
@@ -255,7 +291,9 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
 
         {batchSessions.length === 0 ? (
           <div className="p-8 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
-            <p className="text-xs font-bold text-slate-500">No scheduled sessions found for this batch.</p>
+            <p className="text-xs font-bold text-slate-500">
+              No scheduled sessions found for this batch.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -270,45 +308,70 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-black text-slate-900 text-sm">{s.subject?.name || 'Class Session'}</h4>
+                      <h4 className="font-black text-slate-900 text-sm">
+                        {s.subject?.name || 'Class Session'}
+                      </h4>
                       {s.date && (
                         <span className="text-[10px] text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-md font-extrabold">
-                          📅 {new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}
+                          📅{' '}
+                          {new Date(s.date + 'T00:00:00').toLocaleDateString('en-IN', {
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: 'short',
+                          })}
                         </span>
                       )}
                     </div>
                     <p className="text-xs font-bold text-slate-500 font-mono mt-0.5">
-                      {s.startsAt} – {s.endsAt} • 👤 Tutor: <span className="text-slate-900 font-extrabold">{s.tutorName || 'Bharathi M'}</span>
+                      {s.startsAt} – {s.endsAt} • 👤 Tutor:{' '}
+                      <span className="text-slate-900 font-extrabold">
+                        {s.tutorName || 'Bharathi M'}
+                      </span>
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   {(() => {
-                    const sessionEndDateTime = s.date ? new Date(`${s.date}T${s.endsAt || '23:59'}`) : new Date(0);
-                    const now = new Date();
-                    const isPast = sessionEndDateTime < now;
-                    const isLive = s.liveStatus === 'LIVE_NOW' || s.sessionStatus === 'STARTED';
-                    const effectiveStatus = s.sessionStatus === 'CANCELLED' ? 'CANCELLED' : isPast || s.liveStatus === 'COMPLETED' ? 'COMPLETED' : isLive ? 'LIVE NOW' : s.sessionStatus;
+                    const statusInfo = getClassStatus(s);
+                    const effectiveStatus = statusInfo.statusBadgeText;
 
                     return (
                       <div className="flex items-center gap-2">
-                        {(isLive || s.deliveryMode === 'ONLINE' || s.deliveryMode === 'HYBRID' || (s as any).meetingLink) && s.sessionStatus !== 'CANCELLED' && (
-                          <Link
-                            href={`/dashboard/student/live/${s.id || 'demo-class-1'}`}
-                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black flex items-center gap-1.5 shadow-xs transition"
-                          >
-                            <Video className="w-3.5 h-3.5" />
-                            <span>Join Live Class 🚀</span>
-                          </Link>
-                        )}
+                        {(s.deliveryMode === 'ONLINE' ||
+                          s.deliveryMode === 'HYBRID' ||
+                          (s as any).meetingLink ||
+                          statusInfo.isLive) &&
+                          !statusInfo.isCancelled && (
+                            <button
+                              onClick={() => {
+                                if (!statusInfo.canJoin) return;
+                                const targetUrl = `/dashboard/student/live/${s.id || 'demo-class-1'}`;
+                                if (typeof window !== 'undefined') window.location.href = targetUrl;
+                              }}
+                              disabled={!statusInfo.canJoin}
+                              className={cn(
+                                'px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition',
+                                statusInfo.canJoin
+                                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white cursor-pointer'
+                                  : 'bg-slate-100 border border-slate-200 text-slate-400 opacity-70 cursor-not-allowed',
+                              )}
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>{statusInfo.buttonLabel}</span>
+                            </button>
+                          )}
                         <span
                           className={cn(
                             'text-[10px] font-black px-2.5 py-1 rounded-xl border',
-                            isLive && 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse',
-                            effectiveStatus === 'COMPLETED' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                            effectiveStatus === 'CANCELLED' && 'bg-rose-50 text-rose-700 border-rose-200',
-                            effectiveStatus === 'SCHEDULED' && 'bg-violet-50 text-violet-700 border-violet-200',
+                            statusInfo.isLive &&
+                              'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse',
+                            (effectiveStatus === 'COMPLETED' || effectiveStatus === 'ENDED') &&
+                              'bg-emerald-50 text-emerald-700 border-emerald-200',
+                            effectiveStatus === 'CANCELLED' &&
+                              'bg-rose-50 text-rose-700 border-rose-200',
+                            effectiveStatus === 'SCHEDULED' &&
+                              'bg-violet-50 text-violet-700 border-violet-200',
                           )}
                         >
                           {effectiveStatus}
@@ -326,8 +389,15 @@ export function BatchDetailView({ batchId }: { batchId: string }) {
   );
 }
 
-export default function StudentBatchDetailPage({ params }: { params: Promise<{ batchId: string }> | { batchId: string } }) {
-  const resolvedParams = typeof (params as any).then === 'function' ? (use(params as Promise<{ batchId: string }>) as { batchId: string }) : (params as { batchId: string });
+export default function StudentBatchDetailPage({
+  params,
+}: {
+  params: Promise<{ batchId: string }> | { batchId: string };
+}) {
+  const resolvedParams =
+    typeof (params as any).then === 'function'
+      ? (use(params as Promise<{ batchId: string }>) as { batchId: string })
+      : (params as { batchId: string });
 
   return (
     <ProtectedRoute allowedRoles={['STUDENT']}>

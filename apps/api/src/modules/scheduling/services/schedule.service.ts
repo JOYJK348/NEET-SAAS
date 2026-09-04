@@ -460,11 +460,27 @@ export class ScheduleService {
       });
     }
 
+    let targetBranchId = dto.branchId;
+    const branchExists = await this.prisma.branches.findFirst({ where: { id: targetBranchId }, select: { id: true } });
+    if (!branchExists) {
+      const activeBranch = await this.prisma.branches.findFirst({ where: { tenantId, deletedAt: null }, select: { id: true } })
+        || await this.prisma.branches.findFirst({ select: { id: true } });
+      if (activeBranch) targetBranchId = activeBranch.id;
+    }
+
+    let targetAYId = dto.academicYearId;
+    const ayExists = await this.prisma.academicYears.findFirst({ where: { id: targetAYId }, select: { id: true } });
+    if (!ayExists) {
+      const activeAY = await this.prisma.academicYears.findFirst({ where: { tenantId, deletedAt: null }, select: { id: true } })
+        || await this.prisma.academicYears.findFirst({ select: { id: true } });
+      if (activeAY) targetAYId = activeAY.id;
+    }
+
     const schedule = await this.prisma.schedules.create({
       data: {
         tenantId,
-        branchId: dto.branchId,
-        academicYearId: dto.academicYearId,
+        branchId: targetBranchId,
+        academicYearId: targetAYId,
         batchId: dto.batchId,
         subjectId: dto.subjectId,
         staffProfileId: dto.staffProfileId,

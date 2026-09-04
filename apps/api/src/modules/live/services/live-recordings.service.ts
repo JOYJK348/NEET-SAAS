@@ -212,19 +212,49 @@ export class LiveRecordingsService {
       recordingWhere.status = this.mapStatusFilter(p.status);
     }
 
-    const [recordings, total] = await this.prisma.$transaction([
+    // Perform cleanup of orphan/duplicate PROCESSING records if READY recording exists
+    try {
+      const readyRecordings = await this.prisma.liveClassRecordings.findMany({
+        where: { status: { in: ['READY', 'COMPLETED'] }, deletedAt: null },
+        select: { liveClassId: true },
+      });
+      const readyClassIds = readyRecordings.map((r) => r.liveClassId).filter(Boolean) as string[];
+      if (readyClassIds.length > 0) {
+        await this.prisma.liveClassRecordings.updateMany({
+          where: {
+            liveClassId: { in: readyClassIds },
+            status: { in: ['PROCESSING', 'RECORDING', 'SCHEDULED'] },
+            deletedAt: null,
+          },
+          data: { deletedAt: new Date() },
+        });
+      }
+    } catch {}
+
+    const [recordings] = await this.prisma.$transaction([
       this.prisma.liveClassRecordings.findMany({
         where: recordingWhere,
         orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: limit * 2, // Fetch buffer to allow clean deduplication
       }),
       this.prisma.liveClassRecordings.count({ where: recordingWhere }),
     ]);
 
-    const items = await this.attachLiveClasses(recordings);
+    // Deduplicate: If multiple rows exist for same liveClassId, prefer READY/COMPLETED
+    const seenClassIds = new Set<string>();
+    const deduplicatedRecordings = recordings.filter((r) => {
+      if (!r.liveClassId) return true;
+      if (seenClassIds.has(r.liveClassId)) {
+        return false;
+      }
+      seenClassIds.add(r.liveClassId);
+      return true;
+    });
 
-    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    const items = await this.attachLiveClasses(deduplicatedRecordings);
+
+    return { items, total: deduplicatedRecordings.length, page, limit, pages: Math.ceil(deduplicatedRecordings.length / limit) };
   }
 
   // ─── Detail + signed playback URL ─────────────────────────────────────────

@@ -4,22 +4,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   CreditCard,
   CheckCircle2,
-  Receipt,
   ArrowLeft,
-  DollarSign,
   Printer,
-  Sparkles,
   RefreshCw,
-  UserCheck,
   Zap,
-  BookOpen,
-  Layers,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -102,7 +96,11 @@ function CollectPaymentContent() {
   // Cascading Maps: Course ➔ Batches ➔ Students
   const courseMap = new Map<
     string,
-    { id: string; name: string; batches: Map<string, { id: string; name: string; accounts: StudentAccount[] }> }
+    {
+      id: string;
+      name: string;
+      batches: Map<string, { id: string; name: string; accounts: StudentAccount[] }>;
+    }
   >();
 
   allAccounts.forEach((acc) => {
@@ -125,7 +123,8 @@ function CollectPaymentContent() {
   const coursesList = Array.from(courseMap.values());
   const selectedCourseObj = selectedCourseId ? courseMap.get(selectedCourseId) : null;
   const availableBatches = selectedCourseObj ? Array.from(selectedCourseObj.batches.values()) : [];
-  const selectedBatchObj = selectedCourseObj && selectedBatchId ? selectedCourseObj.batches.get(selectedBatchId) : null;
+  const selectedBatchObj =
+    selectedCourseObj && selectedBatchId ? selectedCourseObj.batches.get(selectedBatchId) : null;
   const availableStudents = selectedBatchObj ? selectedBatchObj.accounts : [];
 
   const selectedAccount = allAccounts.find((acc) => acc.student.id === selectedStudentId);
@@ -201,7 +200,7 @@ function CollectPaymentContent() {
         remarks,
       });
 
-      toast.success('🎉 Fee payment collected & digital receipt generated!');
+      toast.success('Fee payment collected & digital receipt generated!');
       setReceiptResult(res);
       await loadAllAccounts();
     } catch (err: any) {
@@ -213,76 +212,85 @@ function CollectPaymentContent() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-        {/* ── Signature Violet Hero Header ── */}
-        <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-3xl p-5 sm:p-6 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles className="w-4 h-4 text-violet-200" />
-              <span className="text-[11px] sm:text-xs font-black text-violet-200 uppercase tracking-wider">
-                Tenant Administration • Fee Collection Portal
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-              Collect Fee Payment 💳
-            </h1>
-            <p className="text-violet-200 text-xs sm:text-sm mt-1 max-w-xl">
-              Select Course ➔ Batch ➔ Student ➔ Installment to record manual cash, UPI, or bank transfer payments with instant digital receipts.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
+      <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+        {/* Header Banner - ISML LMS Light Blue Style */}
+        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shrink-0"
               onClick={() => router.push('/tenant-admin/fees/students')}
-              className="bg-white/10 hover:bg-white/20 text-white font-bold border-white/30 rounded-2xl text-xs px-4 py-2.5 cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Fee Accounts
+              <ArrowLeft className="h-5 w-5 text-[#0052CC]" />
             </Button>
+            <div>
+              <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+                <span>Financial Operations</span>
+                <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+                <span>Collect Payment</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0B2447]">
+                Collect Fee Payment
+              </h1>
+              <p className="text-xs text-slate-600 font-medium">
+                Select Course ➔ Batch ➔ Student ➔ Installment to record manual cash, UPI, or bank
+                transfer payments.
+              </p>
+            </div>
           </div>
         </div>
 
         {receiptResult ? (
-          /* ── Receipt Success View ── */
-          <div className="bg-white rounded-3xl border border-emerald-200 p-8 text-center space-y-6 shadow-2xs max-w-2xl mx-auto">
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-xs">
+          /* Receipt Success View */
+          <div className="bg-white rounded-2xl border border-emerald-200 p-8 text-center space-y-6 shadow-2xs max-w-2xl mx-auto">
+            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-2xs">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             <div>
-              <span className="text-xs uppercase font-black text-emerald-600 tracking-wider">
+              <span className="text-xs uppercase font-extrabold text-emerald-600 tracking-wider">
                 Payment Collected & Verified
               </span>
-              <h2 className="text-3xl font-black text-slate-900 mt-1">
+              <h2 className="text-3xl font-extrabold text-[#0B2447] mt-1">
                 {formatRupees(Number(receiptResult.payment?.amount))}
               </h2>
-              <p className="text-xs text-slate-500 mt-1 font-semibold">
+              <p className="text-xs text-slate-500 mt-1 font-bold">
                 Receipt Number:{' '}
-                <span className="font-mono text-violet-700 font-bold">
+                <span className="font-mono text-[#0052CC] font-bold">
                   {receiptResult.receipt?.receiptNumber || 'RCPT-ONLINE'}
                 </span>
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-left text-xs space-y-2.5 max-w-md mx-auto">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2.5 max-w-md mx-auto font-bold">
               <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Payment Method:</span>
-                <span className="font-black text-slate-900">{receiptResult.payment?.paymentMethod}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Reference Number:</span>
-                <span className="font-mono font-bold text-slate-800">{receiptResult.payment?.referenceNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500 font-bold">Selected Installment Balance:</span>
-                <span className="font-black text-emerald-600">
-                  {formatRupees(Number(receiptResult.installment?.balanceAmount))} {Number(receiptResult.installment?.balanceAmount) === 0 ? '(Cleared ✅)' : ''}
+                <span className="text-slate-500">Payment Method:</span>
+                <span className="text-[#0B2447] font-extrabold">
+                  {receiptResult.payment?.paymentMethod}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-slate-200/80 pt-2">
-                <span className="text-slate-700 font-black">Total Outstanding Course Dues:</span>
-                <span className="font-black text-amber-600">
-                  {formatRupees(Number(receiptResult.outstandingAmount ?? receiptResult.installment?.balanceAmount))}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Reference Number:</span>
+                <span className="font-mono text-[#0B2447]">
+                  {receiptResult.payment?.referenceNumber}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Selected Installment Balance:</span>
+                <span className="text-emerald-600 font-extrabold">
+                  {formatRupees(Number(receiptResult.installment?.balanceAmount))}{' '}
+                  {Number(receiptResult.installment?.balanceAmount) === 0 ? '(Cleared)' : ''}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-slate-200 pt-2">
+                <span className="text-slate-700">Total Outstanding Dues:</span>
+                <span className="text-amber-600 font-extrabold">
+                  {formatRupees(
+                    Number(
+                      receiptResult.outstandingAmount ?? receiptResult.installment?.balanceAmount,
+                    ),
+                  )}
                 </span>
               </div>
             </div>
@@ -290,10 +298,12 @@ function CollectPaymentContent() {
             <div className="flex justify-center gap-3 pt-2 flex-wrap">
               <Button
                 variant="outline"
-                onClick={() => router.push(`/tenant-admin/fees/receipts/${receiptResult.payment?.id}`)}
-                className="text-xs font-bold text-violet-700 border-violet-200 bg-white hover:bg-violet-50 rounded-xl cursor-pointer"
+                onClick={() =>
+                  router.push(`/tenant-admin/fees/receipts/${receiptResult.payment?.id}`)
+                }
+                className="text-xs font-extrabold text-[#0052CC] border-blue-200 bg-white hover:bg-blue-50 rounded-xl cursor-pointer shadow-2xs"
               >
-                <Printer className="w-4 h-4 mr-2" /> View & Print Digital Receipt
+                <Printer className="w-4 h-4 mr-2 text-[#0052CC]" /> View & Print Digital Receipt
               </Button>
               <Button
                 onClick={() => {
@@ -306,18 +316,18 @@ function CollectPaymentContent() {
                   setReferenceNumber('');
                   setRemarks('');
                 }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-2xs cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-2xs cursor-pointer"
               >
                 Collect Another Fee Payment
               </Button>
             </div>
           </div>
         ) : (
-          /* ── 4-Step Cascading Dropdown Collection Form ── */
-          <div className="bg-white rounded-3xl border border-slate-200/90 p-6 shadow-2xs space-y-6 max-w-2xl mx-auto">
+          /* 4-Step Cascading Dropdown Collection Form */
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-6 max-w-2xl mx-auto">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <CreditCard className="w-5 h-5 text-violet-600 shrink-0" />
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+              <CreditCard className="w-5 h-5 text-[#0052CC] shrink-0" />
+              <h2 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider">
                 Fee Collection Form
               </h2>
             </div>
@@ -325,17 +335,17 @@ function CollectPaymentContent() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Step 1: Select Course Dropdown */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
-                  1. Select Course 📚
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  1. Select Course *
                 </label>
                 {loadingAccounts ? (
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold text-slate-400 flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-violet-600" />
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-400 flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#0052CC]" />
                     Loading enrolled courses list...
                   </div>
                 ) : (
                   <select
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0B2447] focus:bg-white focus:outline-none focus:border-[#0052CC]"
                     value={selectedCourseId}
                     onChange={(e) => handleCourseChange(e.target.value)}
                     required
@@ -352,11 +362,11 @@ function CollectPaymentContent() {
 
               {/* Step 2: Select Batch Dropdown */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
-                  2. Select Batch 👥
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  2. Select Batch *
                 </label>
                 <select
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0B2447] focus:bg-white focus:outline-none focus:border-[#0052CC] disabled:bg-slate-100 disabled:cursor-not-allowed"
                   value={selectedBatchId}
                   onChange={(e) => handleBatchChange(e.target.value)}
                   disabled={!selectedCourseId || availableBatches.length === 0}
@@ -366,8 +376,8 @@ function CollectPaymentContent() {
                     {!selectedCourseId
                       ? '-- Select a Course first --'
                       : availableBatches.length === 0
-                      ? 'No active batches in this course'
-                      : '-- Choose Batch --'}
+                        ? 'No active batches in this course'
+                        : '-- Choose Batch --'}
                   </option>
                   {availableBatches.map((batch) => (
                     <option key={batch.id} value={batch.id}>
@@ -379,11 +389,11 @@ function CollectPaymentContent() {
 
               {/* Step 3: Select Student Dropdown */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
-                  3. Select Student 🎓
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  3. Select Student *
                 </label>
                 <select
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0B2447] focus:bg-white focus:outline-none focus:border-[#0052CC] disabled:bg-slate-100 disabled:cursor-not-allowed"
                   value={selectedStudentId}
                   onChange={(e) => handleStudentChange(e.target.value)}
                   disabled={!selectedBatchId || availableStudents.length === 0}
@@ -393,14 +403,15 @@ function CollectPaymentContent() {
                     {!selectedBatchId
                       ? '-- Select a Batch first --'
                       : availableStudents.length === 0
-                      ? 'No students with outstanding dues in this batch'
-                      : '-- Choose Student --'}
+                        ? 'No students with outstanding dues in this batch'
+                        : '-- Choose Student --'}
                   </option>
                   {availableStudents.map((acc) => {
                     const outAmt = Number(acc.assignment?.outstandingAmount || 0);
                     return (
                       <option key={acc.student.id} value={acc.student.id}>
-                        {acc.student.name} (#{acc.student.admissionNumber}) — Outstanding Dues: {formatRupees(outAmt)}
+                        {acc.student.name} (#{acc.student.admissionNumber}) — Outstanding Dues:{' '}
+                        {formatRupees(outAmt)}
                       </option>
                     );
                   })}
@@ -409,11 +420,11 @@ function CollectPaymentContent() {
 
               {/* Step 4: Select Unpaid Installment Dropdown */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
-                  4. Select Unpaid Installment 💳
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  4. Select Unpaid Installment *
                 </label>
                 <select
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0B2447] focus:bg-white focus:outline-none focus:border-[#0052CC] disabled:bg-slate-100 disabled:cursor-not-allowed"
                   value={installmentId}
                   onChange={(e) => handleInstallmentChange(e.target.value)}
                   disabled={!selectedStudentId || unpaidInstallments.length === 0}
@@ -423,12 +434,18 @@ function CollectPaymentContent() {
                     {!selectedStudentId
                       ? '-- Select a Student first --'
                       : unpaidInstallments.length === 0
-                      ? '🎉 All installments fully cleared!'
-                      : '-- Choose Installment --'}
+                        ? 'All installments fully cleared!'
+                        : '-- Choose Installment --'}
                   </option>
                   {unpaidInstallments.map((inst) => (
                     <option key={inst.id} value={inst.id}>
-                      Inst #{inst.installmentNumber} — Due: {new Date(inst.dueDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} — Balance: {formatRupees(Number(inst.balanceAmount))} ({inst.status})
+                      Inst #{inst.installmentNumber} — Due:{' '}
+                      {new Date(inst.dueDate).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}{' '}
+                      — Balance: {formatRupees(Number(inst.balanceAmount))} ({inst.status})
                     </option>
                   ))}
                 </select>
@@ -436,15 +453,15 @@ function CollectPaymentContent() {
 
               {/* Step 5: Amount Input */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
-                  5. Amount to Collect (₹)
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  5. Amount to Collect (₹) *
                 </label>
                 <Input
                   type="number"
                   placeholder="e.g. 2399"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : '')}
-                  className="rounded-xl text-xs font-black text-slate-900 p-3"
+                  className="rounded-xl text-xs font-extrabold text-[#0B2447] p-3"
                   required
                 />
               </div>
@@ -452,11 +469,11 @@ function CollectPaymentContent() {
               {/* Step 6: Payment Method & Reference */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
                     Payment Method
                   </label>
                   <select
-                    className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-[#0B2447] focus:bg-white focus:outline-none focus:border-[#0052CC]"
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                   >
@@ -468,7 +485,7 @@ function CollectPaymentContent() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-black text-slate-700 block mb-1">
+                  <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
                     Reference / Transaction No.
                   </label>
                   <Input
@@ -482,11 +499,11 @@ function CollectPaymentContent() {
 
               {/* Step 7: Remarks */}
               <div>
-                <label className="text-xs font-black text-slate-700 block mb-1">
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
                   Remarks / Notes (Optional)
                 </label>
                 <Input
-                  placeholder="e.g. Paid 2nd installment partial at Sivakasi office"
+                  placeholder="e.g. Paid 2nd installment partial at office"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   className="rounded-xl text-xs font-bold p-3"
@@ -498,14 +515,14 @@ function CollectPaymentContent() {
                   type="button"
                   variant="outline"
                   onClick={() => router.push('/tenant-admin/fees/students')}
-                  className="text-xs font-bold rounded-xl border-slate-200"
+                  className="text-xs font-bold rounded-xl border-slate-200 text-slate-700"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={submitting || !installmentId}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-2xs cursor-pointer"
+                  className="bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-2xs cursor-pointer"
                 >
                   {submitting ? (
                     <span className="flex items-center gap-1.5">

@@ -9,9 +9,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Search,
-  Sparkles,
   Layers,
-  CheckCircle2,
 } from 'lucide-react';
 import { Recording } from './types';
 import { RecordingCard } from './RecordingCard';
@@ -38,11 +36,50 @@ export function HierarchicalRecordingsBrowse({
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'drilldown' | 'all'>('drilldown');
 
+  const safeRecordings: Recording[] = useMemo(() => {
+    let raw: Recording[] = [];
+    if (Array.isArray(recordings)) raw = recordings;
+    else if (Array.isArray((recordings as any)?.items)) raw = (recordings as any).items;
+    else if (Array.isArray((recordings as any)?.data)) raw = (recordings as any).data;
+
+    // Deduplicate: If a READY/COMPLETED recording exists for a live class, hide duplicate PROCESSING/RECORDING cards
+    const readyLiveClassIds = new Set<string>();
+    for (const rec of raw) {
+      const liveClassId = rec.liveClassId || rec.liveClass?.id;
+      if (liveClassId && (rec.status === 'READY' || rec.status === 'COMPLETED')) {
+        readyLiveClassIds.add(liveClassId);
+      }
+    }
+
+    const deduplicated: Recording[] = [];
+    const seenClassIds = new Set<string>();
+
+    for (const rec of raw) {
+      const liveClassId = rec.liveClassId || rec.liveClass?.id;
+      if (liveClassId) {
+        if (
+          readyLiveClassIds.has(liveClassId) &&
+          rec.status !== 'READY' &&
+          rec.status !== 'COMPLETED'
+        ) {
+          continue; // Hide duplicate PROCESSING placeholder card
+        }
+        if (seenClassIds.has(liveClassId)) {
+          continue; // Hide extra duplicate entries for the same class
+        }
+        seenClassIds.add(liveClassId);
+      }
+      deduplicated.push(rec);
+    }
+
+    return deduplicated;
+  }, [recordings]);
+
   // ── Global Search Filter ──────────────────────────────────────────────────
   const searchFilteredRecordings = useMemo(() => {
-    if (!searchQuery.trim()) return recordings;
+    if (!searchQuery.trim()) return safeRecordings;
     const q = searchQuery.toLowerCase();
-    return recordings.filter((rec) => {
+    return safeRecordings.filter((rec) => {
       const title = String(rec.liveClass?.title || '').toLowerCase();
       const subtitle = String(rec.liveClass?.subtitle || '').toLowerCase();
       const description = String(rec.liveClass?.description || '').toLowerCase();
@@ -62,7 +99,7 @@ export function HierarchicalRecordingsBrowse({
         subject.includes(q)
       );
     });
-  }, [recordings, searchQuery]);
+  }, [safeRecordings, searchQuery]);
 
   // ── Group by Courses (Level 1) ────────────────────────────────────────────
   const coursesList = useMemo(() => {
@@ -162,7 +199,7 @@ export function HierarchicalRecordingsBrowse({
 
   return (
     <div className="space-y-6">
-      {/* ── Prominent Screen-Top Highlighted Back Button ── */}
+      {/* Back Button */}
       {viewMode === 'drilldown' && currentLevel !== 'course' && (
         <div className="flex items-center justify-between">
           <button
@@ -171,18 +208,23 @@ export function HierarchicalRecordingsBrowse({
               else if (currentLevel === 'subject') resetToBatches();
               else if (currentLevel === 'recordings') resetToSubjects();
             }}
-            className="inline-flex items-center gap-2 px-4.5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-violet-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0052CC] hover:bg-blue-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm shadow-2xs transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 shrink-0" />
             <span>
-              Back to {currentLevel === 'batch' ? 'All Courses' : currentLevel === 'subject' ? 'Batches' : 'Subjects'}
+              Back to{' '}
+              {currentLevel === 'batch'
+                ? 'All Courses'
+                : currentLevel === 'subject'
+                  ? 'Batches'
+                  : 'Subjects'}
             </span>
           </button>
         </div>
       )}
 
       {/* Search & Mode Switcher Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -191,7 +233,7 @@ export function HierarchicalRecordingsBrowse({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by class title, topic, tutor name, course, batch or subject..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-400 font-medium focus:bg-white focus:outline-none focus:border-violet-600 focus:ring-1 focus:ring-violet-600 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 font-bold focus:bg-white focus:outline-none focus:border-[#0052CC] transition-all"
           />
           {searchQuery && (
             <button
@@ -204,23 +246,23 @@ export function HierarchicalRecordingsBrowse({
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+        <div className="flex items-center gap-2 bg-slate-100/80 p-1 rounded-xl border border-slate-200 shrink-0">
           <button
             onClick={() => setViewMode('drilldown')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'drilldown'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0052CC] text-white shadow-2xs'
+                : 'text-slate-600 hover:text-[#0B2447]'
             }`}
           >
             <Layers className="w-3.5 h-3.5" /> Category Cards
           </button>
           <button
             onClick={() => setViewMode('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'all'
-                ? 'bg-violet-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0052CC] text-white shadow-2xs'
+                : 'text-slate-600 hover:text-[#0B2447]'
             }`}
           >
             <Video className="w-3.5 h-3.5" /> All Videos ({searchFilteredRecordings.length})
@@ -228,18 +270,18 @@ export function HierarchicalRecordingsBrowse({
         </div>
       </div>
 
-      {/* Interactive Breadcrumbs (Level Navigation) */}
+      {/* Interactive Breadcrumbs */}
       {viewMode === 'drilldown' && (
-        <div className="flex items-center gap-2 overflow-x-auto text-xs font-medium bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200 shadow-2xs scrollbar-none whitespace-nowrap">
+        <div className="flex items-center gap-2 overflow-x-auto text-xs font-bold bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs scrollbar-none whitespace-nowrap">
           <button
             onClick={resetToCourses}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors shrink-0 cursor-pointer ${
               currentLevel === 'course'
-                ? 'bg-violet-100 text-violet-800 font-bold border border-violet-200 shadow-2xs'
+                ? 'bg-blue-100 text-[#0052CC] font-extrabold border border-blue-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <GraduationCap className="w-3.5 h-3.5" /> All Courses
+            <GraduationCap className="w-3.5 h-3.5 text-[#0052CC]" /> All Courses
           </button>
 
           {selectedCourse && (
@@ -249,11 +291,11 @@ export function HierarchicalRecordingsBrowse({
                 onClick={resetToBatches}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors shrink-0 cursor-pointer ${
                   currentLevel === 'batch'
-                    ? 'bg-indigo-100 text-indigo-800 font-bold border border-indigo-200 shadow-2xs'
+                    ? 'bg-blue-100 text-[#0052CC] font-extrabold border border-blue-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Users className="w-3.5 h-3.5" /> {selectedCourse}
+                <Users className="w-3.5 h-3.5 text-[#0052CC]" /> {selectedCourse}
               </button>
             </>
           )}
@@ -265,11 +307,11 @@ export function HierarchicalRecordingsBrowse({
                 onClick={resetToSubjects}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors shrink-0 cursor-pointer ${
                   currentLevel === 'subject'
-                    ? 'bg-cyan-100 text-cyan-800 font-bold border border-cyan-200 shadow-2xs'
+                    ? 'bg-blue-100 text-[#0052CC] font-extrabold border border-blue-200'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <BookOpen className="w-3.5 h-3.5" /> {selectedBatch}
+                <BookOpen className="w-3.5 h-3.5 text-[#0052CC]" /> {selectedBatch}
               </button>
             </>
           )}
@@ -277,18 +319,21 @@ export function HierarchicalRecordingsBrowse({
           {selectedSubject && (
             <>
               <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold border border-emerald-200 shadow-2xs shrink-0">
-                <Video className="w-3.5 h-3.5" /> {selectedSubject} Recordings
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-100 text-[#0052CC] font-extrabold border border-blue-200 shrink-0">
+                <Video className="w-3.5 h-3.5 text-[#0052CC]" /> {selectedSubject} Recordings
               </span>
             </>
           )}
         </div>
       )}
 
-      {/* ── View Mode 1: All Videos Grid ─────────────────────────────────── */}
+      {/* View Mode 1: All Videos Grid */}
       {viewMode === 'all' ? (
         searchFilteredRecordings.length === 0 ? (
-          <EmptyRecordingsState hasFilters={Boolean(searchQuery)} onReset={() => setSearchQuery('')} />
+          <EmptyRecordingsState
+            hasFilters={Boolean(searchQuery)}
+            onReset={() => setSearchQuery('')}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {searchFilteredRecordings.map((rec) => (
@@ -303,39 +348,42 @@ export function HierarchicalRecordingsBrowse({
           </div>
         )
       ) : (
-        /* ── View Mode 2: Hierarchical 4-Tier Cards Flow ───────────────── */
+        /* View Mode 2: Hierarchical 4-Tier Cards Flow */
         <>
           {/* LEVEL 1: COURSES CARDS */}
           {currentLevel === 'course' && (
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-violet-600 shrink-0" /> Select a Course
+                <h2 className="text-lg font-extrabold text-[#0B2447] flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-[#0052CC] shrink-0" /> Select a Course
                 </h2>
-                <span className="self-start sm:self-auto text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shrink-0">
+                <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shrink-0">
                   {coursesList.length} Available Course{coursesList.length === 1 ? '' : 's'}
                 </span>
               </div>
 
               {coursesList.length === 0 ? (
-                <EmptyRecordingsState hasFilters={Boolean(searchQuery)} onReset={() => setSearchQuery('')} />
+                <EmptyRecordingsState
+                  hasFilters={Boolean(searchQuery)}
+                  onReset={() => setSearchQuery('')}
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {coursesList.map((c) => (
                     <button
                       key={c.name}
                       onClick={() => setSelectedCourse(c.name)}
-                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200/90 hover:border-violet-500 shadow-sm hover:shadow-md transition-all duration-300 text-left overflow-hidden cursor-pointer"
+                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs hover:shadow-md transition-all duration-200 text-left overflow-hidden cursor-pointer"
                     >
                       <div className="space-y-3 relative z-10">
-                        <div className="w-12 h-12 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-700 group-hover:scale-105 group-hover:bg-violet-600 group-hover:text-white transition-all duration-300 shadow-2xs">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition-all duration-200">
                           <GraduationCap className="w-6 h-6" />
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-violet-600">
+                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#0052CC]">
                             Course
                           </span>
-                          <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-violet-600 transition-colors leading-snug">
+                          <h3 className="text-base font-extrabold text-[#0B2447] group-hover:text-[#0052CC] transition-colors leading-snug">
                             {c.name}
                           </h3>
                         </div>
@@ -343,10 +391,11 @@ export function HierarchicalRecordingsBrowse({
 
                       <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between relative z-10 text-xs font-bold">
                         <span className="inline-flex items-center gap-1.5 text-slate-600">
-                          <Video className="w-3.5 h-3.5 text-violet-600" />
-                          <strong className="text-slate-900">{c.count}</strong> Recorded Class{c.count === 1 ? '' : 'es'}
+                          <Video className="w-3.5 h-3.5 text-[#0052CC]" />
+                          <strong className="text-[#0B2447]">{c.count}</strong> Recorded Class
+                          {c.count === 1 ? '' : 'es'}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-violet-600 font-extrabold group-hover:translate-x-1 transition-transform">
+                        <span className="inline-flex items-center gap-1 text-[#0052CC] font-extrabold group-hover:translate-x-1 transition-transform">
                           View Batches <ChevronRight className="w-4 h-4" />
                         </span>
                       </div>
@@ -364,44 +413,47 @@ export function HierarchicalRecordingsBrowse({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     onClick={resetToCourses}
-                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-violet-600 hover:border-violet-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
+                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-[#0052CC] hover:border-blue-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
                     title="Back to Courses"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <span className="text-[11px] sm:text-xs font-bold text-violet-600 uppercase tracking-wider block truncate">
+                    <span className="text-[11px] sm:text-xs font-extrabold text-[#0052CC] uppercase tracking-wider block truncate">
                       {selectedCourse}
                     </span>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 truncate">
-                      <Users className="w-5 h-5 text-indigo-600 shrink-0" /> Select a Batch
+                    <h2 className="text-lg font-extrabold text-[#0B2447] flex items-center gap-2 truncate">
+                      <Users className="w-5 h-5 text-[#0052CC] shrink-0" /> Select a Batch
                     </h2>
                   </div>
                 </div>
-                <span className="self-start sm:self-auto text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shrink-0">
+                <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shrink-0">
                   {batchesList.length} Batch{batchesList.length === 1 ? '' : 'es'}
                 </span>
               </div>
 
               {batchesList.length === 0 ? (
-                <EmptyRecordingsState hasFilters={Boolean(searchQuery)} onReset={() => setSearchQuery('')} />
+                <EmptyRecordingsState
+                  hasFilters={Boolean(searchQuery)}
+                  onReset={() => setSearchQuery('')}
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {batchesList.map((b) => (
                     <button
                       key={b.name}
                       onClick={() => setSelectedBatch(b.name)}
-                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-500 shadow-sm hover:shadow-md transition-all duration-300 text-left overflow-hidden cursor-pointer"
+                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs hover:shadow-md transition-all duration-200 text-left overflow-hidden cursor-pointer"
                     >
                       <div className="space-y-3 relative z-10">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-2xs">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition-all duration-200">
                           <Users className="w-6 h-6" />
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-indigo-600">
+                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#0052CC]">
                             Batch
                           </span>
-                          <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                          <h3 className="text-base font-extrabold text-[#0B2447] group-hover:text-[#0052CC] transition-colors leading-snug">
                             {b.name}
                           </h3>
                         </div>
@@ -409,10 +461,11 @@ export function HierarchicalRecordingsBrowse({
 
                       <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between relative z-10 text-xs font-bold">
                         <span className="inline-flex items-center gap-1.5 text-slate-600">
-                          <Video className="w-3.5 h-3.5 text-indigo-600" />
-                          <strong className="text-slate-900">{b.count}</strong> Recorded Class{b.count === 1 ? '' : 'es'}
+                          <Video className="w-3.5 h-3.5 text-[#0052CC]" />
+                          <strong className="text-[#0B2447]">{b.count}</strong> Recorded Class
+                          {b.count === 1 ? '' : 'es'}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-indigo-600 font-extrabold group-hover:translate-x-1 transition-transform">
+                        <span className="inline-flex items-center gap-1 text-[#0052CC] font-extrabold group-hover:translate-x-1 transition-transform">
                           View Subjects <ChevronRight className="w-4 h-4" />
                         </span>
                       </div>
@@ -430,44 +483,47 @@ export function HierarchicalRecordingsBrowse({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     onClick={resetToBatches}
-                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
+                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-[#0052CC] hover:border-blue-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
                     title="Back to Batches"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <span className="text-[11px] sm:text-xs font-bold text-indigo-600 uppercase tracking-wider block truncate">
+                    <span className="text-[11px] sm:text-xs font-extrabold text-[#0052CC] uppercase tracking-wider block truncate">
                       {selectedCourse} • {selectedBatch}
                     </span>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 truncate">
-                      <BookOpen className="w-5 h-5 text-cyan-600 shrink-0" /> Select a Subject
+                    <h2 className="text-lg font-extrabold text-[#0B2447] flex items-center gap-2 truncate">
+                      <BookOpen className="w-5 h-5 text-[#0052CC] shrink-0" /> Select a Subject
                     </h2>
                   </div>
                 </div>
-                <span className="self-start sm:self-auto text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shrink-0">
+                <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shrink-0">
                   {subjectsList.length} Subject{subjectsList.length === 1 ? '' : 's'}
                 </span>
               </div>
 
               {subjectsList.length === 0 ? (
-                <EmptyRecordingsState hasFilters={Boolean(searchQuery)} onReset={() => setSearchQuery('')} />
+                <EmptyRecordingsState
+                  hasFilters={Boolean(searchQuery)}
+                  onReset={() => setSearchQuery('')}
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {subjectsList.map((s) => (
                     <button
                       key={s.name}
                       onClick={() => setSelectedSubject(s.name)}
-                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200/90 hover:border-cyan-500 shadow-sm hover:shadow-md transition-all duration-300 text-left overflow-hidden cursor-pointer"
+                      className="group relative flex flex-col justify-between p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs hover:shadow-md transition-all duration-200 text-left overflow-hidden cursor-pointer"
                     >
                       <div className="space-y-3 relative z-10">
-                        <div className="w-12 h-12 rounded-xl bg-cyan-100 border border-cyan-200 flex items-center justify-center text-cyan-700 group-hover:scale-105 group-hover:bg-cyan-600 group-hover:text-white transition-all duration-300 shadow-2xs">
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0052CC] group-hover:bg-[#0052CC] group-hover:text-white transition-all duration-200">
                           <BookOpen className="w-6 h-6" />
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-cyan-600">
+                          <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#0052CC]">
                             Subject
                           </span>
-                          <h3 className="text-lg font-extrabold text-slate-900 group-hover:text-cyan-600 transition-colors leading-snug">
+                          <h3 className="text-base font-extrabold text-[#0B2447] group-hover:text-[#0052CC] transition-colors leading-snug">
                             {s.name}
                           </h3>
                         </div>
@@ -475,10 +531,11 @@ export function HierarchicalRecordingsBrowse({
 
                       <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between relative z-10 text-xs font-bold">
                         <span className="inline-flex items-center gap-1.5 text-slate-600">
-                          <Video className="w-3.5 h-3.5 text-cyan-600" />
-                          <strong className="text-slate-900">{s.count}</strong> Recorded Video{s.count === 1 ? '' : 's'}
+                          <Video className="w-3.5 h-3.5 text-[#0052CC]" />
+                          <strong className="text-[#0B2447]">{s.count}</strong> Recorded Video
+                          {s.count === 1 ? '' : 's'}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-cyan-600 font-extrabold group-hover:translate-x-1 transition-transform">
+                        <span className="inline-flex items-center gap-1 text-[#0052CC] font-extrabold group-hover:translate-x-1 transition-transform">
                           Watch Videos <ChevronRight className="w-4 h-4" />
                         </span>
                       </div>
@@ -496,27 +553,31 @@ export function HierarchicalRecordingsBrowse({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <button
                     onClick={resetToSubjects}
-                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-cyan-600 hover:border-cyan-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
+                    className="p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-[#0052CC] hover:border-blue-300 shadow-2xs transition-colors shrink-0 cursor-pointer"
                     title="Back to Subjects"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
                   </button>
                   <div className="min-w-0 flex-1">
-                    <span className="text-[11px] sm:text-xs font-bold text-cyan-600 uppercase tracking-wider block truncate">
+                    <span className="text-[11px] sm:text-xs font-extrabold text-[#0052CC] uppercase tracking-wider block truncate">
                       {selectedCourse} • {selectedBatch} • {selectedSubject}
                     </span>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2 truncate">
-                      <Video className="w-5 h-5 text-emerald-600 shrink-0" /> {selectedSubject} Recordings
+                    <h2 className="text-lg font-extrabold text-[#0B2447] flex items-center gap-2 truncate">
+                      <Video className="w-5 h-5 text-emerald-600 shrink-0" /> {selectedSubject}{' '}
+                      Recordings
                     </h2>
                   </div>
                 </div>
-                <span className="self-start sm:self-auto text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200 shrink-0">
+                <span className="self-start sm:self-auto text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1 rounded-full border border-blue-200 shrink-0">
                   {finalVideoCards.length} Video{finalVideoCards.length === 1 ? '' : 's'}
                 </span>
               </div>
 
               {finalVideoCards.length === 0 ? (
-                <EmptyRecordingsState hasFilters={Boolean(searchQuery)} onReset={() => setSearchQuery('')} />
+                <EmptyRecordingsState
+                  hasFilters={Boolean(searchQuery)}
+                  onReset={() => setSearchQuery('')}
+                />
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {finalVideoCards.map((rec) => (

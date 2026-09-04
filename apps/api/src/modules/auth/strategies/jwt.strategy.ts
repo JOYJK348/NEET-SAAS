@@ -14,7 +14,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const isAsymmetric = key.includes('BEGIN');
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => req?.query?.token || req?.query?.access_token || null,
+      ]),
       ignoreExpiration: false,
       algorithms: isAsymmetric ? ['RS256'] : ['HS256', 'RS256'],
       secretOrKey: key,

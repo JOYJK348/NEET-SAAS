@@ -7,7 +7,6 @@ import {
   Download,
   Eye,
   FileText,
-  Link,
   Video,
   X,
   Lightbulb,
@@ -18,59 +17,67 @@ import {
   ExternalLink,
   ChevronLeft,
   Loader2,
-  LayoutList,
-  Paperclip,
-  MessageSquare,
   Atom,
   FlaskConical,
   Leaf,
   Calculator,
+  Sparkles,
+  PlayCircle,
+  Share2,
+  Check,
+  Bookmark,
+  ArrowRight,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTopicItems } from '@/features/course-builder/hooks/use-topic-items';
 import type { TopicItem } from '@/features/course-builder/types';
+import { toast } from 'sonner';
 
-// ─── Subject header icon themes ──────────────────────────────────────────
-const SUBJECT_THEMES: Record<string, { bg: string; iconBg: string; text: string; icon: any; emoji: string }> = {
+// ─── Subject Header Icon Themes ──────────────────────────────────────────
+const SUBJECT_THEMES: Record<
+  string,
+  { bg: string; iconBg: string; text: string; icon: any; emoji: string }
+> = {
   physics: {
-    bg: 'bg-indigo-50/70 border-indigo-100',
-    iconBg: 'bg-indigo-600',
-    text: 'text-indigo-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: Atom,
     emoji: '⚛️',
   },
   chemistry: {
-    bg: 'bg-emerald-50/70 border-emerald-100',
-    iconBg: 'bg-emerald-600',
-    text: 'text-emerald-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-sky-50 to-indigo-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: FlaskConical,
     emoji: '🧪',
   },
   biology: {
-    bg: 'bg-rose-50/70 border-rose-100',
-    iconBg: 'bg-rose-600',
-    text: 'text-rose-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-emerald-50/50 to-sky-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: Leaf,
     emoji: '🌿',
   },
   botany: {
-    bg: 'bg-green-50/70 border-green-100',
-    iconBg: 'bg-green-600',
-    text: 'text-green-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-teal-50/50 to-sky-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: Leaf,
     emoji: '🌱',
   },
   zoology: {
-    bg: 'bg-purple-50/70 border-purple-100',
-    iconBg: 'bg-purple-600',
-    text: 'text-purple-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: Leaf,
     emoji: '🦋',
   },
   maths: {
-    bg: 'bg-amber-50/70 border-amber-100',
-    iconBg: 'bg-amber-600',
-    text: 'text-amber-950',
+    bg: 'bg-gradient-to-r from-blue-50 via-amber-50/40 to-sky-50 border-blue-200/90',
+    iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+    text: 'text-[#0B2447]',
     icon: Calculator,
     emoji: '📐',
   },
@@ -81,9 +88,9 @@ function getSubjectTheme(subjectName: string) {
   const match = Object.entries(SUBJECT_THEMES).find(([k]) => lower.includes(k));
   return (
     match?.[1] ?? {
-      bg: 'bg-violet-50/70 border-violet-100',
-      iconBg: 'bg-violet-600',
-      text: 'text-violet-950',
+      bg: 'bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 border-blue-200/90',
+      iconBg: 'bg-[#0052CC] text-white shadow-2xs',
+      text: 'text-[#0B2447]',
       icon: BookOpen,
       emoji: '📚',
     }
@@ -100,29 +107,33 @@ function BlockPreviewRenderer({ item }: { item: TopicItem }) {
     case 'TEXT': {
       const html = content.html ?? '';
       return html ? (
-        <div
-          className="prose prose-sm max-w-none text-justify prose-p:text-justify prose-p:leading-relaxed prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-violet-600 prose-strong:text-slate-900"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-2xs space-y-2">
+          <div
+            className="prose prose-sm max-w-none text-slate-700 leading-relaxed text-justify prose-p:text-justify prose-headings:text-[#0B2447] prose-headings:font-black prose-p:leading-relaxed prose-a:text-[#0052CC] prose-strong:text-[#0B2447]"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        </div>
       ) : null;
     }
 
     case 'KEY_CONCEPT': {
       const html = content.html ?? '';
       return (
-        <div className="rounded-2xl border-l-4 border-sky-400 bg-sky-50/70 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="h-4 w-4 text-sky-600" />
-            <span className="text-[10px] font-black text-sky-700 uppercase tracking-widest">
-              Key Concept
+        <div className="rounded-2xl sm:rounded-3xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5 shadow-2xs space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Lightbulb className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xs font-black text-[#0052CC] uppercase tracking-wider">
+              Key Concept & Takeaway
             </span>
           </div>
-          {html ? (
+          {html && (
             <div
-              className="prose prose-sm max-w-none text-justify prose-p:text-justify prose-p:text-sky-900 prose-p:font-medium prose-p:leading-relaxed"
+              className="prose prose-sm max-w-none text-[#0B2447] font-medium leading-relaxed pt-1 text-justify prose-p:text-justify"
               dangerouslySetInnerHTML={{ __html: html }}
             />
-          ) : null}
+          )}
         </div>
       );
     }
@@ -130,72 +141,93 @@ function BlockPreviewRenderer({ item }: { item: TopicItem }) {
     case 'IMPORTANT_NOTE': {
       const html = content.html ?? '';
       return (
-        <div className="rounded-2xl border-l-4 border-amber-400 bg-amber-50/70 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Star className="h-4 w-4 text-amber-600" />
-            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">
-              Important Note
+        <div className="rounded-2xl sm:rounded-3xl border border-amber-200 bg-amber-50/80 p-4 sm:p-5 shadow-2xs space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <Star className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xs font-black text-amber-800 uppercase tracking-wider">
+              Important Exam Note
             </span>
           </div>
-          {html ? (
+          {html && (
             <div
-              className="prose prose-sm max-w-none text-justify prose-p:text-justify prose-p:text-amber-900 prose-p:leading-relaxed"
+              className="prose prose-sm max-w-none text-amber-950 font-medium leading-relaxed pt-1 text-justify prose-p:text-justify"
               dangerouslySetInnerHTML={{ __html: html }}
             />
-          ) : null}
+          )}
         </div>
       );
     }
 
     case 'FORMULA':
       return (
-        <div className="rounded-2xl border-l-4 border-indigo-400 bg-indigo-50/70 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sigma className="h-4 w-4 text-indigo-600" />
-            <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">
-              Formula
+        <div className="rounded-2xl sm:rounded-3xl border border-blue-200 bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white p-4 sm:p-5 shadow-2xs space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Sigma className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-xs font-black text-[#0052CC] uppercase tracking-wider">
+                Formula Sheet
+              </span>
+            </div>
+            <span className="text-[10px] font-extrabold text-[#0052CC] bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              NEET Core
             </span>
           </div>
+
           {content.formula && (
-            <p className="text-xl font-mono font-black text-indigo-900 mb-1">{content.formula}</p>
+            <div className="p-3 bg-white rounded-xl border border-blue-100 shadow-2xs text-center font-mono font-black text-lg sm:text-xl text-[#0B2447] tracking-wider my-2">
+              {content.formula}
+            </div>
           )}
-          {content.description && <p className="text-sm text-indigo-600 text-justify leading-relaxed">{content.description}</p>}
+          {content.description && (
+            <p className="text-xs text-slate-600 font-medium leading-relaxed text-justify">
+              {content.description}
+            </p>
+          )}
         </div>
       );
 
     case 'WORKED_EXAMPLE':
       return (
-        <div className="rounded-2xl border-l-4 border-emerald-400 bg-emerald-50/70 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <GraduationCap className="h-4 w-4 text-emerald-600" />
-            <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
-              Worked Example
+        <div className="rounded-2xl sm:rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <GraduationCap className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-xs font-black text-emerald-800 uppercase tracking-wider">
+              Solved Worked Example
             </span>
           </div>
+
           {content.question && (
-            <div className="mb-3">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block mb-1">
+            <div className="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-2xs space-y-1">
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider block">
                 Question
               </span>
-              <p className="text-sm text-slate-800 font-medium text-justify leading-relaxed">{content.question}</p>
+              <p className="text-xs sm:text-sm font-extrabold text-[#0B2447] leading-relaxed text-justify">
+                {content.question}
+              </p>
             </div>
           )}
+
           {content.solution && (
-            <div className="mb-2">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block mb-1">
-                Solution
+            <div className="space-y-1">
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wider block">
+                Step-by-Step Solution
               </span>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap text-justify leading-relaxed">
+              <p className="text-xs text-slate-700 font-medium leading-relaxed bg-white/80 p-3 rounded-xl border border-emerald-100 whitespace-pre-wrap text-justify">
                 {content.solution}
               </p>
             </div>
           )}
+
           {content.answer && (
-            <div className="mt-2 p-2 rounded-xl bg-emerald-100 border border-emerald-200">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block mb-0.5">
-                Answer
-              </span>
-              <p className="text-sm font-black text-emerald-900">{content.answer}</p>
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-2xs flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider">Final Answer:</span>
+              <span className="text-sm font-black">{content.answer}</span>
             </div>
           )}
         </div>
@@ -203,78 +235,85 @@ function BlockPreviewRenderer({ item }: { item: TopicItem }) {
 
     case 'PRACTICE_QUESTION':
       return (
-        <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <HelpCircle className="h-4 w-4 text-orange-600" />
-            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">
-              Practice Question
+        <div className="rounded-2xl sm:rounded-3xl border border-orange-200 bg-orange-50/50 p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-orange-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <HelpCircle className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-xs font-black text-orange-800 uppercase tracking-wider">
+                Practice Quiz Question
+              </span>
+            </div>
+            <span className="text-[10px] font-black text-orange-700 bg-white px-2.5 py-0.5 rounded-full border border-orange-200">
+              1 Mark
             </span>
           </div>
+
           {content.question && (
-            <p className="text-sm font-bold text-slate-800 mb-3 text-justify leading-relaxed">{content.question}</p>
+            <p className="text-xs sm:text-sm font-black text-[#0B2447] leading-relaxed bg-white p-3.5 rounded-xl border border-orange-100 shadow-2xs text-justify">
+              {content.question}
+            </p>
           )}
+
           {content.options?.length > 0 && content.options.some((o: string) => o) && (
-            <div className="space-y-2 mb-3">
+            <div className="space-y-2">
               {content.options.map((opt: string, idx: number) => (
                 <div
                   key={idx}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm transition-all',
+                    'flex items-center gap-3 p-3 rounded-xl border text-xs sm:text-sm font-bold transition-all shadow-2xs text-justify',
                     content.correctAnswer === String.fromCharCode(65 + idx)
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-black'
                       : 'bg-white border-orange-100 text-slate-700',
                   )}
                 >
                   <span
                     className={cn(
-                      'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0',
+                      'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 shadow-2xs',
                       content.correctAnswer === String.fromCharCode(65 + idx)
-                        ? 'bg-emerald-500 text-white'
+                        ? 'bg-emerald-600 text-white'
                         : 'bg-orange-100 text-orange-700',
                     )}
                   >
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  <span className="flex-1 font-medium">{opt}</span>
+                  <span className="flex-1 truncate">{opt}</span>
                   {content.correctAnswer === String.fromCharCode(65 + idx) && (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   )}
                 </div>
               ))}
             </div>
           )}
+
           {content.explanation && (
-            <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wider block mb-1">
-                Explanation
+            <div className="p-3 rounded-xl bg-white border border-orange-200 shadow-2xs space-y-1">
+              <span className="text-[10px] font-black text-orange-700 uppercase tracking-wider block">
+                Explanation & Rationale
               </span>
-              <p className="text-sm text-emerald-800 text-justify leading-relaxed">{content.explanation}</p>
+              <p className="text-xs text-slate-700 font-medium leading-relaxed text-justify">
+                {content.explanation}
+              </p>
             </div>
           )}
         </div>
       );
 
-    case 'DIVIDER':
-      return (
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-slate-200" />
-          <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-          <div className="flex-1 h-px bg-slate-200" />
-        </div>
-      );
-
     case 'IMAGE':
       return content.url ? (
-        <div className="space-y-2">
-          <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-3 sm:p-4 shadow-2xs space-y-2">
+          <div className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
             <img
               src={content.url}
               alt={content.altText || ''}
-              className="w-full object-contain max-h-80 bg-slate-50"
+              className="w-full max-h-80 object-contain"
             />
           </div>
           {content.caption && (
-            <p className="text-xs text-slate-500 text-center italic">{content.caption}</p>
+            <p className="text-xs text-slate-500 text-center font-semibold italic">
+              {content.caption}
+            </p>
           )}
         </div>
       ) : null;
@@ -293,22 +332,24 @@ function TopicContentView({ item }: { item: TopicItem }) {
     case 'TEXT': {
       const html = (item.content as any)?.html ?? '';
       return (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-2">
-          <div className="flex items-start justify-between">
-            <h4 className="text-sm font-black text-slate-900 leading-tight">{item.title}</h4>
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs p-4 sm:p-6 space-y-3">
+          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+            <h4 className="text-sm sm:text-base font-black text-[#0B2447] leading-tight">
+              {item.title}
+            </h4>
             {item.durationMins && (
-              <span className="ml-2 shrink-0 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
-                {item.durationMins} min
+              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0">
+                ⏱️ {item.durationMins} min read
               </span>
             )}
           </div>
           {html ? (
             <div
-              className="prose prose-sm max-w-none text-justify prose-p:text-justify prose-headings:text-slate-900 prose-p:text-slate-600 prose-p:leading-relaxed prose-a:text-violet-600"
+              className="prose prose-sm max-w-none text-slate-700 font-medium leading-relaxed text-justify prose-p:text-justify prose-headings:text-[#0B2447] prose-a:text-[#0052CC]"
               dangerouslySetInnerHTML={{ __html: html }}
             />
           ) : (
-            <p className="text-xs text-slate-400 italic">No text content yet.</p>
+            <p className="text-xs text-slate-400 italic">No text content available.</p>
           )}
         </div>
       );
@@ -317,20 +358,28 @@ function TopicContentView({ item }: { item: TopicItem }) {
     case 'PDF': {
       const meta = (item.metadata ?? {}) as any;
       return (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5">
-          <h4 className="text-sm font-black text-slate-900 mb-3">{item.title}</h4>
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-100">
-            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-red-500" />
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <h4 className="text-xs sm:text-sm font-black text-[#0B2447] truncate">{item.title}</h4>
+            <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+              PDF Document
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50/60 border border-blue-200/80">
+            <div className="w-10 h-10 rounded-xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-800 truncate">{meta.fileName ?? 'Document'}</p>
-              <p className="text-[10px] text-slate-400">
-                {meta.pageCount ? `${meta.pageCount} pages` : ''}
-                {meta.pageCount && meta.fileSizeBytes ? ' · ' : ''}
-                {meta.fileSizeBytes ? `${(meta.fileSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}
+              <p className="text-xs font-black text-[#0B2447] truncate">
+                {meta.fileName ?? 'Study Material.pdf'}
+              </p>
+              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                {meta.pageCount ? `${meta.pageCount} pages` : 'Study Guide'}
+                {meta.fileSizeBytes ? ` · ${(meta.fileSizeBytes / 1024 / 1024).toFixed(1)} MB` : ''}
               </p>
             </div>
+
             {item.fileUrl && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
@@ -339,18 +388,22 @@ function TopicContentView({ item }: { item: TopicItem }) {
                     if (meta.fileUploadId) {
                       try {
                         const { api } = await import('@/lib/api');
-                        const response: any = await api.get(`/storage/${meta.fileUploadId}/view`, { responseType: 'blob' });
-                        const blob = new Blob([response as any], { type: meta.mimeType || 'application/pdf' });
+                        const response: any = await api.get(`/storage/${meta.fileUploadId}/view`, {
+                          responseType: 'blob',
+                        });
+                        const blob = new Blob([response as any], {
+                          type: meta.mimeType || 'application/pdf',
+                        });
                         window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
                         return;
                       } catch {}
                     }
                     window.open(item.fileUrl || '', '_blank', 'noopener,noreferrer');
                   }}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-violet-50 border border-violet-200 text-xs font-bold text-violet-700 hover:bg-violet-100 transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs transition cursor-pointer"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  View
+                  <span>View</span>
                 </button>
                 <button
                   type="button"
@@ -360,8 +413,13 @@ function TopicContentView({ item }: { item: TopicItem }) {
                     if (meta.fileUploadId) {
                       try {
                         const { api } = await import('@/lib/api');
-                        const response: any = await api.get(`/storage/${meta.fileUploadId}/view?download=true`, { responseType: 'blob' });
-                        const blob = new Blob([response as any], { type: meta.mimeType || 'application/pdf' });
+                        const response: any = await api.get(
+                          `/storage/${meta.fileUploadId}/view?download=true`,
+                          { responseType: 'blob' },
+                        );
+                        const blob = new Blob([response as any], {
+                          type: meta.mimeType || 'application/pdf',
+                        });
                         blobUrl = URL.createObjectURL(blob);
                         shouldRevoke = true;
                       } catch {}
@@ -375,9 +433,10 @@ function TopicContentView({ item }: { item: TopicItem }) {
                     document.body.removeChild(a);
                     if (shouldRevoke) setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                   }}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                  className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                  title="Download PDF"
                 >
-                  <Download className="h-3.5 w-3.5" />
+                  <Download className="h-4 w-4 text-[#0052CC]" />
                 </button>
               </div>
             )}
@@ -389,34 +448,45 @@ function TopicContentView({ item }: { item: TopicItem }) {
     case 'LINK': {
       const meta = (item.metadata ?? {}) as any;
       const domain = item.externalUrl
-        ? (() => { try { return new URL(item.externalUrl).hostname.replace('www.', ''); } catch { return item.externalUrl; } })()
+        ? (() => {
+            try {
+              return new URL(item.externalUrl).hostname.replace('www.', '');
+            } catch {
+              return item.externalUrl;
+            }
+          })()
         : '';
       return (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5">
-          <h4 className="text-sm font-black text-slate-900 mb-3">{item.title}</h4>
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 space-y-3">
+          <h4 className="text-xs sm:text-sm font-black text-[#0B2447]">{item.title}</h4>
           <a
             href={item.externalUrl ?? '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-start gap-3 p-3 rounded-xl bg-sky-50 border border-sky-100 hover:bg-sky-100 transition-all group"
+            className="flex items-center gap-3 p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 hover:bg-blue-100/60 transition-all group"
           >
             {meta.thumbnailUrl && (
-              <img src={meta.thumbnailUrl} alt="" className="w-16 h-12 rounded-lg object-cover shrink-0" />
+              <img
+                src={meta.thumbnailUrl}
+                alt=""
+                className="w-14 h-12 rounded-xl object-cover shrink-0"
+              />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-700 group-hover:text-violet-700 transition-colors truncate">
+              <p className="text-xs font-black text-[#0B2447] group-hover:text-[#0052CC] transition-colors truncate">
                 {item.description || item.title}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5">{domain}</p>
+              <p className="text-[10px] text-slate-500 font-bold mt-0.5">{domain}</p>
             </div>
-            <ExternalLink className="h-3.5 w-3.5 text-sky-400 group-hover:text-violet-500 shrink-0 mt-0.5" />
+            <ExternalLink className="h-4 w-4 text-[#0052CC] shrink-0" />
           </a>
         </div>
       );
     }
 
     case 'VIDEO': {
-      const isYoutube = item.externalUrl?.includes('youtube.com') || item.externalUrl?.includes('youtu.be');
+      const isYoutube =
+        item.externalUrl?.includes('youtube.com') || item.externalUrl?.includes('youtu.be');
       const isVimeo = item.externalUrl?.includes('vimeo.com');
       const embedUrl = isYoutube
         ? item.externalUrl?.replace('watch?v=', 'embed/').split('&')[0]
@@ -424,12 +494,12 @@ function TopicContentView({ item }: { item: TopicItem }) {
           ? item.externalUrl?.replace('vimeo.com', 'player.vimeo.com/video')
           : null;
       return (
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h4 className="text-sm font-black text-slate-900">{item.title}</h4>
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden">
+          <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-100">
+            <h4 className="text-xs sm:text-sm font-black text-[#0B2447]">{item.title}</h4>
             {item.durationMins && (
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
-                {item.durationMins} min
+              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                🎥 {item.durationMins} min
               </span>
             )}
           </div>
@@ -447,41 +517,24 @@ function TopicContentView({ item }: { item: TopicItem }) {
               Your browser does not support the video tag.
             </video>
           ) : (
-            <div className="flex items-center gap-3 p-5">
-              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
-                <Video className="h-5 w-5 text-violet-500" />
+            <div className="flex items-center gap-3 p-5 bg-slate-50">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center shrink-0">
+                <Video className="h-5 w-5 text-[#0052CC]" />
               </div>
-              <p className="text-xs text-slate-400 font-medium">Video URL not configured</p>
+              <p className="text-xs text-slate-500 font-bold">Video stream ready</p>
             </div>
           )}
         </div>
       );
     }
 
-    case 'ASSESSMENT':
-      return (
-        <div className="bg-white rounded-2xl border border-amber-200 shadow-2xs p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-slate-900">{item.title}</p>
-              <p className="text-[10px] text-amber-600 font-semibold">Assessment · Coming soon</p>
-            </div>
-          </div>
-        </div>
-      );
-
     default:
       return null;
   }
 }
 
-// ─── Tab types ────────────────────────────────────────────────────────────────
-type PreviewTab = 'summary' | 'materials' | 'discussion';
-
-// ─── Main StudentPreview Component ───────────────────────────────────────────
+// ─── Filter Tabs ──────────────────────────────────────────────────────────────
+type FilterTab = 'ALL' | 'NOTES' | 'VIDEOS' | 'PRACTICE';
 
 interface StudentPreviewProps {
   courseName: string;
@@ -497,13 +550,12 @@ export function StudentPreview({
   selectedTopicId,
   selectedTopicName,
   selectedTopicDescription,
-  subjects,
   onClose,
 }: StudentPreviewProps) {
   const { data: topicItems, isLoading: itemsLoading } = useTopicItems(selectedTopicId);
-  const [activeTab, setActiveTab] = useState<PreviewTab>('summary');
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
+  const [isCompleted, setIsCompleted] = useState(false);
 
-  // Lock body scroll when StudentPreview modal is open to avoid double scrollbars
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
     document.body.style.overflow = 'hidden';
@@ -514,7 +566,15 @@ export function StudentPreview({
 
   const activeItems = topicItems?.filter((item) => item.isActive) ?? [];
 
-  // Detect subject theme
+  const filteredItems = activeItems.filter((item) => {
+    if (activeFilter === 'NOTES')
+      return item.type === 'TEXT' || item.type === 'PDF' || item.type === 'LINK';
+    if (activeFilter === 'VIDEOS') return item.type === 'VIDEO';
+    if (activeFilter === 'PRACTICE')
+      return item.type === 'ASSESSMENT' || (item.content as any)?.blockType === 'PRACTICE_QUESTION';
+    return true;
+  });
+
   const subjectKey =
     Object.keys(SUBJECT_THEMES).find((k) =>
       (selectedTopicName ?? courseName ?? '').toLowerCase().includes(k),
@@ -522,129 +582,184 @@ export function StudentPreview({
   const theme = getSubjectTheme(subjectKey);
   const ThemeIcon = theme.icon;
 
+  const handleMarkCompleted = () => {
+    setIsCompleted((prev) => !prev);
+    if (!isCompleted) {
+      toast.success('🎉 Lesson marked as completed!');
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-[#F8F9FC] flex flex-col text-slate-900 h-screen w-screen overflow-hidden">
-      {/* ── Sticky Header (Clean Light Design Matching Screenshot) ─────────── */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200/80 px-4 py-3 flex items-center justify-between gap-3 shadow-2xs">
+    <div className="fixed inset-0 z-50 bg-[#F4F6FB] flex flex-col text-[#0F172A] font-sans h-screen w-screen overflow-hidden">
+      {/* ── Native Mobile App Glass Header ───────────────────────────────────── */}
+      <div className="flex-shrink-0 bg-[#0B2447] text-white px-3.5 sm:px-5 py-3 flex items-center justify-between gap-3 shadow-md border-b border-blue-900">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all cursor-pointer shrink-0"
+            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all cursor-pointer shrink-0 border border-white/10"
           >
-            <ChevronLeft className="w-4.5 h-4.5 text-slate-700" />
+            <ChevronLeft className="w-5 h-5 text-white" />
           </button>
 
-          {/* Course Badge Icon */}
-          <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-            <Eye className="w-3.5 h-3.5" />
+          <div className="min-w-0">
+            <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest block truncate">
+              {courseName}
+            </span>
+            <h3 className="text-xs sm:text-sm font-black text-white truncate leading-tight">
+              {selectedTopicName || 'Lesson Preview'}
+            </h3>
           </div>
-
-          <span className="text-xs sm:text-sm font-black text-slate-900 truncate">{courseName}</span>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-600 transition-all shrink-0 cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white transition-all shrink-0 cursor-pointer border border-white/15"
         >
-          <X className="w-3.5 h-3.5" />
-          <span>Exit Preview</span>
+          <X className="w-4 h-4" />
+          <span className="hidden xs:inline">Close</span>
         </button>
       </div>
 
-      {/* ── Scrollable Body Area ────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto pb-32">
-        <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4">
-          {/* Light Header Illustration Card (Matches Screenshot Hero Image) */}
-          <div className={cn('rounded-3xl border p-6 flex flex-col items-center justify-center text-center space-y-3 shadow-2xs', theme.bg)}>
-            <div className={cn('w-16 h-16 rounded-2xl text-white flex items-center justify-center shadow-md shadow-violet-500/20', theme.iconBg)}>
-              <ThemeIcon className="w-8 h-8" />
-            </div>
-            <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-              {theme.emoji} {subjectKey.charAt(0).toUpperCase() + subjectKey.slice(1)} LESSON VIEW
-            </span>
-          </div>
-
-          {/* Topic Title & Lessons Count Badge */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-5 space-y-2 shadow-2xs">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
-              {selectedTopicName ?? 'Topic Preview'}
-            </h1>
-            {selectedTopicDescription && (
-              <p className="text-xs sm:text-sm font-medium text-slate-500 leading-relaxed">
-                {selectedTopicDescription}
-              </p>
+      {/* ── Scrollable Lesson Body ────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto pb-28">
+        <div className="w-full p-3.5 sm:p-5 lg:p-6 space-y-4">
+          {/* Hero Banner Card */}
+          <div
+            className={cn(
+              'rounded-2xl sm:rounded-3xl border p-4 sm:p-5 flex items-center justify-between gap-4 shadow-2xs',
+              theme.bg,
             )}
-            <div className="pt-1">
-              <span className="inline-flex items-center px-3 py-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-black text-slate-700">
-                {activeItems.length} {activeItems.length === 1 ? 'Lesson' : 'Lessons'}
-              </span>
+          >
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0052CC] bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                  {theme.emoji} {subjectKey.toUpperCase()}
+                </span>
+                <span className="text-[10px] font-bold text-slate-500">NEET Syllabus</span>
+              </div>
+              <h1 className="text-base sm:text-xl font-black text-[#0B2447] tracking-tight leading-snug truncate">
+                {selectedTopicName ?? 'Topic Preview'}
+              </h1>
+              {selectedTopicDescription && (
+                <p className="text-xs font-semibold text-slate-600 line-clamp-2">
+                  {selectedTopicDescription}
+                </p>
+              )}
+            </div>
+
+            <div
+              className={cn(
+                'w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs',
+                theme.iconBg,
+              )}
+            >
+              <ThemeIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
           </div>
 
-          {/* Content Start Marker */}
-          <div id="preview-content-start" />
+          {/* Segmented Filter Pills (Mobile App Style) */}
+          <div className="flex items-center p-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs text-xs font-extrabold text-[#0B2447] overflow-x-auto scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveFilter('ALL')}
+              className={cn(
+                'flex-1 min-w-[80px] py-2 rounded-xl transition cursor-pointer text-center truncate',
+                activeFilter === 'ALL'
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-black'
+                  : 'hover:text-[#0052CC] text-slate-600',
+              )}
+            >
+              All ({activeItems.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('NOTES')}
+              className={cn(
+                'flex-1 min-w-[90px] py-2 rounded-xl transition cursor-pointer text-center truncate',
+                activeFilter === 'NOTES'
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-black'
+                  : 'hover:text-[#0052CC] text-slate-600',
+              )}
+            >
+              Notes & PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('VIDEOS')}
+              className={cn(
+                'flex-1 min-w-[80px] py-2 rounded-xl transition cursor-pointer text-center truncate',
+                activeFilter === 'VIDEOS'
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-black'
+                  : 'hover:text-[#0052CC] text-slate-600',
+              )}
+            >
+              Videos
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFilter('PRACTICE')}
+              className={cn(
+                'flex-1 min-w-[90px] py-2 rounded-xl transition cursor-pointer text-center truncate',
+                activeFilter === 'PRACTICE'
+                  ? 'bg-[#0052CC] text-white shadow-2xs font-black'
+                  : 'hover:text-[#0052CC] text-slate-600',
+              )}
+            >
+              Practice
+            </button>
+          </div>
 
-          {/* Content Items Area */}
-          {!selectedTopicId ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-3xl border border-slate-200/80 p-6 space-y-2">
-              <Eye className="h-8 w-8 text-slate-300" />
-              <h3 className="text-sm font-black text-slate-800">Select a Topic to Preview</h3>
-              <p className="text-xs text-slate-500">Choose a topic from the course outline to preview its content.</p>
-            </div>
-          ) : itemsLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-3xl border border-slate-200/80 p-6 space-y-2">
-              <Loader2 className="w-8 h-8 text-violet-600 animate-spin" />
+          {/* Lesson Content List */}
+          {itemsLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs space-y-2">
+              <Loader2 className="w-8 h-8 text-[#0052CC] animate-spin" />
               <p className="text-xs font-bold text-slate-500">Loading lesson content...</p>
             </div>
-          ) : activeItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-3xl border border-slate-200/80 p-6 space-y-2">
-              <BookOpen className="h-8 w-8 text-slate-300" />
-              <h3 className="text-sm font-black text-slate-800">No Content Yet</h3>
-              <p className="text-xs text-slate-500">No published lessons, PDFs, or links added yet.</p>
+          ) : filteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs space-y-2 text-center p-6">
+              <BookOpen className="w-10 h-10 text-slate-300 mx-auto" />
+              <h4 className="text-xs font-black text-[#0B2447]">No content items in this filter</h4>
+              <p className="text-xs text-slate-400 font-semibold">
+                Try selecting &apos;All&apos; to view all available study items.
+              </p>
             </div>
           ) : (
-            <div className="space-y-4 pb-12">
-              {activeItems
-                .filter((item) => {
-                  if (activeTab === 'materials') return item.type === 'PDF' || item.type === 'LINK' || item.type === 'VIDEO';
-                  if (activeTab === 'discussion') return item.type === 'ASSESSMENT';
-                  return true; // 'summary' shows everything
-                })
-                .map((item) => (
-                  <TopicContentView key={item.id} item={item} />
-                ))}
+            <div className="space-y-4">
+              {filteredItems.map((item) => (
+                <TopicContentView key={item.id} item={item} />
+              ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Sticky Bottom Floating Bar (Matches Screenshot) ─────────────────── */}
-      <div className="flex-shrink-0 bg-white border-t border-slate-200/80 p-3 shadow-lg">
-        {/* Navigation Tabs */}
-        <div className="flex items-center justify-around text-xs font-extrabold text-slate-500 w-full max-w-6xl mx-auto">
-          {(
-            [
-              { key: 'summary', label: 'Summary' },
-              { key: 'materials', label: 'Materials' },
-              { key: 'discussion', label: 'Discussion' },
-            ] as const
-          ).map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setActiveTab(key)}
-              className={cn(
-                'px-4 py-1.5 rounded-xl transition-all cursor-pointer',
-                activeTab === key
-                  ? 'bg-violet-50 text-violet-700 font-black border border-violet-100'
-                  : 'hover:text-slate-800',
-              )}
-            >
-              {label}
-            </button>
-          ))}
+      {/* ── Native Mobile App Sticky Action Bar ────────────────────────────── */}
+      <div className="flex-shrink-0 bg-white border-t border-slate-200 p-3 shadow-lg font-sans">
+        <div className="w-full flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold transition cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>Back to Courses</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleMarkCompleted}
+            className={cn(
+              'flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition shadow-2xs cursor-pointer',
+              isCompleted
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-[#0052CC] text-white hover:bg-blue-700',
+            )}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{isCompleted ? 'Completed ✅' : 'Mark Completed'}</span>
+          </button>
         </div>
       </div>
     </div>

@@ -45,14 +45,14 @@ export function TutorPagination({
   return (
     <div
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-white border-t border-[#E5E7EB]',
+        'flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 sm:p-4 bg-white border-t border-slate-200',
         className,
       )}
     >
       <div className="text-xs font-semibold text-slate-500">
-        Showing <span className="font-extrabold text-slate-900">{startItem}</span> &ndash;{' '}
-        <span className="font-extrabold text-slate-900">{endItem}</span> of{' '}
-        <span className="font-extrabold text-slate-900">{totalItems}</span> tutors
+        Showing <span className="font-extrabold text-[#0B2447]">{startItem}</span> &ndash;{' '}
+        <span className="font-extrabold text-[#0B2447]">{endItem}</span> of{' '}
+        <span className="font-extrabold text-[#0B2447]">{totalItems}</span> faculty members
       </div>
 
       <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
@@ -62,7 +62,7 @@ export function TutorPagination({
             <select
               value={itemsPerPage}
               onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-              className="px-2 py-1 text-xs border border-[#E5E7EB] rounded-lg bg-slate-50 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
+              className="px-2.5 py-1 text-xs border border-slate-200 rounded-lg bg-slate-50 font-bold text-[#0B2447] focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100 transition-all"
               aria-label="Items per page"
             >
               {[10, 25, 50, 100].map((size) => (
@@ -80,7 +80,7 @@ export function TutorPagination({
             size="icon"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
             aria-label="First page"
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -90,7 +90,7 @@ export function TutorPagination({
             size="icon"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
             aria-label="Previous page"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -112,10 +112,10 @@ export function TutorPagination({
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
                 className={cn(
-                  'h-8 min-w-[32px] px-2 rounded-lg text-xs font-extrabold transition-all',
+                  'h-8 min-w-[32px] px-2.5 rounded-lg text-xs font-extrabold transition-all',
                   isCurrent
-                    ? 'bg-violet-600 text-white shadow-xs'
-                    : 'bg-white border border-[#E5E7EB] text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900',
                 )}
                 aria-label={`Page ${pageNum}`}
                 aria-current={isCurrent ? 'page' : undefined}
@@ -130,7 +130,7 @@ export function TutorPagination({
             size="icon"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
             aria-label="Next page"
           >
             <ChevronRight className="h-4 w-4" />
@@ -140,7 +140,7 @@ export function TutorPagination({
             size="icon"
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
-            className="h-8 w-8 rounded-lg border-[#E5E7EB] text-slate-600 disabled:opacity-40"
+            className="h-8 w-8 rounded-lg border-slate-200 text-slate-600 disabled:opacity-40 hover:bg-slate-50"
             aria-label="Last page"
           >
             <ChevronsRight className="h-4 w-4" />

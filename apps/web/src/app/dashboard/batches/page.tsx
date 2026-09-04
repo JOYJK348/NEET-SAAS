@@ -4,9 +4,9 @@ import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { LoadingSpinner } from '@/components/ui/loading';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Users, Clock, Activity, Sparkles, BookOpen } from 'lucide-react';
+import { Plus, Download, Clock, Activity, ChevronRight, BookOpen } from 'lucide-react';
 import {
   useBatches,
   useBatchStats,
@@ -24,7 +24,6 @@ import { BatchPagination } from '@/features/batches/components/BatchPagination';
 import { BatchSkeleton } from '@/features/batches/components/BatchSkeleton';
 import { BatchEmptyState } from '@/features/batches/components/BatchEmptyState';
 import { BatchErrorState } from '@/features/batches/components/BatchErrorState';
-import { BatchStatCard } from '@/features/batches/components/BatchStatCard';
 import { generateCSV } from '@/features/batches/utils/batch-utils';
 import { toast } from '@/hooks/use-toast';
 
@@ -163,40 +162,39 @@ function BatchesContent() {
   }
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Welcome Header Banner - Signature Violet Gradient */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-5 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-            <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-              Course Batches & Sections
-            </span>
+    <div className="w-full space-y-6 text-[#0F172A] font-sans">
+      {/* Header Banner - ISML LMS Light Blue Style */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Management Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Batches & Sections</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black leading-tight text-white">
-            Course Batches & Sections 📚
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
+            Course Batches & Sections
           </h1>
-          <p className="text-violet-200 text-xs mt-0.5">
+          <p className="text-xs text-slate-600 font-medium">
             Manage active student batches, section allocations, capacity limits, and course
             schedules.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExport}
-            className="flex-1 sm:flex-none px-3 gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold"
+            className="w-full sm:w-auto px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
           >
-            <Download className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <Download className="h-3.5 w-3.5 text-[#0052CC] shrink-0" aria-hidden="true" />
             <span>Export</span>
           </Button>
           <Button
             onClick={handleCreate}
-            className="flex-1 sm:flex-none px-3 gap-2 bg-white text-violet-700 hover:bg-violet-50 font-bold border-0 shadow-xs rounded-xl text-xs"
+            className="w-full sm:w-auto px-4 gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs"
           >
-            <Plus className="h-3.5 w-3.5 text-violet-600 shrink-0" aria-hidden="true" />
+            <Plus className="h-3.5 w-3.5 text-white shrink-0" aria-hidden="true" />
             <span>New Batch</span>
           </Button>
         </div>
@@ -204,43 +202,43 @@ function BatchesContent() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl border border-violet-100 bg-violet-50 text-violet-600 shrink-0">
+        <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+          <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
             <BookOpen className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
               Total Batches
             </p>
-            <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
               {stats?.total ?? 0}
             </p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl border border-blue-100 bg-blue-50 text-blue-600 shrink-0">
+        <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+          <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
             <Clock className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
               Planned Batches
             </p>
-            <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
               {stats?.planned ?? 0}
             </p>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border-[#E5E7EB] bg-white p-3.5 sm:p-4 shadow-xs flex items-center gap-3 transition-all hover:-translate-y-0.5 hover:border-[#7C3AED]/50">
-          <div className="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-600 shrink-0">
+        <Card className="rounded-2xl border-slate-200 bg-white p-3.5 sm:p-4 shadow-2xs flex items-center gap-3 transition-all hover:border-[#0052CC]/40">
+          <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
             <Activity className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
               Active Running
             </p>
-            <p className="text-xl sm:text-2xl font-black text-[#111827] mt-0.5">
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
               {stats?.active ?? 0}
             </p>
           </div>
@@ -248,7 +246,7 @@ function BatchesContent() {
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <BatchSearch
             value={filters.search || ''}
@@ -279,12 +277,12 @@ function BatchesContent() {
       <div className="flex items-center justify-between gap-4 px-1">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
           <span>
-            Showing <span className="font-extrabold text-slate-900">{meta?.from ?? 0}</span> &ndash;{' '}
-            <span className="font-extrabold text-slate-900">{meta?.to ?? 0}</span> of{' '}
-            <span className="font-extrabold text-slate-900">{meta?.total ?? 0}</span> batch records
+            Showing <span className="font-extrabold text-[#0B2447]">{meta?.from ?? 0}</span> &ndash;{' '}
+            <span className="font-extrabold text-[#0B2447]">{meta?.to ?? 0}</span> of{' '}
+            <span className="font-extrabold text-[#0B2447]">{meta?.total ?? 0}</span> batch records
           </span>
           {hasFilters && (
-            <span className="bg-violet-50 text-violet-700 text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-violet-100">
+            <span className="bg-blue-50 text-[#0052CC] text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-blue-200">
               Filtered
             </span>
           )}
@@ -295,7 +293,7 @@ function BatchesContent() {
       {isLoading ? (
         <BatchSkeleton variant={isMobile ? 'card' : 'table'} />
       ) : batches.length === 0 ? (
-        <Card className="rounded-2xl border border-dashed border-slate-200 bg-white p-8">
+        <Card className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 shadow-2xs">
           <BatchEmptyState
             hasFilters={hasFilters}
             onClearFilters={clearFilters}
@@ -304,7 +302,7 @@ function BatchesContent() {
         </Card>
       ) : (
         <>
-          {/* Mobile View: Rich Cards List (block sm:hidden) */}
+          {/* Mobile View: Cards List (block sm:hidden) */}
           <div className="block sm:hidden">
             <BatchList
               batches={batches}
@@ -314,9 +312,9 @@ function BatchesContent() {
             />
           </div>
 
-          {/* Desktop View: Rich Table Layout (hidden sm:block) */}
+          {/* Desktop View: Fit-to-screen Table Layout (hidden sm:block) */}
           <div className="hidden sm:block">
-            <Card className="rounded-2xl border-[#E5E7EB] bg-white shadow-xs overflow-hidden">
+            <Card className="rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
               <BatchTable
                 batches={batches}
                 onView={handleView}
