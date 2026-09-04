@@ -473,6 +473,7 @@ function TeacherStudioInner({
   // ── Web Audio API Mixer for Live Studio Recording (Tutor + All Student Microphones)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const audioDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const audioCompressorRef = useRef<DynamicsCompressorNode | null>(null);
   const audioSourcesMapRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
 
   const getAudioDestinationStream = useCallback(() => {
@@ -481,10 +482,21 @@ function TeacherStudioInner({
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioContextClass) {
-          const ctx = new AudioContextClass();
+          const ctx = new AudioContextClass({ sampleRate: 48000 });
           const dest = ctx.createMediaStreamDestination();
+          const compressor = ctx.createDynamicsCompressor();
+
+          // Soft limiter compressor configuration to prevent peak clipping & distortion
+          compressor.threshold.setValueAtTime(-1.0, ctx.currentTime);
+          compressor.knee.setValueAtTime(10, ctx.currentTime);
+          compressor.ratio.setValueAtTime(4, ctx.currentTime);
+          compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+          compressor.release.setValueAtTime(0.1, ctx.currentTime);
+          compressor.connect(dest);
+
           audioCtxRef.current = ctx;
           audioDestinationRef.current = dest;
+          audioCompressorRef.current = compressor;
         }
       } catch (e) {
         console.warn('[Recording Audio Mixer] AudioContext creation error:', e);
@@ -500,7 +512,7 @@ function TeacherStudioInner({
 
   useEffect(() => {
     const destStream = getAudioDestinationStream();
-    if (!destStream || !audioDestinationRef.current || !audioCtxRef.current) return;
+    if (!destStream || !audioCompressorRef.current || !audioCtxRef.current) return;
     const ctx = audioCtxRef.current;
     if (ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
@@ -511,19 +523,17 @@ function TeacherStudioInner({
 
     audioTracks.forEach((trackRef) => {
       const mediaTrack = trackRef.publication?.track?.mediaStreamTrack;
-      const trackId =
-        mediaTrack?.id ||
-        trackRef.publication?.trackSid ||
-        `${trackRef.participant.identity}_${trackRef.source}`;
 
-      if (mediaTrack && mediaTrack.readyState === 'live' && mediaTrack.enabled) {
+      // STRICT DEDUPLICATION: Use the unique MediaStreamTrack ID ONLY to prevent double-connecting tracks & phase comb filtering
+      if (mediaTrack && mediaTrack.id && mediaTrack.readyState === 'live' && mediaTrack.enabled) {
+        const trackId = mediaTrack.id;
         activeTrackIds.add(trackId);
 
         if (!currentMap.has(trackId)) {
           try {
             const mediaStream = new MediaStream([mediaTrack]);
             const sourceNode = ctx.createMediaStreamSource(mediaStream);
-            sourceNode.connect(audioDestinationRef.current!);
+            sourceNode.connect(audioCompressorRef.current!);
             currentMap.set(trackId, sourceNode);
             console.log(
               `[Recording Audio Mixer] Connected microphone track: ${trackId} (${trackRef.participant.name || trackRef.participant.identity})`,
@@ -952,7 +962,13 @@ function TeacherStudioInner({
       }
 
       chosenMimeTypeRef.current = mimeType;
-      const recorder = new MediaRecorder(compositeStream, { mimeType });
+      const recorderOptions: MediaRecorderOptions = { mimeType };
+      try {
+        (recorderOptions as any).audioBitsPerSecond = 128000;
+        (recorderOptions as any).videoBitsPerSecond = 2500000;
+      } catch {}
+
+      const recorder = new MediaRecorder(compositeStream, recorderOptions);
       recordedChunksRef.current = [];
 
       let startTs = Date.now();

@@ -166,6 +166,7 @@ export class LiveKitService {
     topicId: string;
     batchId: string;
     liveClassId: string;
+    recordingId?: string;
   }): Promise<{ egressId: string }> {
     if (!this.egressClient) {
       this.logger.warn('LiveKit Egress client not initialized. Skipping recording start.');
@@ -185,10 +186,12 @@ export class LiveKitService {
       topicId,
       batchId,
       liveClassId,
+      recordingId,
     } = params;
 
+    const recFileId = recordingId || crypto.randomUUID();
     const filepath =
-      `tenants/${tenantId}/live_recordings/${courseId}/${subjectId}/${chapterId}/${topicId}/${batchId}/${liveClassId}.mp4`;
+      `tenants/${tenantId}/live_recordings/${courseId}/${subjectId}/${chapterId}/${topicId}/${batchId}/${liveClassId}_${recFileId}.mp4`;
 
     // Build real protobuf message instances so the request serializes correctly.
     // (@livekit/protocol is @bufbuild/protobuf — messages are constructed with `new`.)

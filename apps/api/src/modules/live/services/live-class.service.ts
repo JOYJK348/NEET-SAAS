@@ -858,45 +858,55 @@ export class LiveClassService {
     const startMs = new Date(updatedClass.actualStart || updatedClass.createdAt).getTime();
 
     try {
-      const existingRec = await this.prisma.liveClassRecordings.findFirst({
-        where: { liveClassId: id, deletedAt: null },
+      const inFlightRec = await this.prisma.liveClassRecordings.findFirst({
+        where: { liveClassId: id, status: { in: ['RECORDING', 'PROCESSING'] }, deletedAt: null },
+        orderBy: { createdAt: 'desc' },
       });
 
-      const actualDur = existingRec?.durationSeconds && existingRec.durationSeconds > 0
-        ? existingRec.durationSeconds
-        : Math.max(1, Math.floor((now.getTime() - startMs) / 1000));
+      if (inFlightRec) {
+        const actualDur = inFlightRec.durationSeconds && inFlightRec.durationSeconds > 0
+          ? inFlightRec.durationSeconds
+          : Math.max(1, Math.floor((now.getTime() - startMs) / 1000));
 
-      if (existingRec) {
         await this.prisma.liveClassRecordings.update({
-          where: { id: existingRec.id },
+          where: { id: inFlightRec.id },
           data: {
             status: 'READY',
             durationSeconds: actualDur,
-            rawEgressUrl: existingRec.rawEgressUrl && existingRec.rawEgressUrl !== '/lecture.mp4'
-              ? existingRec.rawEgressUrl
-              : `/v1/live-classes/${id}/video`,
+            rawEgressUrl: inFlightRec.rawEgressUrl && inFlightRec.rawEgressUrl !== '/lecture.mp4'
+              ? inFlightRec.rawEgressUrl
+              : `/v1/live-classes/${inFlightRec.id}/video`,
             processingCompletedAt: now,
             updatedBy: 'system',
           },
         });
       } else {
-        await this.prisma.liveClassRecordings.create({
-          data: {
-            tenantId: targetTenantId,
-            liveClassId: id,
-            sessionId: id,
-            status: 'READY',
-            durationSeconds: actualDur,
-            rawEgressUrl: `/v1/live-classes/${id}/video`,
-            processingStartedAt: updatedClass.actualStart || updatedClass.createdAt,
-            processingCompletedAt: now,
-            createdBy: 'system',
-            updatedBy: 'system',
-          },
+        const existingReady = await this.prisma.liveClassRecordings.findFirst({
+          where: { liveClassId: id, status: { in: ['READY', 'COMPLETED'] }, deletedAt: null },
         });
+
+        if (!existingReady) {
+          const recId = crypto.randomUUID();
+          const actualDur = Math.max(1, Math.floor((now.getTime() - startMs) / 1000));
+          await this.prisma.liveClassRecordings.create({
+            data: {
+              id: recId,
+              tenantId: targetTenantId,
+              liveClassId: id,
+              sessionId: id,
+              status: 'READY',
+              durationSeconds: actualDur,
+              rawEgressUrl: `/v1/live-classes/${recId}/video`,
+              processingStartedAt: updatedClass.actualStart || updatedClass.createdAt,
+              processingCompletedAt: now,
+              createdBy: 'system',
+              updatedBy: 'system',
+            },
+          });
+        }
       }
     } catch (recErr) {
-      this.logger.warn(`Failed to upsert recording for ended class ${id}: ${recErr}`);
+      this.logger.warn(`Failed to process recording for ended class ${id}: ${recErr}`);
     }
 
     return updatedClass;
@@ -950,19 +960,13 @@ export class LiveClassService {
     const recordingId = crypto.randomUUID();
     const now = new Date();
 
-    // 1. Save locally as backup
+    // Save locally as backup with unique recording ID file path
     const uploadsDir = path.join(process.cwd(), 'uploads', 'recordings');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
     const filePath = path.join(uploadsDir, `${recordingId}${ext}`);
     fs.writeFileSync(filePath, file.buffer);
-
-    // Legacy fallback path with classId
-    try {
-      const legacyPath = path.join(uploadsDir, `${id}${ext}`);
-      fs.writeFileSync(legacyPath, file.buffer);
-    } catch {}
 
     this.logger.log(`Saved recording locally for class ${id}: ${filePath}`);
 
@@ -1069,21 +1073,6 @@ export class LiveClassService {
 
     const computedDurationSeconds = (passedDuration > 0 && !isNaN(passedDuration)) ? passedDuration : 15;
     const actualStart = new Date(now.getTime() - computedDurationSeconds * 1000);
-
-    // Soft-delete any existing placeholder/processing recordings for this live class to avoid duplicate cards
-    try {
-      await this.prisma.liveClassRecordings.updateMany({
-        where: {
-          liveClassId: id,
-          deletedAt: null,
-          status: { in: ['PROCESSING', 'RECORDING', 'SCHEDULED'] },
-        },
-        data: {
-          deletedAt: now,
-          updatedBy: 'system',
-        },
-      });
-    } catch {}
 
     // Create a NEW recording row for each completed recording segment with its OWN topic
     await this.prisma.liveClassRecordings.create({
@@ -1557,14 +1546,14 @@ export class LiveClassService {
     sessionId?: string,
   ): Promise<void> {
     try {
-      const existing = await this.prisma.liveClassRecordings.findFirst({
-        where: { liveClassId, deletedAt: null },
+      const existingInFlight = await this.prisma.liveClassRecordings.findFirst({
+        where: { liveClassId, status: { in: ['RECORDING', 'PROCESSING'] }, deletedAt: null },
       });
 
       // Don't start a second egress if one is already recording/processing.
       if (
-        existing?.egressId &&
-        ['RECORDING', 'PROCESSING'].includes(existing.status)
+        existingInFlight?.egressId &&
+        ['RECORDING', 'PROCESSING'].includes(existingInFlight.status)
       ) {
         this.logger.log(
           `Recording already in flight for ${liveClassId}; skipping egress start.`,
@@ -1572,6 +1561,7 @@ export class LiveClassService {
         return;
       }
 
+      const newRecId = crypto.randomUUID();
       const { egressId } = await this.livekitService.startRecording({
         roomName: `room-${liveClass.id}`,
         tenantId: liveClass.tenantId,
@@ -1581,34 +1571,24 @@ export class LiveClassService {
         topicId: liveClass.topicId,
         batchId: liveClass.batchId,
         liveClassId: liveClass.id,
+        recordingId: newRecId,
       });
 
       const now = new Date();
-      if (existing) {
-        await this.prisma.liveClassRecordings.update({
-          where: { id: existing.id },
-          data: {
-            status: 'RECORDING',
-            egressId,
-            sessionId: sessionId || existing.sessionId,
-            processingStartedAt: now,
-            updatedBy: 'system',
-          },
-        });
-      } else {
-        await this.prisma.liveClassRecordings.create({
-          data: {
-            tenantId: liveClass.tenantId,
-            liveClassId,
-            sessionId: sessionId || 'pending',
-            egressId,
-            status: 'RECORDING',
-            processingStartedAt: now,
-            createdBy: 'system',
-            updatedBy: 'system',
-          },
-        });
-      }
+      await this.prisma.liveClassRecordings.create({
+        data: {
+          id: newRecId,
+          tenantId: liveClass.tenantId,
+          liveClassId,
+          sessionId: sessionId || 'pending',
+          egressId,
+          status: 'RECORDING',
+          rawEgressUrl: `/v1/live-classes/${newRecId}/video`,
+          processingStartedAt: now,
+          createdBy: 'system',
+          updatedBy: 'system',
+        },
+      });
 
       this.logger.log(
         `Recording started for live class ${liveClassId} (egressId=${egressId})`,
