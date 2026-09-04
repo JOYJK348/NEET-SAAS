@@ -38,6 +38,8 @@ export const courseSchema = z.object({
   branchIds: z.array(z.string()).optional(),
   branchId: z.string().optional(),
   academicYearId: z.string().optional(),
+  baseFee: z.coerce.number().optional(),
+  feeStructureId: z.string().optional(),
 });
 
 export const subjectSchema = z.object({

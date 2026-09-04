@@ -17,6 +17,7 @@ import {
   Save,
   Loader2,
   X,
+  CreditCard,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -50,6 +51,11 @@ function CourseFormBody() {
   const [branchId, setBranchId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
 
+  // Fee Mappings
+  const [baseFee, setBaseFee] = useState<string>('');
+  const [feePlans, setFeePlans] = useState<Array<{ id: string; name: string; code: string; totalAmount: number }>>([]);
+  const [selectedFeePlanId, setSelectedFeePlanId] = useState<string>('auto');
+
   const { data: branchesData } = useBranches({ limit: 100 });
   const { data: academicYearsData } = useAcademicYears({ limit: 100 });
 
@@ -60,6 +66,21 @@ function CourseFormBody() {
     if (branches.length > 0 && !branchId) setBranchId(branches[0].id);
     if (academicYears.length > 0 && !academicYearId) setAcademicYearId(academicYears[0].id);
   }, [branches, academicYears]);
+
+  useEffect(() => {
+    async function fetchFeePlans() {
+      try {
+        const res = await api.get<any>('/billing/fee-plans');
+        const data = res?.data || res;
+        if (Array.isArray(data)) {
+          setFeePlans(data);
+        }
+      } catch (e) {
+        console.error('Failed to load fee plans', e);
+      }
+    }
+    fetchFeePlans();
+  }, []);
 
   useEffect(() => {
     if (!editId) return;
@@ -138,7 +159,36 @@ function CourseFormBody() {
           }
         }
 
-        toast.success('Course created successfully with unique code!');
+        // Auto-create Fee Plan if baseFee is specified and no existing feePlan is selected
+        const numericBaseFee = Number(baseFee || 0);
+        if (courseObj?.id && numericBaseFee > 0 && (!selectedFeePlanId || selectedFeePlanId === 'auto')) {
+          try {
+            await api.post('/billing/fee-plans', {
+              courseId: courseObj.id,
+              academicYearId: academicYearId || `AY_${Date.now()}`,
+              branchId: branchId || `BRANCH_${Date.now()}`,
+              departmentId: `DEPT_${Date.now()}`,
+              code: `FEE-${code.trim().toUpperCase()}`,
+              name: `${displayName.trim() || name.trim()} Standard Fee Plan`,
+              description: `Standard tuition fee plan for ${name.trim()}`,
+              effectiveFrom: new Date().toISOString(),
+              effectiveTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+              items: [
+                {
+                  itemName: 'Course Base Tuition Fee',
+                  amount: numericBaseFee,
+                  taxPercentage: 0,
+                  mandatory: true,
+                  refundable: false,
+                },
+              ],
+            });
+          } catch (feeErr) {
+            console.error('Auto fee plan creation error:', feeErr);
+          }
+        }
+
+        toast.success('Course created successfully with unique code & fee plan mapped!');
       }
 
       router.push('/tenant-admin/courses');
@@ -378,6 +428,62 @@ function CourseFormBody() {
                   ))
                 )}
               </select>
+            </div>
+          </div>
+        </Card>
+
+        {/* Fee Structure & Base Fee Setup Card */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+            <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 shadow-2xs">
+              <CreditCard className="w-5 h-5 text-[#0052CC]" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-[#0B2447]">
+                Fee Structure & Base Fee Mapping
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Set tuition fee for this course program or map to a pre-configured fee plan.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Course Base Tuition Fee (₹)
+              </label>
+              <Input
+                type="number"
+                placeholder="e.g. 45000"
+                value={baseFee}
+                onChange={(e) => setBaseFee(e.target.value)}
+                className="rounded-xl text-xs font-bold text-[#0052CC] bg-slate-50 border-slate-200 focus:border-[#0052CC] h-10"
+              />
+              <p className="text-[11px] text-slate-400 font-medium">
+                Direct tuition amount. Auto-creates standard fee structure upon saving.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                Or Select Existing Fee Plan
+              </label>
+              <select
+                value={selectedFeePlanId}
+                onChange={(e) => setSelectedFeePlanId(e.target.value)}
+                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold text-[#0B2447] bg-slate-50 focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="auto">Auto-Generate Fee Plan from Base Fee (Recommended)</option>
+                {feePlans.map((fp: any) => (
+                  <option key={fp.id} value={fp.id}>
+                    {fp.name} ({fp.code}) — ₹{Number(fp.totalAmount || 0).toLocaleString('en-IN')}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-slate-400 font-medium">
+                You can manage itemized fee breakdown anytime in Billing &gt; Fee Plans.
+              </p>
             </div>
           </div>
         </Card>

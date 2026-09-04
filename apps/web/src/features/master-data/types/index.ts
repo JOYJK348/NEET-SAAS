@@ -92,6 +92,8 @@ export interface CreateCourseInput {
   displayOrder?: number;
   isActive?: boolean;
   branchIds?: string[];
+  baseFee?: number;
+  feeStructureId?: string;
 }
 
 export interface UpdateCourseInput extends Partial<CreateCourseInput> {

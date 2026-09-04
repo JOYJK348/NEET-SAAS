@@ -12,7 +12,7 @@ export const coursesApi = {
   },
 
   async createCourse(input: CreateCourseInput): Promise<Course> {
-    const { branchIds, ...courseData } = input;
+    const { branchIds, baseFee, feeStructureId, ...courseData } = input;
     const course = await api.post<Course>('/master/courses', courseData);
 
     if (branchIds && branchIds.length > 0 && course.id) {
@@ -31,6 +31,39 @@ export const coursesApi = {
         }
       } catch {
         // Ignore branch-courses mapping error
+      }
+    }
+
+    // Auto-create Fee Plan if baseFee is provided and no pre-existing feeStructureId is selected
+    if (baseFee && Number(baseFee) > 0 && course.id && !feeStructureId) {
+      try {
+        const activeYears = await api.get<any>('/master/academic-years?limit=1');
+        const academicYearId = activeYears?.data?.[0]?.id || `AY_${Date.now()}`;
+        const branches = await api.get<any>('/master/branches?limit=1');
+        const branchId = branches?.data?.[0]?.id || `BRANCH_${Date.now()}`;
+
+        await api.post('/billing/fee-plans', {
+          courseId: course.id,
+          academicYearId,
+          branchId,
+          departmentId: `DEPT_${Date.now()}`,
+          code: `FEE-${(course.code || 'CRS').toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`,
+          name: `${course.displayName || course.name} Standard Fee Plan`,
+          description: `Standard tuition fee plan for ${course.name}`,
+          effectiveFrom: course.startDate ? new Date(course.startDate).toISOString() : new Date().toISOString(),
+          effectiveTo: course.endDate ? new Date(course.endDate).toISOString() : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          items: [
+            {
+              itemName: 'Course Base Tuition Fee',
+              amount: Number(baseFee),
+              taxPercentage: 0,
+              mandatory: true,
+              refundable: false,
+            },
+          ],
+        });
+      } catch (err) {
+        console.error('Failed to auto-create fee plan for course:', err);
       }
     }
 

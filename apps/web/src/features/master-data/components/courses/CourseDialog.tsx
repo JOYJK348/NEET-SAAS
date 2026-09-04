@@ -168,11 +168,17 @@ export function CourseDialog({
   }, [course, reset, open]);
 
   const onFormSubmit = async (data: any) => {
-    if (!selectedFeePlanId || selectedFeePlanId === 'none') {
-      toast.error('Fee Plan is required! Please select a Fee Structure Plan for this course.');
+    const baseFeeNum = Number(data.baseFee || 0);
+    const hasSelectedPlan = selectedFeePlanId && selectedFeePlanId !== 'none';
+    if (!hasSelectedPlan && baseFeeNum <= 0) {
+      toast.error('Please enter a Course Base Fee (₹) or select an existing Fee Structure Plan!');
       return;
     }
-    await onSubmit({ ...data, feeStructureId: selectedFeePlanId });
+    await onSubmit({
+      ...data,
+      baseFee: baseFeeNum,
+      feeStructureId: hasSelectedPlan ? selectedFeePlanId : undefined,
+    });
     onOpenChange(false);
   };
 
@@ -486,30 +492,48 @@ export function CourseDialog({
               program
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-rose-600 uppercase tracking-wider block">
-                Target Fee Structure Plan * (Mandatory)
-              </Label>
-              <Select value={selectedFeePlanId} onValueChange={(val) => setSelectedFeePlanId(val)}>
-                <SelectTrigger className="rounded-xl h-10 sm:h-11 bg-slate-50 border-slate-200 text-xs font-medium">
-                  <SelectValue placeholder="Select fee structure plan" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {feePlans.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No Fee Plans Configured Yet
+          <CardContent className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="baseFee" className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Course Base Fee (₹) *
+                </Label>
+                <Input
+                  id="baseFee"
+                  type="number"
+                  placeholder="e.g. 45000"
+                  {...register('baseFee')}
+                  className="h-10 sm:h-11 rounded-xl bg-slate-50 border-slate-200 focus:border-[#0052CC] text-xs font-bold text-[#0052CC]"
+                />
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Standard tuition fee charged for this course program.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Pre-Configured Fee Structure Plan (Optional)
+                </Label>
+                <Select value={selectedFeePlanId} onValueChange={(val) => setSelectedFeePlanId(val)}>
+                  <SelectTrigger className="rounded-xl h-10 sm:h-11 bg-slate-50 border-slate-200 text-xs font-medium">
+                    <SelectValue placeholder="Select fee structure plan" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="none">
+                      Auto-Create Standard Fee Plan from Base Fee
                     </SelectItem>
-                  ) : (
-                    feePlans.map((fp: any) => (
+                    {feePlans.map((fp: any) => (
                       <SelectItem key={fp.id} value={fp.id}>
                         {fp.name} ({fp.code}) — ₹
                         {Number(fp.totalAmount || 0).toLocaleString('en-IN')}
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Select itemized installment plan, or leave as Auto-Create to map base fee.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
