@@ -877,6 +877,26 @@ function StudentClassroomInner({
     [connectionState, studentDataSend],
   );
 
+  // ── Persistent Active Presentation Sync via REST (backup for DataChannel)
+  useEffect(() => {
+    const fetchActivePresentation = async () => {
+      try {
+        const res = await api.get<any>(`/live-classes/${classId}/active-presentation`, {
+          skipGlobalToast: true,
+        });
+        if (res) {
+          if (res.mode && res.mode !== 'screen') setTeacherMode(res.mode);
+          if (res.doc) setTeacherPdfDoc(res.doc);
+          if (res.pdfPage) setTeacherPdfPage(res.pdfPage);
+        }
+      } catch {}
+    };
+
+    fetchActivePresentation();
+    const interval = setInterval(fetchActivePresentation, 3000);
+    return () => clearInterval(interval);
+  }, [classId]);
+
   // ── Native LiveKit Track Toggles (Microphone, Camera, Screen Share)
   const toggleMic = async () => {
     try {

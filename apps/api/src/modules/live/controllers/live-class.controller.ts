@@ -245,6 +245,27 @@ export class LiveClassController {
     return { success: true };
   }
 
+  /** Update active presentation mode & doc state */
+  @Public()
+  @Post(':id/active-presentation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update active presentation state for live class' })
+  async updateActivePresentation(
+    @Param('id') id: string,
+    @Body() body: { mode?: string; doc?: any; pdfPage?: number; whiteboardFrame?: string },
+  ) {
+    return this.liveClassService.updateActivePresentation(id, body);
+  }
+
+  /** Get active presentation state */
+  @Public()
+  @Get(':id/active-presentation')
+  @ApiOperation({ summary: 'Get active presentation state for live class' })
+  async getActivePresentation(@Param('id') id: string) {
+    return this.liveClassService.getActivePresentation(id);
+  }
+
+
   // ─── Recording status (studio / timetable chip) ──────────────────────────
 
 

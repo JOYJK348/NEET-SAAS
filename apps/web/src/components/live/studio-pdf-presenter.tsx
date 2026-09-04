@@ -19,6 +19,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 export interface PdfDocumentInfo {
   id: string;
@@ -221,7 +222,7 @@ export default function StudioPdfPresenter({
         const pdfjs = await getPdfJs();
         if (!pdfjs || isCancelled) return;
 
-        let loadingTask: any;
+        let pdf: any = null;
 
         if (selectedDoc.url.startsWith('data:')) {
           const base64Data = selectedDoc.url.split(',')[1];
@@ -230,21 +231,28 @@ export default function StudioPdfPresenter({
           for (let i = 0; i < raw.length; i++) {
             uint8Array[i] = raw.charCodeAt(i);
           }
-          loadingTask = pdfjs.getDocument({ data: uint8Array });
+          pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
         } else {
-          loadingTask = pdfjs.getDocument(selectedDoc.url);
+          try {
+            pdf = await pdfjs.getDocument({ url: selectedDoc.url, withCredentials: false }).promise;
+          } catch (directErr) {
+            console.warn('Direct PDF.js URL fetch failed, trying ArrayBuffer fetch fallback...', directErr);
+            const resp = await fetch(selectedDoc.url);
+            const buffer = await resp.arrayBuffer();
+            const uint8Array = new Uint8Array(buffer);
+            pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
+          }
         }
 
-        const pdf = await loadingTask.promise;
         if (isCancelled) return;
 
         pdfDocRef.current = pdf;
         loadedDocKeyRef.current = docKey;
-        const realPages = pdf.numPages || 1;
+        const realPages = pdf?.numPages || 1;
         setTotalPages(realPages);
         setIsInitialLoading(false);
 
-        // Render first page onto canvas immediately
+        // Render page onto canvas immediately
         renderPdfPage(currentPage, zoom);
       } catch (err: any) {
         console.error('PDF.js Load Error:', err);
@@ -294,7 +302,7 @@ export default function StudioPdfPresenter({
     onPageChange?.(1);
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     if (!file) return;
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
@@ -306,57 +314,83 @@ export default function StudioPdfPresenter({
     }
 
     setIsUploading(true);
-    const reader = new FileReader();
 
-    reader.onload = async () => {
+    try {
+      let shareUrl: string | null = null;
+
+      // 1. Upload file to Cloud Storage for cross-device sharing
       try {
-        const dataUrl = reader.result as string;
-        let detectedPages = 1;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('moduleCode', 'LIVE_CLASS');
+        formData.append('fileType', 'DOCUMENT');
 
-        if (isPdf) {
-          try {
-            const pdfjs = await getPdfJs();
-            if (pdfjs) {
-              const base64Data = dataUrl.split(',')[1];
-              const raw = atob(base64Data);
-              const uint8Array = new Uint8Array(raw.length);
-              for (let i = 0; i < raw.length; i++) {
-                uint8Array[i] = raw.charCodeAt(i);
-              }
-              const pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
-              detectedPages = pdf.numPages || 1;
-            }
-          } catch {
-            detectedPages = 1;
-          }
-        }
-
-        const customDoc: PdfDocumentInfo = {
-          id: `custom-${Date.now()}`,
-          name: file.name,
-          url: dataUrl,
-          category: 'Uploaded Document',
-          totalPages: detectedPages,
-          fileType: isPdf ? 'pdf' : 'image',
-        };
-
-        handleSelectDocument(customDoc);
-        toast.success(
-          `📄 "${file.name}" loaded (${detectedPages} page${detectedPages > 1 ? 's' : ''})!`,
-        );
-      } catch (err) {
-        toast.error('Failed to parse uploaded document.');
-      } finally {
-        setIsUploading(false);
+        const res: any = await api.post('/storage/upload?expiresIn=604800', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          skipGlobalToast: true,
+        });
+        shareUrl = res?.signedUrl || res?.fileUrl || res?.url || res?.storagePath || res?.key || null;
+      } catch (uploadErr) {
+        console.warn('[Studio PDF] Storage upload fallback to local Data URL:', uploadErr);
       }
-    };
 
-    reader.onerror = () => {
-      toast.error('Error reading file.');
+      // 2. Read file to count pages & generate local fallback Data URL if storage was unavailable
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        try {
+          const dataUrl = reader.result as string;
+          let detectedPages = 1;
+
+          if (isPdf) {
+            try {
+              const pdfjs = await getPdfJs();
+              if (pdfjs) {
+                const base64Data = dataUrl.split(',')[1];
+                const raw = atob(base64Data);
+                const uint8Array = new Uint8Array(raw.length);
+                for (let i = 0; i < raw.length; i++) {
+                  uint8Array[i] = raw.charCodeAt(i);
+                }
+                const pdf = await pdfjs.getDocument({ data: uint8Array }).promise;
+                detectedPages = pdf.numPages || 1;
+              }
+            } catch {
+              detectedPages = 1;
+            }
+          }
+
+          const finalUrl = shareUrl || dataUrl;
+
+          const customDoc: PdfDocumentInfo = {
+            id: `custom-${Date.now()}`,
+            name: file.name,
+            url: finalUrl,
+            category: 'Uploaded Document',
+            totalPages: detectedPages,
+            fileType: isPdf ? 'pdf' : 'image',
+          };
+
+          handleSelectDocument(customDoc);
+          toast.success(
+            `📄 "${file.name}" ready (${detectedPages} page${detectedPages > 1 ? 's' : ''})!`,
+          );
+        } catch (err) {
+          toast.error('Failed to parse uploaded document.');
+        } finally {
+          setIsUploading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error('Error reading file.');
+        setIsUploading(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch {
       setIsUploading(false);
-    };
-
-    reader.readAsDataURL(file);
+    }
   };
 
   const handleCustomUploadEvent = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -2145,4 +2145,37 @@ export class LiveClassService {
   getDiagnosticInfo() {
     return this.livekitService.getSafeDiagnosticInfo();
   }
+
+  private readonly _activePresentation = new Map<
+    string,
+    { mode: string; doc?: any; pdfPage?: number; whiteboardFrame?: string; updatedAt: number }
+  >();
+
+  async updateActivePresentation(
+    classId: string,
+    payload: { mode?: string; doc?: any; pdfPage?: number; whiteboardFrame?: string },
+  ) {
+    const existing = this._activePresentation.get(classId) || { mode: 'idle', updatedAt: Date.now() };
+    const updated = {
+      mode: payload.mode || existing.mode,
+      doc: payload.doc !== undefined ? payload.doc : existing.doc,
+      pdfPage: payload.pdfPage !== undefined ? payload.pdfPage : existing.pdfPage,
+      whiteboardFrame: payload.whiteboardFrame !== undefined ? payload.whiteboardFrame : existing.whiteboardFrame,
+      updatedAt: Date.now(),
+    };
+    this._activePresentation.set(classId, updated);
+    return updated;
+  }
+
+  async getActivePresentation(classId: string) {
+    return (
+      this._activePresentation.get(classId) || {
+        mode: 'idle',
+        doc: null,
+        pdfPage: 1,
+        updatedAt: Date.now(),
+      }
+    );
+  }
 }
+

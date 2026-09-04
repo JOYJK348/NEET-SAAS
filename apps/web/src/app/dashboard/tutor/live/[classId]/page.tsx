@@ -1585,21 +1585,22 @@ function TeacherStudioInner({
 
   const startScreenShare = async () => {
     try {
-      const res = await getScreenMediaStream();
-      if (!res.stream) {
-        if (res.isCancelled) toast.info('Screen share was cancelled.');
-        else toast.error(res.error || 'Screen capture not supported on this browser.');
-        return;
-      }
-      res.stream.getTracks().forEach((t) => t.stop());
       await localParticipant.setScreenShareEnabled(true, { audio: false });
       setMode('screen');
       safeSend({ type: 'mode-change', mode: 'screen', pdfPage });
+      api
+        .post(`/live-classes/${classId}/active-presentation`, { mode: 'screen', pdfPage }, { skipGlobalToast: true })
+        .catch(() => {});
       console.log('[LiveKit Studio] Tutor screen sharing started');
       toast.success('📱 Screen Sharing Active!');
     } catch (err: any) {
       console.error('[LiveKit Studio] Screen share start error:', err);
-      toast.error('Screen sharing could not be started.');
+      const msg = err?.message || '';
+      if (msg.includes('Permission') || msg.includes('cancelled') || msg.includes('denied')) {
+        toast.info('Screen share cancelled.');
+      } else {
+        toast.error('Screen sharing not supported or permission denied on this device.');
+      }
     }
   };
 
@@ -1608,6 +1609,9 @@ function TeacherStudioInner({
       await localParticipant.setScreenShareEnabled(false);
       setMode('idle');
       safeSend({ type: 'mode-change', mode: 'idle', pdfPage });
+      api
+        .post(`/live-classes/${classId}/active-presentation`, { mode: 'idle', pdfPage }, { skipGlobalToast: true })
+        .catch(() => {});
       console.log('[LiveKit Studio] Tutor screen sharing stopped');
     } catch (err: any) {
       console.error('[LiveKit Studio] Stop screen share error:', err);
@@ -1623,6 +1627,13 @@ function TeacherStudioInner({
       stopScreenShare();
     }
     safeSend({ type: 'mode-change', mode: newMode, pdfPage, doc: activePdfDoc });
+    api
+      .post(
+        `/live-classes/${classId}/active-presentation`,
+        { mode: newMode, pdfPage, doc: activePdfDoc },
+        { skipGlobalToast: true },
+      )
+      .catch(() => {});
     try {
       sessionStorage.setItem(`tutor_class_${classId}_mode`, newMode);
     } catch {}
@@ -1641,6 +1652,13 @@ function TeacherStudioInner({
     setPdfPage(page);
     pdfPageRef.current = page;
     safeSend({ type: 'pdf-page-change', page, doc: activePdfDoc });
+    api
+      .post(
+        `/live-classes/${classId}/active-presentation`,
+        { mode: modeRef.current, pdfPage: page, doc: activePdfDoc },
+        { skipGlobalToast: true },
+      )
+      .catch(() => {});
   };
 
   const handlePdfDocChange = (doc: PdfDocumentInfo) => {
@@ -1648,21 +1666,40 @@ function TeacherStudioInner({
     setPdfPage(1);
     pdfPageRef.current = 1;
     safeSend({ type: 'pdf-doc-change', doc, page: 1 });
+    api
+      .post(
+        `/live-classes/${classId}/active-presentation`,
+        { mode: 'pdf', doc, pdfPage: 1 },
+        { skipGlobalToast: true },
+      )
+      .catch(() => {});
   };
 
   // Periodic heartbeat sync so any student entering gets current studio presentation mode
   useEffect(() => {
     const syncInterval = setInterval(() => {
+      const currentMode = isScreenShareEnabled ? 'screen' : modeRef.current;
       safeSend({
         type: 'mode-sync',
-        mode: isScreenShareEnabled ? 'screen' : modeRef.current,
+        mode: currentMode,
         doc: activePdfDocRef.current,
         pdfPage: pdfPageRef.current,
         whiteboardFrame: whiteboardFrameRef.current,
       });
+      api
+        .post(
+          `/live-classes/${classId}/active-presentation`,
+          {
+            mode: currentMode,
+            doc: activePdfDocRef.current,
+            pdfPage: pdfPageRef.current,
+          },
+          { skipGlobalToast: true },
+        )
+        .catch(() => {});
     }, 2000);
     return () => clearInterval(syncInterval);
-  }, [safeSend, isScreenShareEnabled]);
+  }, [safeSend, isScreenShareEnabled, classId]);
 
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
