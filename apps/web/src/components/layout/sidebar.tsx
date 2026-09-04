@@ -95,6 +95,21 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
   const router = useRouter();
   const { user, logout } = useAuth();
 
+  // Lock body scroll on mobile when sidebar drawer is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isMobileOpen]);
+
   const toggleCategory = (category: string) => {
     setOpenCategories((prev) => ({
       ...prev,
@@ -717,15 +732,15 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         />
       )}
 
-      {/* Sidebar (Premium Glassmorphic LMS Style) */}
+      {/* Sidebar (Solid Opaque Premium LMS Style) */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-gradient-to-b from-blue-50/95 via-indigo-50/60 to-sky-50/90 text-slate-900 border-r border-blue-200/80 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0_24px_rgba(0,82,204,0.06)] overflow-hidden font-sans',
+          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-[#F8FAFC] text-slate-900 border-r border-slate-200 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-xl lg:shadow-none overflow-hidden font-sans',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Top Institution / Brand Header */}
-        <div className="p-4 border-b border-blue-200/70 flex items-center justify-between bg-white/80 backdrop-blur-md">
+        <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white">
           <Link
             href="/dashboard"
             onClick={() => isMobile && setIsMobileOpen(false)}
@@ -748,7 +763,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           {isMobileOpen && (
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1.5 rounded-xl bg-blue-100/80 hover:bg-blue-200 text-slate-700 lg:hidden cursor-pointer transition-colors"
+              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 lg:hidden cursor-pointer transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -756,8 +771,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         </div>
 
         {/* Institution Campus Card Badge */}
-        <div className="mx-3 my-2.5 px-3 py-2 rounded-xl bg-white/70 border border-blue-200/80 shadow-2xs flex items-center gap-2.5 backdrop-blur-xs">
-          <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center shrink-0 border border-blue-200/60">
+        <div className="mx-3 my-2.5 px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center shrink-0 border border-blue-200/80">
             <Shield className="w-3.5 h-3.5 text-[#0052CC]" />
           </div>
           <div className="truncate min-w-0">
@@ -1006,7 +1021,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         </nav>
 
         {/* User Profile Section Footer */}
-        <div className="p-3.5 border-t border-blue-200/70 bg-gradient-to-r from-white/90 via-blue-50/40 to-slate-50/90 backdrop-blur-md">
+        <div className="p-3.5 border-t border-slate-200 bg-white shadow-2xs">
           {user &&
             (() => {
               const first = (user.firstName || '').trim();
