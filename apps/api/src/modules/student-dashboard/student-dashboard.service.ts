@@ -1037,16 +1037,13 @@ export class StudentDashboardService {
       };
     }
 
-    // Fetch all attendance records for this student (only for completed/past sessions up to now)
+    // Fetch all attendance records for this student
     const now = new Date();
-    const records = await this.prisma.attendanceRecords.findMany({
+    const rawRecords = await this.prisma.attendanceRecords.findMany({
       where: {
         tenantId,
         studentAdmissionId: ctx.studentAdmissionId,
         deletedAt: null,
-        attendanceSession: {
-          attendanceDate: { lte: now },
-        },
       },
       orderBy: { markedAt: 'desc' },
       take: 200, // last 200 sessions
@@ -1060,7 +1057,7 @@ export class StudentDashboardService {
       },
     });
 
-    if (records.length === 0) {
+    if (rawRecords.length === 0) {
       return {
         summary: { total: 0, present: 0, absent: 0, late: 0, rate: null },
         subjectBreakdown: [],
@@ -1068,10 +1065,15 @@ export class StudentDashboardService {
       };
     }
 
-    // Enrich with session → batch + subject info
-    const sessionIds = records.map((r) => r.attendanceSessionId);
+    // Enrich with session → batch + subject info (EXCLUDING UPCOMING FUTURE SESSIONS)
+    const sessionIds = rawRecords.map((r) => r.attendanceSessionId);
     const sessions = await this.prisma.attendanceSessions.findMany({
-      where: { tenantId, id: { in: sessionIds }, deletedAt: null },
+      where: {
+        tenantId,
+        id: { in: sessionIds },
+        attendanceDate: { lte: now },
+        deletedAt: null,
+      },
       select: {
         id: true,
         attendanceDate: true,
@@ -1082,6 +1084,9 @@ export class StudentDashboardService {
         sessionStatus: true,
       },
     });
+
+    const validSessionIds = new Set(sessions.map((s) => s.id));
+    const records = rawRecords.filter((r) => validSessionIds.has(r.attendanceSessionId));
 
     const sessionMap = new Map(sessions.map((s) => [s.id, s]));
     const subjectIds = [...new Set(sessions.map((s) => s.subjectId))];
