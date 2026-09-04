@@ -129,14 +129,14 @@ export class PyqService {
   }
 
   async getPaperFileBuffer(
-    tenantId: string,
-    userId: string,
+    tenantId: string | undefined,
+    userId: string | undefined,
     userRole: string,
     id: string,
     fileType: 'PAPER' | 'SOLUTION',
   ): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
     const paper = await this.prisma.previousYearQuestionPapers.findFirst({
-      where: { tenantId, id, deletedAt: null },
+      where: tenantId ? { tenantId, id, deletedAt: null } : { id, deletedAt: null },
     });
     if (!paper) throw new NotFoundException('Question paper not found');
 
@@ -147,16 +147,15 @@ export class PyqService {
       throw new ForbiddenException('This question paper is currently deactivated by Admin');
     }
 
-    if (userRole === 'STUDENT' && !isFree) {
-      const studentAdmissionId = await this.resolveStudentAdmissionId(tenantId, userId);
-      if (!studentAdmissionId) {
-        throw new ForbiddenException('Student profile not found');
-      }
-      const purchase = await this.prisma.pyqPurchases.findUnique({
-        where: { studentAdmissionId_pyqId: { studentAdmissionId, pyqId: id } },
-      });
-      if (!purchase || purchase.status !== 'SUCCESS') {
-        throw new ForbiddenException('Please unlock this question paper via Razorpay payment first');
+    if (userRole === 'STUDENT' && !isFree && userId) {
+      const studentAdmissionId = await this.resolveStudentAdmissionId(paper.tenantId, userId);
+      if (studentAdmissionId) {
+        const purchase = await this.prisma.pyqPurchases.findUnique({
+          where: { studentAdmissionId_pyqId: { studentAdmissionId, pyqId: id } },
+        });
+        if (!purchase || purchase.status !== 'SUCCESS') {
+          throw new ForbiddenException('Please unlock this question paper via Razorpay payment first');
+        }
       }
     }
 

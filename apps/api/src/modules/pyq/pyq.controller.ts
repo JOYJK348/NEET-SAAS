@@ -55,7 +55,7 @@ export class PyqController {
     @Param('id') id: string,
     @Res() res: any,
   ) {
-    const tenantId = req.user?.tenantId || 'review-academy';
+    const tenantId = req.user?.tenantId;
     const userRole = req.user?.roleCode || 'STUDENT';
     const userId = req.user?.sub || req.user?.id;
 
@@ -76,7 +76,7 @@ export class PyqController {
     @Param('id') id: string,
     @Res() res: any,
   ) {
-    const tenantId = req.user?.tenantId || 'review-academy';
+    const tenantId = req.user?.tenantId;
     const userRole = req.user?.roleCode || 'STUDENT';
     const userId = req.user?.sub || req.user?.id;
 
