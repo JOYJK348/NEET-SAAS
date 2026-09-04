@@ -125,22 +125,28 @@ export class StudentExamsService {
     const take = limit || 20;
     const skip = page ? (page - 1) * take : 0;
 
+    const orConditions: Prisma.ExamsWhereInput[] = [
+      { batchId: 'ALL' },
+      { batchId: 'batch-default' },
+      { batchId: '' },
+    ];
+
+    if (batchIds.length > 0) {
+      orConditions.push({ batchId: { in: batchIds } });
+    }
+
+    if (admission?.courseId) {
+      orConditions.push({ courseId: admission.courseId });
+    }
+
     const examWhere: Prisma.ExamsWhereInput = {
       tenantId,
       publishStatus: { in: ['PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED'] },
       deletedAt: null,
+      OR: orConditions,
     };
 
-    if (batchIds.length > 0) {
-      examWhere.OR = [
-        { batchId: { in: batchIds } },
-        { batchId: 'ALL' },
-        { batchId: 'batch-default' },
-        { batchId: '' },
-      ];
-    }
-
-    let [total, exams] = await Promise.all([
+    const [total, exams] = await Promise.all([
       this.prisma.exams.count({ where: examWhere }),
       this.prisma.exams.findMany({
         where: examWhere,
@@ -149,24 +155,6 @@ export class StudentExamsService {
         take,
       }),
     ]);
-
-    // Fallback: If no exams found for strict batch filter, return all published exams for tenant
-    if (total === 0) {
-      const fallbackWhere: Prisma.ExamsWhereInput = {
-        tenantId,
-        publishStatus: { in: ['PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED'] },
-        deletedAt: null,
-      };
-      [total, exams] = await Promise.all([
-        this.prisma.exams.count({ where: fallbackWhere }),
-        this.prisma.exams.findMany({
-          where: fallbackWhere,
-          orderBy: { scheduledStartAt: 'asc' },
-          skip,
-          take,
-        }),
-      ]);
-    }
 
     const now = new Date();
 
@@ -274,8 +262,20 @@ export class StudentExamsService {
     });
 
     if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const isBatchOrCourseAllowed =
+      !exam.batchId ||
+      exam.batchId === 'ALL' ||
+      exam.batchId === 'batch-default' ||
+      exam.batchId === '' ||
+      (batchIds.length > 0 && batchIds.includes(exam.batchId)) ||
+      (admission?.courseId && exam.courseId === admission.courseId);
+
+    if (!isBatchOrCourseAllowed) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your institute',
+        'Exam not found or not assigned to your batch/course',
       );
     }
 
@@ -473,8 +473,20 @@ export class StudentExamsService {
     });
 
     if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const isBatchOrCourseAllowed =
+      !exam.batchId ||
+      exam.batchId === 'ALL' ||
+      exam.batchId === 'batch-default' ||
+      exam.batchId === '' ||
+      (batchIds.length > 0 && batchIds.includes(exam.batchId)) ||
+      (admission?.courseId && exam.courseId === admission.courseId);
+
+    if (!isBatchOrCourseAllowed) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your institute',
+        'Exam not found or not assigned to your batch/course',
       );
     }
 
@@ -569,8 +581,20 @@ export class StudentExamsService {
     });
 
     if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    const isBatchOrCourseAllowed =
+      !exam.batchId ||
+      exam.batchId === 'ALL' ||
+      exam.batchId === 'batch-default' ||
+      exam.batchId === '' ||
+      (batchIds.length > 0 && batchIds.includes(exam.batchId)) ||
+      (admission?.courseId && exam.courseId === admission.courseId);
+
+    if (!isBatchOrCourseAllowed) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your institute',
+        'Exam not found or not assigned to your batch/course',
       );
     }
 
