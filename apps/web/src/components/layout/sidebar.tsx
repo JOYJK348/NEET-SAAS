@@ -192,6 +192,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-[#0052CC]',
     },
     {
+      name: 'My Attendance',
+      href: '/dashboard/student/attendance',
+      icon: UserCheck,
+      iconColor: 'text-[#0052CC]',
+    },
+    {
       name: 'My Fees & Receipts',
       href: '/dashboard/student/fees',
       icon: DollarSign,
@@ -411,6 +417,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             queryFn: ({ signal }) => api.get('/pyq', { signal, skipGlobalToast: true }),
             staleTime: STALE_TIMES.DEFAULT,
           });
+        } else if (href === '/dashboard/student/attendance') {
+          queryClient.prefetchQuery({
+            queryKey: studentDashboardKeys.attendance(),
+            queryFn: () => studentDashboardApi.getAttendance(),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
         } else if (href === '/dashboard/student/fees' || href === '/tenant-admin/fees') {
           const studentAdmissionId =
             (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
@@ -520,6 +532,11 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         queryClient.prefetchQuery({
           queryKey: ['student-pyq-all'],
           queryFn: ({ signal }) => api.get('/pyq', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        });
+        queryClient.prefetchQuery({
+          queryKey: studentDashboardKeys.attendance(),
+          queryFn: () => studentDashboardApi.getAttendance(),
           staleTime: STALE_TIMES.DEFAULT,
         });
         queryClient.prefetchQuery({
