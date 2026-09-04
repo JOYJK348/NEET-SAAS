@@ -142,7 +142,7 @@ function TutorAttendanceContent() {
             date: day.date,
             dayOfWeek: day.dayOfWeek,
             status: s.sessionStatus || 'SCHEDULED',
-            hasAttendanceRecords: Boolean(s.hasAttendanceRecords),
+            hasAttendanceRecords: Boolean((s as any).hasAttendanceRecords),
           });
         }
       }
