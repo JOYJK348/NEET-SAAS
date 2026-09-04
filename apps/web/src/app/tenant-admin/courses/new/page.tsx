@@ -16,8 +16,12 @@ import {
   ChevronRight,
   Save,
   Loader2,
-  X,
+  Plus,
+  Trash2,
+  Calendar,
   CreditCard,
+  DollarSign,
+  Layers,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -38,23 +42,38 @@ function CourseFormBody() {
     return `CRS-NEET-${randomNum}`;
   };
 
-  // Form states
+  // Form states - Core Course Information
   const [code, setCode] = useState(generateUniqueCode());
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Medical / NEET');
-  const [duration, setDuration] = useState('1 Year');
   const [isActive, setIsActive] = useState(true);
+
+  // Dates & Auto-Calculated Duration
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [durationMonths, setDurationMonths] = useState<number>(12);
 
   // Branch & Academic Year mappings
   const [branchId, setBranchId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
 
-  // Fee Mappings
-  const [baseFee, setBaseFee] = useState<string>('');
-  const [feePlans, setFeePlans] = useState<Array<{ id: string; name: string; code: string; totalAmount: number }>>([]);
-  const [selectedFeePlanId, setSelectedFeePlanId] = useState<string>('auto');
+  // Fee Component Breakdown (Auto-calculated Total)
+  const [lineItems, setLineItems] = useState<Array<{ itemName: string; amount: number }>>([
+    { itemName: 'Tuition Base Fee', amount: 40000 },
+    { itemName: 'Study Material & Test Series', amount: 5000 },
+  ]);
+
+  // Installment Plan & Auto-Split Schedule
+  const [installmentPlanName, setInstallmentPlanName] = useState('3 Installments Schedule');
+  const [installmentItems, setInstallmentItems] = useState<
+    Array<{ installmentNumber: number; label: string; dueDate: string; amountFixed: number }>
+  >([
+    { installmentNumber: 1, label: '1st Installment', dueDate: '2026-06-10', amountFixed: 15000 },
+    { installmentNumber: 2, label: '2nd Installment', dueDate: '2026-08-10', amountFixed: 15000 },
+    { installmentNumber: 3, label: '3rd Installment', dueDate: '2026-10-10', amountFixed: 15000 },
+  ]);
 
   const { data: branchesData } = useBranches({ limit: 100 });
   const { data: academicYearsData } = useAcademicYears({ limit: 100 });
@@ -67,21 +86,46 @@ function CourseFormBody() {
     if (academicYears.length > 0 && !academicYearId) setAcademicYearId(academicYears[0].id);
   }, [branches, academicYears]);
 
+  // AUTO-CALCULATION 1: Duration (Months) calculation from Start Date & End Date
   useEffect(() => {
-    async function fetchFeePlans() {
-      try {
-        const res = await api.get<any>('/billing/fee-plans');
-        const data = res?.data || res;
-        if (Array.isArray(data)) {
-          setFeePlans(data);
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start < end) {
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const computed = Math.round(diffDays / 30.4375);
+        if (computed > 0) {
+          setDurationMonths(computed);
         }
-      } catch (e) {
-        console.error('Failed to load fee plans', e);
       }
     }
-    fetchFeePlans();
-  }, []);
+  }, [startDate, endDate]);
 
+  // AUTO-CALCULATION 2: Calculated Course Total Fee from Fee Component Items
+  const totalCourseFee = lineItems.reduce((acc, item) => acc + Number(item.amount || 0), 0);
+  const totalInstallmentsSum = installmentItems.reduce(
+    (acc, item) => acc + Number(item.amountFixed || 0),
+    0,
+  );
+
+  // AUTO-CALCULATION 3: Recalculate & re-split installment amounts whenever totalCourseFee changes!
+  useEffect(() => {
+    if (totalCourseFee <= 0 || installmentItems.length === 0) return;
+
+    const count = installmentItems.length;
+    const baseAmount = Math.floor(totalCourseFee / count);
+    const remainder = totalCourseFee - baseAmount * count;
+
+    setInstallmentItems((prev) =>
+      prev.map((item, idx) => ({
+        ...item,
+        amountFixed: idx === count - 1 ? baseAmount + remainder : baseAmount,
+      })),
+    );
+  }, [totalCourseFee]);
+
+  // Load existing course when editing
   useEffect(() => {
     if (!editId) return;
 
@@ -96,6 +140,9 @@ function CourseFormBody() {
           setDisplayName(data.displayName || data.name || '');
           setDescription(data.description || '');
           setIsActive(data.isActive !== false);
+          if (data.durationMonths) setDurationMonths(data.durationMonths);
+          if (data.startDate) setStartDate(data.startDate.split('T')[0]);
+          if (data.endDate) setEndDate(data.endDate.split('T')[0]);
         }
       } catch (err: any) {
         toast.error('Failed to load existing course details');
@@ -111,6 +158,98 @@ function CourseFormBody() {
     const newCode = generateUniqueCode();
     setCode(newCode);
     toast.info(`Generated new unique course code: ${newCode}`);
+  };
+
+  // Fee Component Row Handlers
+  const addLineItemRow = () => {
+    setLineItems([...lineItems, { itemName: '', amount: 0 }]);
+  };
+
+  const removeLineItemRow = (idx: number) => {
+    if (lineItems.length <= 1) {
+      toast.error('At least 1 fee line item is required');
+      return;
+    }
+    setLineItems(lineItems.filter((_, index) => index !== idx));
+  };
+
+  // Installment Auto-Split Handlers
+  const autoDistributeInstallments = () => {
+    const count = installmentItems.length;
+    if (count === 0 || totalCourseFee <= 0) return;
+
+    const baseAmount = Math.floor(totalCourseFee / count);
+    const remainder = totalCourseFee - baseAmount * count;
+
+    const updated = installmentItems.map((item, idx) => ({
+      ...item,
+      amountFixed: idx === count - 1 ? baseAmount + remainder : baseAmount,
+    }));
+
+    setInstallmentItems(updated);
+    toast.success(
+      `Auto-distributed ₹${totalCourseFee.toLocaleString('en-IN')} across ${count} installments!`,
+    );
+  };
+
+  const addInstallmentRow = () => {
+    const nextNum = installmentItems.length + 1;
+    const suffix = nextNum === 1 ? 'st' : nextNum === 2 ? 'nd' : nextNum === 3 ? 'rd' : 'th';
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + nextNum);
+    const dateStr = nextMonth.toISOString().split('T')[0];
+
+    const newItems = [
+      ...installmentItems,
+      {
+        installmentNumber: nextNum,
+        label: `${nextNum}${suffix} Installment`,
+        dueDate: dateStr,
+        amountFixed: 0,
+      },
+    ];
+
+    if (totalCourseFee > 0) {
+      const count = newItems.length;
+      const baseAmount = Math.floor(totalCourseFee / count);
+      const remainder = totalCourseFee - baseAmount * count;
+
+      setInstallmentItems(
+        newItems.map((item, idx) => ({
+          ...item,
+          amountFixed: idx === count - 1 ? baseAmount + remainder : baseAmount,
+        })),
+      );
+    } else {
+      setInstallmentItems(newItems);
+    }
+  };
+
+  const removeInstallmentRow = (idx: number) => {
+    if (installmentItems.length <= 1) {
+      toast.error('Installment schedule must contain at least 1 installment row');
+      return;
+    }
+    const filtered = installmentItems.filter((_, index) => index !== idx);
+    const renumbered = filtered.map((item, index) => ({
+      ...item,
+      installmentNumber: index + 1,
+    }));
+
+    if (totalCourseFee > 0) {
+      const count = renumbered.length;
+      const baseAmount = Math.floor(totalCourseFee / count);
+      const remainder = totalCourseFee - baseAmount * count;
+
+      setInstallmentItems(
+        renumbered.map((item, index) => ({
+          ...item,
+          amountFixed: index === count - 1 ? baseAmount + remainder : baseAmount,
+        })),
+      );
+    } else {
+      setInstallmentItems(renumbered);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,6 +273,9 @@ function CourseFormBody() {
         name: name.trim(),
         displayName: displayName.trim() || name.trim(),
         description: description.trim(),
+        durationMonths,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
         isActive,
       };
 
@@ -146,7 +288,7 @@ function CourseFormBody() {
         const newCourse = await api.post<any>('/master/courses', payload);
         const courseObj = newCourse?.data || newCourse;
 
-        // Optionally map branch and academic year
+        // Map branch & academic year
         if (courseObj?.id && branchId && academicYearId) {
           try {
             await api.post('/master/branch-courses', {
@@ -159,36 +301,41 @@ function CourseFormBody() {
           }
         }
 
-        // Auto-create Fee Plan if baseFee is specified and no existing feePlan is selected
-        const numericBaseFee = Number(baseFee || 0);
-        if (courseObj?.id && numericBaseFee > 0 && (!selectedFeePlanId || selectedFeePlanId === 'auto')) {
+        // Create Itemized Fee Structure Plan & Installment Plan
+        const validLineItems = lineItems.filter((i) => i.itemName.trim() && i.amount > 0);
+        if (courseObj?.id && validLineItems.length > 0) {
           try {
-            await api.post('/billing/fee-plans', {
+            const feePlan = await api.post<any>('/billing/fee-plans', {
               courseId: courseObj.id,
               academicYearId: academicYearId || `AY_${Date.now()}`,
               branchId: branchId || `BRANCH_${Date.now()}`,
               departmentId: `DEPT_${Date.now()}`,
               code: `FEE-${code.trim().toUpperCase()}`,
-              name: `${displayName.trim() || name.trim()} Standard Fee Plan`,
-              description: `Standard tuition fee plan for ${name.trim()}`,
-              effectiveFrom: new Date().toISOString(),
-              effectiveTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-              items: [
-                {
-                  itemName: 'Course Base Tuition Fee',
-                  amount: numericBaseFee,
-                  taxPercentage: 0,
-                  mandatory: true,
-                  refundable: false,
-                },
-              ],
+              name: `${displayName.trim() || name.trim()} Fee Structure Plan`,
+              description: `Auto-calculated fee structure for ${name.trim()}`,
+              effectiveFrom: startDate ? new Date(startDate).toISOString() : new Date().toISOString(),
+              effectiveTo: endDate ? new Date(endDate).toISOString() : new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+              items: validLineItems,
             });
+
+            // Create Installment Schedule
+            if (feePlan?.id && installmentItems.length > 0) {
+              await api.post(`/billing/fee-plans/${feePlan.id}/installment-plans`, {
+                name: installmentPlanName,
+                isDefault: true,
+                items: installmentItems.map((pi, idx) => ({
+                  ...pi,
+                  installmentNumber: idx + 1,
+                  dueDate: new Date(pi.dueDate).toISOString(),
+                })),
+              });
+            }
           } catch (feeErr) {
-            console.error('Auto fee plan creation error:', feeErr);
+            console.error('Fee plan creation error:', feeErr);
           }
         }
 
-        toast.success('Course created successfully with unique code & fee plan mapped!');
+        toast.success('Course created with auto-calculated fee plan & installment schedule!');
       }
 
       router.push('/tenant-admin/courses');
@@ -208,7 +355,7 @@ function CourseFormBody() {
   }
 
   return (
-    <div className="w-full space-y-6 text-[#0F172A] font-sans">
+    <div className="w-full space-y-6 text-[#0F172A] font-sans pb-16">
       {/* Top Action Bar */}
       <div className="flex items-center justify-between">
         <button
@@ -235,15 +382,14 @@ function CourseFormBody() {
             {editId ? `Edit Course: ${name || 'Details'}` : 'Create New Academic Course'}
           </h1>
           <p className="text-xs text-slate-600 font-medium">
-            Define course titles, auto-generate unique course codes, and assign branch curriculum
-            mappings.
+            Define course details, auto-calculate syllabus duration, and configure interactive fee component schedules.
           </p>
         </div>
       </div>
 
       {/* Form Container */}
       <form onSubmit={handleSubmit} className="space-y-6 w-full">
-        {/* Core Course Information Card */}
+        {/* SECTION 1: Core Course Information */}
         <Card className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-6">
           <div className="border-b border-slate-100 pb-3 flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 shadow-2xs">
@@ -288,9 +434,6 @@ function CourseFormBody() {
                   AUTO UNIQUE
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">
-                Unique identifier used in admissions and fee structures.
-              </p>
             </div>
 
             {/* Course Name */}
@@ -311,7 +454,7 @@ function CourseFormBody() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Display Name */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
@@ -339,22 +482,58 @@ function CourseFormBody() {
                 <option value="Engineering / JEE">Engineering / JEE</option>
               </select>
             </div>
+          </div>
 
-            {/* Duration */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Course Duration
-              </label>
-              <select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold text-[#0B2447] bg-slate-50 focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="1 Year">1 Year Academic Program</option>
-                <option value="2 Years">2 Years Integrated Program</option>
-                <option value="6 Months">6 Months Crash Course</option>
-                <option value="3 Months">3 Months Fast Track</option>
-              </select>
+          {/* Timeline & AUTO-CALCULATED Duration Section */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#0052CC]" />
+              <span className="text-xs font-extrabold text-[#0B2447]">
+                Academic Schedule & Auto-Calculated Duration
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="rounded-xl text-xs font-medium bg-white border-slate-200 h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="rounded-xl text-xs font-medium bg-white border-slate-200 h-10"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                  Calculated Duration (Months) ⚡
+                </label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={durationMonths}
+                    readOnly
+                    className="rounded-xl text-xs font-extrabold text-[#0052CC] bg-blue-50/80 border-blue-200 h-10 cursor-not-allowed"
+                  />
+                  <span className="absolute right-3 top-2.5 text-[10px] font-extrabold text-[#0052CC] bg-blue-100 px-2 py-0.5 rounded-md">
+                    AUTO CALC
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -371,7 +550,7 @@ function CourseFormBody() {
           </div>
         </Card>
 
-        {/* Branch & Academic Year Mapping Card */}
+        {/* SECTION 2: Branch & Academic Year Mapping */}
         <Card className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
           <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
             <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 shadow-2xs">
@@ -432,58 +611,209 @@ function CourseFormBody() {
           </div>
         </Card>
 
-        {/* Fee Structure & Base Fee Setup Card */}
+        {/* SECTION 3: Interactive Fee Component Breakdown (AUTO-CALCULATED TOTAL) */}
         <Card className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
-          <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-            <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 shadow-2xs">
-              <CreditCard className="w-5 h-5 text-[#0052CC]" />
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 shrink-0 shadow-2xs">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[#0B2447]">
+                  Fee Components & Auto-Calculated Total
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Add tuition, material, and test series line items. Total fee auto-calculates in real-time.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-[#0B2447]">
-                Fee Structure & Base Fee Mapping
-              </h3>
-              <p className="text-xs text-slate-500 font-medium">
-                Set tuition fee for this course program or map to a pre-configured fee plan.
-              </p>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addLineItemRow}
+              className="text-xs font-extrabold text-[#0052CC] border-blue-200 hover:bg-blue-50 rounded-xl shadow-2xs"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add Component Row
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {lineItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center text-xs p-3 sm:p-0 rounded-2xl bg-slate-50 sm:bg-transparent border sm:border-0 border-slate-200"
+              >
+                <Input
+                  placeholder="Component Name (e.g. Tuition Base Fee)"
+                  value={item.itemName}
+                  className="flex-1 rounded-xl text-xs bg-white font-bold"
+                  onChange={(e) => {
+                    const updated = [...lineItems];
+                    updated[idx].itemName = e.target.value;
+                    setLineItems(updated);
+                  }}
+                />
+                <div className="relative w-full sm:w-48">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={item.amount || ''}
+                    className="pl-7 font-extrabold text-[#0B2447] rounded-xl text-xs bg-white"
+                    onChange={(e) => {
+                      const updated = [...lineItems];
+                      updated[idx].amount = Number(e.target.value);
+                      setLineItems(updated);
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end sm:justify-start">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeLineItemRow(idx)}
+                    className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Real-time Calculated Total Bar */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Auto-Calculated Course Total Fee
+              </span>
+            </div>
+            <span className="text-xl font-black text-emerald-700 font-mono">
+              ₹{totalCourseFee.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </Card>
+
+        {/* SECTION 4: Installment Schedule Builder (AUTO-SPLIT & SUM MATCH) */}
+        <Card className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-2xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 shadow-2xs">
+                <Calendar className="w-5 h-5 text-[#0052CC]" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-[#0B2447]">
+                  Installment Schedule & Auto-Split
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Divide course total fee across student installment due dates automatically.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={autoDistributeInstallments}
+                className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 rounded-xl flex-1 sm:flex-none shadow-2xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Auto-Split Equally ⚡
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={addInstallmentRow}
+                className="text-xs text-[#0052CC] font-extrabold hover:bg-blue-50 rounded-xl flex-1 sm:flex-none"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Row
+              </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Course Base Tuition Fee (₹)
-              </label>
-              <Input
-                type="number"
-                placeholder="e.g. 45000"
-                value={baseFee}
-                onChange={(e) => setBaseFee(e.target.value)}
-                className="rounded-xl text-xs font-bold text-[#0052CC] bg-slate-50 border-slate-200 focus:border-[#0052CC] h-10"
-              />
-              <p className="text-[11px] text-slate-400 font-medium">
-                Direct tuition amount. Auto-creates standard fee structure upon saving.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                Or Select Existing Fee Plan
-              </label>
-              <select
-                value={selectedFeePlanId}
-                onChange={(e) => setSelectedFeePlanId(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold text-[#0B2447] bg-slate-50 focus:outline-none focus:border-[#0052CC] focus:ring-2 focus:ring-blue-100"
+          <div className="space-y-3">
+            {installmentItems.map((pi, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center text-xs p-3 sm:p-0 rounded-2xl bg-slate-50 sm:bg-transparent border sm:border-0 border-slate-200"
               >
-                <option value="auto">Auto-Generate Fee Plan from Base Fee (Recommended)</option>
-                {feePlans.map((fp: any) => (
-                  <option key={fp.id} value={fp.id}>
-                    {fp.name} ({fp.code}) — ₹{Number(fp.totalAmount || 0).toLocaleString('en-IN')}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-slate-400 font-medium">
-                You can manage itemized fee breakdown anytime in Billing &gt; Fee Plans.
-              </p>
+                <Input
+                  placeholder="Label (e.g. 1st Installment)"
+                  value={pi.label}
+                  className="flex-1 rounded-xl text-xs bg-white font-bold"
+                  onChange={(e) => {
+                    const updated = [...installmentItems];
+                    updated[idx].label = e.target.value;
+                    setInstallmentItems(updated);
+                  }}
+                />
+                <Input
+                  type="date"
+                  value={pi.dueDate}
+                  className="w-full sm:w-44 rounded-xl text-xs bg-white font-bold"
+                  onChange={(e) => {
+                    const updated = [...installmentItems];
+                    updated[idx].dueDate = e.target.value;
+                    setInstallmentItems(updated);
+                  }}
+                />
+                <div className="relative w-full sm:w-40">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">
+                    ₹
+                  </span>
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={pi.amountFixed || ''}
+                    className="pl-7 font-extrabold text-[#0B2447] rounded-xl text-xs bg-white"
+                    onChange={(e) => {
+                      const updated = [...installmentItems];
+                      updated[idx].amountFixed = Number(e.target.value);
+                      setInstallmentItems(updated);
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end sm:justify-start">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeInstallmentRow(idx)}
+                    className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sum Match Verification Bar */}
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold">
+            <span className="text-slate-600">
+              Target Course Fee:{' '}
+              <strong className="text-[#0B2447]">₹{totalCourseFee.toLocaleString('en-IN')}</strong>
+            </span>
+            <div>
+              {Math.abs(totalInstallmentsSum - totalCourseFee) < 0.01 ? (
+                <span className="font-extrabold text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" /> Installments Sum Matches Exactly (₹
+                  {totalInstallmentsSum.toLocaleString('en-IN')})
+                </span>
+              ) : (
+                <span className="font-extrabold text-amber-600">
+                  Installment Sum (₹{totalInstallmentsSum.toLocaleString('en-IN')}) != Total Fee (₹
+                  {totalCourseFee.toLocaleString('en-IN')})
+                </span>
+              )}
             </div>
           </div>
         </Card>
