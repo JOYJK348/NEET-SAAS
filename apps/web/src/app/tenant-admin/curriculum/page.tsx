@@ -227,18 +227,20 @@ function CurriculumContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
             <Button
               onClick={() => setBulkImportOpen(true)}
-              className="w-full sm:w-auto gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 shadow-2xs shrink-0 rounded-xl text-xs"
+              className="w-full sm:w-auto justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-200 shadow-2xs rounded-xl text-xs h-9 px-3 cursor-pointer"
             >
-              <FileSpreadsheet className="h-4 w-4 text-[#0052CC]" /> Bulk Import Subjects
+              <FileSpreadsheet className="h-4 w-4 text-[#0052CC] shrink-0" />
+              <span className="truncate">Bulk Import</span>
             </Button>
             <Button
               onClick={handleCreateSubject}
-              className="w-full sm:w-auto gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs shrink-0 rounded-xl text-xs"
+              className="w-full sm:w-auto justify-center gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs h-9 px-3 cursor-pointer"
             >
-              <Plus className="h-4 w-4 text-white" /> Add Master Subject
+              <Plus className="h-4 w-4 text-white shrink-0" />
+              <span className="truncate">Add Subject</span>
             </Button>
           </div>
         </div>

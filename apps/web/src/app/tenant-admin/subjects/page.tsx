@@ -356,22 +356,22 @@ function SubjectsContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 self-end sm:self-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setBulkImportOpen(true)}
-              className="w-full sm:w-auto px-3.5 gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs"
+              className="w-full sm:w-auto justify-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 border-slate-200 rounded-xl text-xs font-bold shadow-2xs h-9 px-3 cursor-pointer"
             >
               <Upload className="h-3.5 w-3.5 text-[#0052CC] shrink-0" />
               <span className="truncate">Bulk Import</span>
             </Button>
             <Button
               onClick={handleCreate}
-              className="w-full sm:w-auto px-4 gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs"
+              className="w-full sm:w-auto justify-center gap-1.5 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold shadow-2xs rounded-xl text-xs h-9 px-3 cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 text-white shrink-0" />
-              <span className="truncate">Add Master Subject</span>
+              <span className="truncate">Add Subject</span>
             </Button>
           </div>
         </div>
