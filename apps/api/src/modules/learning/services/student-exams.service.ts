@@ -187,12 +187,19 @@ export class StudentExamsService {
 
         let remainingSeconds = 0;
         if (submission?.calculatedEndAt) {
-          remainingSeconds = Math.max(
-            0,
-            Math.floor(
-              (submission.calculatedEndAt.getTime() - now.getTime()) / 1000,
-            ),
-          );
+          const endMs = submission.calculatedEndAt.getTime();
+          const graceMs =
+            submission.graceEndAt?.getTime() ??
+            endMs + (exam.graceMinutes || 0) * 60 * 1000;
+          const nowMs = now.getTime();
+
+          if (nowMs < endMs) {
+            remainingSeconds = Math.floor((endMs - nowMs) / 1000);
+          } else if (nowMs < graceMs) {
+            remainingSeconds = Math.floor((graceMs - nowMs) / 1000);
+          } else {
+            remainingSeconds = 0;
+          }
         }
 
         return {
@@ -219,6 +226,8 @@ export class StudentExamsService {
                   (exam.resultsPublishedAt &&
                     exam.resultsPublishedAt.getTime() > 0),
                 startedAt: submission.startedAt,
+                calculatedEndAt: submission.calculatedEndAt,
+                graceEndAt: submission.graceEndAt,
                 submittedAt: submission.submittedAt,
                 obtainedMarks: Number(submission.obtainedMarks),
               }
@@ -519,12 +528,19 @@ export class StudentExamsService {
 
     let remainingSeconds = 0;
     if (submission?.calculatedEndAt) {
-      remainingSeconds = Math.max(
-        0,
-        Math.floor(
-          (submission.calculatedEndAt.getTime() - now.getTime()) / 1000,
-        ),
-      );
+      const endMs = submission.calculatedEndAt.getTime();
+      const graceMs =
+        submission.graceEndAt?.getTime() ??
+        endMs + (exam.graceMinutes || 0) * 60 * 1000;
+      const nowMs = now.getTime();
+
+      if (nowMs < endMs) {
+        remainingSeconds = Math.floor((endMs - nowMs) / 1000);
+      } else if (nowMs < graceMs) {
+        remainingSeconds = Math.floor((graceMs - nowMs) / 1000);
+      } else {
+        remainingSeconds = 0;
+      }
     }
 
     let questionPaperSignedUrl: string | null = null;

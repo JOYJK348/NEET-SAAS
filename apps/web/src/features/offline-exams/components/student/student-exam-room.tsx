@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useGetQuestionPaperUrl,
   useHeartbeat,
@@ -36,6 +36,14 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   const { lastSyncedAt, isSyncing } = useHeartbeat(examId, isStarted);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getQPMutation = useGetQuestionPaperUrl();
   const uploadMutation = useUploadAnswerSheet();
@@ -58,17 +66,61 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
     );
   }
 
-  const remainingSeconds = exam.remainingSeconds || 0;
-  const isGrace = remainingSeconds === 0 && exam.allowLateUpload;
-  const isExpired = remainingSeconds === 0 && !exam.allowLateUpload;
+  // Real-time calculation using actual system wall-clock time vs submission timestamps
+  const startedAtMs = exam.submission?.startedAt
+    ? new Date(exam.submission.startedAt).getTime()
+    : null;
 
-  const minutes = Math.floor(remainingSeconds / 60);
-  const seconds = remainingSeconds % 60;
-  const timerFormatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const calculatedEndMs = exam.submission?.calculatedEndAt
+    ? new Date(exam.submission.calculatedEndAt).getTime()
+    : startedAtMs
+      ? startedAtMs + exam.durationMinutes * 60 * 1000
+      : null;
+
+  const graceEndMs = exam.submission?.graceEndAt
+    ? new Date(exam.submission.graceEndAt).getTime()
+    : calculatedEndMs
+      ? calculatedEndMs + (exam.graceMinutes || 0) * 60 * 1000
+      : null;
+
+  let currentRemainingSec = 0;
+  let isGrace = false;
+  let isExpired = false;
+
+  if (calculatedEndMs && graceEndMs) {
+    if (nowMs < calculatedEndMs) {
+      currentRemainingSec = Math.max(0, Math.floor((calculatedEndMs - nowMs) / 1000));
+    } else if (nowMs < graceEndMs) {
+      currentRemainingSec = Math.max(0, Math.floor((graceEndMs - nowMs) / 1000));
+      isGrace = true;
+    } else {
+      currentRemainingSec = 0;
+      isExpired = true;
+    }
+  } else {
+    currentRemainingSec = Math.max(0, exam.remainingSeconds || 0);
+    if (currentRemainingSec === 0) {
+      if (exam.allowLateUpload) {
+        isGrace = true;
+      } else {
+        isExpired = true;
+      }
+    }
+  }
+
+  const hours = Math.floor(currentRemainingSec / 3600);
+  const minutes = Math.floor((currentRemainingSec % 3600) / 60);
+  const seconds = currentRemainingSec % 60;
+
+  const timerFormatted =
+    hours > 0
+      ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   const getTimerColorClass = () => {
+    if (isExpired) return 'text-slate-500 bg-slate-100 border-slate-300';
     if (isGrace) return 'text-amber-700 bg-amber-50 border-amber-200 animate-pulse';
-    if (remainingSeconds < 600)
+    if (currentRemainingSec < 600)
       return 'text-rose-700 bg-rose-50 border-rose-200 animate-pulse';
     return 'text-emerald-700 bg-emerald-50 border-emerald-200';
   };

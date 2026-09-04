@@ -35,6 +35,8 @@ export interface StudentExamItem {
     evaluationStatus?: string;
     isResultsPublished?: boolean;
     startedAt?: string | null;
+    calculatedEndAt?: string | null;
+    graceEndAt?: string | null;
     submittedAt?: string | null;
     obtainedMarks?: number;
   } | null;

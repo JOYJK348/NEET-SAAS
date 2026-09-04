@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStartExam, useStudentExams } from '../../hooks/use-student-exams';
@@ -41,6 +41,14 @@ export function StudentExamsDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('LIVE');
   const [startingExam, setStartingExam] = useState<StudentExamItem | null>(null);
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const { data: response, isLoading } = useStudentExams();
   const startExamMutation = useStartExam();
@@ -184,6 +192,40 @@ export function StudentExamsDashboard() {
             const isStarted = !!exam.submission?.startedAt;
             const isSubmittedCard = !!exam.submission?.submittedAt;
 
+            let cardTimer: { label: string; style: string } | null = null;
+            if (isStarted && !isSubmittedCard && exam.submission?.startedAt) {
+              const startedAtMs = new Date(exam.submission.startedAt).getTime();
+              const calculatedEndMs = exam.submission.calculatedEndAt
+                ? new Date(exam.submission.calculatedEndAt).getTime()
+                : startedAtMs + exam.durationMinutes * 60 * 1000;
+              const graceEndMs = exam.submission.graceEndAt
+                ? new Date(exam.submission.graceEndAt).getTime()
+                : calculatedEndMs + (exam.graceMinutes || 0) * 60 * 1000;
+
+              if (nowMs < calculatedEndMs) {
+                const remSec = Math.max(0, Math.floor((calculatedEndMs - nowMs) / 1000));
+                const m = Math.floor(remSec / 60);
+                const s = remSec % 60;
+                cardTimer = {
+                  label: `⏳ ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+                  style: 'bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse',
+                };
+              } else if (nowMs < graceEndMs) {
+                const remSec = Math.max(0, Math.floor((graceEndMs - nowMs) / 1000));
+                const m = Math.floor(remSec / 60);
+                const s = remSec % 60;
+                cardTimer = {
+                  label: `Grace: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+                  style: 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse',
+                };
+              } else {
+                cardTimer = {
+                  label: 'Time Expired',
+                  style: 'bg-rose-50 text-rose-700 border-rose-200',
+                };
+              }
+            }
+
             return (
               <div
                 key={exam.id}
@@ -203,10 +245,21 @@ export function StudentExamsDashboard() {
                     >
                       {exam.studentExamStatus}
                     </span>
-                    <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                      <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                      {exam.durationMinutes} mins
-                    </span>
+                    {cardTimer ? (
+                      <span
+                        className={cn(
+                          'text-xs flex items-center gap-1 font-mono font-black px-2 py-0.5 rounded-md border',
+                          cardTimer.style,
+                        )}
+                      >
+                        {cardTimer.label}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
+                        {exam.durationMinutes} mins
+                      </span>
+                    )}
                   </div>
 
                   <div>
