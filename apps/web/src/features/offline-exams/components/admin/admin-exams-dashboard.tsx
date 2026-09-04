@@ -28,6 +28,9 @@ import {
   Layers,
   ChevronRight,
   Loader2,
+  FileCheck,
+  FileX,
+  AlertCircle,
 } from 'lucide-react';
 
 export function AdminExamsDashboard() {
@@ -136,6 +139,23 @@ export function AdminExamsDashboard() {
     }
   };
 
+  const getQPStatusBadge = (questionPaperFileId?: string | null) => {
+    if (questionPaperFileId) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-extrabold rounded-full shadow-2xs">
+          <FileCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span>QP Uploaded ✓</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-extrabold rounded-full shadow-2xs animate-pulse">
+        <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+        <span>QP Missing ⚠️</span>
+      </span>
+    );
+  };
+
   const tabs = [
     { key: 'ALL', label: 'All Exams' },
     { key: 'DRAFT', label: 'Drafts' },
@@ -184,7 +204,7 @@ export function AdminExamsDashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Total Exams */}
         <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-[#0052CC]/40">
           <div className="flex items-center gap-3">
@@ -197,6 +217,23 @@ export function AdminExamsDashboard() {
               </p>
               <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
                 {exams.length}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* QP Uploaded Status */}
+        <Card className="rounded-2xl border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-emerald-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
+              <FileCheck className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+                QP Ready
+              </p>
+              <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-0.5">
+                {exams.filter((e) => !!e.questionPaperFileId).length} / {exams.length}
               </p>
             </div>
           </div>
@@ -313,11 +350,14 @@ export function AdminExamsDashboard() {
                   <h3 className="font-extrabold text-[#0B2447] text-base leading-snug">
                     {exam.title}
                   </h3>
-                  <div className="shrink-0">{getStatusBadge(exam.publishStatus)}</div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {getStatusBadge(exam.publishStatus)}
+                    {getQPStatusBadge(exam.questionPaperFileId)}
+                  </div>
                 </div>
 
-                {/* Target Batches Badges */}
-                <div className="flex flex-wrap gap-1">
+                {/* Target Batches & QP Status Badges */}
+                <div className="flex flex-wrap items-center gap-1">
                   {exam.batchNames.map((bName, idx) => (
                     <span
                       key={idx}
@@ -376,14 +416,14 @@ export function AdminExamsDashboard() {
                     size="sm"
                     onClick={() => setUploadModalExam(exam)}
                     className={cn(
-                      'h-9 rounded-xl text-xs font-bold gap-1 px-3',
+                      'h-9 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all',
                       exam.questionPaperFileId
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-blue-50 text-[#0052CC] border-blue-200',
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse',
                     )}
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    {exam.questionPaperFileId ? 'QP Uploaded' : 'Upload QP'}
+                    {exam.questionPaperFileId ? '✓ QP Uploaded' : '⚠️ Upload QP'}
                   </Button>
 
                   {exam.publishStatus === 'DRAFT' && (
@@ -451,6 +491,7 @@ export function AdminExamsDashboard() {
                 <th className="py-3.5 px-4">Exam Details</th>
                 <th className="py-3.5 px-4">Duration & Window</th>
                 <th className="py-3.5 px-4">Marks Criteria</th>
+                <th className="py-3.5 px-4">Question Paper Status</th>
                 <th className="py-3.5 px-4">Publish Status</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
@@ -458,13 +499,13 @@ export function AdminExamsDashboard() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-slate-400 font-semibold">
+                  <td colSpan={6} className="py-16 text-center text-slate-400 font-semibold">
                     Loading exam schedules...
                   </td>
                 </tr>
               ) : filteredExams.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-slate-400 font-semibold">
+                  <td colSpan={6} className="py-16 text-center text-slate-400 font-semibold">
                     No exams found matching your filter criteria.
                   </td>
                 </tr>
@@ -509,6 +550,11 @@ export function AdminExamsDashboard() {
                       </p>
                     </td>
 
+                    {/* Dedicated Question Paper Status Column */}
+                    <td className="py-4 px-4">
+                      {getQPStatusBadge(exam.questionPaperFileId)}
+                    </td>
+
                     <td className="py-4 px-4">{getStatusBadge(exam.publishStatus)}</td>
 
                     <td className="py-4 px-4 text-right">
@@ -518,14 +564,14 @@ export function AdminExamsDashboard() {
                           size="sm"
                           onClick={() => setUploadModalExam(exam)}
                           className={cn(
-                            'h-9 rounded-xl text-xs font-bold gap-1 px-3 transition-all',
+                            'h-9 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all',
                             exam.questionPaperFileId
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-blue-50 text-[#0052CC] border-blue-200 hover:bg-blue-100',
+                              : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse',
                           )}
                         >
                           <Upload className="w-3.5 h-3.5" />
-                          {exam.questionPaperFileId ? 'QP Uploaded' : 'Upload QP'}
+                          {exam.questionPaperFileId ? '✓ QP Uploaded' : '⚠️ Upload QP'}
                         </Button>
 
                         {exam.publishStatus === 'DRAFT' && (
