@@ -1037,12 +1037,16 @@ export class StudentDashboardService {
       };
     }
 
-    // Fetch all attendance records for this student
+    // Fetch all attendance records for this student (only for completed/past sessions up to now)
+    const now = new Date();
     const records = await this.prisma.attendanceRecords.findMany({
       where: {
         tenantId,
         studentAdmissionId: ctx.studentAdmissionId,
         deletedAt: null,
+        attendanceSession: {
+          attendanceDate: { lte: now },
+        },
       },
       orderBy: { markedAt: 'desc' },
       take: 200, // last 200 sessions

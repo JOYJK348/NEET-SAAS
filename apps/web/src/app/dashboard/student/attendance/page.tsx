@@ -184,7 +184,9 @@ function AttendanceContent() {
   const records = attendance?.records || [];
 
   const filteredRecords = useMemo(() => {
-    let list = records;
+    // Only show completed/past session logs (r.date <= today). Exclude future/upcoming dates!
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    let list = records.filter((r) => !r.date || r.date <= todayStr);
 
     if (selectedSubjectId !== 'ALL') {
       list = list.filter((r) => r.subject?.id === selectedSubjectId || r.subject?.name === selectedSubjectId);
