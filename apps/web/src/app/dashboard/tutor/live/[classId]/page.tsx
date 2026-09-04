@@ -470,6 +470,82 @@ function TeacherStudioInner({
   const studioCanvasAnimRef = useRef<any>(null);
   const [isScreenRecordingActive, setIsScreenRecordingActive] = useState(false);
 
+  // ── Web Audio API Mixer for Live Studio Recording (Tutor + All Student Microphones)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const audioSourcesMapRef = useRef<Map<string, MediaStreamAudioSourceNode>>(new Map());
+
+  const getAudioDestinationStream = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    if (!audioDestinationRef.current) {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const dest = ctx.createMediaStreamDestination();
+          audioCtxRef.current = ctx;
+          audioDestinationRef.current = dest;
+        }
+      } catch (e) {
+        console.warn('[Recording Audio Mixer] AudioContext creation error:', e);
+      }
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+    return audioDestinationRef.current?.stream || null;
+  }, []);
+
+  const audioTracks = useTracks([Track.Source.Microphone], { onlySubscribed: false });
+
+  useEffect(() => {
+    const destStream = getAudioDestinationStream();
+    if (!destStream || !audioDestinationRef.current || !audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const currentMap = audioSourcesMapRef.current;
+    const activeTrackIds = new Set<string>();
+
+    audioTracks.forEach((trackRef) => {
+      const mediaTrack = trackRef.publication?.track?.mediaStreamTrack;
+      const trackId =
+        mediaTrack?.id ||
+        trackRef.publication?.trackSid ||
+        `${trackRef.participant.identity}_${trackRef.source}`;
+
+      if (mediaTrack && mediaTrack.readyState === 'live' && mediaTrack.enabled) {
+        activeTrackIds.add(trackId);
+
+        if (!currentMap.has(trackId)) {
+          try {
+            const mediaStream = new MediaStream([mediaTrack]);
+            const sourceNode = ctx.createMediaStreamSource(mediaStream);
+            sourceNode.connect(audioDestinationRef.current!);
+            currentMap.set(trackId, sourceNode);
+            console.log(
+              `[Recording Audio Mixer] Connected microphone track: ${trackId} (${trackRef.participant.name || trackRef.participant.identity})`,
+            );
+          } catch (e) {
+            console.warn('[Recording Audio Mixer] Error connecting audio track:', e);
+          }
+        }
+      }
+    });
+
+    currentMap.forEach((sourceNode, id) => {
+      if (!activeTrackIds.has(id)) {
+        try {
+          sourceNode.disconnect();
+        } catch {}
+        currentMap.delete(id);
+        console.log(`[Recording Audio Mixer] Disconnected microphone track: ${id}`);
+      }
+    });
+  }, [audioTracks, getAudioDestinationStream]);
+
   const isMicRef = useRef(isMicrophoneEnabled);
   const isCamRef = useRef(isCameraEnabled);
 
@@ -823,7 +899,22 @@ function TeacherStudioInner({
           const animInterval = setInterval(drawComposite, 33);
           studioCanvasAnimRef.current = animInterval;
 
-          compositeStream = (compCanvas as any).captureStream(30);
+          const canvasVideoStream = (compCanvas as any).captureStream(30);
+          const mixedAudioStream = getAudioDestinationStream();
+
+          const finalCompositeStream = new MediaStream();
+          canvasVideoStream.getVideoTracks().forEach((vt: MediaStreamTrack) => {
+            finalCompositeStream.addTrack(vt);
+          });
+
+          if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) {
+            mixedAudioStream.getAudioTracks().forEach((at: MediaStreamTrack) => {
+              finalCompositeStream.addTrack(at);
+              console.log('[Recording Audio Mixer] Added mixed audio track to MediaRecorder compositeStream');
+            });
+          }
+
+          compositeStream = finalCompositeStream;
         }
       } catch (err) {
         console.warn('[LiveKit Studio] Studio recording capture init error:', err);
@@ -892,7 +983,7 @@ function TeacherStudioInner({
       setIsScreenRecordingActive(false);
       return false;
     }
-  }, [classId, tutorName]);
+  }, [classId, tutorName, getAudioDestinationStream]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1748,28 +1839,6 @@ function TeacherStudioInner({
               title="Auto-recording is ON"
             >
               <Video className="w-2.5 h-2.5" /> REC
-            </div>
-          )}
-          {autoEndCountdown && (
-            <div className="hidden md:flex items-center gap-1.5">
-              <div
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border transition ${
-                  isNearAutoEnd
-                    ? 'bg-amber-50 text-amber-700 border-amber-300 animate-pulse'
-                    : 'bg-amber-500/10 text-amber-600 border-amber-300/50'
-                }`}
-                title="Class will automatically end 15 minutes after scheduled end time"
-              >
-                <Clock className="w-3 h-3 text-amber-500" />
-                <span>Auto-ends in {autoEndCountdown}</span>
-              </div>
-              <button
-                onClick={handleExtendClass}
-                className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-black bg-violet-600 hover:bg-violet-700 text-white transition shadow-sm cursor-pointer active:scale-95"
-                title="Extend live class duration by +15 minutes"
-              >
-                <span>+15m ⏱️</span>
-              </button>
             </div>
           )}
         </div>

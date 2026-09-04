@@ -1001,12 +1001,6 @@ function StudentClassroomInner({
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-bold uppercase tracking-wider animate-pulse shrink-0">
             <Radio className="w-2.5 h-2.5" /> LIVE
           </div>
-          {autoEndCountdown && (
-            <div className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-300/50 text-amber-600 text-[10px] font-bold">
-              <Clock className="w-3 h-3 text-amber-500" />
-              <span>Auto-ends in {autoEndCountdown}</span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
