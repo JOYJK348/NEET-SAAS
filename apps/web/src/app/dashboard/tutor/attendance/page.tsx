@@ -69,11 +69,11 @@ function formatSessionTime(timeStr: string): string {
 }
 
 type StatusFilterType = 'ALL' | 'PENDING' | 'MARKED';
-type TimeFilterType = 'ALL' | 'TODAY' | 'PAST' | 'UPCOMING';
+type TimeFilterType = 'ALL' | 'TODAY' | 'PAST';
 type SortByType = 'NEWEST' | 'OLDEST';
 
 function TutorAttendanceContent() {
-  // Query 30 days in the past and 30 days in the future
+  // Query 30 days in the past up to TODAY (exclude future upcoming sessions)
   const dateFrom = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -81,9 +81,7 @@ function TutorAttendanceContent() {
   }, []);
 
   const dateTo = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
+    return new Date().toISOString().split('T')[0];
   }, []);
 
   const { timetable, isLoading: isTimetableLoading } = useTutorTimetable(dateFrom, dateTo);
@@ -122,13 +120,17 @@ function TutorAttendanceContent() {
     }
   }, [batches, selectedBatchId]);
 
-  // Extract all REAL backend sessions for the selected batch across timetable days
+  // Extract all REAL backend sessions up to TODAY for the selected batch
   const batchSessions = useMemo<ClassSessionItem[]>(() => {
     if (!selectedBatchId) return [];
     const list: ClassSessionItem[] = [];
+    const todayStr = new Date().toISOString().split('T')[0];
 
     const days = timetable?.timetable ?? [];
     for (const day of days) {
+      // STRICTLY exclude future upcoming dates (only show past & today's classes)
+      if (day.date > todayStr) continue;
+
       for (const s of day.sessions) {
         if (!s.batch || s.batch.id === selectedBatchId) {
           list.push({
@@ -151,7 +153,6 @@ function TutorAttendanceContent() {
     if (list.length === 0) {
       const selectedBatchObj = batches.find((b) => b.id === selectedBatchId);
       const batchName = selectedBatchObj?.name || 'Selected Batch';
-      const todayStr = new Date().toISOString().split('T')[0];
       const todayDayStr = new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
       list.push({
@@ -187,6 +188,9 @@ function TutorAttendanceContent() {
     let result = [...batchSessions];
     const todayStr = new Date().toISOString().split('T')[0];
 
+    // Always filter out any accidental future dates
+    result = result.filter((s) => s.date <= todayStr);
+
     // 1. Status Filter
     if (statusFilter === 'MARKED') {
       result = result.filter((s) => isSessionMarked(s));
@@ -199,8 +203,6 @@ function TutorAttendanceContent() {
       result = result.filter((s) => s.date === todayStr);
     } else if (timeFilter === 'PAST') {
       result = result.filter((s) => s.date < todayStr);
-    } else if (timeFilter === 'UPCOMING') {
-      result = result.filter((s) => s.date > todayStr);
     }
 
     // 3. Search Query
@@ -584,10 +586,9 @@ function TutorAttendanceContent() {
                   onChange={(e) => setTimeFilter(e.target.value as TimeFilterType)}
                   className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] cursor-pointer"
                 >
-                  <option value="ALL">All Dates</option>
+                  <option value="ALL">All Past & Today's Classes</option>
                   <option value="TODAY">Today's Classes</option>
                   <option value="PAST">Past Classes</option>
-                  <option value="UPCOMING">Upcoming Classes</option>
                 </select>
 
                 {/* Sort Select */}
