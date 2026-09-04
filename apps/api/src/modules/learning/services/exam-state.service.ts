@@ -63,14 +63,6 @@ export class ExamStateService {
     if (exam.isClosed) return false;
     if (exam.publishStatus !== ExamPublishStatusEnum.PUBLISHED) return false;
     if (now < exam.examWindowStart || now > exam.examWindowEnd) return false;
-
-    if (exam.requireFullDurationWindow) {
-      const graceMs = (exam.graceMinutes || 0) * 60 * 1000;
-      const remainingMs =
-        exam.examWindowEnd.getTime() - now.getTime() + graceMs;
-      const requiredMs = exam.durationMinutes * 60 * 1000;
-      if (remainingMs < requiredMs) return false;
-    }
     return true;
   }
 
