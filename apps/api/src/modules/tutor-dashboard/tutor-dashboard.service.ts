@@ -808,38 +808,6 @@ export class TutorDashboardService {
             existingSessionKeys.add(key);
           }
         }
-      } else if (targetBatchIds.length > 0 && curDate.getDay() !== 0) {
-        for (const bId of targetBatchIds) {
-          const key = `${bId}_${fallbackSubjectId}_${dateKey}`;
-          if (!existingSessionKeys.has(key)) {
-            const sTime = new Date(curDate);
-            sTime.setHours(10, 0, 0, 0);
-
-            const eTime = new Date(curDate);
-            eTime.setHours(11, 30, 0, 0);
-
-            sessions.push({
-              id: `DEF-${bId}-${dateKey}`,
-              tenantId,
-              batchId: bId,
-              subjectId: fallbackSubjectId,
-              branchId: 'main-branch',
-              staffProfileId,
-              scheduleId: null,
-              attendanceDate: new Date(curDate),
-              startsAt: sTime,
-              endsAt: eTime,
-              sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
-              sessionSource: 'SCHEDULED',
-              overrideType: null,
-              cancelledReason: null,
-              createdAt: new Date(curDate),
-              updatedAt: new Date(curDate),
-              deletedAt: null,
-            } as unknown as AttendanceSessions);
-            existingSessionKeys.add(key);
-          }
-        }
       }
 
       curDate.setDate(curDate.getDate() + 1);

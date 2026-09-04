@@ -150,28 +150,8 @@ function TutorAttendanceContent() {
       }
     }
 
-    if (list.length === 0) {
-      const selectedBatchObj = batches.find((b) => b.id === selectedBatchId);
-      const batchName = selectedBatchObj?.name || 'Selected Batch';
-      const todayDayStr = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-      list.push({
-        id: `SESSION-TODAY-${selectedBatchId}`,
-        batchId: selectedBatchId,
-        batchName,
-        subjectName: 'Regular Batch Class Session',
-        subjectCode: 'NEET-MAIN',
-        startTime: '10:00 AM',
-        endTime: '11:30 AM',
-        date: todayStr,
-        dayOfWeek: todayDayStr,
-        status: 'SCHEDULED',
-        hasAttendanceRecords: false,
-      });
-    }
-
     return list;
-  }, [timetable, selectedBatchId, batches]);
+  }, [timetable, selectedBatchId]);
 
   // Helper check if session attendance has been marked
   const isSessionMarked = (session: ClassSessionItem) => {
