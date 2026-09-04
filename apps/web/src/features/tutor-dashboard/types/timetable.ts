@@ -41,6 +41,7 @@ export interface TimetableSessionDto {
   branch?: BranchDto | null;
   room?: RoomDto | null;
   sessionStatus: string; // SCHEDULED, COMPLETED, CANCELLED, DRAFT
+  hasAttendanceRecords?: boolean;
   sessionSource?: string | null;
   overrideType?: string | null;
   cancelledReason?: string | null;
