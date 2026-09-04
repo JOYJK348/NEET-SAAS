@@ -46,11 +46,29 @@ export class StudentDashboardService {
     return String(dt);
   }
 
-  private toLocalDateKey(d: Date): string {
-    const y = d.getFullYear();
-    const mo = (d.getMonth() + 1).toString().padStart(2, '0');
-    const day = d.getDate().toString().padStart(2, '0');
-    return `${y}-${mo}-${day}`;
+  private toLocalDateKey(d: Date | string): string {
+    if (!d) return '';
+    const dateObj = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(dateObj.getTime())) return String(d);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(dateObj);
+  }
+
+  private getTodayISTBounds(): { today: Date; tomorrow: Date; nextWeek: Date; todayKey: string } {
+    const now = new Date();
+    const todayKey = this.toLocalDateKey(now);
+    const [y, m, d] = todayKey.split('-').map(Number);
+
+    const todayStartUtc = Date.UTC(y, m - 1, d, 0, 0, 0) - 5.5 * 3600 * 1000;
+    const today = new Date(todayStartUtc);
+    const tomorrow = new Date(todayStartUtc + 24 * 3600 * 1000);
+    const nextWeek = new Date(todayStartUtc + 8 * 24 * 3600 * 1000);
+
+    return { today, tomorrow, nextWeek, todayKey };
   }
 
   private weekdayFromDateKey(dateKey: string): string {
@@ -159,12 +177,7 @@ export class StudentDashboardService {
       batchIds = tenantBatches.map((b) => b.id);
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 8);
+    const { today, tomorrow, nextWeek, todayKey } = this.getTodayISTBounds();
 
     if (batchIds.length === 0) {
       return {
@@ -462,7 +475,6 @@ export class StudentDashboardService {
       ctx.classType,
     );
 
-    const todayKey = this.toLocalDateKey(today);
     const strictTodaysSchedule = enriched.filter((s) => s.date === todayKey);
     const strictUpcomingSchedule = enrichedUpcoming.filter((s) => s.date > todayKey);
 
