@@ -141,7 +141,17 @@ export class StudentExamsService {
 
     const examWhere: Prisma.ExamsWhereInput = {
       tenantId,
-      publishStatus: { in: ['PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED'] },
+      publishStatus: {
+        in: [
+          'PUBLISHED',
+          'SCHEDULED',
+          'LOCKED',
+          'UNDER_REVIEW',
+          'ADMIN_REVIEW',
+          'RESULT_PUBLISHED',
+          'ARCHIVED',
+        ],
+      },
       deletedAt: null,
       OR: orConditions,
     };
@@ -215,6 +225,7 @@ export class StudentExamsService {
           graceMinutes: exam.graceMinutes,
           examWindowStart: exam.examWindowStart,
           examWindowEnd: exam.examWindowEnd,
+          publishStatus: exam.publishStatus,
           studentExamStatus: derivedStatus,
           canStart,
           remainingSeconds,

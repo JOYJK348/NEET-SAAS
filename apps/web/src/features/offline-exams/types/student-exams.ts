@@ -25,6 +25,7 @@ export interface StudentExamItem {
   graceMinutes: number;
   examWindowStart: string;
   examWindowEnd: string;
+  publishStatus?: string;
   studentExamStatus: string;
   canStart: boolean;
   remainingSeconds: number;

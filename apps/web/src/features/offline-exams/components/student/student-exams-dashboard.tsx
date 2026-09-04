@@ -40,7 +40,7 @@ const formatExamDateTime = (dateStr?: string | null) => {
 
 export function StudentExamsDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('LIVE');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('LIVE');
   const [startingExam, setStartingExam] = useState<StudentExamItem | null>(null);
   const [nowMs, setNowMs] = useState<number>(Date.now());
 
@@ -61,16 +61,42 @@ export function StudentExamsDashboard() {
       : [];
 
   const isResultPub = (e: StudentExamItem) =>
-    e.studentExamStatus === 'RESULT_PUBLISHED' || !!e.submission?.isResultsPublished;
+    e.studentExamStatus === 'RESULT_PUBLISHED' ||
+    e.publishStatus === 'RESULT_PUBLISHED' ||
+    !!e.submission?.isResultsPublished ||
+    e.submission?.evaluationStatus === 'PUBLISHED' ||
+    e.submission?.evaluationStatus === 'COMPLETED';
 
-  const isSubmitted = (e: StudentExamItem) =>
-    !isResultPub(e) && !!e.submission?.submittedAt;
+  const isSubmitted = (e: StudentExamItem) => {
+    if (isResultPub(e)) return false;
+    if (!!e.submission?.submittedAt) return true;
+    if (
+      e.submission?.status === 'SUBMITTED' ||
+      e.submission?.status === 'LATE' ||
+      e.submission?.status === 'ABSENT'
+    )
+      return true;
+    if (
+      e.submission?.evaluationStatus === 'PENDING' ||
+      e.submission?.evaluationStatus === 'UNDER_EVALUATION' ||
+      e.submission?.evaluationStatus === 'APPROVED'
+    )
+      return true;
+    return false;
+  };
+
+  const isExamUpcoming = (e: StudentExamItem) => {
+    if (isResultPub(e) || isSubmitted(e)) return false;
+    if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') return true;
+    const now = new Date();
+    const start = new Date(e.examWindowStart);
+    return !isNaN(start.getTime()) && now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
+  };
 
   const isExamLive = (e: StudentExamItem) => {
-    if (isResultPub(e) || isSubmitted(e)) return false;
+    if (isResultPub(e) || isSubmitted(e) || isExamUpcoming(e)) return false;
     if (e.studentExamStatus === 'LIVE') return true;
     if (e.canStart) return true;
-    if (!!e.submission?.startedAt) return true;
     const now = new Date();
     const start = new Date(e.examWindowStart);
     const end = new Date(e.examWindowEnd);
@@ -79,26 +105,24 @@ export function StudentExamsDashboard() {
       !isNaN(end.getTime()) &&
       now >= start &&
       now <= end &&
-      e.studentExamStatus !== 'RESULT_PUBLISHED'
+      !e.isSubmissionLocked
     );
-  };
-
-  const isExamUpcoming = (e: StudentExamItem) => {
-    if (isResultPub(e) || isSubmitted(e) || isExamLive(e)) return false;
-    if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') return true;
-    const now = new Date();
-    const start = new Date(e.examWindowStart);
-    return !isNaN(start.getTime()) && now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
   };
 
   const liveCount = examList.filter((e) => isExamLive(e)).length;
   const upcomingCount = examList.filter((e) => isExamUpcoming(e)).length;
-  const submittedCount = examList.filter((e) => isSubmitted(e)).length;
   const resultsCount = examList.filter((e) => isResultPub(e)).length;
+  const submittedCount = examList.filter(
+    (e) => isSubmitted(e) || (!isResultPub(e) && !isExamLive(e) && !isExamUpcoming(e)),
+  ).length;
 
   const filteredExams = examList.filter((exam) => {
+    if (activeTab === 'ALL') return true;
     if (activeTab === 'RESULTS') return isResultPub(exam);
-    if (activeTab === 'SUBMITTED') return isSubmitted(exam);
+    if (activeTab === 'SUBMITTED')
+      return (
+        isSubmitted(exam) || (!isResultPub(exam) && !isExamLive(exam) && !isExamUpcoming(exam))
+      );
     if (activeTab === 'LIVE') return isExamLive(exam);
     if (activeTab === 'UPCOMING') return isExamUpcoming(exam);
     return true;
@@ -144,9 +168,10 @@ export function StudentExamsDashboard() {
       {/* Tab Navigation Switcher Pills */}
       <div className="flex items-center p-1 bg-white rounded-2xl border border-slate-200/90 shadow-2xs text-xs font-extrabold text-[#0B2447] overflow-x-auto scrollbar-none">
         {[
+          { key: 'ALL', label: 'All Exams', count: examList.length },
           { key: 'LIVE', label: 'Live & Active', count: liveCount },
           { key: 'UPCOMING', label: 'Upcoming Exams', count: upcomingCount },
-          { key: 'SUBMITTED', label: 'Submitted', count: submittedCount },
+          { key: 'SUBMITTED', label: 'Submitted & History', count: submittedCount },
           { key: 'RESULTS', label: 'Results & Rank', count: resultsCount },
         ].map((tab) => (
           <button
