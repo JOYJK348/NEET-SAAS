@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -115,7 +115,7 @@ interface FormState {
   chatEnabled: boolean;
 }
 
-export default function CreateSchedulePage() {
+function CreateScheduleForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('editId');
@@ -1153,3 +1153,20 @@ export default function CreateSchedulePage() {
     </DashboardLayout>
   );
 }
+
+export default function CreateSchedulePage() {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#0052CC]" />
+          </div>
+        </DashboardLayout>
+      }
+    >
+      <CreateScheduleForm />
+    </Suspense>
+  );
+}
+
