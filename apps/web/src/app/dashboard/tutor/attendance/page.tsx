@@ -26,11 +26,13 @@ import {
   ArrowLeft,
   Calendar,
   BookOpen,
-  PlayCircle,
   Edit3,
+  CheckSquare,
+  AlertCircle,
+  BarChart3,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatDate } from '@/features/students/utils/student-utils';
 
 interface AttendanceStudent {
   id: string;
@@ -51,6 +53,7 @@ interface ClassSessionItem {
   date: string;
   dayOfWeek: string;
   status: string;
+  hasAttendanceRecords?: boolean;
 }
 
 function formatSessionTime(timeStr: string): string {
@@ -65,8 +68,12 @@ function formatSessionTime(timeStr: string): string {
   return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
 }
 
+type StatusFilterType = 'ALL' | 'PENDING' | 'MARKED';
+type TimeFilterType = 'ALL' | 'TODAY' | 'PAST' | 'UPCOMING';
+type SortByType = 'NEWEST' | 'OLDEST';
+
 function TutorAttendanceContent() {
-  // Query 30 days in the past (to include last month's sessions) and 30 days in the future
+  // Query 30 days in the past and 30 days in the future
   const dateFrom = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -84,8 +91,18 @@ function TutorAttendanceContent() {
 
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [selectedSession, setSelectedSession] = useState<ClassSessionItem | null>(null);
-  const [search, setSearch] = useState('');
+
+  // Filter & Search Controls
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
+  const [timeFilter, setTimeFilter] = useState<TimeFilterType>('ALL');
+  const [sessionSearch, setSessionSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortByType>('NEWEST');
+
+  // Roster search & saving states
+  const [rosterSearch, setRosterSearch] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [locallyMarkedSessions, setLocallyMarkedSessions] = useState<Set<string>>(new Set());
 
   const batches = useMemo(() => {
     const list = tutorBatchesData?.batches ?? [];
@@ -125,10 +142,12 @@ function TutorAttendanceContent() {
             date: day.date,
             dayOfWeek: day.dayOfWeek,
             status: s.sessionStatus || 'SCHEDULED',
+            hasAttendanceRecords: Boolean(s.hasAttendanceRecords),
           });
         }
       }
     }
+
     if (list.length === 0) {
       const selectedBatchObj = batches.find((b) => b.id === selectedBatchId);
       const batchName = selectedBatchObj?.name || 'Selected Batch';
@@ -146,11 +165,75 @@ function TutorAttendanceContent() {
         date: todayStr,
         dayOfWeek: todayDayStr,
         status: 'SCHEDULED',
+        hasAttendanceRecords: false,
       });
     }
 
     return list;
   }, [timetable, selectedBatchId, batches]);
+
+  // Helper check if session attendance has been marked
+  const isSessionMarked = (session: ClassSessionItem) => {
+    return (
+      Boolean(session.hasAttendanceRecords) ||
+      session.status === 'COMPLETED' ||
+      session.status === 'PUBLISHED' ||
+      locallyMarkedSessions.has(session.id)
+    );
+  };
+
+  // Filtered & Sorted Sessions List
+  const filteredSessions = useMemo(() => {
+    let result = [...batchSessions];
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Status Filter
+    if (statusFilter === 'MARKED') {
+      result = result.filter((s) => isSessionMarked(s));
+    } else if (statusFilter === 'PENDING') {
+      result = result.filter((s) => !isSessionMarked(s));
+    }
+
+    // 2. Time Filter
+    if (timeFilter === 'TODAY') {
+      result = result.filter((s) => s.date === todayStr);
+    } else if (timeFilter === 'PAST') {
+      result = result.filter((s) => s.date < todayStr);
+    } else if (timeFilter === 'UPCOMING') {
+      result = result.filter((s) => s.date > todayStr);
+    }
+
+    // 3. Search Query
+    if (sessionSearch.trim()) {
+      const q = sessionSearch.toLowerCase().trim();
+      result = result.filter(
+        (s) =>
+          s.subjectName.toLowerCase().includes(q) ||
+          s.subjectCode.toLowerCase().includes(q) ||
+          s.date.includes(q) ||
+          s.dayOfWeek.toLowerCase().includes(q),
+      );
+    }
+
+    // 4. Sort By Date
+    result.sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortBy === 'NEWEST' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [batchSessions, statusFilter, timeFilter, sessionSearch, sortBy, locallyMarkedSessions]);
+
+  // Stats Counters
+  const totalSessionsCount = batchSessions.length;
+  const markedSessionsCount = useMemo(
+    () => batchSessions.filter((s) => isSessionMarked(s)).length,
+    [batchSessions, locallyMarkedSessions],
+  );
+  const pendingSessionsCount = totalSessionsCount - markedSessionsCount;
+  const completionRate =
+    totalSessionsCount > 0 ? Math.round((markedSessionsCount / totalSessionsCount) * 100) : 0;
 
   // Fetch real enrolled students for the selected batch
   const { batchStudents, isLoading: isStudentsLoading } = useBatchStudents(selectedBatchId || null);
@@ -180,13 +263,53 @@ function TutorAttendanceContent() {
     }
   }, [batchStudents]);
 
+  // Fetch existing attendance records if editing a session
+  useEffect(() => {
+    if (!selectedSession) return;
+    let isSubscribed = true;
+
+    const loadExistingAttendance = async () => {
+      try {
+        const res = await api.get<any>(`/live-classes/${selectedSession.id}/attendance`);
+        if (
+          isSubscribed &&
+          res &&
+          res.attendanceRecords &&
+          Array.isArray(res.attendanceRecords) &&
+          res.attendanceRecords.length > 0
+        ) {
+          const recordMap = new Map<string, 'PRESENT' | 'ABSENT' | 'LATE'>();
+          for (const rec of res.attendanceRecords) {
+            if (rec.studentAdmissionId) {
+              recordMap.set(rec.studentAdmissionId, rec.attendanceStatus || 'PRESENT');
+            }
+          }
+          setRoster((prev) =>
+            prev.map((s) => ({
+              ...s,
+              status: recordMap.get(s.studentId) || recordMap.get(s.id) || s.status,
+            })),
+          );
+        }
+      } catch {
+        /* ignore fallback errors */
+      }
+    };
+
+    loadExistingAttendance();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [selectedSession]);
+
   const filteredRoster = useMemo(() => {
     return roster.filter((s) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
+      if (!rosterSearch) return true;
+      const q = rosterSearch.toLowerCase();
       return s.name.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q);
     });
-  }, [roster, search]);
+  }, [roster, rosterSearch]);
 
   const toggleStatus = (id: string, newStatus: 'PRESENT' | 'ABSENT' | 'LATE') => {
     setRoster((prev) => prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s)));
@@ -197,8 +320,6 @@ function TutorAttendanceContent() {
     setRoster((prev) => prev.map((s) => ({ ...s, status })));
     setIsSaved(false);
   };
-
-  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     if (roster.length === 0) {
@@ -222,6 +343,8 @@ function TutorAttendanceContent() {
       await api.post(`/live-classes/${targetSessionId}/attendance`, { records });
 
       setIsSaved(true);
+      setLocallyMarkedSessions((prev) => new Set(prev).add(targetSessionId));
+
       const sessionTitle = selectedSession
         ? `${selectedSession.subjectName} (${selectedSession.startTime} - ${selectedSession.endTime})`
         : 'Class Session';
@@ -240,7 +363,6 @@ function TutorAttendanceContent() {
   const presentCount = roster.filter((s) => s.status === 'PRESENT' || s.status === 'LATE').length;
   const absentCount = roster.filter((s) => s.status === 'ABSENT').length;
   const totalCount = roster.length;
-  const rate = Math.round((presentCount / (totalCount || 1)) * 100);
 
   const isLoading =
     isBatchesLoading || isTimetableLoading || (!!selectedBatchId && isStudentsLoading);
@@ -255,7 +377,7 @@ function TutorAttendanceContent() {
 
   return (
     <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
-      {/* ── ISML LMS Light Blue Header Banner ── */}
+      {/* ── Header Banner ── */}
       <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
@@ -275,7 +397,7 @@ function TutorAttendanceContent() {
           <p className="text-xs text-slate-600 font-medium">
             {selectedSession
               ? `Mark & edit student presence for ${selectedSession.subjectName} (${selectedSession.startTime} - ${selectedSession.endTime})`
-              : `Select a batch and click on a scheduled class session with timings to mark/edit attendance.`}
+              : `Select a batch, use status filters, and click any scheduled class session to mark or edit attendance.`}
           </p>
         </div>
 
@@ -289,13 +411,20 @@ function TutorAttendanceContent() {
             <span>Back to Classes List</span>
           </button>
         ) : (
-          <div className="bg-white px-5 py-3 rounded-xl border border-blue-200 text-center shrink-0 self-start sm:self-auto shadow-2xs">
-            <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0052CC]">
-              Active Batches
-            </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-[#0B2447] mt-0.5">
-              {batches.length}
-            </p>
+          <div className="bg-white px-5 py-3 rounded-xl border border-blue-200 text-center shrink-0 self-start sm:self-auto shadow-2xs flex items-center gap-4">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#0052CC]">
+                Active Batches
+              </p>
+              <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">{batches.length}</p>
+            </div>
+            <div className="h-8 w-px bg-slate-200" />
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600">
+                Register Progress
+              </p>
+              <p className="text-2xl font-extrabold text-[#0B2447] mt-0.5">{completionRate}%</p>
+            </div>
           </div>
         )}
       </div>
@@ -308,7 +437,7 @@ function TutorAttendanceContent() {
           </div>
           <div className="w-full sm:w-auto">
             <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
-              Select Batch Section
+              Select Active Batch Section
             </label>
             <select
               value={selectedBatchId}
@@ -338,81 +467,338 @@ function TutorAttendanceContent() {
         )}
       </div>
 
-      {/* ── VIEW MODE 1: CLASS SESSIONS LIST (When no class session is selected) ── */}
+      {/* ── VIEW MODE 1: CLASS SESSIONS LIST ── */}
       {!selectedSession ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#0052CC]" />
-              <span>Classes & Sessions for Selected Batch ({batchSessions.length})</span>
-            </h2>
-            <span className="text-xs text-slate-500 font-bold">
-              Click any class below to mark or edit attendance
-            </span>
+        <div className="space-y-6">
+          {/* ── KPI METRICS OVERVIEW BAR ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Total Sessions
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+                  {totalSessionsCount} Classes
+                </p>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border border-emerald-200 bg-emerald-50/20 p-4 shadow-2xs flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-300 shrink-0">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                  Attendance Marked
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-0.5">
+                  {markedSessionsCount} Done
+                </p>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border border-amber-200 bg-amber-50/20 p-4 shadow-2xs flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-amber-100 text-amber-700 border border-amber-300 shrink-0">
+                <Clock className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                  Pending Attendance
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5">
+                  {pendingSessionsCount} Pending
+                </p>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border border-indigo-200 bg-indigo-50/20 p-4 shadow-2xs flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-indigo-100 text-indigo-700 border border-indigo-300 shrink-0">
+                <BarChart3 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider">
+                  Completion Rate
+                </p>
+                <p className="text-xl sm:text-2xl font-extrabold text-indigo-700 mt-0.5">
+                  {completionRate}%
+                </p>
+              </div>
+            </Card>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {batchSessions.map((session) => (
-              <Card
-                key={session.id}
-                onClick={() => setSelectedSession(session)}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs hover:border-[#0052CC] hover:shadow-md transition-all cursor-pointer group space-y-4 flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#0052CC] border border-blue-200 text-[10px] font-mono font-extrabold">
-                      {session.subjectCode}
-                    </span>
-                    <span
+          {/* ── CLEAN & CRISPY FILTER BAR ── */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl shrink-0 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('ALL')}
+                  className={cn(
+                    'px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap',
+                    statusFilter === 'ALL'
+                      ? 'bg-white text-[#0B2447] shadow-2xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                >
+                  All Classes ({totalSessionsCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('PENDING')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap',
+                    statusFilter === 'PENDING'
+                      ? 'bg-amber-500 text-white shadow-2xs'
+                      : 'text-amber-800 hover:bg-amber-100/60',
+                  )}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Pending ({pendingSessionsCount})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('MARKED')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap',
+                    statusFilter === 'MARKED'
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'text-emerald-800 hover:bg-emerald-100/60',
+                  )}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Marked ({markedSessionsCount})</span>
+                </button>
+              </div>
+
+              {/* Time & Search Controls */}
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+                {/* Date Filter Select */}
+                <select
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value as TimeFilterType)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] cursor-pointer"
+                >
+                  <option value="ALL">All Dates</option>
+                  <option value="TODAY">Today's Classes</option>
+                  <option value="PAST">Past Classes</option>
+                  <option value="UPCOMING">Upcoming Classes</option>
+                </select>
+
+                {/* Sort Select */}
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortByType)}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-[#0052CC] cursor-pointer"
+                >
+                  <option value="NEWEST">Date: Newest First</option>
+                  <option value="OLDEST">Date: Oldest First</option>
+                </select>
+
+                {/* Search Box */}
+                <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 w-full sm:w-64">
+                  <Search className="h-4 w-4 text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search subject or date..."
+                    value={sessionSearch}
+                    onChange={(e) => setSessionSearch(e.target.value)}
+                    className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── SESSIONS GRID ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#0052CC]" />
+                <span>
+                  Showing {filteredSessions.length} of {batchSessions.length} Class Sessions
+                </span>
+              </h2>
+            </div>
+
+            {filteredSessions.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+                <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <SlidersHorizontal className="w-6 h-6" />
+                </div>
+                <h3 className="font-extrabold text-slate-800 text-sm">
+                  No class sessions match selected filters
+                </h3>
+                <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto">
+                  Try changing your status filter, date range, or search keyword to see matching class registers.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter('ALL');
+                    setTimeFilter('ALL');
+                    setSessionSearch('');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-blue-50 text-[#0052CC] text-xs font-extrabold border border-blue-200 hover:bg-blue-100 transition-colors"
+                >
+                  Reset All Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredSessions.map((session) => {
+                  const marked = isSessionMarked(session);
+
+                  return (
+                    <Card
+                      key={session.id}
+                      onClick={() => setSelectedSession(session)}
                       className={cn(
-                        'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider',
-                        session.status === 'LIVE NOW'
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse'
-                          : session.status === 'COMPLETED'
-                            ? 'bg-slate-100 text-slate-700 border border-slate-200'
-                            : 'bg-blue-100 text-blue-800 border border-blue-200',
+                        'rounded-2xl border p-5 shadow-2xs transition-all cursor-pointer group space-y-4 flex flex-col justify-between relative overflow-hidden',
+                        marked
+                          ? 'border-emerald-300 bg-gradient-to-b from-emerald-50/30 via-white to-white hover:border-emerald-500 hover:shadow-md'
+                          : 'border-slate-200 bg-white hover:border-[#0052CC] hover:shadow-md',
                       )}
                     >
-                      {session.status}
-                    </span>
-                  </div>
+                      {/* Top Accent Indicator Strip */}
+                      <div
+                        className={cn(
+                          'absolute top-0 left-0 right-0 h-1',
+                          marked ? 'bg-emerald-500' : 'bg-amber-400',
+                        )}
+                      />
 
-                  <div>
-                    <h3 className="font-extrabold text-[#0B2447] text-base group-hover:text-[#0052CC] transition-colors">
-                      {session.subjectName}
-                    </h3>
-                    <p className="text-xs text-slate-500 font-bold mt-0.5">{session.batchName}</p>
-                  </div>
-                </div>
+                      <div className="space-y-3 pt-1">
+                        {/* Header Row: Subject Code + Visual Attendance Badge */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-[#0052CC] border border-blue-200 text-[10px] font-mono font-extrabold">
+                            {session.subjectCode}
+                          </span>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <div className="flex flex-col gap-1 font-extrabold text-[#0B2447]">
-                    <div className="flex items-center gap-1.5 text-slate-600 text-[11px] font-bold">
-                      <Calendar className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
-                      <span>
-                        {session.date} {session.dayOfWeek ? `(${session.dayOfWeek})` : ''}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0B2447]">
-                      <Clock className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
-                      <span>
-                        {session.startTime} - {session.endTime}
-                      </span>
-                    </div>
-                  </div>
+                          {marked ? (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>Attendance Marked ✓</span>
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                              <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                              <span>Pending Attendance ⏳</span>
+                            </span>
+                          )}
+                        </div>
 
-                  <span className="inline-flex items-center gap-1 font-extrabold text-[#0052CC] group-hover:translate-x-1 transition-transform shrink-0">
-                    <span>Mark Register</span>
-                    <ChevronRight className="w-4 h-4 text-[#0052CC]" />
-                  </span>
-                </div>
-              </Card>
-            ))}
+                        <div>
+                          <h3
+                            className={cn(
+                              'font-extrabold text-base transition-colors',
+                              marked
+                                ? 'text-emerald-950 group-hover:text-emerald-700'
+                                : 'text-[#0B2447] group-hover:text-[#0052CC]',
+                            )}
+                          >
+                            {session.subjectName}
+                          </h3>
+                          <p className="text-xs text-slate-500 font-bold mt-0.5">
+                            {session.batchName}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Card Footer Info & CTA */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <div className="flex flex-col gap-1 font-extrabold text-[#0B2447]">
+                          <div className="flex items-center gap-1.5 text-slate-600 text-[11px] font-bold">
+                            <Calendar className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
+                            <span>
+                              {session.date} {session.dayOfWeek ? `(${session.dayOfWeek})` : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#0B2447]">
+                            <Clock className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
+                            <span>
+                              {session.startTime} - {session.endTime}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 font-extrabold text-xs group-hover:translate-x-1 transition-transform shrink-0 px-2.5 py-1.5 rounded-xl border',
+                            marked
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-blue-50 text-[#0052CC] border-blue-200',
+                          )}
+                        >
+                          <span>{marked ? 'Edit Register' : 'Mark Attendance'}</span>
+                          <ChevronRight className="w-4 h-4" />
+                        </span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       ) : (
         /* ── VIEW MODE 2: CLASS ATTENDANCE REGISTER FOR SELECTED SESSION ── */
         <div className="space-y-6">
+          {/* ── Session Status Banner ── */}
+          <div
+            className={cn(
+              'p-4 rounded-2xl border flex items-center justify-between gap-4',
+              isSessionMarked(selectedSession)
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                : 'bg-amber-50 border-amber-300 text-amber-900',
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'p-2.5 rounded-xl shrink-0',
+                  isSessionMarked(selectedSession)
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700',
+                )}
+              >
+                {isSessionMarked(selectedSession) ? (
+                  <CheckCircle2 className="w-6 h-6" />
+                ) : (
+                  <Clock className="w-6 h-6" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm">
+                  {isSessionMarked(selectedSession)
+                    ? 'Attendance Already Marked for this Session ✓'
+                    : 'Pending Attendance - Please Mark Register Below ⏳'}
+                </h3>
+                <p className="text-xs opacity-90 font-medium">
+                  {isSessionMarked(selectedSession)
+                    ? 'You can review or edit student attendance statuses below and save changes anytime.'
+                    : 'Select Present/Absent/Late status for each student and click "Save & Submit Register".'}
+                </p>
+              </div>
+            </div>
+
+            <span
+              className={cn(
+                'px-3 py-1.5 rounded-xl font-extrabold text-xs uppercase tracking-wider border shrink-0 hidden sm:inline-block',
+                isSessionMarked(selectedSession)
+                  ? 'bg-emerald-600 text-white border-emerald-700'
+                  : 'bg-amber-500 text-white border-amber-600',
+              )}
+            >
+              {isSessionMarked(selectedSession) ? 'Status: Marked' : 'Status: Pending'}
+            </span>
+          </div>
+
           {/* ── Class Info & KPI Metric Strip ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex items-center gap-3">
@@ -479,8 +865,8 @@ function TutorAttendanceContent() {
               <input
                 type="text"
                 placeholder="Search student by name or roll number..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={rosterSearch}
+                onChange={(e) => setRosterSearch(e.target.value)}
                 className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
               />
             </div>
@@ -693,3 +1079,4 @@ export default function TutorAttendancePage() {
     </ProtectedRoute>
   );
 }
+
