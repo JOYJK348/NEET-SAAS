@@ -607,21 +607,24 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                 onFocus={() => handleLinkHover(item.href)}
                 onClick={() => isMobile && setIsMobileOpen(false)}
                 className={cn(
-                  'flex-1 flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
+                  'flex-1 flex items-center justify-between px-3 py-2 rounded-xl text-xs font-extrabold transition-all duration-200 group',
                   isActive
-                    ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
-                    : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+                    ? 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
+                    : 'text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
                 )}
               >
-                <Icon
-                  className={cn(
-                    depth === 0 ? 'h-4 w-4' : 'h-3.5 w-3.5',
-                    'flex-shrink-0 transition-colors',
-                    isActive ? 'text-white' : 'text-[#0052CC]',
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="truncate">{item.name}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon
+                    className={cn(
+                      depth === 0 ? 'h-4 w-4' : 'h-3.5 w-3.5',
+                      'flex-shrink-0 transition-colors',
+                      isActive ? 'text-white' : 'text-[#0052CC] group-hover:text-[#0052CC]',
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{item.name}</span>
+                </div>
+                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
               </Link>
 
               <button
@@ -631,11 +634,11 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                   e.stopPropagation();
                   toggleSubMenu(item.name);
                 }}
-                className="p-2 text-slate-500 hover:text-[#0B2447] transition-colors cursor-pointer"
+                className="p-2 text-slate-400 hover:text-[#0052CC] transition-colors cursor-pointer"
               >
                 <ChevronDown
                   className={cn(
-                    'h-3.5 w-3.5 transition-transform duration-200 text-slate-500',
+                    'h-3.5 w-3.5 transition-transform duration-200 text-slate-400',
                     isSubOpen && 'rotate-180 text-[#0052CC]',
                   )}
                 />
@@ -645,7 +648,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             {isSubOpen && (
               <div
                 className={cn(
-                  'space-y-1 border-l border-blue-200/80 ml-4 pl-3 transition-all duration-200',
+                  'space-y-1 border-l-2 border-blue-200/80 ml-4 pl-3.5 pt-0.5 transition-all duration-200',
                 )}
               >
                 {renderNavItems(item.children!, depth + 1)}
@@ -663,14 +666,14 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           onFocus={() => handleLinkHover(item.href)}
           onClick={() => isMobile && setIsMobileOpen(false)}
           className={cn(
-            'flex items-center transition-all duration-150',
+            'flex items-center justify-between transition-all duration-200 group',
             depth > 0
-              ? 'relative py-1.5 px-3 text-xs text-slate-700 hover:text-[#0052CC] hover:bg-white/80 rounded-xl font-bold'
-              : 'gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+              ? 'py-1.5 px-3 text-xs text-slate-600 hover:text-[#0052CC] hover:bg-white/80 rounded-xl font-bold hover:translate-x-0.5'
+              : 'px-3.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
             isActive &&
               (depth > 0
-                ? 'text-[#0052CC] bg-white font-black rounded-xl border-l-2 border-[#0052CC] shadow-2xs'
-                : 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'),
+                ? 'text-[#0052CC] bg-white font-black rounded-xl border border-blue-200 shadow-2xs'
+                : 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white font-extrabold shadow-md shadow-blue-500/20 hover:translate-x-0'),
           )}
           aria-current={isActive ? 'page' : undefined}
         >
@@ -686,14 +689,17 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             </div>
           ) : (
             <>
-              <Icon
-                className={cn(
-                  'h-4 w-4 flex-shrink-0 transition-colors',
-                  isActive ? 'text-white' : 'text-[#0052CC]',
-                )}
-                aria-hidden="true"
-              />
-              <span className="truncate">{item.name}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Icon
+                  className={cn(
+                    'h-4 w-4 flex-shrink-0 transition-colors',
+                    isActive ? 'text-white' : 'text-[#0052CC]',
+                  )}
+                  aria-hidden="true"
+                />
+                <span className="truncate">{item.name}</span>
+              </div>
+              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
             </>
           )}
         </Link>
@@ -711,29 +717,29 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         />
       )}
 
-      {/* Sidebar sidebar (Matches Section 1 Hero Light Blue Gradient) */}
+      {/* Sidebar (Premium Glassmorphic LMS Style) */}
       <aside
         className={cn(
-          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-gradient-to-b from-blue-50/95 via-indigo-50/50 to-sky-50/90 text-slate-900 border-r border-blue-200/80 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xs overflow-hidden font-sans',
+          'fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-gradient-to-b from-blue-50/95 via-indigo-50/60 to-sky-50/90 text-slate-900 border-r border-blue-200/80 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0_24px_rgba(0,82,204,0.06)] overflow-hidden font-sans',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Top Institution / Brand Header */}
-        <div className="p-4 border-b border-blue-200/70 flex items-center justify-between bg-white/70 backdrop-blur-md">
+        <div className="p-4 border-b border-blue-200/70 flex items-center justify-between bg-white/80 backdrop-blur-md">
           <Link
             href="/dashboard"
             onClick={() => isMobile && setIsMobileOpen(false)}
             onMouseEnter={() => handleLinkHover('/dashboard')}
-            className="flex items-center gap-2.5 min-w-0"
+            className="flex items-center gap-3 min-w-0 group"
           >
-            <div className="w-9 h-9 rounded-xl bg-[#0052CC] flex items-center justify-center text-white shadow-2xs font-extrabold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0052CC] via-indigo-600 to-sky-500 shadow-md shadow-blue-500/20 text-white flex items-center justify-center font-black text-sm shrink-0 group-hover:scale-105 transition-transform">
               ⚡
             </div>
             <div className="truncate">
-              <h2 className="font-extrabold text-sm text-[#0B2447] truncate leading-tight tracking-tight">
+              <h2 className="font-extrabold text-sm text-[#0B2447] truncate leading-tight tracking-tight group-hover:text-[#0052CC] transition-colors">
                 NEET Platform
               </h2>
-              <p className="text-[10px] text-[#0052CC] font-mono font-extrabold truncate">
+              <p className="text-[10px] text-[#0052CC] font-mono font-extrabold truncate uppercase tracking-wider mt-0.5">
                 Coaching SaaS Portal
               </p>
             </div>
@@ -742,18 +748,20 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           {isMobileOpen && (
             <button
               onClick={() => setIsMobileOpen(false)}
-              className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-slate-700 lg:hidden cursor-pointer"
+              className="p-1.5 rounded-xl bg-blue-100/80 hover:bg-blue-200 text-slate-700 lg:hidden cursor-pointer transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {/* Institution Badge Bar */}
-        <div className="px-4 py-2.5 bg-blue-100/50 border-b border-blue-200/60 flex items-center gap-2">
-          <Shield className="w-3.5 h-3.5 text-[#0052CC] shrink-0" />
-          <div className="truncate">
-            <p className="text-[10px] text-[#0052CC] uppercase tracking-wider font-black">
+        {/* Institution Campus Card Badge */}
+        <div className="mx-3 my-2.5 px-3 py-2 rounded-xl bg-white/70 border border-blue-200/80 shadow-2xs flex items-center gap-2.5 backdrop-blur-xs">
+          <div className="w-7 h-7 rounded-lg bg-blue-50 text-[#0052CC] flex items-center justify-center shrink-0 border border-blue-200/60">
+            <Shield className="w-3.5 h-3.5 text-[#0052CC]" />
+          </div>
+          <div className="truncate min-w-0">
+            <p className="text-[9px] text-[#0052CC] uppercase tracking-widest font-black">
               Institution Campus
             </p>
             <p className="text-xs font-extrabold text-[#0B2447] truncate">
@@ -774,7 +782,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-4 overflow-y-auto" aria-label="Main navigation">
+        <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto custom-scrollbar" aria-label="Main navigation">
           {(() => {
             const rawRole = user?.roleCode || (user as any)?.role || '';
             const currentRole = rawRole.toUpperCase();
@@ -799,21 +807,24 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         onFocus={() => handleLinkHover(item.href)}
                         onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
+                          'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200',
                           isActive
-                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
-                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+                            ? 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
+                            : 'text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
-                        <Icon
-                          className={cn(
-                            'h-4 w-4 flex-shrink-0',
-                            isActive ? 'text-white' : 'text-[#0052CC]',
-                          )}
-                          aria-hidden="true"
-                        />
-                        <span className="truncate">{item.name}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 flex-shrink-0',
+                              isActive ? 'text-white' : 'text-[#0052CC]',
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{item.name}</span>
+                        </div>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
                       </Link>
                     );
                   })}
@@ -842,21 +853,24 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         onFocus={() => handleLinkHover(item.href)}
                         onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
+                          'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200',
                           isActive
-                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
-                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+                            ? 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
+                            : 'text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
-                        <Icon
-                          className={cn(
-                            'h-4 w-4 flex-shrink-0 transition-colors',
-                            isActive ? 'text-white' : 'text-[#0052CC]',
-                          )}
-                          aria-hidden="true"
-                        />
-                        <span className="truncate">{item.name}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 flex-shrink-0 transition-colors',
+                              isActive ? 'text-white' : 'text-[#0052CC]',
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{item.name}</span>
+                        </div>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
                       </Link>
                     );
                   })}
@@ -883,21 +897,24 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         onFocus={() => handleLinkHover(item.href)}
                         onClick={() => isMobile && setIsMobileOpen(false)}
                         className={cn(
-                          'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
+                          'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200',
                           isActive
-                            ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
-                            : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+                            ? 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
+                            : 'text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
                         )}
                         aria-current={isActive ? 'page' : undefined}
                       >
-                        <Icon
-                          className={cn(
-                            'h-4 w-4 flex-shrink-0 transition-colors',
-                            isActive ? 'text-white' : 'text-[#0052CC]',
-                          )}
-                          aria-hidden="true"
-                        />
-                        <span className="truncate">{item.name}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 flex-shrink-0 transition-colors',
+                              isActive ? 'text-white' : 'text-[#0052CC]',
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">{item.name}</span>
+                        </div>
+                        {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
                       </Link>
                     );
                   })}
@@ -927,21 +944,24 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                           onFocus={() => handleLinkHover(item.href)}
                           onClick={() => isMobile && setIsMobileOpen(false)}
                           className={cn(
-                            'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-extrabold transition-all',
+                            'flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-extrabold transition-all duration-200',
                             isActive
-                              ? 'bg-[#0052CC] text-white font-extrabold shadow-sm border-l-4 border-cyan-300 rounded-r-xl'
-                              : 'text-[#0B2447] hover:bg-white/80 hover:text-[#0052CC]',
+                              ? 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20'
+                              : 'text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
                           )}
                           aria-current={isActive ? 'page' : undefined}
                         >
-                          <Icon
-                            className={cn(
-                              'h-4 w-4 flex-shrink-0 transition-colors',
-                              isActive ? 'text-white' : 'text-[#0052CC]',
-                            )}
-                            aria-hidden="true"
-                          />
-                          <span className="truncate">{item.name}</span>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Icon
+                              className={cn(
+                                'h-4 w-4 flex-shrink-0 transition-colors',
+                                isActive ? 'text-white' : 'text-[#0052CC]',
+                              )}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-cyan-300 shadow-xs shrink-0" />}
                         </Link>
                       );
                     })}
@@ -962,12 +982,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       {group.category ? (
                         <button
                           onClick={() => toggleCategory(group.category)}
-                          className="w-full flex items-center justify-between px-3 py-1 text-[10px] font-black text-[#0052CC] uppercase tracking-wider hover:text-[#0B2447] transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-[#0052CC] uppercase tracking-wider hover:text-[#0B2447] transition-colors cursor-pointer group"
                         >
                           <span>{group.category}</span>
                           <ChevronDown
                             className={cn(
-                              'h-3 w-3 transition-transform duration-200 text-slate-500',
+                              'h-3 w-3 transition-transform duration-200 text-slate-400 group-hover:text-[#0052CC]',
                               !isGroupOpen && '-rotate-90',
                             )}
                           />
@@ -986,7 +1006,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         </nav>
 
         {/* User Profile Section Footer */}
-        <div className="p-3 border-t border-blue-200/70 bg-white/70 backdrop-blur-md">
+        <div className="p-3.5 border-t border-blue-200/70 bg-gradient-to-r from-white/90 via-blue-50/40 to-slate-50/90 backdrop-blur-md">
           {user &&
             (() => {
               const first = (user.firstName || '').trim();
@@ -1014,14 +1034,17 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                         : 'Tenant Administrator';
 
               return (
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2.5">
                   <div className="flex items-center gap-2.5 truncate min-w-0">
-                    <Avatar className="h-8 w-8 border border-blue-300 shrink-0 shadow-2xs">
-                      <AvatarImage src={user.avatar || undefined} alt={displayName} />
-                      <AvatarFallback className="bg-[#0052CC] text-white font-extrabold text-xs">
-                        {displayName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative shrink-0">
+                      <Avatar className="h-9 w-9 border-2 border-blue-300/60 shadow-2xs ring-2 ring-blue-100">
+                        <AvatarImage src={user.avatar || undefined} alt={displayName} />
+                        <AvatarFallback className="bg-gradient-to-br from-[#0052CC] to-indigo-600 text-white font-extrabold text-xs">
+                          {displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white" />
+                    </div>
                     <div className="flex-1 min-w-0 truncate">
                       <p className="text-xs font-black text-[#0B2447] truncate leading-snug">
                         {displayName}
@@ -1035,7 +1058,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                        className="w-8 h-8 rounded-xl bg-slate-100/80 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200/60 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                         title="Sign out"
                       >
                         <LogOut className="h-4 w-4" />
@@ -1043,15 +1066,15 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-52 bg-white text-slate-900 border-slate-200"
+                      className="w-52 bg-white text-slate-900 border-slate-200 shadow-lg rounded-2xl p-1.5"
                     >
-                      <DropdownMenuLabel className="text-xs font-bold">
+                      <DropdownMenuLabel className="text-xs font-bold text-slate-700">
                         Sign out from session?
                       </DropdownMenuLabel>
-                      <DropdownMenuSeparator />
+                      <DropdownMenuSeparator className="bg-slate-100" />
                       <DropdownMenuItem
                         onClick={() => logout()}
-                        className="text-rose-600 focus:text-rose-600 cursor-pointer text-xs font-bold flex items-center gap-2"
+                        className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 cursor-pointer text-xs font-extrabold flex items-center gap-2 rounded-xl py-2"
                       >
                         <LogOut className="h-3.5 w-3.5" />
                         <span>Confirm Sign Out</span>
@@ -1066,3 +1089,4 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     </>
   );
 }
+
