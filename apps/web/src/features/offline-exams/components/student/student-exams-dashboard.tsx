@@ -28,6 +28,7 @@ const formatExamDateTime = (dateStr?: string | null) => {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return 'N/A';
   return d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -195,9 +196,16 @@ export function StudentExamsDashboard() {
             let cardTimer: { label: string; style: string } | null = null;
             if (isStarted && !isSubmittedCard && exam.submission?.startedAt) {
               const startedAtMs = new Date(exam.submission.startedAt).getTime();
-              const calculatedEndMs = exam.submission.calculatedEndAt
+              const windowEndMs = exam.examWindowEnd ? new Date(exam.examWindowEnd).getTime() : null;
+
+              let calculatedEndMs = exam.submission.calculatedEndAt
                 ? new Date(exam.submission.calculatedEndAt).getTime()
                 : startedAtMs + exam.durationMinutes * 60 * 1000;
+
+              if (windowEndMs && calculatedEndMs > windowEndMs) {
+                calculatedEndMs = windowEndMs;
+              }
+
               const graceEndMs = exam.submission.graceEndAt
                 ? new Date(exam.submission.graceEndAt).getTime()
                 : calculatedEndMs + (exam.graceMinutes || 0) * 60 * 1000;

@@ -187,7 +187,10 @@ export class StudentExamsService {
 
         let remainingSeconds = 0;
         if (submission?.calculatedEndAt) {
-          const endMs = submission.calculatedEndAt.getTime();
+          let endMs = submission.calculatedEndAt.getTime();
+          if (exam.examWindowEnd && endMs > exam.examWindowEnd.getTime()) {
+            endMs = exam.examWindowEnd.getTime();
+          }
           const graceMs =
             submission.graceEndAt?.getTime() ??
             endMs + (exam.graceMinutes || 0) * 60 * 1000;
@@ -295,9 +298,12 @@ export class StudentExamsService {
     }
 
     const startedAt = now;
-    const calculatedEndAt = new Date(
+    let calculatedEndAt = new Date(
       startedAt.getTime() + exam.durationMinutes * 60 * 1000,
     );
+    if (exam.examWindowEnd && calculatedEndAt > exam.examWindowEnd) {
+      calculatedEndAt = exam.examWindowEnd;
+    }
     const graceEndAt = new Date(
       calculatedEndAt.getTime() + exam.graceMinutes * 60 * 1000,
     );
@@ -528,7 +534,10 @@ export class StudentExamsService {
 
     let remainingSeconds = 0;
     if (submission?.calculatedEndAt) {
-      const endMs = submission.calculatedEndAt.getTime();
+      let endMs = submission.calculatedEndAt.getTime();
+      if (exam.examWindowEnd && endMs > exam.examWindowEnd.getTime()) {
+        endMs = exam.examWindowEnd.getTime();
+      }
       const graceMs =
         submission.graceEndAt?.getTime() ??
         endMs + (exam.graceMinutes || 0) * 60 * 1000;

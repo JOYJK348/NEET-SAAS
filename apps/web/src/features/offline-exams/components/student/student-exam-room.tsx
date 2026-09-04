@@ -71,11 +71,17 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
     ? new Date(exam.submission.startedAt).getTime()
     : null;
 
-  const calculatedEndMs = exam.submission?.calculatedEndAt
+  const windowEndMs = exam.examWindowEnd ? new Date(exam.examWindowEnd).getTime() : null;
+
+  let calculatedEndMs = exam.submission?.calculatedEndAt
     ? new Date(exam.submission.calculatedEndAt).getTime()
     : startedAtMs
       ? startedAtMs + exam.durationMinutes * 60 * 1000
       : null;
+
+  if (calculatedEndMs && windowEndMs && calculatedEndMs > windowEndMs) {
+    calculatedEndMs = windowEndMs;
+  }
 
   const graceEndMs = exam.submission?.graceEndAt
     ? new Date(exam.submission.graceEndAt).getTime()
