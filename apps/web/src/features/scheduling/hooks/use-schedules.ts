@@ -111,12 +111,32 @@ export function useCheckConflicts() {
   });
 }
 
+export function invalidateAllScheduleQueries(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: scheduleKeys.all });
+  qc.invalidateQueries({ queryKey: ['tutor-overview'] });
+  qc.invalidateQueries({ queryKey: ['student-overview'] });
+  qc.invalidateQueries({ queryKey: ['tutor-timetable'] });
+  qc.invalidateQueries({ queryKey: ['student-timetable'] });
+  qc.invalidateQueries({ queryKey: ['student-dashboard'] });
+  qc.invalidateQueries({ queryKey: ['live-classes'] });
+  qc.invalidateQueries({ queryKey: ['timetable'] });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('schedule-updated'));
+    try {
+      const bc = new BroadcastChannel('neet-platform-schedule-sync');
+      bc.postMessage({ type: 'SCHEDULE_UPDATED', timestamp: Date.now() });
+      bc.close();
+    } catch {}
+  }
+}
+
 export function useCreateSchedule() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateSchedulePayload) => createSchedule(payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: scheduleKeys.all });
+      invalidateAllScheduleQueries(qc);
     },
   });
 }
@@ -127,7 +147,7 @@ export function useUpdateSchedule() {
     mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateSchedulePayload> }) =>
       updateSchedule(id, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: scheduleKeys.all });
+      invalidateAllScheduleQueries(qc);
     },
   });
 }
@@ -137,7 +157,7 @@ export function useDeleteSchedule() {
   return useMutation({
     mutationFn: (id: string) => deleteSchedule(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: scheduleKeys.all });
+      invalidateAllScheduleQueries(qc);
     },
   });
 }

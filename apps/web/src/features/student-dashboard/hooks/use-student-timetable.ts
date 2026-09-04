@@ -1,12 +1,10 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { studentDashboardApi, studentDashboardKeys } from '../api/student-dashboard.api';
 import type {
   StudentTimetableResponseDto,
   JoinSessionResponseDto,
 } from '../types/student-dashboard.types';
-
-const STALE_TIME = 5 * 60 * 1000; // 5 min cache for instant 0ms navigation
-const GC_TIME = 30 * 60 * 1000;
 
 export interface UseStudentTimetableReturn {
   timetable: StudentTimetableResponseDto | null;
@@ -19,10 +17,36 @@ export function useStudentTimetable(dateFrom?: string, dateTo?: string): UseStud
   const { data, isPending, error, refetch } = useQuery({
     queryKey: studentDashboardKeys.timetable(dateFrom, dateTo),
     queryFn: () => studentDashboardApi.getTimetable(dateFrom, dateTo),
-    staleTime: STALE_TIME,
-    gcTime: GC_TIME,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    refetchInterval: 2000,
     retry: 2,
   });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleSync = () => {
+      refetch();
+    };
+
+    window.addEventListener('schedule-updated', handleSync);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('neet-platform-schedule-sync');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'SCHEDULE_UPDATED') {
+          handleSync();
+        }
+      };
+    } catch {}
+
+    return () => {
+      window.removeEventListener('schedule-updated', handleSync);
+      if (bc) bc.close();
+    };
+  }, [refetch]);
 
   return {
     timetable: data ?? null,

@@ -7,6 +7,7 @@ import { overrideSession, OverrideScope } from '../services/schedule-service';
 import { ScopeSelectorDialog } from './ScopeSelectorDialog';
 import { ScheduleDetail } from '../types/schedule.types';
 import { toast } from 'sonner';
+import { invalidateAllScheduleQueries } from '../hooks/use-schedules';
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -67,7 +68,7 @@ export function SessionOverrideDrawer({
         cancel: 'Class cancelled',
       };
       toast.success(`${labels[action!]}. Notifications queued for students.`);
-      queryClient.invalidateQueries({ queryKey: ['schedules'] });
+      invalidateAllScheduleQueries(queryClient);
       setScopeDialogOpen(false);
       handleClose();
       onSuccess();
