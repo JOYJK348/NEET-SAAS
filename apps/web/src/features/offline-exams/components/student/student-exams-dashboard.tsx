@@ -51,51 +51,47 @@ export function StudentExamsDashboard() {
       ? (response as any).data
       : [];
 
+  const isResultPub = (e: StudentExamItem) =>
+    e.studentExamStatus === 'RESULT_PUBLISHED' || !!e.submission?.isResultsPublished;
+
+  const isSubmitted = (e: StudentExamItem) =>
+    !isResultPub(e) && !!e.submission?.submittedAt;
+
   const isExamLive = (e: StudentExamItem) => {
-    if (!!e.submission) return false;
+    if (isResultPub(e) || isSubmitted(e)) return false;
     if (e.studentExamStatus === 'LIVE') return true;
+    if (e.canStart) return true;
+    if (!!e.submission?.startedAt) return true;
     const now = new Date();
     const start = new Date(e.examWindowStart);
     const end = new Date(e.examWindowEnd);
-    return now >= start && now <= end && e.studentExamStatus !== 'RESULT_PUBLISHED';
+    return (
+      !isNaN(start.getTime()) &&
+      !isNaN(end.getTime()) &&
+      now >= start &&
+      now <= end &&
+      e.studentExamStatus !== 'RESULT_PUBLISHED'
+    );
   };
 
   const isExamUpcoming = (e: StudentExamItem) => {
-    if (!!e.submission) return false;
+    if (isResultPub(e) || isSubmitted(e) || isExamLive(e)) return false;
     if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') return true;
     const now = new Date();
     const start = new Date(e.examWindowStart);
-    return now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
+    return !isNaN(start.getTime()) && now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
   };
 
-  const liveCount = examList.filter(isExamLive).length;
-  const upcomingCount = examList.filter(isExamUpcoming).length;
-  const submittedCount = examList.filter(
-    (e) =>
-      !!e.submission &&
-      e.studentExamStatus !== 'RESULT_PUBLISHED' &&
-      !e.submission?.isResultsPublished,
-  ).length;
-  const resultsCount = examList.filter(
-    (e) => e.studentExamStatus === 'RESULT_PUBLISHED' || !!e.submission?.isResultsPublished,
-  ).length;
+  const liveCount = examList.filter((e) => isExamLive(e)).length;
+  const upcomingCount = examList.filter((e) => isExamUpcoming(e)).length;
+  const submittedCount = examList.filter((e) => isSubmitted(e)).length;
+  const resultsCount = examList.filter((e) => isResultPub(e)).length;
 
   const filteredExams = examList.filter((exam) => {
-    const isResultPub =
-      exam.studentExamStatus === 'RESULT_PUBLISHED' || !!exam.submission?.isResultsPublished;
-
-    if (activeTab === 'RESULTS') {
-      return isResultPub;
-    }
-    if (activeTab === 'SUBMITTED') {
-      return !!exam.submission && !isResultPub;
-    }
-    if (activeTab === 'LIVE') {
-      return isExamLive(exam);
-    }
-    if (activeTab === 'UPCOMING') {
-      return isExamUpcoming(exam);
-    }
+    if (activeTab === 'RESULTS') return isResultPub(exam);
+    if (activeTab === 'SUBMITTED') return isSubmitted(exam);
+    if (activeTab === 'LIVE') return isExamLive(exam);
+    if (activeTab === 'UPCOMING') return isExamUpcoming(exam);
     return true;
   });
 
@@ -186,8 +182,7 @@ export function StudentExamsDashboard() {
         ) : (
           filteredExams.map((exam) => {
             const isStarted = !!exam.submission?.startedAt;
-            const isSubmitted =
-              exam.submission?.status === 'SUBMITTED' || exam.submission?.status === 'LATE';
+            const isSubmittedCard = !!exam.submission?.submittedAt;
 
             return (
               <div
@@ -256,7 +251,7 @@ export function StudentExamsDashboard() {
                     >
                       <Award className="w-4 h-4 text-white" /> View Scorecard & Rank
                     </Link>
-                  ) : isSubmitted ? (
+                  ) : isSubmittedCard ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}`}
                       className="w-full text-center px-4 py-2.5 bg-blue-50 border border-blue-200 text-[#0052CC] rounded-xl text-xs font-extrabold shadow-2xs transition flex items-center justify-center gap-2 hover:bg-blue-100 cursor-pointer"
