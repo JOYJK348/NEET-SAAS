@@ -134,12 +134,13 @@ export class StudentExamsService {
     if (batchIds.length > 0) {
       examWhere.OR = [
         { batchId: { in: batchIds } },
+        { batchId: 'ALL' },
         { batchId: 'batch-default' },
         { batchId: '' },
       ];
     }
 
-    const [total, exams] = await Promise.all([
+    let [total, exams] = await Promise.all([
       this.prisma.exams.count({ where: examWhere }),
       this.prisma.exams.findMany({
         where: examWhere,
@@ -148,6 +149,24 @@ export class StudentExamsService {
         take,
       }),
     ]);
+
+    // Fallback: If no exams found for strict batch filter, return all published exams for tenant
+    if (total === 0) {
+      const fallbackWhere: Prisma.ExamsWhereInput = {
+        tenantId,
+        publishStatus: { in: ['PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED'] },
+        deletedAt: null,
+      };
+      [total, exams] = await Promise.all([
+        this.prisma.exams.count({ where: fallbackWhere }),
+        this.prisma.exams.findMany({
+          where: fallbackWhere,
+          orderBy: { scheduledStartAt: 'asc' },
+          skip,
+          take,
+        }),
+      ]);
+    }
 
     const now = new Date();
 
@@ -254,9 +273,9 @@ export class StudentExamsService {
       },
     });
 
-    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
+    if (!exam) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your batch',
+        'Exam not found or not assigned to your institute',
       );
     }
 
@@ -453,9 +472,9 @@ export class StudentExamsService {
       where: { id: examId, tenantId, deletedAt: null },
     });
 
-    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
+    if (!exam) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your batch',
+        'Exam not found or not assigned to your institute',
       );
     }
 
@@ -549,9 +568,9 @@ export class StudentExamsService {
       where: { id: examId, tenantId, deletedAt: null },
     });
 
-    if (!exam || (batchIds.length > 0 && !batchIds.includes(exam.batchId))) {
+    if (!exam) {
       throw new NotFoundException(
-        'Exam not found or not assigned to your batch',
+        'Exam not found or not assigned to your institute',
       );
     }
 
