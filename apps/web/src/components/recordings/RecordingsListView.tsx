@@ -78,7 +78,8 @@ export function RecordingsListView({
 
       return api.get<RecordingListResponse>('/recordings', { params, signal });
     },
-    staleTime: STALE_TIMES.DEFAULT,
+    staleTime: 0,
+    refetchInterval: 3000,
     placeholderData: keepPreviousData,
   });
 

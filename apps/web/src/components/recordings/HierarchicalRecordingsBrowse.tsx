@@ -42,7 +42,7 @@ export function HierarchicalRecordingsBrowse({
     else if (Array.isArray((recordings as any)?.items)) raw = (recordings as any).items;
     else if (Array.isArray((recordings as any)?.data)) raw = (recordings as any).data;
 
-    // Deduplicate: If a READY/COMPLETED recording exists for a live class, hide duplicate PROCESSING/RECORDING cards
+    // Filter out incomplete placeholder cards if a READY recording exists
     const readyLiveClassIds = new Set<string>();
     for (const rec of raw) {
       const liveClassId = rec.liveClassId || rec.liveClass?.id;
@@ -51,28 +51,21 @@ export function HierarchicalRecordingsBrowse({
       }
     }
 
-    const deduplicated: Recording[] = [];
-    const seenClassIds = new Set<string>();
-
+    const result: Recording[] = [];
     for (const rec of raw) {
       const liveClassId = rec.liveClassId || rec.liveClass?.id;
-      if (liveClassId) {
-        if (
-          readyLiveClassIds.has(liveClassId) &&
-          rec.status !== 'READY' &&
-          rec.status !== 'COMPLETED'
-        ) {
-          continue; // Hide duplicate PROCESSING placeholder card
-        }
-        if (seenClassIds.has(liveClassId)) {
-          continue; // Hide extra duplicate entries for the same class
-        }
-        seenClassIds.add(liveClassId);
+      if (
+        liveClassId &&
+        readyLiveClassIds.has(liveClassId) &&
+        rec.status !== 'READY' &&
+        rec.status !== 'COMPLETED'
+      ) {
+        continue; // Hide incomplete placeholder card if a READY recording exists
       }
-      deduplicated.push(rec);
+      result.push(rec);
     }
 
-    return deduplicated;
+    return result;
   }, [recordings]);
 
   // ── Global Search Filter ──────────────────────────────────────────────────
