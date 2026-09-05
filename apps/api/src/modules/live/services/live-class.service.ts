@@ -373,7 +373,12 @@ export class LiveClassService {
     }
 
     const state = await this._getOrLoadSessionState(classId);
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date().toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
     const normName = studentName ? studentName.trim().toLowerCase() : '';
 
     // ALWAYS reset old approvals and denials when a new join attempt is registered

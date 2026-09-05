@@ -1552,7 +1552,12 @@ function TeacherStudioInner({
               name: data.name,
               time:
                 data.time ||
-                new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                new Date().toLocaleTimeString('en-US', {
+                  timeZone: 'Asia/Kolkata',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                }),
             },
           ];
         });
