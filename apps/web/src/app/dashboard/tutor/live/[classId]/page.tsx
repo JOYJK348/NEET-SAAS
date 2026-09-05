@@ -36,6 +36,8 @@ import {
   BookOpen,
   ClipboardList,
   Check,
+  CloudUpload,
+  CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -381,6 +383,7 @@ function TeacherStudioInner({
   >([]);
   const [showEndModal, setShowEndModal] = useState(false);
   const [endingClass, setEndingClass] = useState(false);
+  const [endingStep, setEndingStep] = useState<'finalizing' | 'uploading' | 'ending' | 'done'>('finalizing');
   const safeSendRef = useRef<((payload: any) => void) | null>(null);
 
   // ── Audio Autoplay Policy Recovery (Mobile / Strict Browser)
@@ -1026,6 +1029,8 @@ function TeacherStudioInner({
   const confirmEndClass = useCallback(
     async (topicArg?: string) => {
       setEndingClass(true);
+      setEndingStep('finalizing');
+      setShowEndModal(false);
       const topicCovered = topicArg !== undefined ? topicArg : todayTopicInput;
 
       try {
@@ -1045,8 +1050,6 @@ function TeacherStudioInner({
       safeSendRef.current?.({ type: 'class-ended' });
 
       // Stop and finalize local recording upload
-      toast.info('⏱ Uploading live class recording...');
-
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try {
           await new Promise<void>((resolve) => {
@@ -1064,6 +1067,7 @@ function TeacherStudioInner({
       const finalChunks = persistedChunks.length > 0 ? persistedChunks : recordedChunksRef.current;
 
       if (finalChunks.length > 0) {
+        setEndingStep('uploading');
         try {
           const mime = chosenMimeTypeRef.current || 'video/mp4';
           const isMp4 = mime.includes('mp4');
@@ -1097,16 +1101,18 @@ function TeacherStudioInner({
         }
       }
 
+      setEndingStep('ending');
       try {
         await api.post(`/live-classes/${classId}/end`, {}, { skipGlobalToast: true });
       } catch {}
 
-      toast.success('✅ Class ended and recording saved! Redirecting...');
+      setEndingStep('done');
+      toast.success('✅ Class ended and recording saved!');
       setTimeout(() => {
         if (typeof window !== 'undefined') {
           window.location.href = '/dashboard/tutor';
         }
-      }, 800);
+      }, 600);
     },
     [classId, todayTopicInput],
   );
@@ -3136,7 +3142,6 @@ function TeacherStudioInner({
               </button>
               <button
                 onClick={() => {
-                  setShowEndModal(false);
                   confirmEndClass();
                 }}
                 disabled={endingClass}
@@ -3145,6 +3150,80 @@ function TeacherStudioInner({
                 {endingClass ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 <span>End Class Now</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Ending Class & Uploading Recording Progress Full-Screen Overlay ── */}
+      {endingClass && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 select-none animate-in fade-in duration-300">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6 relative overflow-hidden">
+            {/* Ambient Background Blur Elements */}
+            <div className="absolute -top-16 -right-16 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+            <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl" />
+
+            {/* Dynamic Animated Status Icon */}
+            <div className="relative mx-auto w-20 h-20 rounded-3xl bg-slate-800/90 border border-slate-700/80 flex items-center justify-center shadow-xl">
+              {endingStep === 'finalizing' && (
+                <Video className="w-9 h-9 text-blue-400 animate-pulse" />
+              )}
+              {endingStep === 'uploading' && (
+                <div className="relative flex items-center justify-center">
+                  <CloudUpload className="w-9 h-9 text-emerald-400 animate-bounce" />
+                </div>
+              )}
+              {endingStep === 'ending' && (
+                <Radio className="w-9 h-9 text-amber-400 animate-pulse" />
+              )}
+              {endingStep === 'done' && (
+                <CheckCircle2 className="w-10 h-10 text-emerald-400 animate-in zoom-in duration-300" />
+              )}
+              <div className="absolute inset-0 rounded-3xl border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-black uppercase tracking-wider">
+                {endingStep === 'finalizing' && 'Step 1 of 3: Finalizing Recording'}
+                {endingStep === 'uploading' && 'Step 2 of 3: Uploading Class Video'}
+                {endingStep === 'ending' && 'Step 3 of 3: Closing Session'}
+                {endingStep === 'done' && 'Complete!'}
+              </div>
+              <h3 className="text-xl font-black text-white tracking-tight">
+                {endingStep === 'finalizing' && 'Finalizing Live Class Video'}
+                {endingStep === 'uploading' && 'Uploading Class Recording Video'}
+                {endingStep === 'ending' && 'Finalizing Class Summary & Session'}
+                {endingStep === 'done' && 'Class Session Ended Successfully'}
+              </h3>
+              <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">
+                {endingStep === 'finalizing' && 'Compressing audio and video streams from your live class session...'}
+                {endingStep === 'uploading' && 'Saving and uploading full recorded video to cloud storage...'}
+                {endingStep === 'ending' && 'Saving student attendance records and closing live studio...'}
+                {endingStep === 'done' && 'Redirecting to Tutor Dashboard now...'}
+              </p>
+            </div>
+
+            {/* Dynamic Step Progress Bar */}
+            <div className="space-y-2 pt-2">
+              <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/60">
+                <div
+                  className="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 h-full transition-all duration-500 ease-out"
+                  style={{
+                    width:
+                      endingStep === 'finalizing'
+                        ? '30%'
+                        : endingStep === 'uploading'
+                          ? '70%'
+                          : endingStep === 'ending'
+                            ? '90%'
+                            : '100%',
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 font-semibold">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+                <span>Please do not close or refresh this tab</span>
+              </div>
             </div>
           </div>
         </div>
