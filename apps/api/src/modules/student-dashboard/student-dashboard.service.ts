@@ -304,16 +304,7 @@ export class StudentDashboardService {
 
     // Fallback: If no materialized attendanceSessions exist for today, generate virtual sessions from schedules table
     if (todaysSessions.length === 0) {
-      const weekdays = [
-        'SUNDAY',
-        'MONDAY',
-        'TUESDAY',
-        'WEDNESDAY',
-        'THURSDAY',
-        'FRIDAY',
-        'SATURDAY',
-      ] as const;
-      const todayDayOfWeek = weekdays[today.getDay()];
+      const todayDayOfWeek = this.weekdayFromDateKey(todayKey).toUpperCase();
 
       const todaySchedules = await this.prisma.schedules.findMany({
         where: {
@@ -337,14 +328,9 @@ export class StudentDashboardService {
 
       if (todaySchedules.length > 0) {
         todaysSessions = todaySchedules.map((sch) => {
-          const [startH, startM] = sch.startTime.split(':').map(Number);
-          const [endH, endM] = sch.endTime.split(':').map(Number);
-
-          const sTime = new Date(today);
-          sTime.setHours(startH, startM, 0, 0);
-
-          const eTime = new Date(today);
-          eTime.setHours(endH, endM, 0, 0);
+          const sTime = this.parseISTDateTime(todayKey, sch.startTime);
+          const eTime = this.parseISTDateTime(todayKey, sch.endTime);
+          const todayAttDate = new Date(todayKey + 'T00:00:00.000Z');
 
           return {
             id: sch.id,
@@ -353,15 +339,15 @@ export class StudentDashboardService {
             subjectId: sch.subjectId,
             branchId: sch.branchId,
             scheduleId: sch.id,
-            attendanceDate: today,
+            attendanceDate: todayAttDate,
             startsAt: sTime,
             endsAt: eTime,
             sessionStatus: 'SCHEDULED',
             sessionSource: 'SCHEDULED',
             overrideType: null,
             cancelledReason: null,
-            createdAt: today,
-            updatedAt: today,
+            createdAt: todayAttDate,
+            updatedAt: todayAttDate,
             deletedAt: null,
           } as any;
         });
@@ -370,16 +356,8 @@ export class StudentDashboardService {
 
     // Fallback: If no materialized upcoming sessions exist, generate virtual slots for next 7 days
     if (upcomingSessions.length === 0) {
-      const weekdays = [
-        'SUNDAY',
-        'MONDAY',
-        'TUESDAY',
-        'WEDNESDAY',
-        'THURSDAY',
-        'FRIDAY',
-        'SATURDAY',
-      ] as const;
       const allUpcomingSlots: any[] = [];
+      const [y, mo, d] = todayKey.split('-').map(Number);
 
       const futureSchedules = await this.prisma.schedules.findMany({
         where: {
@@ -390,41 +368,35 @@ export class StudentDashboardService {
       });
 
       for (let i = 1; i <= 7; i++) {
-        const curDate = new Date(today);
-        curDate.setDate(today.getDate() + i);
-        curDate.setHours(0, 0, 0, 0);
-        const dayStr = weekdays[curDate.getDay()];
+        const curDateObj = new Date(y, mo - 1, d + i);
+        const curDateKey = this.toLocalDateKey(curDateObj);
+        const dayStr = this.weekdayFromDateKey(curDateKey).toUpperCase();
 
         const matchingSchedules = futureSchedules.filter(
           (s) => s.dayOfWeek === dayStr,
         );
 
         for (const sch of matchingSchedules) {
-          const [startH, startM] = sch.startTime.split(':').map(Number);
-          const [endH, endM] = sch.endTime.split(':').map(Number);
-
-          const sTime = new Date(curDate);
-          sTime.setHours(startH, startM, 0, 0);
-
-          const eTime = new Date(curDate);
-          eTime.setHours(endH, endM, 0, 0);
+          const sTime = this.parseISTDateTime(curDateKey, sch.startTime);
+          const eTime = this.parseISTDateTime(curDateKey, sch.endTime);
+          const curAttDate = new Date(curDateKey + 'T00:00:00.000Z');
 
           allUpcomingSlots.push({
-            id: `${sch.id}-${curDate.toISOString().split('T')[0]}`,
+            id: `${sch.id}-${curDateKey}`,
             tenantId,
             batchId: sch.batchId,
             subjectId: sch.subjectId,
             branchId: sch.branchId,
             scheduleId: sch.id,
-            attendanceDate: curDate,
+            attendanceDate: curAttDate,
             startsAt: sTime,
             endsAt: eTime,
             sessionStatus: 'SCHEDULED',
             sessionSource: 'SCHEDULED',
             overrideType: null,
             cancelledReason: null,
-            createdAt: curDate,
-            updatedAt: curDate,
+            createdAt: curAttDate,
+            updatedAt: curAttDate,
             deletedAt: null,
           });
         }

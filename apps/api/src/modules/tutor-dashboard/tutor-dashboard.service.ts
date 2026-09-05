@@ -165,16 +165,7 @@ export class TutorDashboardService {
 
     // Fallback: If no materialized attendance sessions exist for today, check recurring schedules for today's weekday
     if (todaysSessions.length === 0) {
-      const weekdays = [
-        'SUNDAY',
-        'MONDAY',
-        'TUESDAY',
-        'WEDNESDAY',
-        'THURSDAY',
-        'FRIDAY',
-        'SATURDAY',
-      ] as const;
-      const todayDayOfWeek = weekdays[today.getDay()];
+      const todayDayOfWeek = this.weekdayFromDateKey(todayKey).toUpperCase();
 
       const todaySchedules = await this.prisma.schedules.findMany({
         where: {
@@ -198,14 +189,9 @@ export class TutorDashboardService {
 
       if (todaySchedules.length > 0) {
         todaysSessions = todaySchedules.map((sch) => {
-          const [startH, startM] = sch.startTime.split(':').map(Number);
-          const [endH, endM] = sch.endTime.split(':').map(Number);
-
-          const sTime = new Date(today);
-          sTime.setHours(startH, startM, 0, 0);
-
-          const eTime = new Date(today);
-          eTime.setHours(endH, endM, 0, 0);
+          const sTime = this.parseISTDateTime(todayKey, sch.startTime);
+          const eTime = this.parseISTDateTime(todayKey, sch.endTime);
+          const todayAttDate = new Date(todayKey + 'T00:00:00.000Z');
 
           return {
             id: sch.id,
@@ -215,15 +201,15 @@ export class TutorDashboardService {
             branchId: sch.branchId,
             staffProfileId,
             scheduleId: sch.id,
-            attendanceDate: today,
+            attendanceDate: todayAttDate,
             startsAt: sTime,
             endsAt: eTime,
             sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
             sessionSource: 'SCHEDULED',
             overrideType: null,
             cancelledReason: null,
-            createdAt: today,
-            updatedAt: today,
+            createdAt: todayAttDate,
+            updatedAt: todayAttDate,
             deletedAt: null,
           } as unknown as AttendanceSessions;
         });
@@ -302,16 +288,6 @@ export class TutorDashboardService {
 
     // Fallback: If no materialized attendance sessions exist for upcoming days, generate virtual slots for next 7 days (starting tomorrow)
     if (upcomingSessions.length === 0) {
-      const weekdays = [
-        'SUNDAY',
-        'MONDAY',
-        'TUESDAY',
-        'WEDNESDAY',
-        'THURSDAY',
-        'FRIDAY',
-        'SATURDAY',
-      ] as const;
-
       const futureSchedules = await this.prisma.schedules.findMany({
         where: {
           tenantId,
@@ -332,45 +308,39 @@ export class TutorDashboardService {
 
       if (futureSchedules.length > 0) {
         const virtualUpcoming: AttendanceSessions[] = [];
+        const [y, mo, d] = todayKey.split('-').map(Number);
 
         // Loop through days 1 to 7 (starting tomorrow)
         for (let i = 1; i <= 7; i++) {
-          const futureDate = new Date(today);
-          futureDate.setDate(today.getDate() + i);
-          futureDate.setHours(0, 0, 0, 0);
-
-          const futureWeekday = weekdays[futureDate.getDay()];
+          const futureDateObj = new Date(y, mo - 1, d + i);
+          const futureDateKey = this.toLocalDateKey(futureDateObj);
+          const futureWeekday = this.weekdayFromDateKey(futureDateKey).toUpperCase();
           const matchingSchedules = futureSchedules.filter(
             (sch) => sch.dayOfWeek === futureWeekday,
           );
 
           for (const sch of matchingSchedules) {
-            const [startH, startM] = sch.startTime.split(':').map(Number);
-            const [endH, endM] = sch.endTime.split(':').map(Number);
-
-            const sTime = new Date(futureDate);
-            sTime.setHours(startH, startM, 0, 0);
-
-            const eTime = new Date(futureDate);
-            eTime.setHours(endH, endM, 0, 0);
+            const sTime = this.parseISTDateTime(futureDateKey, sch.startTime);
+            const eTime = this.parseISTDateTime(futureDateKey, sch.endTime);
+            const futureAttDate = new Date(futureDateKey + 'T00:00:00.000Z');
 
             virtualUpcoming.push({
-              id: `${sch.id}-${futureDate.toISOString().slice(0, 10)}`,
+              id: `${sch.id}-${futureDateKey}`,
               tenantId,
               batchId: sch.batchId,
               subjectId: sch.subjectId,
               branchId: sch.branchId,
               staffProfileId,
               scheduleId: sch.id,
-              attendanceDate: futureDate,
+              attendanceDate: futureAttDate,
               startsAt: sTime,
               endsAt: eTime,
               sessionStatus: 'SCHEDULED' as AttendanceSessionStatusEnum,
               sessionSource: 'SCHEDULED',
               overrideType: null,
               cancelledReason: null,
-              createdAt: futureDate,
-              updatedAt: futureDate,
+              createdAt: futureAttDate,
+              updatedAt: futureAttDate,
               deletedAt: null,
             } as unknown as AttendanceSessions);
           }
