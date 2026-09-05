@@ -310,7 +310,7 @@ export class StudentDashboardService {
         where: {
           tenantId,
           batchId: { in: batchIds },
-          dayOfWeek: todayDayOfWeek,
+          dayOfWeek: todayDayOfWeek as any,
           effectiveFrom: { lte: today },
         },
         select: {
@@ -373,7 +373,7 @@ export class StudentDashboardService {
         const dayStr = this.weekdayFromDateKey(curDateKey).toUpperCase();
 
         const matchingSchedules = futureSchedules.filter(
-          (s) => s.dayOfWeek === dayStr,
+          (s) => (s.dayOfWeek as string) === dayStr,
         );
 
         for (const sch of matchingSchedules) {

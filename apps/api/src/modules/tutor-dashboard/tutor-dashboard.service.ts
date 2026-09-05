@@ -170,7 +170,7 @@ export class TutorDashboardService {
       const todaySchedules = await this.prisma.schedules.findMany({
         where: {
           tenantId,
-          dayOfWeek: todayDayOfWeek,
+          dayOfWeek: todayDayOfWeek as any,
           effectiveFrom: { lte: today },
           OR: staffMatchConditions,
           ...(tutorSubjectIds.length > 0 ? { subjectId: { in: tutorSubjectIds } } : {}),
@@ -316,7 +316,7 @@ export class TutorDashboardService {
           const futureDateKey = this.toLocalDateKey(futureDateObj);
           const futureWeekday = this.weekdayFromDateKey(futureDateKey).toUpperCase();
           const matchingSchedules = futureSchedules.filter(
-            (sch) => sch.dayOfWeek === futureWeekday,
+            (sch) => (sch.dayOfWeek as string) === futureWeekday,
           );
 
           for (const sch of matchingSchedules) {
