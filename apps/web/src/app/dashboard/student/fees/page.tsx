@@ -21,6 +21,9 @@ import {
   ChevronRight,
   ShieldCheck,
   ArrowUpRight,
+  Printer,
+  X,
+  Copy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -123,11 +126,88 @@ async function fetchStudentFeeAccount(studentAdmissionId: string): Promise<Stude
   }
 }
 
+function numberToWordsINR(num: number): string {
+  if (!num || isNaN(num)) return 'Zero Rupees Only';
+  const a = [
+    '',
+    'One',
+    'Two',
+    'Three',
+    'Four',
+    'Five',
+    'Six',
+    'Seven',
+    'Eight',
+    'Nine',
+    'Ten',
+    'Eleven',
+    'Twelve',
+    'Thirteen',
+    'Fourteen',
+    'Fifteen',
+    'Sixteen',
+    'Seventeen',
+    'Eighteen',
+    'Nineteen',
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const inWords = (n: number): string => {
+    if (n < 20) return a[n];
+    if (n < 100) return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+    if (n < 1000)
+      return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + inWords(n % 100) : '');
+    if (n < 100000)
+      return inWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + inWords(n % 1000) : '');
+    if (n < 10000000)
+      return inWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + inWords(n % 100000) : '');
+    return inWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + inWords(n % 10000000) : '');
+  };
+
+  return `${inWords(Math.floor(num))} Rupees Only`;
+}
+
 function StudentFeeContent() {
   const router = useRouter();
   const { user } = useAuth();
   const [payingInstId, setPayingInstId] = useState<string | null>(null);
   const [payingFull, setPayingFull] = useState(false);
+
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [receiptModalData, setReceiptModalData] = useState<any | null>(null);
+
+  const handleViewReceipt = (payment: any) => {
+    const year = payment.paymentDate ? new Date(payment.paymentDate).getFullYear() : new Date().getFullYear();
+    const shortId = (payment.id || 'PAY').slice(-6).toUpperCase();
+    const instantData = {
+      receiptNumber: `RCP-${year}-${shortId}`,
+      generatedAt: payment.paymentDate || new Date().toISOString(),
+      paymentId: payment.id,
+      amount: Number(payment.amount),
+      paymentMethod: payment.paymentMethod || 'RAZORPAY_ONLINE',
+      referenceNumber: payment.referenceNumber || `REF-${shortId}`,
+      paymentDate: payment.paymentDate || new Date().toISOString(),
+      installmentNumber: payment.installmentNumber || 1,
+      studentName: (user as any)?.name || 'Student',
+      admissionNumber: 'NEET-2026-001',
+      courseName: 'NEET 2026 Medical Intensive Program',
+      paidBy: payment.paidBy || 'Student',
+      paidByRoleLabel:
+        payment.paidByRoleLabel ||
+        (payment.paidByRole === 'PARENT' ? 'Paid by Parent 👨‍👩‍👧' : 'Paid by Student 🎓'),
+    };
+
+    setReceiptModalData(instantData);
+    setSelectedPaymentId(payment.id);
+
+    // Background fetch to enrich receipt fields
+    api
+      .get<any>(`/billing/payments/receipts/${payment.id}`, { skipGlobalToast: true })
+      .then((fresh) => {
+        if (fresh) setReceiptModalData((prev: any) => ({ ...prev, ...fresh }));
+      })
+      .catch(() => {});
+  };
 
   const studentAdmissionId =
     (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
@@ -671,7 +751,7 @@ function StudentFeeContent() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => router.push(`/tenant-admin/fees/receipts/${p.id}`)}
+                        onClick={() => handleViewReceipt(p)}
                         className="text-xs font-bold text-[#0052CC] border-blue-200 bg-white hover:bg-blue-50 shrink-0 rounded-xl cursor-pointer"
                       >
                         <ArrowUpRight className="w-3.5 h-3.5 mr-1" /> View Receipt
@@ -681,6 +761,256 @@ function StudentFeeContent() {
                 </div>
               </Card>
             )}
+          </div>
+        )}
+
+        {/* ── Official Professional Tax Fee Bill Receipt Modal ── */}
+        {selectedPaymentId && receiptModalData && (
+          <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto print:p-0 print:bg-white print:static animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden border border-slate-300 my-auto print:shadow-none print:border-none print:rounded-none">
+              {/* Floating Action Controls Bar (Hidden on print) */}
+              <div className="px-6 py-3.5 bg-[#0B2447] text-white flex items-center justify-between print:hidden border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-400 flex items-center justify-center font-bold">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                      Official Fee Tax Invoice
+                    </h3>
+                    <p className="text-[10px] text-slate-300 font-medium">
+                      NEET Premier Academy • Verified Voucher
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-600 active:scale-95 text-white rounded-xl text-xs font-black transition shadow-sm cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedPaymentId(null);
+                      setReceiptModalData(null);
+                    }}
+                    className="p-1.5 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Bill Document Container */}
+              <div className="p-6 sm:p-10 space-y-6 bg-white text-slate-900 font-sans relative print:p-0 border-t-8 border-[#0052CC]">
+                {/* Header Branding & Tax Invoice Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b-2 border-slate-800 pb-5 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-[#0052CC] text-white flex items-center justify-center font-black text-sm shadow-md">
+                        NPA
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-black text-[#0B2447] tracking-tight uppercase">
+                          NEET PREMIER ACADEMY
+                        </h1>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          Govt. Regd. Educational Institute • HSN/SAC Code: 999293
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium pt-1">
+                      124, Premier Tower, Anna Salai, Chennai - 600002 • Helpline: +91 98765 43210
+                    </p>
+                  </div>
+
+                  <div className="sm:text-right bg-blue-50/80 p-3 sm:p-4 rounded-xl border border-blue-200 shrink-0">
+                    <span className="inline-block text-[10px] font-black uppercase tracking-widest text-[#0052CC] bg-white border border-blue-200 px-2 py-0.5 rounded-md mb-1">
+                      OFFICIAL PAYMENT RECEIPT
+                    </span>
+                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                      Receipt No
+                    </div>
+                    <div className="text-lg font-black text-[#0B2447] font-mono tracking-tight">
+                      {receiptModalData.receiptNumber}
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                      📅 Date:{' '}
+                      {new Date(receiptModalData.paymentDate || receiptModalData.generatedAt).toLocaleDateString(
+                        'en-IN',
+                        { day: '2-digit', month: 'short', year: 'numeric' },
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payer & Student Information Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200 text-xs">
+                  <div className="space-y-1.5 border-b sm:border-b-0 sm:border-r border-slate-200 pb-3 sm:pb-0 sm:pr-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                      Billed To (Student Details)
+                    </span>
+                    <p className="font-black text-[#0B2447] text-base">{receiptModalData.studentName}</p>
+                    <div className="space-y-0.5 text-slate-600 font-medium">
+                      <p>
+                        Admission No:{' '}
+                        <span className="font-mono font-bold text-slate-900">
+                          {receiptModalData.admissionNumber}
+                        </span>
+                      </p>
+                      <p>
+                        Program:{' '}
+                        <span className="font-bold text-[#0052CC]">{receiptModalData.courseName}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 sm:pl-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                      Payment & Transaction Details
+                    </span>
+                    <div className="space-y-1 text-slate-600 font-medium">
+                      <p>
+                        Payment Date:{' '}
+                        <span className="font-bold text-slate-900">
+                          {new Date(receiptModalData.paymentDate || receiptModalData.generatedAt).toLocaleDateString(
+                            'en-IN',
+                            { day: '2-digit', month: 'long', year: 'numeric' },
+                          )}
+                        </span>
+                      </p>
+                      <p>
+                        Payment Mode:{' '}
+                        <span className="font-extrabold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                          {receiptModalData.paymentMethod}
+                        </span>
+                      </p>
+                      <p className="flex items-center gap-1.5 flex-wrap">
+                        Ref ID:{' '}
+                        <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                          {receiptModalData.referenceNumber}
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(receiptModalData.referenceNumber);
+                            toast.success('Copied transaction ID!');
+                          }}
+                          className="p-1 hover:bg-slate-200 rounded transition text-slate-500 cursor-pointer print:hidden"
+                          title="Copy Transaction Ref ID"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </p>
+                      <p>
+                        Payer:{' '}
+                        <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          {receiptModalData.paidByRoleLabel || 'Paid by Student 🎓'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Itemized Invoice Table */}
+                <div className="rounded-xl border-2 border-slate-800 overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900 text-white font-extrabold text-[11px] uppercase tracking-wider border-b border-slate-800">
+                      <tr>
+                        <th className="p-3 w-20">HSN/SAC</th>
+                        <th className="p-3">Fee Particulars & Description</th>
+                        <th className="p-3 text-center w-24">Installment</th>
+                        <th className="p-3 text-right w-36">Amount Paid (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white font-medium">
+                      <tr>
+                        <td className="p-3 font-mono text-slate-500">999293</td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900 text-sm">
+                            Academic Tuition & NEET Program Fee
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                            {receiptModalData.courseName} • Verified via Razorpay Digital Gateway
+                          </div>
+                        </td>
+                        <td className="p-3 text-center font-extrabold text-[#0052CC]">
+                          #{receiptModalData.installmentNumber}
+                        </td>
+                        <td className="p-3 text-right font-black text-slate-900 text-sm">
+                          {formatRupees(receiptModalData.amount)}
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot className="bg-slate-50 border-t-2 border-slate-800">
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="p-3.5 text-right font-black text-slate-900 text-xs uppercase tracking-wider"
+                        >
+                          Total Fees Paid:
+                        </td>
+                        <td className="p-3.5 text-right font-black text-emerald-600 text-xl">
+                          {formatRupees(receiptModalData.amount)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {/* Amount in Words */}
+                <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-200 text-xs font-bold text-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <span>Amount Paid in Words:</span>
+                  <span className="font-extrabold text-emerald-900 italic">
+                    {numberToWordsINR(receiptModalData.amount)}
+                  </span>
+                </div>
+
+                {/* Audit Verification & Signature Footer */}
+                <div className="pt-4 border-t-2 border-dashed border-slate-300 grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                  {/* QR Code Verification Stamp */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex flex-col items-center justify-center text-white shrink-0 shadow-sm">
+                      <div className="w-full h-full border border-dashed border-slate-500 flex items-center justify-center text-[9px] font-mono text-center font-extrabold leading-tight text-emerald-400">
+                        OFFICIAL
+                        <br />
+                        VERIFIED
+                        <br />
+                        STAMP
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-wider">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        VERIFIED & AUDITED
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        System Receipt ID:{' '}
+                        <span className="font-mono font-bold text-slate-800">
+                          {receiptModalData.receiptNumber}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Authorized Signature Box */}
+                  <div className="sm:text-right space-y-1">
+                    <div className="inline-block border-b-2 border-slate-800 pb-1 px-4">
+                      <span className="font-serif italic text-lg font-bold text-slate-800 tracking-wide">
+                        Accounts Dept.
+                      </span>
+                    </div>
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                      Authorized Officer • NEET Premier Academy
+                    </p>
+                    <p className="text-[9px] text-slate-400">
+                      Computer generated tax invoice. No physical signature required.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

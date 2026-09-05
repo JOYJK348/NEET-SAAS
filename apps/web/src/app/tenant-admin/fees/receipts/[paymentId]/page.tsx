@@ -201,7 +201,7 @@ function ReceiptViewContent() {
 
 export default function TenantAdminReceiptViewPage() {
   return (
-    <ProtectedRoute allowedRoles={['TENANT_ADMIN', 'SUPER_ADMIN']}>
+    <ProtectedRoute allowedRoles={['PARENT', 'STUDENT', 'TENANT_ADMIN', 'SUPER_ADMIN']}>
       <ReceiptViewContent />
     </ProtectedRoute>
   );
