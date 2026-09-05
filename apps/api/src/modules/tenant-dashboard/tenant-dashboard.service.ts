@@ -230,7 +230,7 @@ export class TenantDashboardService {
 
     // Attendance Rate
     const presentRecordsCount = await this.prisma.attendanceRecords.count({
-      where: { tenantId, status: 'PRESENT' },
+      where: { tenantId, attendanceStatus: 'PRESENT' },
     });
     const overallAttendancePercentage =
       attendanceStatsAgg > 0 ? Math.round((presentRecordsCount / attendanceStatsAgg) * 100) : 94.8;
