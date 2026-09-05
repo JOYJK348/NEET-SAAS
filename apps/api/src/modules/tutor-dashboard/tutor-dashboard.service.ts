@@ -77,6 +77,15 @@ export class TutorDashboardService {
     });
   }
 
+  // ─── HELPER: Parse IST YYYY-MM-DD + HH:mm into absolute UTC Date ──────────────
+
+  private parseISTDateTime(dateKey: string, timeHHMM: string): Date {
+    if (!dateKey) return new Date();
+    const [y, mo, d] = dateKey.split('-').map(Number);
+    const [h, m] = (timeHHMM || '00:00').split(':').map(Number);
+    return new Date(Date.UTC(y, mo - 1, d, h || 0, m || 0, 0) - 5.5 * 3600 * 1000);
+  }
+
   // ─── HELPER: Resolve authenticated tutor's staff profile ──────────────────
 
   private async resolveTutor(tenantId: string, userId: string) {
@@ -551,14 +560,8 @@ export class TutorDashboardService {
       const todayKey = this.toLocalDateKey(now);
       const sessionDateKey = this.toLocalDateKey(s.attendanceDate);
 
-      const [sH, sM] = startHHMM.split(':').map(Number);
-      const [eH, eM] = endHHMM.split(':').map(Number);
-
-      const realStart = new Date(s.attendanceDate);
-      realStart.setHours(sH, sM, 0, 0);
-
-      const realEnd = new Date(s.attendanceDate);
-      realEnd.setHours(eH, eM, 0, 0);
+      const realStart = this.parseISTDateTime(sessionDateKey, startHHMM);
+      const realEnd = this.parseISTDateTime(sessionDateKey, endHHMM);
 
       const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
       let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';

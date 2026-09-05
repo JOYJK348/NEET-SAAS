@@ -78,6 +78,13 @@ export class StudentDashboardService {
     });
   }
 
+  private parseISTDateTime(dateKey: string, timeHHMM: string): Date {
+    if (!dateKey) return new Date();
+    const [y, mo, d] = dateKey.split('-').map(Number);
+    const [h, m] = (timeHHMM || '00:00').split(':').map(Number);
+    return new Date(Date.UTC(y, mo - 1, d, h || 0, m || 0, 0) - 5.5 * 3600 * 1000);
+  }
+
   // ─── SHARED STUDENT RESOLVER ────────────────────────────────────────────
   // Every endpoint calls this first. No mismatched identity keys.
 
@@ -681,14 +688,8 @@ export class StudentDashboardService {
         let startStr = sched?.startTime ? sched.startTime : this.formatTime(s.startsAt);
         let endStr = sched?.endTime ? sched.endTime : this.formatTime(s.endsAt);
 
-        const [sH, sM] = startStr.split(':').map(Number);
-        const [eH, eM] = endStr.split(':').map(Number);
-
-        const realStart = new Date(s.attendanceDate);
-        realStart.setHours(sH, sM, 0, 0);
-
-        const realEnd = new Date(s.attendanceDate);
-        realEnd.setHours(eH, eM, 0, 0);
+        const realStart = this.parseISTDateTime(sessionDateKey, startStr);
+        const realEnd = this.parseISTDateTime(sessionDateKey, endStr);
 
         const isFinished = ['PUBLISHED', 'LOCKED'].includes(s.sessionStatus);
         let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
