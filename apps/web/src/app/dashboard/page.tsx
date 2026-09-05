@@ -471,16 +471,17 @@ function TenantAdminDashboard() {
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Attendance Rate
+              Active Batches
             </span>
-            <CalendarCheck className="w-4 h-4 text-emerald-600" />
+            <Users className="w-4 h-4 text-emerald-600" />
           </div>
           <p className="text-2xl font-extrabold text-emerald-700">
-            {loading ? '...' : `${data?.stats?.overallAttendancePercentage ?? 0}%`}
+            {loading ? '...' : (data?.stats?.totalBatches ?? 0)}
           </p>
-          <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Real-time Attendance DB
-          </p>
+          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-emerald-600 h-full rounded-full" style={{ width: '75%' }} />
+          </div>
+          <p className="text-[11px] font-medium text-slate-500">Running Enrolled Batches</p>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
@@ -536,9 +537,6 @@ function TenantAdminDashboard() {
           >
             <BookOpen className="w-6 h-6 text-[#0052CC] group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold text-slate-800">Physics (P)</span>
-            <span className="text-[10px] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-              180 Marks • 45 Qs
-            </span>
           </Link>
 
           <Link
@@ -547,9 +545,6 @@ function TenantAdminDashboard() {
           >
             <FileText className="w-6 h-6 text-rose-600 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold text-slate-800">Chemistry (C)</span>
-            <span className="text-[10px] font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">
-              180 Marks • 45 Qs
-            </span>
           </Link>
 
           <Link
@@ -558,9 +553,6 @@ function TenantAdminDashboard() {
           >
             <GraduationCap className="w-6 h-6 text-emerald-600 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold text-slate-800">Botany (B)</span>
-            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-              180 Marks • 45 Qs
-            </span>
           </Link>
 
           <Link
@@ -569,9 +561,6 @@ function TenantAdminDashboard() {
           >
             <Award className="w-6 h-6 text-purple-600 group-hover:scale-110 transition-transform" />
             <span className="text-xs font-bold text-slate-800">Zoology (Z)</span>
-            <span className="text-[10px] font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-              180 Marks • 45 Qs
-            </span>
           </Link>
         </div>
       </div>
