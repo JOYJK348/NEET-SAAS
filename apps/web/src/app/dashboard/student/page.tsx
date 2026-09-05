@@ -170,7 +170,7 @@ import { getClassStatus } from '@/lib/class-status';
 // ─── Session Card Component ───────────────────────────────────────────────────
 function SessionCard({
   session,
-  showDate,
+  showDate = true,
   isFeeLocked,
 }: {
   session: StudentSessionDto;
@@ -231,8 +231,11 @@ function SessionCard({
                 {formatTime(session.startsAt, session.endsAt)}
               </span>
               {showDate && session.date && (
-                <span className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                  {new Date(session.date).toLocaleDateString('en-IN', {
+                <span className="text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 font-extrabold flex items-center gap-1">
+                  📅{' '}
+                  {new Date(
+                    session.date.includes('T') ? session.date : session.date + 'T00:00:00',
+                  ).toLocaleDateString('en-IN', {
                     weekday: 'short',
                     day: '2-digit',
                     month: 'short',

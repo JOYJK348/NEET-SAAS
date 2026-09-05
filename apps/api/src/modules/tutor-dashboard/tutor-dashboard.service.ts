@@ -107,39 +107,22 @@ export class TutorDashboardService {
 
     const { today, tomorrow, nextWeek, todayKey } = this.getTodayISTBounds();
 
-    // Today's classes count
-    const todaysClasses = await this.prisma.attendanceSessions.count({
-      where: {
-        tenantId,
-        staffProfileId,
-        deletedAt: null,
-        attendanceDate: { gte: today, lt: tomorrow },
-        sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
-      },
-    });
-
-    // Upcoming classes count (next 7 days excluding today)
-    const upcomingClasses = await this.prisma.attendanceSessions.count({
-      where: {
-        tenantId,
-        staffProfileId,
-        deletedAt: null,
-        attendanceDate: { gte: tomorrow, lt: nextWeek },
-        sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
-      },
-    });
-
-    // Assigned batches count
-    const myBatches = await this.prisma.staffBatchAssignments.count({
-      where: { tenantId, staffProfileId, isActive: true, deletedAt: null },
-    });
-
-    // Total assigned students across all batches
+    // Assigned batches & subjects for tutor
     const batchAssignments = await this.prisma.staffBatchAssignments.findMany({
       where: { tenantId, staffProfileId, isActive: true, deletedAt: null },
       select: { batchId: true },
     });
     const batchIds = batchAssignments.map((ba) => ba.batchId);
+
+    const staffSubjects = await this.prisma.staffSubjects.findMany({
+      where: { tenantId, staffProfileId, deletedAt: null },
+      select: { subjectId: true },
+    });
+    const tutorSubjectIds = staffSubjects.map((s) => s.subjectId).filter(Boolean);
+
+    const myBatches = batchIds.length;
+
+    // Total assigned students across all batches
     const totalStudents =
       batchIds.length > 0
         ? await this.prisma.studentBatchEnrollments.count({
@@ -152,14 +135,21 @@ export class TutorDashboardService {
           })
         : 0;
 
+    const staffMatchConditions = [
+      { staffProfileId },
+      { staffProfileId: userId },
+      ...(batchIds.length > 0 ? [{ batchId: { in: batchIds } }] : []),
+    ];
+
     // Today's schedule
     let todaysSessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
-        staffProfileId,
         deletedAt: null,
         attendanceDate: { gte: today, lt: tomorrow },
         sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
+        OR: staffMatchConditions,
+        ...(tutorSubjectIds.length > 0 ? { subjectId: { in: tutorSubjectIds } } : {}),
       },
       orderBy: { startsAt: 'asc' },
     });
@@ -180,9 +170,10 @@ export class TutorDashboardService {
       const todaySchedules = await this.prisma.schedules.findMany({
         where: {
           tenantId,
-          staffProfileId,
           dayOfWeek: todayDayOfWeek,
           effectiveFrom: { lte: today },
+          OR: staffMatchConditions,
+          ...(tutorSubjectIds.length > 0 ? { subjectId: { in: tutorSubjectIds } } : {}),
         },
         select: {
           id: true,
@@ -232,12 +223,6 @@ export class TutorDashboardService {
 
     // Merge active/LIVE LiveClasses into todaysSessions for tutor's assigned subjects/batches
     try {
-      const staffSubjects = await this.prisma.staffSubjects.findMany({
-        where: { tenantId, staffProfileId, deletedAt: null },
-        select: { subjectId: true },
-      });
-      const tutorSubjectIds = staffSubjects.map((s) => s.subjectId).filter(Boolean);
-
       const activeLiveClasses = await this.prisma.liveClasses.findMany({
         where: {
           tenantId,
@@ -296,10 +281,11 @@ export class TutorDashboardService {
     let upcomingSessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
-        staffProfileId,
         deletedAt: null,
         attendanceDate: { gte: tomorrow, lt: nextWeek },
         sessionStatus: { not: AttendanceSessionStatusEnum.CANCELLED },
+        OR: staffMatchConditions,
+        ...(tutorSubjectIds.length > 0 ? { subjectId: { in: tutorSubjectIds } } : {}),
       },
       orderBy: [{ attendanceDate: 'asc' }, { startsAt: 'asc' }],
       take: 10,
@@ -320,8 +306,9 @@ export class TutorDashboardService {
       const futureSchedules = await this.prisma.schedules.findMany({
         where: {
           tenantId,
-          staffProfileId,
           effectiveFrom: { lte: nextWeek },
+          OR: staffMatchConditions,
+          ...(tutorSubjectIds.length > 0 ? { subjectId: { in: tutorSubjectIds } } : {}),
         },
         select: {
           id: true,

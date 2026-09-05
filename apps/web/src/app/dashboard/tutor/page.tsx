@@ -115,7 +115,7 @@ import { toast } from 'sonner';
 
 import { getClassStatus } from '@/lib/class-status';
 
-function SessionCard({ session, showDate }: { session: TutorialSessionDto; showDate?: boolean }) {
+function SessionCard({ session, showDate = true }: { session: TutorialSessionDto; showDate?: boolean }) {
   const router = useRouter();
 
   // Tick every 30 seconds so button state auto-updates when class time expires
@@ -175,7 +175,10 @@ function SessionCard({ session, showDate }: { session: TutorialSessionDto; showD
               <span>{formatTime(session.startsAt, session.endsAt)}</span>
               {showDate && session.date && (
                 <span className="text-[10px] text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md font-extrabold ml-1">
-                  {new Date(session.date).toLocaleDateString('en-IN', {
+                  📅{' '}
+                  {new Date(
+                    session.date.includes('T') ? session.date : session.date + 'T00:00:00',
+                  ).toLocaleDateString('en-IN', {
                     weekday: 'short',
                     day: '2-digit',
                     month: 'short',
