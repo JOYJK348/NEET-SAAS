@@ -446,75 +446,7 @@ function TenantAdminDashboard() {
         </Link>
       </div>
 
-      {/* 🔴 2. LIVE ACADEMIC SESSION BANNER */}
-      {liveClass ? (
-        <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3 border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans animate-in fade-in duration-200">
-          <div className="space-y-2 min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] sm:text-xs font-extrabold rounded-full flex items-center gap-1.5 shrink-0 uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-                {liveClass.status === 'LIVE' ? 'LIVE CLASS ACTIVE NOW' : 'SCHEDULED SESSION TODAY'}
-              </span>
-              <span className="text-xs text-[#0052CC] bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 rounded-full font-extrabold truncate">
-                {liveClass.subjectName} ({liveClass.batchName})
-              </span>
-            </div>
 
-            <h2 className="text-base sm:text-lg font-extrabold text-[#0B2447] tracking-tight leading-snug">
-              {liveClass.title}
-            </h2>
-
-            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium">
-              <span className="inline-flex items-center gap-1 text-[#0052CC] font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs">
-                <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                {liveClass.startTime}
-              </span>
-              <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-semibold">
-                <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                Campus: {liveClass.campusName}
-              </span>
-              <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-bold text-slate-800">
-                <Users className="w-3.5 h-3.5 text-[#0052CC]" />
-                {liveClass.enrolledStudentsCount} Enrolled Students
-              </span>
-            </div>
-          </div>
-
-          <Link
-            href={`/dashboard/live/${liveClass.id}`}
-            className="w-full md:w-auto px-5 py-3 bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl shadow-2xs flex items-center justify-center gap-2 shrink-0 transition-all hover:shadow-md cursor-pointer"
-          >
-            <Video className="w-4 h-4 text-white" />
-            <span>VIEW CLASS TIMETABLE</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      ) : (
-        <div className="w-full bg-gradient-to-r from-blue-50/60 to-slate-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans">
-          <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-blue-100 text-[#0052CC] text-[10px] sm:text-xs font-extrabold rounded-full uppercase tracking-wider">
-                LIVE TIMETABLE
-              </span>
-              <span className="text-xs text-slate-500 font-semibold">Real-time status</span>
-            </div>
-            <h2 className="text-sm sm:text-base font-extrabold text-[#0B2447]">
-              No Live Class Currently Active
-            </h2>
-            <p className="text-xs text-slate-500">
-              All live classes scheduled for today will automatically stream here when started by tutors.
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard/timetable"
-            className="w-full md:w-auto px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-[#0052CC] text-xs font-bold rounded-xl shadow-2xs flex items-center justify-center gap-1.5 shrink-0 transition-all"
-          >
-            <Video className="w-4 h-4" />
-            <span>View Full Timetable</span>
-          </Link>
-        </div>
-      )}
 
 
 
