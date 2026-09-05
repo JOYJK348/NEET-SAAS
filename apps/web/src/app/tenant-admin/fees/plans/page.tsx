@@ -60,10 +60,11 @@ interface FeePlan {
   installmentPlans: InstallmentPlan[];
 }
 
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
+
 function FeePlansContent() {
   const router = useRouter();
-  const [plans, setPlans] = useState<FeePlan[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   // Inline Installment Schedule Form Panel (Per Fee Plan)
@@ -79,21 +80,17 @@ function FeePlansContent() {
     { installmentNumber: 3, label: '3rd Installment', dueDate: '2026-10-10', amountFixed: 20000 },
   ]);
 
-  const loadPlans = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get<FeePlan[]>('/billing/fee-plans');
-      setPlans(data);
-    } catch (err: any) {
-      toast.error('Failed to load fee plans');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPlans();
-  }, []);
+  const {
+    data: plansData,
+    isLoading: loading,
+    refetch: loadPlans,
+  } = useQuery<FeePlan[]>({
+    queryKey: ['fees', 'plans'],
+    queryFn: ({ signal }) => api.get<FeePlan[]>('/billing/fee-plans', { signal }),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+  const plans = plansData || [];
 
   const openInstallmentPanel = (plan: FeePlan) => {
     if (activeInstallmentPlanId === plan.id) {

@@ -57,10 +57,11 @@ function formatRupees(val: number): string {
   return `₹${val.toLocaleString('en-IN')}`;
 }
 
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
+
 function CollectPaymentContent() {
   const router = useRouter();
-  const [allAccounts, setAllAccounts] = useState<StudentAccount[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
 
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedBatchId, setSelectedBatchId] = useState('');
@@ -73,25 +74,22 @@ function CollectPaymentContent() {
   const [submitting, setSubmitting] = useState(false);
   const [receiptResult, setReceiptResult] = useState<any>(null);
 
-  const loadAllAccounts = async () => {
-    try {
-      setLoadingAccounts(true);
-      const data = await api.get<StudentAccount[]>('/billing/fee-assignments');
-      const validAccounts = (Array.isArray(data) ? data : []).filter(
+  const {
+    data: allAccountsData,
+    isLoading: loadingAccounts,
+    refetch: loadAllAccounts,
+  } = useQuery<StudentAccount[]>({
+    queryKey: ['fees', 'assignments'],
+    queryFn: async ({ signal }) => {
+      const data = await api.get<StudentAccount[]>('/billing/fee-assignments', { signal });
+      return (Array.isArray(data) ? data : []).filter(
         (acc) => acc.hasFeeAssigned && acc.installments.some((i) => i.status !== 'PAID'),
       );
-      setAllAccounts(validAccounts);
-    } catch (err: any) {
-      console.error('Failed to load student fee accounts:', err);
-      toast.error('Failed to load student fee accounts');
-    } finally {
-      setLoadingAccounts(false);
-    }
-  };
-
-  useEffect(() => {
-    loadAllAccounts();
-  }, []);
+    },
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+  const allAccounts = allAccountsData || [];
 
   // Cascading Maps: Course ➔ Batches ➔ Students
   const courseMap = new Map<

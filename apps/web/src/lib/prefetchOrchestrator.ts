@@ -347,6 +347,32 @@ export async function prefetchCriticalData(
           queryFn: () => getWeeklyView(undefined),
           staleTime: STALE_TIMES.DEFAULT,
         }),
+
+        // 10. Fee Management Pages (/tenant-admin/fees, /plans, /students, /reports)
+        queryClient.prefetchQuery({
+          queryKey: ['fees', 'kpis'],
+          queryFn: ({ signal }) =>
+            api.get('/billing/ledger/kpis', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['fees', 'plans'],
+          queryFn: ({ signal }) =>
+            api.get('/billing/fee-plans', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['fees', 'assignments'],
+          queryFn: ({ signal }) =>
+            api.get('/billing/fee-assignments', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['fees', 'outstanding', 'ALL'],
+          queryFn: ({ signal }) =>
+            api.get('/billing/ledger/outstanding', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
       ]);
     }
   } catch (error) {

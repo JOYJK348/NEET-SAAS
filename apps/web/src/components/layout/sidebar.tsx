@@ -438,7 +438,32 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             queryFn: () => studentDashboardApi.getAttendance(),
             staleTime: STALE_TIMES.DEFAULT,
           });
-        } else if (href === '/dashboard/student/fees' || href === '/tenant-admin/fees') {
+        } else if (href.startsWith('/tenant-admin/fees')) {
+          queryClient.prefetchQuery({
+            queryKey: ['fees', 'kpis'],
+            queryFn: ({ signal }) =>
+              api.get('/billing/ledger/kpis', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['fees', 'plans'],
+            queryFn: ({ signal }) =>
+              api.get('/billing/fee-plans', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['fees', 'assignments'],
+            queryFn: ({ signal }) =>
+              api.get('/billing/fee-assignments', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+          queryClient.prefetchQuery({
+            queryKey: ['fees', 'outstanding', 'ALL'],
+            queryFn: ({ signal }) =>
+              api.get('/billing/ledger/outstanding', { signal, skipGlobalToast: true }),
+            staleTime: STALE_TIMES.DEFAULT,
+          });
+        } else if (href === '/dashboard/student/fees') {
           const studentAdmissionId =
             (user as any)?.studentAdmissionId || (user as any)?.id || 'DEMO_STUDENT_ID';
           queryClient.prefetchQuery({

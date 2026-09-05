@@ -17,6 +17,8 @@ import {
   ArrowRight,
   ChevronRight,
 } from 'lucide-react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
 import { api } from '@/lib/api';
 
 interface Kpis {
@@ -28,22 +30,13 @@ interface Kpis {
 
 function FeesDashboardContent() {
   const router = useRouter();
-  const [kpis, setKpis] = useState<Kpis | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadKpis() {
-      try {
-        const data = await api.get<Kpis>('/billing/ledger/kpis');
-        setKpis(data);
-      } catch (err: any) {
-        console.error('Failed to load billing KPIs', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadKpis();
-  }, []);
+  const { data: kpis, isLoading: loading } = useQuery<Kpis>({
+    queryKey: ['fees', 'kpis'],
+    queryFn: ({ signal }) => api.get<Kpis>('/billing/ledger/kpis', { signal }),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
 
   const formatRupees = (val: number) => {
     return new Intl.NumberFormat('en-IN', {

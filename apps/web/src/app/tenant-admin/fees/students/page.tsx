@@ -115,46 +115,42 @@ function getStatusBadge(status: string) {
   }
 }
 
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
+
 function StudentFeeAccountContent() {
   const router = useRouter();
-  const [allAccounts, setAllAccounts] = useState<StudentAccount[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<StudentAccount | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [feePlans, setFeePlans] = useState<FeePlanOption[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [assigning, setAssigning] = useState(false);
 
-  const loadAllAccounts = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get<StudentAccount[]>('/billing/fee-assignments');
-      setAllAccounts(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      console.error('Failed to load student fee accounts:', err);
-      setAllAccounts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: allAccountsData,
+    isLoading: loading,
+    refetch: loadAllAccounts,
+  } = useQuery<StudentAccount[]>({
+    queryKey: ['fees', 'assignments'],
+    queryFn: async ({ signal }) => {
+      const data = await api.get<StudentAccount[]>('/billing/fee-assignments', { signal });
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+  const allAccounts = allAccountsData || [];
 
-  const loadFeePlans = async () => {
-    try {
-      const data = await api.get<FeePlanOption[]>('/billing/fee-plans');
-      setFeePlans(data);
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    loadAllAccounts();
-    loadFeePlans();
-  }, []);
+  const { data: feePlansData } = useQuery<FeePlanOption[]>({
+    queryKey: ['fees', 'plans'],
+    queryFn: ({ signal }) => api.get<FeePlanOption[]>('/billing/fee-plans', { signal }),
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+  const feePlans = feePlansData || [];
 
   // 1. Group by Courses
   const courseMap = new Map<

@@ -35,30 +35,25 @@ interface OutstandingItem {
   courseName: string;
 }
 
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { STALE_TIMES } from '@/lib/staleTimes';
+
 function OutstandingReportContent() {
   const router = useRouter();
-  const [report, setReport] = useState<OutstandingItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OVERDUE' | 'UNPAID' | 'PARTIALLY_PAID'>(
     'ALL',
   );
 
-  const loadReport = async () => {
-    try {
-      setLoading(true);
+  const { data: reportData, isLoading: loading } = useQuery<OutstandingItem[]>({
+    queryKey: ['fees', 'outstanding', statusFilter],
+    queryFn: ({ signal }) => {
       const queryParam = statusFilter !== 'ALL' ? `?status=${statusFilter}` : '';
-      const data = await api.get<OutstandingItem[]>(`/billing/ledger/outstanding${queryParam}`);
-      setReport(data);
-    } catch (err: any) {
-      toast.error('Failed to load outstanding report');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadReport();
-  }, [statusFilter]);
+      return api.get<OutstandingItem[]>(`/billing/ledger/outstanding${queryParam}`, { signal });
+    },
+    staleTime: STALE_TIMES.DEFAULT,
+    placeholderData: keepPreviousData,
+  });
+  const report = reportData || [];
 
   const formatRupees = (val: number) => {
     return new Intl.NumberFormat('en-IN', {
