@@ -320,6 +320,41 @@ interface TenantDashboardOverviewResponse {
     totalExams: number;
     totalBranches: number;
     totalTutors: number;
+    totalFeeCollected: number;
+    feeCollectionPercentage: number;
+    overallAttendancePercentage: number;
+  };
+  liveClassActive?: {
+    id: string;
+    title: string;
+    subjectName: string;
+    batchName: string;
+    startTime: string;
+    campusName: string;
+    enrolledStudentsCount: number;
+    status: string;
+  } | null;
+  runningBatches?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    studentCount: number;
+    courseName: string;
+    progressPercentage: number;
+  }>;
+  recentRecordings?: Array<{
+    id: string;
+    title: string;
+    subjectName: string;
+    dateFormatted: string;
+    durationMinutes: number;
+    watchUrl: string;
+  }>;
+  feeSummary?: {
+    totalFeeAssignments: number;
+    paidFeeAssignments: number;
+    pendingFeeAssignments: number;
+    totalAmountCollected: number;
   };
   recentAdmissions: Array<{
     name: string;
@@ -328,13 +363,8 @@ interface TenantDashboardOverviewResponse {
     status: string;
     statusColor: string;
   }>;
-  todayClasses: Array<{
-    time: string;
-    subject: string;
-    topic: string;
-    color: string;
-  }>;
   upcomingMockTests: Array<{
+    id: string;
     title: string;
     time: string;
     desc: string;
@@ -354,17 +384,10 @@ function TenantAdminDashboard() {
     enabled: !!user,
   });
 
-  const formattedDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 16 ? 'Good Afternoon' : 'Good Evening';
 
-  const liveClassToday =
-    data?.todayClasses && data.todayClasses.length > 0 ? data.todayClasses[0] : null;
+  const liveClass = data?.liveClassActive;
 
   const adminName =
     user?.firstName &&
@@ -423,42 +446,42 @@ function TenantAdminDashboard() {
         </Link>
       </div>
 
-      {/* 🔴 2. LIVE ACADEMIC SESSION BANNER - ISML LMS LIGHT BLUE STYLE */}
-      {liveClassToday && (
+      {/* 🔴 2. LIVE ACADEMIC SESSION BANNER */}
+      {liveClass ? (
         <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-3 border border-blue-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans animate-in fade-in duration-200">
           <div className="space-y-2 min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-1 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] sm:text-xs font-extrabold rounded-full flex items-center gap-1.5 shrink-0 uppercase tracking-wider">
                 <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-                LIVE CLASS ACTIVE NOW
+                {liveClass.status === 'LIVE' ? 'LIVE CLASS ACTIVE NOW' : 'SCHEDULED SESSION TODAY'}
               </span>
               <span className="text-xs text-[#0052CC] bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 rounded-full font-extrabold truncate">
-                {liveClassToday.subject || 'NEET Physics Target Batch'}
+                {liveClass.subjectName} ({liveClass.batchName})
               </span>
             </div>
 
             <h2 className="text-base sm:text-lg font-extrabold text-[#0B2447] tracking-tight leading-snug">
-              {liveClassToday.topic || 'Electromagnetic Induction & Optics Masterclass'}
+              {liveClass.title}
             </h2>
 
             <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium">
               <span className="inline-flex items-center gap-1 text-[#0052CC] font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs">
                 <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                {liveClassToday.time || '10:00 AM - 11:30 AM'}
+                {liveClass.startTime}
               </span>
               <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-semibold">
                 <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                Campus: Main Branch
+                Campus: {liveClass.campusName}
               </span>
               <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-bold text-slate-800">
                 <Users className="w-3.5 h-3.5 text-[#0052CC]" />
-                42 Enrolled Students
+                {liveClass.enrolledStudentsCount} Enrolled Students
               </span>
             </div>
           </div>
 
           <Link
-            href="/dashboard/timetable"
+            href={`/dashboard/live/${liveClass.id}`}
             className="w-full md:w-auto px-5 py-3 bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl shadow-2xs flex items-center justify-center gap-2 shrink-0 transition-all hover:shadow-md cursor-pointer"
           >
             <Video className="w-4 h-4 text-white" />
@@ -466,14 +489,39 @@ function TenantAdminDashboard() {
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
+      ) : (
+        <div className="w-full bg-gradient-to-r from-blue-50/60 to-slate-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs border border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-4 font-sans">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 bg-blue-100 text-[#0052CC] text-[10px] sm:text-xs font-extrabold rounded-full uppercase tracking-wider">
+                LIVE TIMETABLE
+              </span>
+              <span className="text-xs text-slate-500 font-semibold">Real-time status</span>
+            </div>
+            <h2 className="text-sm sm:text-base font-extrabold text-[#0B2447]">
+              No Live Class Currently Active
+            </h2>
+            <p className="text-xs text-slate-500">
+              All live classes scheduled for today will automatically stream here when started by tutors.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/timetable"
+            className="w-full md:w-auto px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 text-[#0052CC] text-xs font-bold rounded-xl shadow-2xs flex items-center justify-center gap-1.5 shrink-0 transition-all"
+          >
+            <Video className="w-4 h-4" />
+            <span>View Full Timetable</span>
+          </Link>
+        </div>
       )}
 
-      {/* 3 & 4. TWO-COLUMN: Continue Pre-Recorded + Recent Live Class Recordings */}
+      {/* 3 & 4. TWO-COLUMN: Active Batches & Class Recordings Archive */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ▶️ Continue Pre-Recorded / Running Batch Session */}
+        {/* ▶️ Active Batch Operations */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="p-2 rounded-lg bg-blue-50 text-[#0052CC]">
                   <PlayCircle className="w-5 h-5" />
@@ -485,26 +533,43 @@ function TenantAdminDashboard() {
                   <h3 className="text-sm font-bold text-[#0B2447]">Running NEET Batches</h3>
                 </div>
               </div>
-              <span className="text-xs font-semibold text-slate-500">
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
                 {data?.stats?.totalBatches ?? 0} Batches Running
               </span>
             </div>
 
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-              <p className="text-xs font-mono text-[#0052CC] font-semibold">
-                NEET 2026 Intensive Batch A
-              </p>
-              <p className="text-sm font-bold text-slate-800 line-clamp-1">
-                Syllabus Completion: Physics & Organic Chemistry
-              </p>
+            <div className="space-y-2.5">
+              {!data?.runningBatches || data.runningBatches.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center font-medium">
+                  No active batches configured yet
+                </p>
+              ) : (
+                data.runningBatches.slice(0, 3).map((batch) => (
+                  <div
+                    key={batch.id}
+                    className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-extrabold text-[#0052CC] truncate">
+                        {batch.name} ({batch.code})
+                      </p>
+                      <span className="text-[10px] font-bold bg-blue-50 text-[#0052CC] px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
+                        {batch.studentCount} Students
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 truncate">
+                      {batch.courseName}
+                    </p>
 
-              {/* Progress bar */}
-              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-[#0052CC] h-full rounded-full transition-all"
-                  style={{ width: '68%' }}
-                />
-              </div>
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
+                      <div
+                        className="bg-[#0052CC] h-full rounded-full transition-all"
+                        style={{ width: `${batch.progressPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -541,35 +606,31 @@ function TenantAdminDashboard() {
             </div>
 
             <div className="space-y-2.5">
-              <Link
-                href="/dashboard/recordings"
-                className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 transition-colors group"
-              >
-                <div className="space-y-0.5 max-w-xs">
-                  <p className="text-xs font-bold text-slate-800 group-hover:text-[#0052CC] line-clamp-1">
-                    Organic Chemistry: Reaction Mechanisms & Hydrocarbons
-                  </p>
-                  <p className="text-[11px] text-slate-500">Recorded Yesterday • 90 mins</p>
-                </div>
-                <span className="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg shrink-0 flex items-center gap-1 group-hover:bg-[#0052CC] group-hover:text-white transition-all">
-                  <Film className="w-3.5 h-3.5" /> Watch
-                </span>
-              </Link>
-
-              <Link
-                href="/dashboard/recordings"
-                className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 transition-colors group"
-              >
-                <div className="space-y-0.5 max-w-xs">
-                  <p className="text-xs font-bold text-slate-800 group-hover:text-[#0052CC] line-clamp-1">
-                    Human Physiology: Genetics & Inheritance Principles
-                  </p>
-                  <p className="text-[11px] text-slate-500">Recorded 2 days ago • 80 mins</p>
-                </div>
-                <span className="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg shrink-0 flex items-center gap-1 group-hover:bg-[#0052CC] group-hover:text-white transition-all">
-                  <Film className="w-3.5 h-3.5" /> Watch
-                </span>
-              </Link>
+              {!data?.recentRecordings || data.recentRecordings.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center font-medium">
+                  No ended live class recordings available in archive yet
+                </p>
+              ) : (
+                data.recentRecordings.slice(0, 2).map((rec) => (
+                  <Link
+                    key={rec.id}
+                    href={rec.watchUrl}
+                    className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 transition-colors group"
+                  >
+                    <div className="space-y-0.5 max-w-xs min-w-0">
+                      <p className="text-xs font-bold text-slate-800 group-hover:text-[#0052CC] truncate">
+                        {rec.title} ({rec.subjectName})
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        Recorded {rec.dateFormatted} • {rec.durationMinutes} mins
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg shrink-0 flex items-center gap-1 group-hover:bg-[#0052CC] group-hover:text-white transition-all">
+                      <Film className="w-3.5 h-3.5" /> Watch
+                    </span>
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -579,7 +640,7 @@ function TenantAdminDashboard() {
         </div>
       </div>
 
-      {/* 📚 5. COURSE PROGRESS & OVERVIEW STAT CARDS (4 Column Grid) */}
+      {/* 📚 5. OVERVIEW KPI STAT CARDS (4 Column Grid) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
           <div className="flex items-center justify-between">
@@ -604,9 +665,11 @@ function TenantAdminDashboard() {
             </span>
             <CalendarCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-extrabold text-emerald-700">94.8%</p>
+          <p className="text-2xl font-extrabold text-emerald-700">
+            {loading ? '...' : `${data?.stats?.overallAttendancePercentage ?? 0}%`}
+          </p>
           <p className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Approved by Faculty
+            <CheckCircle2 className="w-3 h-3" /> Real-time Attendance DB
           </p>
         </div>
 
@@ -705,7 +768,7 @@ function TenantAdminDashboard() {
 
       {/* 📝 7. THREE-COLUMN QUICK ACTION / SUPPORT GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Pending Admissions & Homework */}
+        {/* Pending Admissions */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[#0B2447] flex items-center gap-1.5">
@@ -781,7 +844,7 @@ function TenantAdminDashboard() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[#0B2447] flex items-center gap-1.5">
-              <MessageSquare className="w-4 h-4 text-cyan-600" /> Fee & Support Center
+              <MessageSquare className="w-4 h-4 text-cyan-600" /> Fee & Billing Overview
             </h3>
             <Link
               href="/tenant-admin/fees"
@@ -790,13 +853,20 @@ function TenantAdminDashboard() {
               View Billing
             </Link>
           </div>
-          <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200 space-y-1.5">
-            <span className="text-[10px] font-extrabold text-cyan-800 uppercase tracking-wider">
-              Fee Collection Overview
-            </span>
-            <p className="text-xs font-bold text-slate-800">Pending Installments Tracked</p>
+          <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200 space-y-1 text-[#0F172A]">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-cyan-800 uppercase tracking-wider">
+                Fee Collection Rate
+              </span>
+              <span className="text-xs font-extrabold text-cyan-900">
+                {data?.stats?.feeCollectionPercentage ?? 0}%
+              </span>
+            </div>
+            <p className="text-xs font-bold text-slate-800">
+              ₹{data?.stats?.totalFeeCollected?.toLocaleString() ?? 0} Collected
+            </p>
             <p className="text-[11px] text-slate-600">
-              Automatic payment receipts generated for active admissions.
+              {data?.feeSummary?.paidFeeAssignments ?? 0} of {data?.feeSummary?.totalFeeAssignments ?? 0} fee assignments paid.
             </p>
           </div>
         </div>
