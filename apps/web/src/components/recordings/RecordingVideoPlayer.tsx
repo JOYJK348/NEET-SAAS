@@ -16,6 +16,33 @@ interface RecordingVideoPlayerProps {
   fileSizeBytes?: number | null;
 }
 
+function getApiOrigin(): string {
+  if (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')) {
+    try {
+      return new URL(process.env.NEXT_PUBLIC_API_URL).origin;
+    } catch {}
+  }
+
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const host = window.location.hostname;
+    const isLocal =
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host) ||
+      /^[\d.]+$/.test(host);
+
+    if (isLocal) {
+      return `http://${host === 'localhost' ? '127.0.0.1' : host}:3000`;
+    }
+  }
+
+  return 'https://neet-saas.onrender.com';
+}
+
 function resolveFullVideoUrl(url?: string): string {
   if (!url || url === '/lecture.mp4' || url.endsWith('/lecture.mp4')) {
     return FALLBACK_VIDEO_STREAM;
@@ -24,11 +51,7 @@ function resolveFullVideoUrl(url?: string): string {
   // 1. If already a full HTTPS URL (e.g. Supabase signed URL or Google Cloud stream), return directly
   if (url.startsWith('https://')) return url;
 
-  const apiHost =
-    typeof window !== 'undefined' && window.location?.hostname
-      ? window.location.hostname
-      : '127.0.0.1';
-  const apiOrigin = `http://${apiHost === 'localhost' ? '127.0.0.1' : apiHost}:3000`;
+  const apiOrigin = getApiOrigin();
 
   let finalUrl = url;
   if (finalUrl.includes('localhost:3000') || finalUrl.includes('127.0.0.1:3000')) {
@@ -92,8 +115,6 @@ export function RecordingVideoPlayer({
         className="w-full aspect-video bg-black cursor-pointer"
         aria-label={title}
       >
-        <source src={currentSrc} type="video/mp4" />
-        <source src={currentSrc} type="video/webm" />
         Your browser does not support playing this video.
       </video>
 
