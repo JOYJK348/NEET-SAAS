@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-// NestJS Live Class AutoEnd Service Update
+// NestJS Live Class AutoEnd Service Update - Clean Professional Emoji-Free Format
 import { AppModule } from './app.module';
 import { Logger } from 'nestjs-pino';
 import {

@@ -21,10 +21,13 @@ import {
   BookOpen,
   Check,
   X,
+  Bot,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { AiDoubtSolverModal } from './ai-doubt-solver-modal';
 
 export interface CbtResultQuestionReview {
+  questionId?: string;
   questionNumber: number;
   questionText: string;
   options: { label: string; text: string; isCorrect: boolean }[];
@@ -36,6 +39,7 @@ export interface CbtResultQuestionReview {
 }
 
 export interface CbtResultData {
+  attemptId?: string;
   examId: string;
   examTitle: string;
   resultStatus: 'PASS' | 'FAIL' | 'EVALUATED';
@@ -92,6 +96,14 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
   const [result, setResult] = useState<CbtResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [activeAiQuestion, setActiveAiQuestion] = useState<{
+    questionId: string;
+    questionNumber: number;
+    questionText: string;
+    options: { label: string; text: string; isCorrect: boolean }[];
+    selectedOption: string | null;
+    correctOption: string;
+  } | null>(null);
 
   useEffect(() => {
     async function fetchResult() {
@@ -376,11 +388,31 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
                       })}
                     </div>
 
-                    {/* Solution Explanation Box */}
-                    <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-1 text-slate-900">
-                      <h5 className="font-extrabold text-blue-900 text-xs flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Explanation & Solution:
-                      </h5>
+                    {/* Solution Explanation Box & AI Doubt Button */}
+                    <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3 text-slate-900">
+                      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                        <h5 className="font-extrabold text-blue-900 text-xs flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Explanation & Solution:
+                        </h5>
+
+                        <button
+                          onClick={() =>
+                            setActiveAiQuestion({
+                              questionId: q.questionId || `q-${q.questionNumber}`,
+                              questionNumber: q.questionNumber,
+                              questionText: cleanQText,
+                              options: q.options,
+                              selectedOption: q.selectedOption,
+                              correctOption: q.correctOption,
+                            })
+                          }
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 hover:from-blue-700 hover:to-slate-800 text-white text-xs font-black transition shadow-xs cursor-pointer shrink-0"
+                        >
+                          <Bot className="w-3.5 h-3.5 text-blue-200" />
+                          <span>Ask AI Doubt Solver</span>
+                        </button>
+                      </div>
+
                       <p className="text-xs font-normal leading-relaxed text-slate-800 pt-0.5">
                         {q.explanation?.solutionText || q.explanation?.shortExplanation || 'Correct Answer is ' + q.correctOption + '.'}
                       </p>
@@ -392,6 +424,22 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
           })}
         </div>
       </div>
+
+      {/* AI Doubt Solver Modal */}
+      {activeAiQuestion && (
+        <AiDoubtSolverModal
+          isOpen={Boolean(activeAiQuestion)}
+          onClose={() => setActiveAiQuestion(null)}
+          attemptId={result.attemptId || result.examId}
+          questionId={activeAiQuestion.questionId}
+          questionNumber={activeAiQuestion.questionNumber}
+          questionText={activeAiQuestion.questionText}
+          options={activeAiQuestion.options}
+          selectedOption={activeAiQuestion.selectedOption}
+          correctOption={activeAiQuestion.correctOption}
+        />
+      )}
     </div>
   );
 }
+

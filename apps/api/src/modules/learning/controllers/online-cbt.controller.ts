@@ -10,6 +10,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiConsumes,
@@ -25,6 +26,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import type { AuthenticatedRequestUser } from '../../auth/auth.types';
 import { QuestionImportService } from '../services/question-import.service';
 import { OnlineCbtService, AutosaveAnswerDto } from '../services/online-cbt.service';
+import { AiDoubtService, ChatMessageDto } from '../services/ai-doubt.service';
 import type { ParsedQuestionItem } from '../services/structured-question-parser.service';
 
 @ApiTags('Online CBT Exams')
@@ -35,6 +37,7 @@ export class OnlineCbtController {
   constructor(
     private readonly importService: QuestionImportService,
     private readonly cbtService: OnlineCbtService,
+    private readonly aiDoubtService: AiDoubtService,
   ) {}
 
   // ─── ADMIN BULK IMPORT ENDPOINTS ───────────────────────────────────────────
@@ -148,4 +151,44 @@ export class OnlineCbtController {
   ) {
     return this.cbtService.getExamResult(user.tenantId!, examId, user.sub);
   }
+
+  // ─── AI DOUBT SOLVER ENDPOINTS ──────────────────────────────────────────────
+
+  @Post(['attempts/:attemptId/questions/:questionId/ai-explanation', 'attempt/:attemptId/questions/:questionId/ai-explanation'])
+  @Roles('STUDENT', 'PARENT', 'TENANT_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Get structured AI Doubt Explanation for a submitted CBT question' })
+  async getAiExplanation(
+    @Param('attemptId') attemptId: string,
+    @Param('questionId') questionId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.aiDoubtService.getAiExplanation(
+      user.tenantId!,
+      user.sub,
+      user.roleCode,
+      attemptId,
+      questionId,
+    );
+  }
+
+  @Post(['attempts/:attemptId/questions/:questionId/ai-chat', 'attempt/:attemptId/questions/:questionId/ai-chat'])
+  @Roles('STUDENT', 'PARENT', 'TENANT_ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Send follow-up doubt query for a submitted CBT question' })
+  async sendAiChatFollowup(
+    @Param('attemptId') attemptId: string,
+    @Param('questionId') questionId: string,
+    @Body() body: { message: string; history?: ChatMessageDto[] },
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.aiDoubtService.sendAiChatFollowup(
+      user.tenantId!,
+      user.sub,
+      user.roleCode,
+      attemptId,
+      questionId,
+      body.message,
+      body.history || [],
+    );
+  }
 }
+

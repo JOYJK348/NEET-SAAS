@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../common/prisma/prisma.module';
+import { RedisModule } from '../../common/redis/redis.module';
 import { TenantScopedPrisma } from '../../common/utils/tenant-scoped-prisma';
 import { TopicItemController } from './controllers/topic-item.controller';
 import { AdminExamsController } from './controllers/admin-exams.controller';
@@ -23,9 +24,10 @@ import { DocumentExtractorService } from './services/document-extractor.service'
 import { StructuredQuestionParserService } from './services/structured-question-parser.service';
 import { QuestionImportService } from './services/question-import.service';
 import { OnlineCbtService } from './services/online-cbt.service';
+import { AiDoubtService } from './services/ai-doubt.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, RedisModule],
   controllers: [
     TopicItemController,
     AdminExamsController,
@@ -50,6 +52,7 @@ import { OnlineCbtService } from './services/online-cbt.service';
     StructuredQuestionParserService,
     QuestionImportService,
     OnlineCbtService,
+    AiDoubtService,
   ],
   exports: [
     TopicItemService,
@@ -67,6 +70,8 @@ import { OnlineCbtService } from './services/online-cbt.service';
     StructuredQuestionParserService,
     QuestionImportService,
     OnlineCbtService,
+    AiDoubtService,
   ],
 })
 export class LearningModule {}
+

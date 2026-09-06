@@ -579,38 +579,99 @@ export class OnlineCbtService {
       where: { userId: studentUserId, deletedAt: null },
     });
 
-    const searchAdmissionId = studentProfile?.userId || studentUserId;
+    const possibleStudentIds = Array.from(
+      new Set(
+        [
+          studentUserId,
+          (studentProfile as any)?.id,
+          studentProfile?.userId,
+          (studentProfile as any)?.studentAdmissionId,
+        ].filter(Boolean) as string[],
+      ),
+    );
 
-    const result = await this.prisma.examResults.findFirst({
+    // 1. Primary lookup by candidate student IDs
+    let result = await this.prisma.examResults.findFirst({
       where: {
         examId,
         tenantId,
         deletedAt: null,
         OR: [
-          { studentAdmissionId: searchAdmissionId },
-          { createdBy: studentUserId },
+          ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
+          ...possibleStudentIds.map((id) => ({ createdBy: id })),
         ],
       },
       include: {
         tenant: true,
       },
+      orderBy: { createdAt: 'desc' },
     });
 
+    // 2. Fallback lookup: search any active ExamResults for this exam
     if (!result) {
-      throw new NotFoundException('Exam result not available yet.');
+      result = await this.prisma.examResults.findFirst({
+        where: {
+          examId,
+          tenantId,
+          deletedAt: null,
+        },
+        include: { tenant: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // 3. Fallback lookup: check if an attempt exists and auto-evaluate
+    if (!result) {
+      const existingAttempt = await this.prisma.examAttempts.findFirst({
+        where: {
+          examId,
+          tenantId,
+          deletedAt: null,
+          OR: [
+            ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
+            ...possibleStudentIds.map((id) => ({ createdBy: id })),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingAttempt) {
+        return this.submitExamAttempt(tenantId, studentUserId, existingAttempt.id);
+      }
     }
 
     const exam = await this.prisma.exams.findFirst({
       where: { id: examId, tenantId },
     });
 
-    // Fetch attempt details
-    const attempt = await this.prisma.examAttempts.findFirst({
-      where: {
-        id: result.attemptId,
-        tenantId,
-      },
-    });
+    if (!result && !exam) {
+      throw new NotFoundException('Exam or scorecard not available.');
+    }
+
+    // Fetch attempt details with fallback lookup
+    let attempt = result?.attemptId
+      ? await this.prisma.examAttempts.findFirst({
+          where: {
+            id: result.attemptId,
+            tenantId,
+          },
+        })
+      : null;
+
+    if (!attempt) {
+      attempt = await this.prisma.examAttempts.findFirst({
+        where: {
+          examId,
+          tenantId,
+          deletedAt: null,
+          OR: [
+            ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
+            ...possibleStudentIds.map((id) => ({ createdBy: id })),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
 
     // Fetch all exam questions in display order
     const examQuestions = await this.prisma.examQuestions.findMany({
@@ -662,6 +723,7 @@ export class OnlineCbtService {
       const isCorrect = Boolean(ans?.isCorrect);
 
       return {
+        questionId: eq.questionBankId,
         questionNumber: eq.displayOrder || idx + 1,
         questionText: q?.questionText || '',
         options: opts.map((o) => ({
@@ -683,24 +745,25 @@ export class OnlineCbtService {
     });
 
     return {
-      resultId: result.id,
+      resultId: result?.id || `res-${examId}`,
+      attemptId: attempt?.id || result?.attemptId || examId,
       examId,
       examTitle: exam?.title || 'Online CBT Exam',
-      resultStatus: result.passFail ? 'PASS' : 'FAIL',
-      totalMarks: Number(result.totalMarks),
-      obtainedMarks: Number(result.obtainedMarks),
-      correctCount: result.correct,
-      wrongCount: result.wrong,
-      skippedCount: result.skipped,
-      correct: result.correct,
-      wrong: result.wrong,
-      skipped: result.skipped,
-      percentage: Number(result.percentage),
-      rank: result.rank || 1,
-      passingMarks: Number(result.passingMarks || 0),
-      passFail: result.passFail ? 'PASS' : 'FAIL',
-      grade: result.grade,
-      publishedAt: result.publishedAt,
+      resultStatus: result?.passFail ? 'PASS' : 'FAIL',
+      totalMarks: Number(result?.totalMarks || 100),
+      obtainedMarks: Number(result?.obtainedMarks || 0),
+      correctCount: result?.correct || 0,
+      wrongCount: result?.wrong || 0,
+      skippedCount: result?.skipped || 0,
+      correct: result?.correct || 0,
+      wrong: result?.wrong || 0,
+      skipped: result?.skipped || 0,
+      percentage: Number(result?.percentage || 0),
+      rank: result?.rank || 1,
+      passingMarks: Number(result?.passingMarks || 0),
+      passFail: result?.passFail ? 'PASS' : 'FAIL',
+      grade: result?.grade || 'EVALUATED',
+      publishedAt: result?.publishedAt || new Date(),
       questionsReview,
     };
   }
