@@ -86,9 +86,9 @@ export function useChildSwitcher() {
       linkedStudents: [],
       selectedChildId: null,
       selectedChild: null,
-      setSelectedChildId: () => {},
+      setSelectedChildId: () => { },
       isLoading: false,
-      refetch: async () => {},
+      refetch: async () => { },
     };
   }
   return context;

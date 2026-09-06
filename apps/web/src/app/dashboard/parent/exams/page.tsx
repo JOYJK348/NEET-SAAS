@@ -8,6 +8,7 @@ import type {
   CompletedExamItem,
 } from '@/features/parent-portal/types/parent-portal';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   FileText,
@@ -28,22 +29,22 @@ import {
   BarChart3,
   ChevronRight,
   ShieldCheck,
+  RotateCcw,
 } from 'lucide-react';
 import { formatDate } from '@/features/students/utils/student-utils';
 import { cn } from '@/lib/utils';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { STALE_TIMES } from '@/lib/staleTimes';
+import { useQuery } from '@tanstack/react-query';
 
 export default function ParentExamsPage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
 
-  const { data, isLoading: isExamsLoading } = useQuery<ParentExamsData>({
-    queryKey: ['parent', 'exams', selectedChildId],
-    queryFn: () => parentPortalService.getExams(selectedChildId!),
-    enabled: Boolean(selectedChildId),
-    staleTime: STALE_TIMES.DEFAULT,
-    placeholderData: keepPreviousData,
+  const { data, isLoading: isExamsLoading, refetch } = useQuery<ParentExamsData>({
+    queryKey: ['parent', 'exams', selectedChildId || 'default'],
+    queryFn: () => parentPortalService.getExams(selectedChildId || 'default'),
+    enabled: true,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const isLoading = (isExamsLoading && !data) || isSwitcherLoading;
@@ -172,7 +173,16 @@ export default function ParentExamsPage() {
           </div>
 
           {/* Quick Metrics Badges */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              className="bg-white border-blue-200 text-[#0052CC] hover:bg-blue-100 text-xs font-extrabold gap-1.5 rounded-xl h-11 px-3.5 shadow-2xs cursor-pointer"
+              title="Sync Latest Exam Data"
+            >
+              <RotateCcw className="w-4 h-4 text-[#0052CC]" /> Refresh
+            </Button>
             <div className="bg-white p-3 rounded-xl border border-blue-200 text-center shadow-2xs min-w-[90px]">
               <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
                 Avg Score
@@ -201,45 +211,6 @@ export default function ParentExamsPage() {
         </div>
       </div>
 
-      {/* ── Upcoming Exams Section ── */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-[#0052CC]" />
-          Upcoming Scheduled Exams ({upcoming.length})
-        </h3>
-
-        {upcoming.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcoming.map((exam) => (
-              <Card
-                key={exam.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-2xs hover:border-blue-300 transition-all"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-extrabold text-sm text-[#0B2447] truncate">{exam.title}</h4>
-                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0">
-                    Scheduled
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-500 pt-1">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-[#0052CC]" />
-                    {formatDate(exam.startDate)}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-[#0052CC]" />
-                    {exam.durationMins || 180} Mins
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card className="rounded-2xl border border-slate-200 bg-white p-5 text-center text-xs font-medium text-slate-400 shadow-2xs">
-            No upcoming exams scheduled right now.
-          </Card>
-        )}
-      </div>
 
       {/* ── Interactive Exam Selector & Subject Breakdown Section ── */}
       <div className="space-y-4 pt-2">

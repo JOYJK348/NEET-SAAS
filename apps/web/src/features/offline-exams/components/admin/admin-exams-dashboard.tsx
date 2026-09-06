@@ -35,6 +35,32 @@ import {
   Trash2,
 } from 'lucide-react';
 
+function getEffectiveDuration(exam: {
+  durationMinutes?: number;
+  examWindowStart?: string | Date;
+  examWindowEnd?: string | Date;
+  scheduledStartAt?: string | Date;
+  scheduledEndAt?: string | Date;
+}): number {
+  if (exam.examWindowStart && exam.examWindowEnd) {
+    const startMs = new Date(exam.examWindowStart).getTime();
+    const endMs = new Date(exam.examWindowEnd).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  if (exam.scheduledStartAt && exam.scheduledEndAt) {
+    const startMs = new Date(exam.scheduledStartAt).getTime();
+    const endMs = new Date(exam.scheduledEndAt).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  return exam.durationMinutes || 120;
+}
+
 export function AdminExamsDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -46,6 +72,7 @@ export function AdminExamsDashboard() {
   const [reviewModalExamId, setReviewModalExamId] = useState<string | null>(null);
   const [analyticsModalExamId, setAnalyticsModalExamId] = useState<string | null>(null);
   const [uploadModalExam, setUploadModalExam] = useState<ExamItem | null>(null);
+  const [deleteModalExam, setDeleteModalExam] = useState<(ExamItem & { allExamIds: string[] }) | null>(null);
 
   const { batches } = useBatches();
   const batchMap = new Map(batches.map((b) => [b.id, b.name]));
@@ -445,7 +472,7 @@ export function AdminExamsDashboard() {
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1 font-bold text-[#0B2447]">
                           <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                          {exam.durationMinutes}m (+{exam.graceMinutes}m)
+                          {getEffectiveDuration(exam)}m (+{exam.graceMinutes}m)
                         </span>
                         <span className="flex items-center gap-1 font-bold text-[#0B2447]">
                           <Award className="w-3.5 h-3.5 text-amber-500" />
@@ -538,11 +565,7 @@ export function AdminExamsDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            if (confirm(`Are you sure you want to delete exam "${exam.title}"?`)) {
-                              exam.allExamIds.forEach((id) => deleteExamMutation.mutate(id));
-                            }
-                          }}
+                          onClick={() => setDeleteModalExam(exam)}
                           disabled={deleteExamMutation.isPending}
                           className="h-8 bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 rounded-xl text-[11px] font-bold px-2 cursor-pointer"
                           title="Delete Exam"
@@ -579,7 +602,7 @@ export function AdminExamsDashboard() {
                       <div className="flex items-center gap-1.5 text-[#0B2447] font-extrabold text-xs">
                         <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
                         <span>
-                          {exam.durationMinutes}m (+{exam.graceMinutes}m grace)
+                          {getEffectiveDuration(exam)}m (+{exam.graceMinutes}m grace)
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-medium">
@@ -680,11 +703,7 @@ export function AdminExamsDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            if (confirm(`Are you sure you want to delete exam "${exam.title}"?`)) {
-                              exam.allExamIds.forEach((id) => deleteExamMutation.mutate(id));
-                            }
-                          }}
+                          onClick={() => setDeleteModalExam(exam)}
                           disabled={deleteExamMutation.isPending}
                           className="h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 rounded-xl text-xs font-bold gap-1 px-2.5 cursor-pointer shrink-0"
                           title="Delete Exam"
@@ -732,6 +751,61 @@ export function AdminExamsDashboard() {
           isOpen={!!analyticsModalExamId}
           onClose={() => setAnalyticsModalExamId(null)}
         />
+      )}
+
+      {deleteModalExam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-2xl shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-slate-900 leading-snug">
+                  Delete Examination?
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Are you sure you want to delete <span className="font-extrabold text-slate-800">"{deleteModalExam.title}"</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50/70 border border-rose-200/80 rounded-2xl text-[11px] font-semibold text-rose-800 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>This exam schedule will be deleted for all target batches.</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteModalExam(null)}
+                disabled={deleteExamMutation.isPending}
+                className="h-10 rounded-xl text-xs font-bold px-4 border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const idsToDelete = deleteModalExam.allExamIds && deleteModalExam.allExamIds.length > 0
+                    ? deleteModalExam.allExamIds
+                    : [deleteModalExam.id];
+                  idsToDelete.forEach((id) => deleteExamMutation.mutate(id));
+                  setDeleteModalExam(null);
+                }}
+                disabled={deleteExamMutation.isPending}
+                className="h-10 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs px-5 rounded-xl shadow-xs gap-1.5 cursor-pointer"
+              >
+                {deleteExamMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" /> Confirm Delete
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

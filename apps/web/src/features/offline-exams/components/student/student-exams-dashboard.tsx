@@ -39,6 +39,32 @@ const formatExamDateTime = (dateStr?: string | null) => {
   });
 };
 
+const getEffectiveDuration = (exam: {
+  durationMinutes?: number;
+  examWindowStart?: string | Date;
+  examWindowEnd?: string | Date;
+  scheduledStartAt?: string | Date;
+  scheduledEndAt?: string | Date;
+}): number => {
+  if (exam.examWindowStart && exam.examWindowEnd) {
+    const startMs = new Date(exam.examWindowStart).getTime();
+    const endMs = new Date(exam.examWindowEnd).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  if (exam.scheduledStartAt && exam.scheduledEndAt) {
+    const startMs = new Date(exam.scheduledStartAt).getTime();
+    const endMs = new Date(exam.scheduledEndAt).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  return exam.durationMinutes || 120;
+};
+
 export function StudentExamsDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('ALL');
@@ -72,7 +98,7 @@ export function StudentExamsDashboard() {
   // 2. Deduplicate identical exam instances (same title, windowStart, durationMinutes)
   const deduplicatedExamsMap = new Map<string, StudentExamItem>();
   Array.from(uniqueExamsMap.values()).forEach((exam) => {
-    const key = `${exam.title.trim().toLowerCase()}-${exam.examWindowStart || ''}-${exam.durationMinutes}`;
+    const key = `${exam.title.trim().toLowerCase()}-${exam.examWindowStart || ''}-${getEffectiveDuration(exam)}`;
     if (!deduplicatedExamsMap.has(key)) {
       deduplicatedExamsMap.set(key, exam);
     } else {
@@ -279,7 +305,7 @@ export function StudentExamsDashboard() {
 
               let calculatedEndMs = exam.submission.calculatedEndAt
                 ? new Date(exam.submission.calculatedEndAt).getTime()
-                : startedAtMs + exam.durationMinutes * 60 * 1000;
+                : startedAtMs + getEffectiveDuration(exam) * 60 * 1000;
 
               if (windowEndMs && calculatedEndMs > windowEndMs) {
                 calculatedEndMs = windowEndMs;
@@ -356,7 +382,7 @@ export function StudentExamsDashboard() {
                     ) : (
                       <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                         <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                        {exam.durationMinutes} mins
+                        {getEffectiveDuration(exam)} mins
                       </span>
                     )}
                   </div>
@@ -469,7 +495,7 @@ export function StudentExamsDashboard() {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-[11px] font-semibold text-slate-700">
                   <li>
-                    Your <strong>{startingExam.durationMinutes}-minute timer</strong> will begin
+                    Your <strong>{getEffectiveDuration(startingExam)}-minute timer</strong> will begin
                     immediately upon confirmation.
                   </li>
                   <li>

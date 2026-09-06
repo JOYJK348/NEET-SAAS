@@ -112,7 +112,12 @@ export interface ParentExamsData {
     id: string;
     title: string;
     startDate: string | Date;
+    endDate?: string | Date;
     durationMins?: number;
+    totalMarks?: number;
+    passingMarks?: number;
+    mode?: string;
+    examType?: string;
     status: string;
   }>;
   completed: CompletedExamItem[];

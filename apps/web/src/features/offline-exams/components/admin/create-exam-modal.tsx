@@ -401,7 +401,18 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   <input
                     type="datetime-local"
                     value={examWindowStart}
-                    onChange={(e) => setExamWindowStart(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExamWindowStart(val);
+                      if (val && examWindowEnd) {
+                        const startMs = new Date(val).getTime();
+                        const endMs = new Date(examWindowEnd).getTime();
+                        if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+                          const diff = Math.round((endMs - startMs) / (1000 * 60));
+                          if (diff > 0) setDurationMinutes(diff);
+                        }
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>
@@ -413,7 +424,18 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   <input
                     type="datetime-local"
                     value={examWindowEnd}
-                    onChange={(e) => setExamWindowEnd(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExamWindowEnd(val);
+                      if (examWindowStart && val) {
+                        const startMs = new Date(examWindowStart).getTime();
+                        const endMs = new Date(val).getTime();
+                        if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+                          const diff = Math.round((endMs - startMs) / (1000 * 60));
+                          if (diff > 0) setDurationMinutes(diff);
+                        }
+                      }
+                    }}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 font-medium"
                   />
                 </div>

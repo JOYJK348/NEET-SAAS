@@ -28,6 +28,33 @@ interface StudentExamRoomProps {
   examId: string;
 }
 
+const getEffectiveDuration = (exam?: {
+  durationMinutes?: number;
+  examWindowStart?: string | Date;
+  examWindowEnd?: string | Date;
+  scheduledStartAt?: string | Date;
+  scheduledEndAt?: string | Date;
+}): number => {
+  if (!exam) return 120;
+  if (exam.examWindowStart && exam.examWindowEnd) {
+    const startMs = new Date(exam.examWindowStart).getTime();
+    const endMs = new Date(exam.examWindowEnd).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  if (exam.scheduledStartAt && exam.scheduledEndAt) {
+    const startMs = new Date(exam.scheduledStartAt).getTime();
+    const endMs = new Date(exam.scheduledEndAt).getTime();
+    if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+      const diff = Math.round((endMs - startMs) / (1000 * 60));
+      if (diff > 0) return diff;
+    }
+  }
+  return exam.durationMinutes || 120;
+};
+
 export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   const router = useRouter();
   const { data: exam, isLoading, refetch } = useStudentExamDetail(examId);
@@ -76,7 +103,7 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   let calculatedEndMs = exam.submission?.calculatedEndAt
     ? new Date(exam.submission.calculatedEndAt).getTime()
     : startedAtMs
-      ? startedAtMs + exam.durationMinutes * 60 * 1000
+      ? startedAtMs + getEffectiveDuration(exam) * 60 * 1000
       : null;
 
   if (calculatedEndMs && windowEndMs && calculatedEndMs > windowEndMs) {
@@ -176,7 +203,7 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
               LIVE SESSION
             </span>
             <span className="text-xs text-slate-500 font-mono font-medium">
-              Duration: {exam.durationMinutes} mins
+              Duration: {getEffectiveDuration(exam)} mins
             </span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 mt-1">{exam.title}</h1>

@@ -520,7 +520,18 @@ function CreateExamContent() {
                   <Input
                     type="datetime-local"
                     value={examWindowStart}
-                    onChange={(e) => setExamWindowStart(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExamWindowStart(val);
+                      if (val && examWindowEnd) {
+                        const startMs = new Date(val).getTime();
+                        const endMs = new Date(examWindowEnd).getTime();
+                        if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+                          const diff = Math.round((endMs - startMs) / (1000 * 60));
+                          if (diff > 0) setDurationMinutes(diff);
+                        }
+                      }
+                    }}
                     className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>
@@ -532,7 +543,18 @@ function CreateExamContent() {
                   <Input
                     type="datetime-local"
                     value={examWindowEnd}
-                    onChange={(e) => setExamWindowEnd(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setExamWindowEnd(val);
+                      if (examWindowStart && val) {
+                        const startMs = new Date(examWindowStart).getTime();
+                        const endMs = new Date(val).getTime();
+                        if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
+                          const diff = Math.round((endMs - startMs) / (1000 * 60));
+                          if (diff > 0) setDurationMinutes(diff);
+                        }
+                      }
+                    }}
                     className="rounded-xl h-11 border-slate-200 focus:border-[#0052CC] text-xs font-medium"
                   />
                 </div>

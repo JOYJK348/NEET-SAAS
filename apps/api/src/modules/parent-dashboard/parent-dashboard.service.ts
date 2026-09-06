@@ -550,6 +550,36 @@ export class ParentDashboardService {
   async getExams(tenantId: string, parentUserId: string, studentId: string) {
     const admission = await this.getStudentAdmission(tenantId, studentId);
 
+    let batchIds: string[] = [];
+    if (admission) {
+      const enrollments = await this.prisma.studentBatchEnrollments.findMany({
+        where: { studentAdmissionId: admission.id, tenantId, deletedAt: null },
+      });
+      batchIds = enrollments.map((e) => e.batchId).filter(Boolean);
+    }
+    if (batchIds.length === 0) {
+      const allBatches = await this.prisma.batches.findMany({
+        where: { tenantId, deletedAt: null },
+        select: { id: true },
+        take: 100,
+      });
+      batchIds = allBatches.map((b) => b.id);
+    }
+
+    const orConditions: any[] = [
+      { batchId: 'ALL' },
+      { batchId: 'batch-default' },
+      { batchId: '' },
+    ];
+
+    if (batchIds.length > 0) {
+      orConditions.push({ batchId: { in: batchIds } });
+    }
+
+    if (admission?.courseId) {
+      orConditions.push({ courseId: admission.courseId });
+    }
+
     const submissions = admission
       ? await this.prisma.examSubmissions.findMany({
           where: {
@@ -562,31 +592,68 @@ export class ParentDashboardService {
       : [];
 
     const now = new Date();
-    const submittedExamIds = new Set(submissions.map((s) => s.examId));
+    const submittedExamIds = new Set(
+      submissions
+        .filter((s) => s.evaluationStatus === 'COMPLETED' || s.isResultsPublished || s.status === 'SUBMITTED')
+        .map((s) => s.examId),
+    );
 
     const completedSubmissions = submissions.filter(
       (s) => s.isResultsPublished || s.evaluationStatus === 'COMPLETED',
     );
 
-    const allExams = await this.prisma.exams.findMany({
-      where: { tenantId, deletedAt: null },
+    let allExams = await this.prisma.exams.findMany({
+      where: {
+        tenantId,
+        publishStatus: {
+          in: ['PUBLISHED', 'SCHEDULED', 'LOCKED', 'UNDER_REVIEW', 'ADMIN_REVIEW'],
+        },
+        deletedAt: null,
+        OR: orConditions,
+      },
       orderBy: { scheduledStartAt: 'asc' },
     });
+
+    if (allExams.length === 0) {
+      allExams = await this.prisma.exams.findMany({
+        where: {
+          tenantId,
+          publishStatus: {
+            in: ['PUBLISHED', 'SCHEDULED', 'LOCKED', 'UNDER_REVIEW', 'ADMIN_REVIEW'],
+          },
+          deletedAt: null,
+        },
+        orderBy: { scheduledStartAt: 'asc' },
+      });
+    }
 
     const upcoming = allExams
       .filter((e) => {
         if (submittedExamIds.has(e.id)) return false;
-        if (e.isClosed || e.publishStatus === 'RESULT_PUBLISHED' || e.publishStatus === 'ARCHIVED') return false;
-        if (new Date(e.scheduledStartAt) < now) return false;
         return true;
       })
-      .map((e) => ({
-        id: e.id,
-        title: e.title,
-        startDate: e.scheduledStartAt,
-        durationMins: e.durationMinutes,
-        status: 'UPCOMING',
-      }));
+      .map((e) => {
+        const winStart = e.examWindowStart ? new Date(e.examWindowStart) : new Date(e.scheduledStartAt);
+        const winEnd = e.examWindowEnd ? new Date(e.examWindowEnd) : new Date(e.scheduledEndAt);
+        let status = 'SCHEDULED';
+        if (now >= winStart && (!winEnd || now <= winEnd)) {
+          status = 'LIVE / ACTIVE';
+        } else if (winEnd && now > winEnd) {
+          status = 'PUBLISHED';
+        }
+        return {
+          id: e.id,
+          title: e.title,
+          startDate: e.examWindowStart || e.scheduledStartAt,
+          endDate: e.examWindowEnd || e.scheduledEndAt,
+          durationMins: e.durationMinutes,
+          totalMarks: e.totalMarks,
+          passingMarks: e.passingMarks,
+          mode: e.mode,
+          examType: e.examType,
+          status,
+        };
+      });
 
     const dbSubjects = await this.prisma.subjects.findMany({
       where: { tenantId, deletedAt: null },
