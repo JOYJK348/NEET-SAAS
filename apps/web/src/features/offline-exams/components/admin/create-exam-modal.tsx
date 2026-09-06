@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
-import { useCreateExam } from '../../hooks/use-admin-exams';
+import { useCreateExam, useCheckExamConflict } from '../../hooks/use-admin-exams';
 import type { SectionConfigItem } from '../../types/admin-exams';
+import { toast } from 'sonner';
 import {
   Calendar,
   Clock,
@@ -61,6 +62,13 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   ]);
 
   const createExamMutation = useCreateExam();
+  const checkConflictMutation = useCheckExamConflict();
+
+  const [conflictResult, setConflictResult] = useState<{
+    hasConflict: boolean;
+    conflicts: any[];
+  } | null>(null);
+  const [conflictChecked, setConflictChecked] = useState(false);
 
   if (!isOpen) return null;
 
@@ -85,6 +93,55 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
       return new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]).toISOString();
     }
     return new Date(str).toISOString();
+  };
+
+  const handleRunConflictCheck = () => {
+    if (!title || !examWindowStart || !examWindowEnd) {
+      toast.error('Please enter Exam Title and Exam Window Start/End dates first!');
+      return;
+    }
+
+    const startIso = parseLocalDateTime(scheduledStartAt);
+    const futureDate = new Date(Date.now() + durationMinutes * 60 * 1000);
+    const futureIso = futureDate.toISOString();
+
+    const endIso = scheduledEndAt ? parseLocalDateTime(scheduledEndAt) : futureIso;
+    const winStartIso = examWindowStart ? parseLocalDateTime(examWindowStart) : startIso;
+    const winEndIso = examWindowEnd ? parseLocalDateTime(examWindowEnd) : endIso;
+
+    const selectedCourseId = courseId || courses[0]?.id || 'course-default';
+    const finalBatchIds =
+      selectedBatchIds.length > 0 ? selectedBatchIds : [batches[0]?.id || 'batch-default'];
+
+    checkConflictMutation.mutate(
+      {
+        courseId: selectedCourseId,
+        batchIds: finalBatchIds,
+        examWindowStart: winStartIso,
+        examWindowEnd: winEndIso,
+        scheduledStartAt: startIso,
+        scheduledEndAt: endIso,
+      },
+      {
+        onSuccess: (data) => {
+          setConflictResult(data);
+          setConflictChecked(true);
+          if (data.hasConflict) {
+            toast.warning('Schedule conflicts detected!', {
+              description: `${data.conflicts.length} conflict(s) found. Please review details below.`,
+            });
+          } else {
+            toast.success('No Schedule Conflicts Found! ⚡', {
+              description: 'Target Batches & Time slots are 100% available for this exam window.',
+            });
+          }
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || 'Failed to check conflicts';
+          toast.error(msg);
+        },
+      },
+    );
   };
 
   const handleSubmit = () => {
@@ -528,9 +585,19 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 </div>
               </div>
 
-              {/* Summary Box */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <h4 className="font-bold text-slate-900 text-sm mb-2">Exam Creation Summary</h4>
+              {/* Summary Box & Conflict Results */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-sm">Exam Creation Summary</h4>
+                  <button
+                    type="button"
+                    onClick={handleRunConflictCheck}
+                    disabled={checkConflictMutation.isPending || !title}
+                    className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {checkConflictMutation.isPending ? 'Checking...' : '⚡ Check Conflict'}
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 gap-2 text-slate-600">
                   <p>
                     Title: <span className="text-slate-900 font-semibold">{title || 'Untitled Exam'}</span>
@@ -570,12 +637,57 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   </p>
                 </div>
               </div>
+
+              {/* Conflict Alert Display Box */}
+              {conflictChecked && conflictResult && (
+                <div className="pt-1">
+                  {!conflictResult.hasConflict ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-start gap-3 text-emerald-900 animate-in fade-in duration-200">
+                      <div className="w-5 h-5 text-emerald-600 font-bold shrink-0 mt-0.5">✓</div>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-emerald-800">
+                          ✅ No Schedule Conflicts Detected!
+                        </h4>
+                        <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                          Target Batches and Course time slots are 100% clear for this exam window. You can safely save this exam.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 space-y-2 text-rose-900 animate-in fade-in duration-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-5 h-5 text-rose-600 font-bold shrink-0 mt-0.5">⚠️</div>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-rose-800">
+                            ⚠️ Schedule Conflict Detected ({conflictResult.conflicts.length} conflict(s))
+                          </h4>
+                          <p className="text-[11px] text-rose-700 font-medium mt-0.5">
+                            The following exam(s) or live class schedule(s) overlap with this exam window:
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 pl-8 text-xs font-semibold">
+                        {conflictResult.conflicts.map((conf: any, idx: number) => (
+                          <div key={idx} className="bg-white/90 border border-rose-200 p-2.5 rounded-lg text-rose-900 shadow-sm">
+                            <p className="font-extrabold text-rose-950">{conf.message || conf.title}</p>
+                            {conf.batchName && (
+                              <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold mt-1 inline-block">
+                                Batch: {conf.batchName}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer Controls */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/80">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50/80 gap-2">
           <button
             disabled={step === 1}
             onClick={() => setStep((step - 1) as any)}
@@ -584,22 +696,33 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
             Previous
           </button>
 
-          {step < 4 ? (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setStep((step + 1) as any)}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition"
+              type="button"
+              onClick={handleRunConflictCheck}
+              disabled={checkConflictMutation.isPending || !title}
+              className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              Next Step
+              {checkConflictMutation.isPending ? 'Checking...' : '⚡ Check Conflict'}
             </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={createExamMutation.isPending || !title}
-              className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold shadow-lg shadow-emerald-900/20 transition"
-            >
-              {createExamMutation.isPending ? 'Saving Exam...' : 'Create Exam (Save Draft)'}
-            </button>
-          )}
+
+            {step < 4 ? (
+              <button
+                onClick={() => setStep((step + 1) as any)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
+              >
+                Next Step
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={createExamMutation.isPending || !title}
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold shadow-lg shadow-emerald-900/20 transition cursor-pointer"
+              >
+                {createExamMutation.isPending ? 'Saving Exam...' : 'Create Exam (Save Draft)'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

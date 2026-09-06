@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useAdminExams, usePublishExam } from '../../hooks/use-admin-exams';
+import { useAdminExams, usePublishExam, useDeleteExam } from '../../hooks/use-admin-exams';
 import { useBatches } from '@/features/students/hooks/use-students';
+import { toast } from 'sonner';
 import type { ExamItem } from '../../types/admin-exams';
 import { CreateExamModal } from './create-exam-modal';
 import { LiveDashboardModal } from './live-dashboard-modal';
@@ -31,6 +32,7 @@ import {
   FileCheck,
   FileX,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 
 export function AdminExamsDashboard() {
@@ -48,20 +50,38 @@ export function AdminExamsDashboard() {
   const { batches } = useBatches();
   const batchMap = new Map(batches.map((b) => [b.id, b.name]));
 
-  const { data: response, isLoading, refetch } = useAdminExams();
+  const { data: response, isLoading, refetch } = useAdminExams({ limit: 100 });
   const publishExamMutation = usePublishExam();
+  const deleteExamMutation = useDeleteExam();
 
   const rawExams = response?.data || [];
 
-  // Deduplicate and group exams with same title & course into a single row with multi-batch badges
+  // Sort rawExams newest first (createdAt DESC / scheduledStartAt DESC)
+  const sortedRawExams = [...rawExams].sort((a, b) => {
+    const timeA = new Date((a as any).createdAt || a.examWindowStart || 0).getTime();
+    const timeB = new Date((b as any).createdAt || b.examWindowStart || 0).getTime();
+    return timeB - timeA;
+  });
+
+  // Group and map exams cleanly so distinct exams are sorted newest first
   const groupedExamsMap = new Map<
     string,
     ExamItem & { batchNames: string[]; allExamIds: string[] }
   >();
 
-  rawExams.forEach((exam) => {
-    const groupKey = `${exam.title.trim().toLowerCase()}-${exam.courseId}-${exam.durationMinutes}`;
-    const batchName = batchMap.get(exam.batchId) || exam.batchId;
+  sortedRawExams.forEach((exam) => {
+    const titleKey = exam.title.trim().toLowerCase();
+    const dateKey = new Date(exam.examWindowStart || exam.scheduledStartAt || 0).toISOString().slice(0, 10);
+    const groupKey = `${titleKey}-${dateKey}-${exam.publishStatus}`;
+
+    let batchName = batchMap.get(exam.batchId);
+    if (!batchName) {
+      if (exam.batchId === 'ALL' || exam.batchId === 'batch-default') {
+        batchName = 'All Batches';
+      } else {
+        batchName = exam.batchId || 'Batch';
+      }
+    }
 
     if (!groupedExamsMap.has(groupKey)) {
       groupedExamsMap.set(groupKey, {
@@ -302,6 +322,7 @@ export function AdminExamsDashboard() {
           {tabs.map((tab) => (
             <button
               key={tab.key}
+              suppressHydrationWarning
               onClick={() => setActiveTab(tab.key)}
               className={cn(
                 'px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
@@ -320,6 +341,7 @@ export function AdminExamsDashboard() {
           <Search className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             type="text"
+            suppressHydrationWarning
             placeholder="Search exams by title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -328,197 +350,212 @@ export function AdminExamsDashboard() {
         </div>
       </div>
 
-      {/* Professional Mobile Card Layout (Visible on mobile screens) */}
-      <div className="block md:hidden space-y-4">
-        {isLoading ? (
-          <div className="p-8 text-center text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">
-            Loading exam schedules...
-          </div>
-        ) : filteredExams.length === 0 ? (
-          <div className="p-8 text-center border border-dashed rounded-2xl border-slate-200 bg-white shadow-2xs space-y-2">
-            <p className="text-xs font-bold text-slate-500">No exams found</p>
-          </div>
-        ) : (
-          filteredExams.map((exam) => (
-            <Card
-              key={exam.id}
-              className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden"
-            >
-              {/* Card Header Strip */}
-              <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 p-4 border-b border-blue-200 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-extrabold text-[#0B2447] text-base leading-snug">
-                    {exam.title}
-                  </h3>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    {getStatusBadge(exam.publishStatus)}
-                    {getQPStatusBadge(exam.questionPaperFileId)}
-                  </div>
-                </div>
+      {/* Unified Responsive Exam List & Table Container */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+        {/* Table Header (Hidden on Mobile, Visible on Tablet/Desktop) */}
+        <div className="hidden md:grid md:grid-cols-12 gap-3 px-6 py-4 bg-slate-50/80 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+          <div className="col-span-3">Exam Details</div>
+          <div className="col-span-2">Timing & Window</div>
+          <div className="col-span-2">Marks Criteria</div>
+          <div className="col-span-2">Status & QP</div>
+          <div className="col-span-3 text-right">Actions</div>
+        </div>
 
-                {/* Target Batches & QP Status Badges */}
-                <div className="flex flex-wrap items-center gap-1">
-                  {exam.batchNames.map((bName, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-1 text-[10px] font-extrabold text-[#0052CC] bg-white px-2 py-0.5 rounded-md border border-blue-200 shadow-2xs"
-                    >
-                      <Layers className="w-3 h-3 text-[#0052CC]" />
-                      {bName}
-                    </span>
-                  ))}
-                </div>
-
-                {exam.description && (
-                  <p className="text-xs text-slate-600 font-medium line-clamp-2 leading-relaxed">
-                    {exam.description}
-                  </p>
-                )}
+        {/* List Content */}
+        <div className="divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="py-16 text-center space-y-3">
+              <Loader2 className="w-8 h-8 text-[#0052CC] animate-spin mx-auto" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Loading exam schedules...
+              </p>
+            </div>
+          ) : filteredExams.length === 0 ? (
+            <div className="py-16 text-center space-y-3 px-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] flex items-center justify-center mx-auto border border-blue-100">
+                <FileText className="w-6 h-6" />
               </div>
+              <h3 className="text-sm font-extrabold text-[#0B2447]">No exams found</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                No exams match your current filter or search criteria. Click &quot;Create New Exam&quot; to schedule a test.
+              </p>
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="mt-2 h-9 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-bold gap-1.5 px-4 shadow-sm cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Create New Exam
+              </Button>
+            </div>
+          ) : (
+            filteredExams.map((exam) => {
+              const isDraft = exam.publishStatus === 'DRAFT';
+              const isLive = exam.publishStatus === 'PUBLISHED';
+              const isResultsLive = exam.publishStatus === 'RESULT_PUBLISHED';
+              const isUnderReview =
+                exam.publishStatus === 'UNDER_REVIEW' || exam.publishStatus === 'ADMIN_REVIEW';
 
-              {/* Card Meta Stats Grid */}
-              <div className="p-4 bg-white space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
-                      Duration & Grace
-                    </span>
-                    <span className="font-extrabold text-[#0B2447] flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                      {exam.durationMinutes}m (+{exam.graceMinutes}m)
-                    </span>
-                  </div>
+              const borderAccentColor = isLive
+                ? 'border-l-emerald-500'
+                : isResultsLive
+                  ? 'border-l-teal-500'
+                  : isUnderReview
+                    ? 'border-l-amber-500'
+                    : 'border-l-[#0052CC]';
 
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
-                      Marks (Total / Pass)
-                    </span>
-                    <span className="font-extrabold text-[#0B2447] flex items-center gap-1 mt-0.5">
-                      <Award className="w-3.5 h-3.5 text-amber-500" />
-                      {exam.totalMarks} ({exam.passingMarks})
-                    </span>
-                  </div>
-                </div>
+              return (
+                <div
+                  key={exam.id}
+                  className={cn(
+                    'transition-colors hover:bg-blue-50/30 border-l-4 p-4 sm:p-5 md:p-0 md:border-l-0',
+                    borderAccentColor,
+                  )}
+                >
+                  {/* MOBILE VIEW (< 768px): Sleek, continuous list item without ugly box-in-box feel */}
+                  <div className="block md:hidden space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-extrabold text-[#0B2447] text-sm sm:text-base leading-snug">
+                          {exam.title}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          {exam.batchNames.map((bName, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1 text-[10px] font-black text-[#0052CC] bg-blue-50/90 px-2 py-0.5 rounded-md border border-blue-200/80"
+                            >
+                              <Layers className="w-2.5 h-2.5 text-[#0052CC]" />
+                              {bName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex flex-col items-end gap-1">
+                        {getStatusBadge(exam.publishStatus)}
+                      </div>
+                    </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-medium text-slate-600">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" /> Exam Window:
-                  </span>
-                  <span className="font-bold text-[#0B2447]">
-                    {new Date(exam.examWindowStart).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* Card Action Buttons */}
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUploadModalExam(exam)}
-                    className={cn(
-                      'h-9 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all',
-                      exam.questionPaperFileId
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                        : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse',
+                    {exam.description && (
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                        {exam.description}
+                      </p>
                     )}
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    {exam.questionPaperFileId ? '✓ QP Uploaded' : '⚠️ Upload QP'}
-                  </Button>
 
-                  {exam.publishStatus === 'DRAFT' && (
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))
-                      }
-                      disabled={publishExamMutation.isPending}
-                      className="h-9 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-2xs px-3"
-                    >
-                      {publishExamMutation.isPending ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        'Publish Exam'
-                      )}
-                    </Button>
-                  )}
+                    {/* Metadata Strip */}
+                    <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2 pt-1 border-t border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 font-bold text-[#0B2447]">
+                          <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
+                          {exam.durationMinutes}m (+{exam.graceMinutes}m)
+                        </span>
+                        <span className="flex items-center gap-1 font-bold text-[#0B2447]">
+                          <Award className="w-3.5 h-3.5 text-amber-500" />
+                          {exam.totalMarks} Marks
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        {new Date(exam.examWindowStart).toLocaleDateString()}
+                      </span>
+                    </div>
 
-                  {exam.publishStatus === 'PUBLISHED' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/exams/${exam.id}/live`)}
-                      className="h-9 bg-emerald-50 text-emerald-700 border-emerald-200 rounded-xl text-xs font-bold gap-1 px-3"
-                    >
-                      <Activity className="w-3.5 h-3.5" /> Live Monitor
-                    </Button>
-                  )}
+                    {/* QP Badge & Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                      <div>{getQPStatusBadge(exam.questionPaperFileId)}</div>
 
-                  {(exam.publishStatus === 'UNDER_REVIEW' ||
-                    exam.publishStatus === 'ADMIN_REVIEW') && (
-                    <Button
-                      size="sm"
-                      onClick={() => setReviewModalExamId(exam.id)}
-                      className="h-9 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold shadow-2xs gap-1 px-3"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" /> Review Queue
-                    </Button>
-                  )}
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        {isDraft && !exam.questionPaperFileId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setUploadModalExam(exam)}
+                            className="h-8 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 rounded-xl text-[11px] font-extrabold gap-1 px-2.5 cursor-pointer"
+                          >
+                            <Upload className="w-3 h-3" /> Upload QP
+                          </Button>
+                        )}
 
-                  {exam.publishStatus === 'RESULT_PUBLISHED' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/dashboard/exams/${exam.id}/analytics`)}
-                      className="h-9 bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200 rounded-xl text-xs font-bold gap-1 px-3"
-                    >
-                      <BarChart3 className="w-3.5 h-3.5" /> Analytics
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
+                        {isDraft && exam.questionPaperFileId && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))}
+                              disabled={publishExamMutation.isPending}
+                              className="h-8 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-[11px] font-extrabold px-3 shadow-2xs cursor-pointer"
+                            >
+                              Publish Exam
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setUploadModalExam(exam)}
+                              className="h-8 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 rounded-xl text-[11px] font-bold px-2 cursor-pointer"
+                              title="Replace QP"
+                            >
+                              <Upload className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
 
-      {/* Desktop Roster Data Table Card (Hidden on mobile) */}
-      <Card className="hidden md:block rounded-2xl border-slate-200 bg-white shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-[11px] border-b border-slate-200">
-              <tr>
-                <th className="py-3.5 px-4">Exam Details</th>
-                <th className="py-3.5 px-4">Duration & Window</th>
-                <th className="py-3.5 px-4">Marks Criteria</th>
-                <th className="py-3.5 px-4">Question Paper Status</th>
-                <th className="py-3.5 px-4">Publish Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400 font-semibold">
-                    Loading exam schedules...
-                  </td>
-                </tr>
-              ) : filteredExams.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center text-slate-400 font-semibold">
-                    No exams found matching your filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredExams.map((exam) => (
-                  <tr key={exam.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-4 px-4">
-                      <p className="font-extrabold text-[#0B2447] text-sm">{exam.title}</p>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        {isLive && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/exams/${exam.id}/live`)}
+                            className="h-8 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 rounded-xl text-[11px] font-extrabold gap-1 px-3 cursor-pointer"
+                          >
+                            <Activity className="w-3 h-3" /> Monitor
+                          </Button>
+                        )}
+
+                        {isUnderReview && (
+                          <Button
+                            size="sm"
+                            onClick={() => setReviewModalExamId(exam.id)}
+                            className="h-8 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-extrabold gap-1 px-3 cursor-pointer"
+                          >
+                            <ShieldCheck className="w-3 h-3" /> Review
+                          </Button>
+                        )}
+
+                        {isResultsLive && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/exams/${exam.id}/analytics`)}
+                            className="h-8 bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200 rounded-xl text-[11px] font-extrabold gap-1 px-3 cursor-pointer"
+                          >
+                            <BarChart3 className="w-3 h-3" /> Analytics
+                          </Button>
+                        )}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete exam "${exam.title}"?`)) {
+                              exam.allExamIds.forEach((id) => deleteExamMutation.mutate(id));
+                            }
+                          }}
+                          disabled={deleteExamMutation.isPending}
+                          className="h-8 bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 rounded-xl text-[11px] font-bold px-2 cursor-pointer"
+                          title="Delete Exam"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 768px): 12-column grid layout with clean 3-col Actions space */}
+                  <div className="hidden md:grid md:grid-cols-12 gap-3 px-6 py-4 items-center">
+                    {/* Exam Details (col-span-3) */}
+                    <div className="col-span-3 min-w-0">
+                      <p className="font-extrabold text-[#0B2447] text-sm truncate">{exam.title}</p>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
                         {exam.batchNames.map((bName, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200"
+                            className="inline-flex items-center gap-1 text-[10px] font-black text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200"
                           >
                             <Layers className="w-3 h-3 text-[#0052CC]" />
                             {bName}
@@ -528,113 +565,132 @@ export function AdminExamsDashboard() {
                       <p className="text-[11px] text-slate-500 mt-1 truncate max-w-xs font-medium">
                         {exam.description || 'No description provided'}
                       </p>
-                    </td>
+                    </div>
 
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-1.5 text-[#0B2447] font-bold">
+                    {/* Duration & Window (col-span-2) */}
+                    <div className="col-span-2">
+                      <div className="flex items-center gap-1.5 text-[#0B2447] font-extrabold text-xs">
                         <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
                         <span>
-                          {exam.durationMinutes} mins (+{exam.graceMinutes}m grace)
+                          {exam.durationMinutes}m (+{exam.graceMinutes}m grace)
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1 font-medium">
                         <Calendar className="w-3 h-3 text-slate-400" />
                         <span>Window: {new Date(exam.examWindowStart).toLocaleDateString()}</span>
                       </div>
-                    </td>
+                    </div>
 
-                    <td className="py-4 px-4">
-                      <p className="font-extrabold text-[#0B2447]">{exam.totalMarks} Marks</p>
+                    {/* Marks Criteria (col-span-2) */}
+                    <div className="col-span-2">
+                      <p className="font-extrabold text-[#0B2447] text-xs">{exam.totalMarks} Marks</p>
                       <p className="text-[11px] text-slate-500 font-medium">
                         Passing: {exam.passingMarks} Marks
                       </p>
-                    </td>
+                    </div>
 
-                    {/* Dedicated Question Paper Status Column */}
-                    <td className="py-4 px-4">
-                      {getQPStatusBadge(exam.questionPaperFileId)}
-                    </td>
+                    {/* Status & QP (col-span-2) */}
+                    <div className="col-span-2 space-y-1">
+                      <div>{getStatusBadge(exam.publishStatus)}</div>
+                      <div>{getQPStatusBadge(exam.questionPaperFileId)}</div>
+                    </div>
 
-                    <td className="py-4 px-4">{getStatusBadge(exam.publishStatus)}</td>
-
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setUploadModalExam(exam)}
-                          className={cn(
-                            'h-9 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all',
-                            exam.questionPaperFileId
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 animate-pulse',
-                          )}
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          {exam.questionPaperFileId ? '✓ QP Uploaded' : '⚠️ Upload QP'}
-                        </Button>
-
-                        {exam.publishStatus === 'DRAFT' && (
+                    {/* Actions (col-span-3 text-right) - Generous space so buttons NEVER overlap! */}
+                    <div className="col-span-3 text-right shrink-0">
+                      <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                        {isDraft && !exam.questionPaperFileId && (
                           <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() =>
-                              exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))
-                            }
-                            disabled={publishExamMutation.isPending}
-                            className="h-9 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-2xs px-3"
+                            onClick={() => setUploadModalExam(exam)}
+                            className="h-9 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all cursor-pointer shadow-2xs"
                           >
-                            {publishExamMutation.isPending ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              'Publish Exam'
-                            )}
+                            <Upload className="w-3.5 h-3.5" />
+                            Upload QP
                           </Button>
                         )}
 
-                        {exam.publishStatus === 'PUBLISHED' && (
+                        {isDraft && exam.questionPaperFileId && (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))}
+                              disabled={publishExamMutation.isPending}
+                              className="h-9 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-2xs px-3.5 transition-all cursor-pointer"
+                            >
+                              {publishExamMutation.isPending ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                'Publish Exam'
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setUploadModalExam(exam)}
+                              className="h-9 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold px-2.5 cursor-pointer"
+                              title="Replace QP File"
+                            >
+                              <Upload className="w-3.5 h-3.5 text-slate-600" />
+                            </Button>
+                          </>
+                        )}
+
+                        {isLive && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/dashboard/exams/${exam.id}/live`)}
-                            className="h-9 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 rounded-xl text-xs font-bold gap-1 px-3"
+                            className="h-9 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 rounded-xl text-xs font-bold gap-1 px-3 cursor-pointer"
                           >
-                            <Activity className="w-3.5 h-3.5" />
-                            Live Monitor
+                            <Activity className="w-3.5 h-3.5" /> Live Monitor
                           </Button>
                         )}
 
-                        {(exam.publishStatus === 'UNDER_REVIEW' ||
-                          exam.publishStatus === 'ADMIN_REVIEW') && (
+                        {isUnderReview && (
                           <Button
                             size="sm"
                             onClick={() => setReviewModalExamId(exam.id)}
-                            className="h-9 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold shadow-2xs gap-1 px-3"
+                            className="h-9 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold shadow-2xs gap-1 px-3 cursor-pointer"
                           >
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            Review Queue
+                            <ShieldCheck className="w-3.5 h-3.5" /> Review Queue
                           </Button>
                         )}
 
-                        {exam.publishStatus === 'RESULT_PUBLISHED' && (
+                        {isResultsLive && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push(`/dashboard/exams/${exam.id}/analytics`)}
-                            className="h-9 bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200 rounded-xl text-xs font-bold gap-1 px-3"
+                            className="h-9 bg-teal-50 hover:bg-teal-100 text-teal-700 border-teal-200 rounded-xl text-xs font-bold gap-1 px-3 cursor-pointer"
                           >
-                            <BarChart3 className="w-3.5 h-3.5" />
-                            Analytics & Scorecard
+                            <BarChart3 className="w-3.5 h-3.5" /> Analytics
                           </Button>
                         )}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete exam "${exam.title}"?`)) {
+                              exam.allExamIds.forEach((id) => deleteExamMutation.mutate(id));
+                            }
+                          }}
+                          disabled={deleteExamMutation.isPending}
+                          className="h-9 bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200 rounded-xl text-xs font-bold gap-1 px-2.5 cursor-pointer shrink-0"
+                          title="Delete Exam"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
-      </Card>
+      </div>
 
       {/* Modals */}
       <UploadFilesModal

@@ -669,6 +669,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
 
               <button
                 type="button"
+                suppressHydrationWarning
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -1021,6 +1022,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                     <div key={groupIdx} className="space-y-1">
                       {group.category ? (
                         <button
+                          suppressHydrationWarning
                           onClick={() => toggleCategory(group.category)}
                           className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-black text-[#0052CC] uppercase tracking-wider hover:text-[#0B2447] transition-colors cursor-pointer group"
                         >

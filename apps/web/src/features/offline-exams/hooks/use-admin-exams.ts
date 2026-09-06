@@ -23,7 +23,7 @@ export function useAdminExams(params?: Record<string, any>) {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 3,
-    staleTime: 1000 * 10,
+    staleTime: 0,
   });
 }
 
@@ -130,6 +130,16 @@ export function useCreateExam() {
       toast.success('Exam created successfully as DRAFT');
       queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
     },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create exam schedule';
+      toast.error(msg);
+    },
+  });
+}
+
+export function useCheckExamConflict() {
+  return useMutation({
+    mutationFn: (data: Partial<CreateExamPayload>) => adminExamsService.checkConflict(data),
   });
 }
 
@@ -140,6 +150,25 @@ export function usePublishExam() {
     onSuccess: () => {
       toast.success('Exam published successfully to student portal');
       queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to publish exam';
+      toast.error(msg);
+    },
+  });
+}
+
+export function useDeleteExam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminExamsService.deleteExam(id),
+    onSuccess: () => {
+      toast.success('Exam deleted successfully');
+      queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to delete exam';
+      toast.error(msg);
     },
   });
 }

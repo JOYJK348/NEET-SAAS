@@ -20,6 +20,7 @@ import {
   X,
   CheckCircle2,
   FileCheck,
+  Lock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,11 +55,43 @@ export function StudentExamsDashboard() {
   const { data: response, isLoading } = useStudentExams();
   const startExamMutation = useStartExam();
 
-  const examList: StudentExamItem[] = Array.isArray(response)
+  const rawExamList: StudentExamItem[] = Array.isArray(response)
     ? response
     : Array.isArray((response as any)?.data)
       ? (response as any).data
       : [];
+
+  // 1. Deduplicate by unique exam ID
+  const uniqueExamsMap = new Map<string, StudentExamItem>();
+  rawExamList.forEach((exam) => {
+    if (!uniqueExamsMap.has(exam.id)) {
+      uniqueExamsMap.set(exam.id, exam);
+    }
+  });
+
+  // 2. Deduplicate identical exam instances (same title, windowStart, durationMinutes)
+  const deduplicatedExamsMap = new Map<string, StudentExamItem>();
+  Array.from(uniqueExamsMap.values()).forEach((exam) => {
+    const key = `${exam.title.trim().toLowerCase()}-${exam.examWindowStart || ''}-${exam.durationMinutes}`;
+    if (!deduplicatedExamsMap.has(key)) {
+      deduplicatedExamsMap.set(key, exam);
+    } else {
+      const existing = deduplicatedExamsMap.get(key)!;
+      // Prioritize the entry with an active or completed submission
+      if (!existing.submission && exam.submission) {
+        deduplicatedExamsMap.set(key, exam);
+      } else if (
+        existing.submission &&
+        exam.submission &&
+        (exam.submission.submittedAt || exam.submission.startedAt) &&
+        !existing.submission.submittedAt
+      ) {
+        deduplicatedExamsMap.set(key, exam);
+      }
+    }
+  });
+
+  const examList: StudentExamItem[] = Array.from(deduplicatedExamsMap.values());
 
   const isResultPub = (e: StudentExamItem) =>
     e.studentExamStatus === 'RESULT_PUBLISHED' ||
@@ -219,9 +252,14 @@ export function StudentExamsDashboard() {
             const isSubmittedCard = !!exam.submission?.submittedAt;
 
             let cardTimer: { label: string; style: string } | null = null;
+            let isTimerExpired = false;
+
+            const windowEndMs = exam.examWindowEnd ? new Date(exam.examWindowEnd).getTime() : null;
+            const windowGraceEndMs = windowEndMs ? windowEndMs + (exam.graceMinutes || 0) * 60 * 1000 : null;
+            const isWindowExpired = windowGraceEndMs !== null && !isNaN(windowGraceEndMs) && nowMs > windowGraceEndMs;
+
             if (isStarted && !isSubmittedCard && exam.submission?.startedAt) {
               const startedAtMs = new Date(exam.submission.startedAt).getTime();
-              const windowEndMs = exam.examWindowEnd ? new Date(exam.examWindowEnd).getTime() : null;
 
               let calculatedEndMs = exam.submission.calculatedEndAt
                 ? new Date(exam.submission.calculatedEndAt).getTime()
@@ -256,8 +294,16 @@ export function StudentExamsDashboard() {
                   label: 'Time Expired',
                   style: 'bg-rose-50 text-rose-700 border-rose-200',
                 };
+                isTimerExpired = true;
               }
+            } else if (isWindowExpired && !isSubmittedCard) {
+              cardTimer = {
+                label: 'Time Expired',
+                style: 'bg-rose-50 text-rose-700 border-rose-200',
+              };
             }
+
+            const isLockedOrExpired = exam.isSubmissionLocked || isTimerExpired || isWindowExpired;
 
             return (
               <div
@@ -269,14 +315,18 @@ export function StudentExamsDashboard() {
                     <span
                       className={cn(
                         'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs',
-                        exam.studentExamStatus === 'LIVE'
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : exam.studentExamStatus === 'RESULT_PUBLISHED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-blue-50 text-[#0052CC] border border-blue-200',
+                        isLockedOrExpired && exam.studentExamStatus !== 'RESULT_PUBLISHED' && !isSubmittedCard
+                          ? 'bg-slate-100 text-slate-500 border border-slate-300'
+                          : exam.studentExamStatus === 'LIVE'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : exam.studentExamStatus === 'RESULT_PUBLISHED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-blue-50 text-[#0052CC] border border-blue-200',
                       )}
                     >
-                      {exam.studentExamStatus}
+                      {isLockedOrExpired && exam.studentExamStatus !== 'RESULT_PUBLISHED' && !isSubmittedCard
+                        ? 'EXPIRED / CLOSED'
+                        : exam.studentExamStatus}
                     </span>
                     {cardTimer ? (
                       <span
@@ -344,6 +394,13 @@ export function StudentExamsDashboard() {
                     >
                       <FileText className="w-4 h-4 text-[#0052CC]" /> Submitted (Under Evaluation)
                     </Link>
+                  ) : isLockedOrExpired ? (
+                    <button
+                      disabled
+                      className="w-full text-center px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-xl text-xs font-extrabold shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed opacity-70"
+                    >
+                      <Lock className="w-4 h-4 text-slate-400" /> Time Expired (Exam Closed)
+                    </button>
                   ) : isStarted ? (
                     <Link
                       href={`/dashboard/student/exams/${exam.id}`}

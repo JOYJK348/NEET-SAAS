@@ -23,8 +23,16 @@ export const adminExamsService = {
     return api.post('/admin/exams', data);
   },
 
+  checkConflict(data: Partial<CreateExamPayload>): Promise<{ hasConflict: boolean; conflicts: any[] }> {
+    return api.post('/admin/exams/check-conflict', data);
+  },
+
   updateExam(id: string, data: Partial<CreateExamPayload>): Promise<ExamItem> {
     return api.patch(`/admin/exams/${id}`, data);
+  },
+
+  deleteExam(id: string): Promise<{ success: boolean; message: string }> {
+    return api.delete(`/admin/exams/${id}`);
   },
 
   uploadQuestionPaper(id: string, file: File): Promise<{ message: string; exam: ExamItem }> {

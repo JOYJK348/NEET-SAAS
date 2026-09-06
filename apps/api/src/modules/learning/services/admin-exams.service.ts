@@ -39,6 +39,230 @@ export class AdminExamsService {
     private readonly examApprovalService: ExamApprovalService,
   ) {}
 
+  private async checkExamScheduleConflict(
+    tenantId: string,
+    params: {
+      courseId: string;
+      batchId: string;
+      batchIds?: string[];
+      windowStart: Date;
+      windowEnd: Date;
+      excludeExamId?: string;
+    },
+  ) {
+    const targetBatchIds = [
+      params.batchId,
+      ...(params.batchIds || []),
+      'ALL',
+      'batch-default',
+    ].filter((id) => id && id !== '');
+
+    const overlappingExams = await this.prisma.exams.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        status: ExamStatusEnum.ACTIVE,
+        publishStatus: { notIn: ['ARCHIVED'] },
+        ...(params.excludeExamId ? { id: { not: params.excludeExamId } } : {}),
+        OR: [
+          { batchId: { in: targetBatchIds } },
+          { courseId: params.courseId },
+        ],
+        AND: [
+          { examWindowStart: { lt: params.windowEnd } },
+          { examWindowEnd: { gt: params.windowStart } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        batchId: true,
+        courseId: true,
+        examWindowStart: true,
+        examWindowEnd: true,
+      },
+    });
+
+    if (overlappingExams.length > 0) {
+      const conflict = overlappingExams[0];
+      const startFmt = conflict.examWindowStart.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      const endFmt = conflict.examWindowEnd.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+
+      throw new BadRequestException(
+        `Schedule Conflict Detected: Exam "${conflict.title}" is already scheduled for this batch/course between ${startFmt} and ${endFmt}. Please choose a non-overlapping exam window.`,
+      );
+    }
+  }
+
+  async checkConflictPublic(tenantId: string, dto: Record<string, any>) {
+    const startIso = dto.scheduledStartAt || dto.examWindowStart || new Date().toISOString();
+    const endIso = dto.scheduledEndAt || dto.examWindowEnd || new Date(Date.now() + 7200000).toISOString();
+    const windowStart = new Date(dto.examWindowStart || startIso);
+    const windowEnd = new Date(dto.examWindowEnd || endIso);
+
+    const primaryBatchId =
+      (dto.batchIds && dto.batchIds.length > 0 ? dto.batchIds[0] : dto.batchId) || 'ALL';
+
+    const targetBatchIds = [
+      primaryBatchId,
+      ...(dto.batchIds || []),
+      'ALL',
+      'batch-default',
+    ].filter((id) => id && id !== '');
+
+    const conflicts: Array<{
+      type: 'EXAM' | 'CLASS_SCHEDULE';
+      title: string;
+      batchName?: string;
+      windowStart: string;
+      windowEnd: string;
+      message: string;
+    }> = [];
+
+    // 1. Check overlapping exams
+    const overlappingExams = await this.prisma.exams.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        status: ExamStatusEnum.ACTIVE,
+        publishStatus: { notIn: ['ARCHIVED'] },
+        ...(dto.excludeExamId ? { id: { not: dto.excludeExamId } } : {}),
+        OR: [
+          { batchId: { in: targetBatchIds } },
+          ...(dto.courseId ? [{ courseId: dto.courseId }] : []),
+        ],
+        AND: [
+          { examWindowStart: { lt: windowEnd } },
+          { examWindowEnd: { gt: windowStart } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        batchId: true,
+        examWindowStart: true,
+        examWindowEnd: true,
+      },
+    });
+
+    for (const ex of overlappingExams) {
+      const startFmt = ex.examWindowStart.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+      const endFmt = ex.examWindowEnd.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+
+      conflicts.push({
+        type: 'EXAM',
+        title: ex.title,
+        windowStart: startFmt,
+        windowEnd: endFmt,
+        message: `Exam "${ex.title}" is already scheduled (${startFmt} – ${endFmt})`,
+      });
+    }
+
+    // 2. Check overlapping class timetables/schedules
+    try {
+      const activeSchedules = await this.prisma.schedules.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          batchId: { in: targetBatchIds },
+        },
+      });
+
+      const batchIdsInSched = Array.from(new Set(activeSchedules.map((s) => s.batchId)));
+      const subjectIdsInSched = Array.from(new Set(activeSchedules.map((s) => s.subjectId)));
+
+      const schedBatches: Array<{ id: string; name: string }> =
+        batchIdsInSched.length > 0
+          ? await this.prisma.batches.findMany({
+              where: { id: { in: batchIdsInSched } },
+              select: { id: true, name: true },
+            })
+          : [];
+
+      const schedSubjects: Array<{ id: string; name: string }> =
+        subjectIdsInSched.length > 0
+          ? await this.prisma.subjects.findMany({
+              where: { id: { in: subjectIdsInSched } },
+              select: { id: true, name: true },
+            })
+          : [];
+
+      const batchMap = new Map<string, string>();
+      schedBatches.forEach((b) => batchMap.set(b.id, b.name));
+      const subjectMap = new Map<string, string>();
+      schedSubjects.forEach((s) => subjectMap.set(s.id, s.name));
+
+      const windowStartDay = windowStart.getDay();
+      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const currentDayOfWeek = days[windowStartDay];
+
+      const examStartMinutes = windowStart.getHours() * 60 + windowStart.getMinutes();
+      const examEndMinutes = windowEnd.getHours() * 60 + windowEnd.getMinutes();
+
+      for (const sched of activeSchedules) {
+        if (sched.dayOfWeek && sched.dayOfWeek !== currentDayOfWeek) continue;
+        if (sched.effectiveFrom && windowEnd < new Date(sched.effectiveFrom)) continue;
+        if (sched.effectiveUntil && windowStart > new Date(sched.effectiveUntil)) continue;
+
+        if (sched.startTime && sched.endTime) {
+          const [sh, sm] = sched.startTime.split(':').map(Number);
+          const [eh, em] = sched.endTime.split(':').map(Number);
+          const schedStartMins = sh * 60 + sm;
+          const schedEndMins = eh * 60 + em;
+
+          if (examStartMinutes < schedEndMins && examEndMinutes > schedStartMins) {
+            const subjectName = subjectMap.get(sched.subjectId) || 'Live Class';
+            const batchName = batchMap.get(sched.batchId) || 'Batch';
+
+            conflicts.push({
+              type: 'CLASS_SCHEDULE',
+              title: `${subjectName} Class`,
+              batchName,
+              windowStart: sched.startTime,
+              windowEnd: sched.endTime,
+              message: `Live Class "${subjectName}" (${batchName}) scheduled (${sched.startTime} – ${sched.endTime})`,
+            });
+          }
+        }
+      }
+    } catch {
+      // Ignore schedule check errors
+    }
+
+    return {
+      hasConflict: conflicts.length > 0,
+      conflicts,
+    };
+  }
+
   async createExam(tenantId: string, userId: string, dto: CreateExamDto) {
     const start = new Date(dto.scheduledStartAt);
     const end = new Date(dto.scheduledEndAt);
@@ -53,9 +277,23 @@ export class AdminExamsService {
       );
     }
 
+    if (windowStart >= windowEnd) {
+      throw new BadRequestException(
+        'Exam window end must be strictly after exam window start time',
+      );
+    }
+
     const primaryBatchId =
       (dto.batchIds && dto.batchIds.length > 0 ? dto.batchIds[0] : dto.batchId) ||
       'ALL';
+
+    await this.checkExamScheduleConflict(tenantId, {
+      courseId: dto.courseId,
+      batchId: primaryBatchId,
+      batchIds: dto.batchIds,
+      windowStart,
+      windowEnd,
+    });
 
     const createdExam = await this.prisma.exams.create({
       data: {
@@ -124,6 +362,36 @@ export class AdminExamsService {
       throw new BadRequestException('Cannot modify non-draft exam');
     }
 
+    const newWindowStart = dto.examWindowStart
+      ? new Date(dto.examWindowStart)
+      : dto.scheduledStartAt
+        ? new Date(dto.scheduledStartAt)
+        : existing.examWindowStart;
+
+    const newWindowEnd = dto.examWindowEnd
+      ? new Date(dto.examWindowEnd)
+      : dto.scheduledEndAt
+        ? new Date(dto.scheduledEndAt)
+        : existing.examWindowEnd;
+
+    const courseIdToTest = dto.courseId || existing.courseId;
+    const batchIdToTest = dto.batchId || existing.batchId;
+
+    if (newWindowStart >= newWindowEnd) {
+      throw new BadRequestException(
+        'Exam window end must be strictly after exam window start time',
+      );
+    }
+
+    await this.checkExamScheduleConflict(tenantId, {
+      courseId: courseIdToTest,
+      batchId: batchIdToTest,
+      batchIds: dto.batchIds,
+      windowStart: newWindowStart,
+      windowEnd: newWindowEnd,
+      excludeExamId: examId,
+    });
+
     const data: Record<string, unknown> = { updatedBy: userId };
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
@@ -181,7 +449,7 @@ export class AdminExamsService {
 
     const orderBy = buildPrismaOrderBy(
       query.sortBy || 'createdAt',
-      query.sortOrder,
+      query.sortOrder || 'desc',
     );
 
     return paginateAndMap(
@@ -338,6 +606,12 @@ export class AdminExamsService {
       throw new NotFoundException('Exam not found');
     }
 
+    if (!exam.questionPaperFileId) {
+      throw new BadRequestException(
+        'Cannot publish exam without uploading Question Paper PDF first.',
+      );
+    }
+
     if (exam.publishStatus === 'PUBLISHED') {
       return exam;
     }
@@ -441,5 +715,24 @@ export class AdminExamsService {
 
   async publishResults(tenantId: string, userId: string, examId: string) {
     return this.examApprovalService.publishResults(tenantId, examId, userId);
+  }
+
+  async deleteExam(tenantId: string, examId: string) {
+    const exam = await this.prisma.exams.findFirst({
+      where: this.tenantScoped.buildWhere(tenantId, { id: examId }),
+    });
+
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    await this.prisma.exams.update({
+      where: { id: examId },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+
+    return { success: true, message: 'Exam deleted successfully' };
   }
 }

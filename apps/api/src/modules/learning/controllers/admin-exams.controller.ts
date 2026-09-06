@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -63,6 +64,16 @@ export class AdminExamsController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.adminExamsService.createExam(user.tenantId!, user.sub, dto);
+  }
+
+  @Post('check-conflict')
+  @ApiOperation({ summary: 'Check exam schedule conflict with existing exams & class timetables' })
+  @ApiResponse({ status: 200, description: 'Conflict check result' })
+  checkConflict(
+    @Body() dto: Record<string, any>,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.adminExamsService.checkConflictPublic(user.tenantId!, dto);
   }
 
   @Get()
@@ -354,5 +365,15 @@ export class AdminExamsController {
     @CurrentUser() user: AuthenticatedRequestUser,
   ) {
     return this.adminExamsService.publishResults(user.tenantId!, user.sub, id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete an exam' })
+  @ApiResponse({ status: 200, description: 'Exam deleted successfully' })
+  deleteExam(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+  ) {
+    return this.adminExamsService.deleteExam(user.tenantId!, id);
   }
 }

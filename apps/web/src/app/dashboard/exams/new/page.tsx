@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
-import { useCreateExam } from '@/features/offline-exams/hooks/use-admin-exams';
+import { useCreateExam, useCheckExamConflict } from '@/features/offline-exams/hooks/use-admin-exams';
 import type { SectionConfigItem } from '@/features/offline-exams/types/admin-exams';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,10 +64,66 @@ function CreateExamContent() {
   ]);
 
   const createExamMutation = useCreateExam();
+  const checkConflictMutation = useCheckExamConflict();
+
+  const [conflictResult, setConflictResult] = useState<{
+    hasConflict: boolean;
+    conflicts: any[];
+  } | null>(null);
+  const [conflictChecked, setConflictChecked] = useState(false);
 
   const availableBatches = courseId
     ? batches.filter((b) => !b.courseId || b.courseId === courseId)
     : [];
+
+  const handleRunConflictCheck = () => {
+    if (!isStep1Valid || !isStep2Valid) {
+      toast.error('Please enter Title, Course, Batches and Exam Window dates first!');
+      return;
+    }
+
+    const startIso = parseLocalDateTime(scheduledStartAt);
+    const futureDate = new Date(Date.now() + durationMinutes * 60 * 1000);
+    const futureIso = futureDate.toISOString();
+
+    const endIso = scheduledEndAt ? parseLocalDateTime(scheduledEndAt) : futureIso;
+    const winStartIso = examWindowStart ? parseLocalDateTime(examWindowStart) : startIso;
+    const winEndIso = examWindowEnd ? parseLocalDateTime(examWindowEnd) : endIso;
+
+    const selectedCourseId = courseId || courses[0]?.id || 'course-default';
+    const finalBatchIds =
+      selectedBatchIds.length > 0 ? selectedBatchIds : [batches[0]?.id || 'batch-default'];
+
+    checkConflictMutation.mutate(
+      {
+        courseId: selectedCourseId,
+        batchIds: finalBatchIds,
+        examWindowStart: winStartIso,
+        examWindowEnd: winEndIso,
+        scheduledStartAt: startIso,
+        scheduledEndAt: endIso,
+      },
+      {
+        onSuccess: (data) => {
+          setConflictResult(data);
+          setConflictChecked(true);
+          if (data.hasConflict) {
+            toast.warning('Schedule conflicts detected!', {
+              description: `${data.conflicts.length} conflict(s) found. Please review details below.`,
+            });
+          } else {
+            toast.success('No Schedule Conflicts Found! ⚡', {
+              description: 'Target Batches & Time slots are 100% available for this exam window.',
+            });
+          }
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message || err?.message || 'Failed to check conflicts';
+          toast.error(msg);
+        },
+      },
+    );
+  };
 
   const isStep1Valid = Boolean(
     title.trim() !== '' && courseId !== '' && selectedBatchIds.length > 0,
@@ -659,11 +715,28 @@ function CreateExamContent() {
                 </div>
               </div>
 
-              {/* Final Summary Card */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-                <h4 className="font-extrabold text-[#0B2447] text-sm mb-2">
-                  Exam Configuration Summary
-                </h4>
+              {/* Final Summary Card & Conflict Results */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-[#0B2447] text-sm">
+                    Exam Configuration Summary
+                  </h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRunConflictCheck}
+                    disabled={checkConflictMutation.isPending || !isStep1Valid || !isStep2Valid}
+                    className="h-8 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 font-extrabold text-xs gap-1.5 cursor-pointer"
+                  >
+                    {checkConflictMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      '⚡ Check Conflict'
+                    )}
+                  </Button>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 text-slate-600 font-medium">
                   <p>
                     Title:{' '}
@@ -701,11 +774,56 @@ function CreateExamContent() {
                   </p>
                 </div>
               </div>
+
+              {/* Conflict Alert Display Box */}
+              {conflictChecked && conflictResult && (
+                <div className="pt-1">
+                  {!conflictResult.hasConflict ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 flex items-start gap-3 text-emerald-900 animate-in fade-in duration-200">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-extrabold text-emerald-800">
+                          ✅ No Schedule Conflicts Detected!
+                        </h4>
+                        <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                          Target Batches and Course time slots are 100% clear for this exam window. You can safely save this exam.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 space-y-2 text-rose-900 animate-in fade-in duration-200">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-xs font-extrabold text-rose-800">
+                            ⚠️ Schedule Conflict Detected ({conflictResult.conflicts.length} conflict(s))
+                          </h4>
+                          <p className="text-[11px] text-rose-700 font-medium mt-0.5">
+                            The following exam(s) or live class schedule(s) overlap with this exam window:
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 pl-8 text-xs font-semibold">
+                        {conflictResult.conflicts.map((conf: any, idx: number) => (
+                          <div key={idx} className="bg-white/90 border border-rose-200 p-2.5 rounded-lg text-rose-900 shadow-2xs">
+                            <p className="font-extrabold text-rose-950">{conf.message || conf.title}</p>
+                            {conf.batchName && (
+                              <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold mt-1 inline-block">
+                                Batch: {conf.batchName}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Controls Footer */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
             <Button
               variant="outline"
               disabled={step === 1}
@@ -715,50 +833,66 @@ function CreateExamContent() {
               Previous
             </Button>
 
-            {step < 4 ? (
+            <div className="flex items-center gap-2">
               <Button
-                onClick={() => {
-                  if (step === 1 && !isStep1Valid) {
-                    toast.error(
-                      'Please enter the Exam Title and select Course & Batches before proceeding.',
-                    );
-                    return;
-                  }
-                  if (step === 2 && !isStep2Valid) {
-                    toast.error(
-                      'Please select both Exam Window Start and End dates before proceeding.',
-                    );
-                    return;
-                  }
-                  if (step === 3 && !isStep3Valid) {
-                    toast.error(
-                      'Please enter valid Total Marks and Section names before proceeding.',
-                    );
-                    return;
-                  }
-                  setStep((step + 1) as any);
-                }}
-                disabled={
-                  (step === 1 && !isStep1Valid) ||
-                  (step === 2 && !isStep2Valid) ||
-                  (step === 3 && !isStep3Valid)
-                }
-                className="rounded-xl h-11 px-6 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
+                variant="outline"
+                onClick={handleRunConflictCheck}
+                disabled={checkConflictMutation.isPending || !isStep1Valid || !isStep2Valid}
+                className="rounded-xl h-11 px-4 bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300 font-extrabold text-xs gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50"
               >
-                Next Step
+                {checkConflictMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-800" />
+                ) : (
+                  '⚡ Check Conflict'
+                )}
               </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={
-                  createExamMutation.isPending || !isStep1Valid || !isStep2Valid || !isStep3Valid
-                }
-                className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs gap-2 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {createExamMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Confirm & Save Exam (Draft)
-              </Button>
-            )}
+
+              {step < 4 ? (
+                <Button
+                  onClick={() => {
+                    if (step === 1 && !isStep1Valid) {
+                      toast.error(
+                        'Please enter the Exam Title and select Course & Batches before proceeding.',
+                      );
+                      return;
+                    }
+                    if (step === 2 && !isStep2Valid) {
+                      toast.error(
+                        'Please select both Exam Window Start and End dates before proceeding.',
+                      );
+                      return;
+                    }
+                    if (step === 3 && !isStep3Valid) {
+                      toast.error(
+                        'Please enter valid Total Marks and Section names before proceeding.',
+                      );
+                      return;
+                    }
+                    setStep((step + 1) as any);
+                  }}
+                  disabled={
+                    (step === 1 && !isStep1Valid) ||
+                    (step === 2 && !isStep2Valid) ||
+                    (step === 3 && !isStep3Valid)
+                  }
+                  className="rounded-xl h-11 px-6 bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next Step
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    createExamMutation.isPending || !isStep1Valid || !isStep2Valid || !isStep3Valid
+                  }
+                  className="rounded-xl h-11 px-8 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs gap-2 shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {createExamMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Confirm & Save Exam (Draft)
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       </div>
