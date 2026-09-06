@@ -463,35 +463,42 @@ export function AdminExamsDashboard() {
                       <div>{getQPStatusBadge(exam.questionPaperFileId)}</div>
 
                       <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                        {isDraft && !exam.questionPaperFileId && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setUploadModalExam(exam)}
-                            className="h-8 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 rounded-xl text-[11px] font-extrabold gap-1 px-2.5 cursor-pointer"
-                          >
-                            <Upload className="w-3 h-3" /> Upload QP
-                          </Button>
-                        )}
-
-                        {isDraft && exam.questionPaperFileId && (
+                        {isDraft && (
                           <>
                             <Button
                               size="sm"
-                              onClick={() => exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))}
+                              onClick={() => {
+                                if (!exam.questionPaperFileId) {
+                                  toast.error('Please upload Question Paper PDF before publishing!');
+                                  setUploadModalExam(exam);
+                                  return;
+                                }
+                                exam.allExamIds.forEach((id) => publishExamMutation.mutate(id));
+                              }}
                               disabled={publishExamMutation.isPending}
                               className="h-8 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-[11px] font-extrabold px-3 shadow-2xs cursor-pointer"
                             >
-                              Publish Exam
+                              {publishExamMutation.isPending ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                'Publish Exam'
+                              )}
                             </Button>
+
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setUploadModalExam(exam)}
-                              className="h-8 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 rounded-xl text-[11px] font-bold px-2 cursor-pointer"
-                              title="Replace QP"
+                              className={cn(
+                                'h-8 rounded-xl text-[11px] font-extrabold gap-1 px-2.5 cursor-pointer',
+                                exam.questionPaperFileId
+                                  ? 'bg-blue-50 text-[#0052CC] border-blue-200 hover:bg-blue-100'
+                                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100',
+                              )}
+                              title={exam.questionPaperFileId ? 'Replace QP File' : 'Upload QP File'}
                             >
                               <Upload className="w-3 h-3" />
+                              {exam.questionPaperFileId ? 'QP' : 'Upload QP'}
                             </Button>
                           </>
                         )}
@@ -598,23 +605,18 @@ export function AdminExamsDashboard() {
                     {/* Actions (col-span-3 text-right) - Generous space so buttons NEVER overlap! */}
                     <div className="col-span-3 text-right shrink-0">
                       <div className="flex items-center justify-end gap-1.5 flex-nowrap">
-                        {isDraft && !exam.questionPaperFileId && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setUploadModalExam(exam)}
-                            className="h-9 bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all cursor-pointer shadow-2xs"
-                          >
-                            <Upload className="w-3.5 h-3.5" />
-                            Upload QP
-                          </Button>
-                        )}
-
-                        {isDraft && exam.questionPaperFileId && (
+                        {isDraft && (
                           <>
                             <Button
                               size="sm"
-                              onClick={() => exam.allExamIds.forEach((id) => publishExamMutation.mutate(id))}
+                              onClick={() => {
+                                if (!exam.questionPaperFileId) {
+                                  toast.error('Please upload Question Paper PDF before publishing!');
+                                  setUploadModalExam(exam);
+                                  return;
+                                }
+                                exam.allExamIds.forEach((id) => publishExamMutation.mutate(id));
+                              }}
                               disabled={publishExamMutation.isPending}
                               className="h-9 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-2xs px-3.5 transition-all cursor-pointer"
                             >
@@ -624,14 +626,21 @@ export function AdminExamsDashboard() {
                                 'Publish Exam'
                               )}
                             </Button>
+
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => setUploadModalExam(exam)}
-                              className="h-9 bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 rounded-xl text-xs font-bold px-2.5 cursor-pointer"
-                              title="Replace QP File"
+                              className={cn(
+                                'h-9 rounded-xl text-xs font-extrabold gap-1.5 px-3 transition-all cursor-pointer shadow-2xs',
+                                exam.questionPaperFileId
+                                  ? 'bg-blue-50 text-[#0052CC] border-blue-200 hover:bg-blue-100'
+                                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100',
+                              )}
+                              title={exam.questionPaperFileId ? 'Replace QP File' : 'Upload QP File'}
                             >
-                              <Upload className="w-3.5 h-3.5 text-slate-600" />
+                              <Upload className="w-3.5 h-3.5" />
+                              {exam.questionPaperFileId ? 'QP' : 'Upload QP'}
                             </Button>
                           </>
                         )}

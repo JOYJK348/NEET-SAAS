@@ -41,7 +41,7 @@ const formatExamDateTime = (dateStr?: string | null) => {
 
 export function StudentExamsDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('LIVE');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('ALL');
   const [startingExam, setStartingExam] = useState<StudentExamItem | null>(null);
   const [nowMs, setNowMs] = useState<number>(Date.now());
 
@@ -106,11 +106,10 @@ export function StudentExamsDashboard() {
     if (
       e.submission?.status === 'SUBMITTED' ||
       e.submission?.status === 'LATE' ||
-      e.submission?.status === 'ABSENT'
+      e.submission?.status === 'COMPLETED'
     )
       return true;
     if (
-      e.submission?.evaluationStatus === 'PENDING' ||
       e.submission?.evaluationStatus === 'UNDER_EVALUATION' ||
       e.submission?.evaluationStatus === 'APPROVED'
     )
@@ -118,44 +117,61 @@ export function StudentExamsDashboard() {
     return false;
   };
 
+  const getStartMs = (e: StudentExamItem) => {
+    const d = new Date(e.examWindowStart || 0);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  };
+
+  const getEndMs = (e: StudentExamItem) => {
+    const d = new Date(e.examWindowEnd || 0);
+    if (isNaN(d.getTime())) return 0;
+    const graceMs = (e.graceMinutes ?? 15) * 60 * 1000;
+    return d.getTime() + graceMs;
+  };
+
   const isExamUpcoming = (e: StudentExamItem) => {
     if (isResultPub(e) || isSubmitted(e)) return false;
-    if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') return true;
-    const now = new Date();
-    const start = new Date(e.examWindowStart);
-    return !isNaN(start.getTime()) && now < start && e.studentExamStatus !== 'RESULT_PUBLISHED';
+    const startMs = getStartMs(e);
+    if (startMs > 0 && nowMs < startMs) return true;
+    if (e.studentExamStatus === 'SCHEDULED' || e.studentExamStatus === 'UPCOMING') {
+      return startMs > 0 ? nowMs < startMs : true;
+    }
+    return false;
   };
 
   const isExamLive = (e: StudentExamItem) => {
     if (isResultPub(e) || isSubmitted(e) || isExamUpcoming(e)) return false;
-    if (e.studentExamStatus === 'LIVE') return true;
-    if (e.canStart) return true;
-    const now = new Date();
-    const start = new Date(e.examWindowStart);
-    const end = new Date(e.examWindowEnd);
-    return (
-      !isNaN(start.getTime()) &&
-      !isNaN(end.getTime()) &&
-      now >= start &&
-      now <= end &&
-      !e.isSubmissionLocked
-    );
+    if (e.isSubmissionLocked) return false;
+    const startMs = getStartMs(e);
+    const endMs = getEndMs(e);
+
+    if (startMs > 0 && endMs > 0) {
+      if (nowMs >= startMs && nowMs <= endMs) return true;
+    }
+
+    if (e.studentExamStatus === 'LIVE' || e.canStart) return true;
+    return false;
+  };
+
+  const isHistory = (e: StudentExamItem) => {
+    if (isResultPub(e)) return false;
+    if (isSubmitted(e)) return true;
+    const endMs = getEndMs(e);
+    if (endMs > 0 && nowMs > endMs) return true;
+    if (e.isSubmissionLocked || e.studentExamStatus === 'LOCKED' || e.studentExamStatus === 'EXPIRED')
+      return true;
+    return false;
   };
 
   const liveCount = examList.filter((e) => isExamLive(e)).length;
   const upcomingCount = examList.filter((e) => isExamUpcoming(e)).length;
   const resultsCount = examList.filter((e) => isResultPub(e)).length;
-  const submittedCount = examList.filter(
-    (e) => isSubmitted(e) || (!isResultPub(e) && !isExamLive(e) && !isExamUpcoming(e)),
-  ).length;
+  const submittedCount = examList.filter((e) => isHistory(e)).length;
 
   const filteredExams = examList.filter((exam) => {
     if (activeTab === 'ALL') return true;
     if (activeTab === 'RESULTS') return isResultPub(exam);
-    if (activeTab === 'SUBMITTED')
-      return (
-        isSubmitted(exam) || (!isResultPub(exam) && !isExamLive(exam) && !isExamUpcoming(exam))
-      );
+    if (activeTab === 'SUBMITTED') return isHistory(exam);
     if (activeTab === 'LIVE') return isExamLive(exam);
     if (activeTab === 'UPCOMING') return isExamUpcoming(exam);
     return true;

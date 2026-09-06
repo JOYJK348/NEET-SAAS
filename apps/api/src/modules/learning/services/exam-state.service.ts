@@ -23,26 +23,35 @@ export class ExamStateService {
       publishStatus: ExamPublishStatusEnum;
       examWindowStart: Date;
       examWindowEnd: Date;
+      graceMinutes?: number;
       isClosed?: boolean;
     },
     now: Date = new Date(),
   ): DerivedExamState {
-    if (exam.publishStatus === ExamPublishStatusEnum.PUBLISHED) {
+    if (
+      exam.publishStatus === ExamPublishStatusEnum.PUBLISHED ||
+      (exam.publishStatus as string) === 'SCHEDULED'
+    ) {
+      const graceMs = (exam.graceMinutes ?? 15) * 60 * 1000;
+      const windowEndWithGrace = new Date(
+        exam.examWindowEnd.getTime() + graceMs,
+      );
+
       if (now < exam.examWindowStart) {
         return 'SCHEDULED';
       }
       if (
         now >= exam.examWindowStart &&
-        now <= exam.examWindowEnd &&
+        now <= windowEndWithGrace &&
         !exam.isClosed
       ) {
         return 'LIVE';
       }
-      if (now > exam.examWindowEnd || exam.isClosed) {
+      if (now > windowEndWithGrace || exam.isClosed) {
         return 'LOCKED';
       }
     }
-    return exam.publishStatus;
+    return exam.publishStatus as DerivedExamState;
   }
 
   /**
@@ -61,8 +70,17 @@ export class ExamStateService {
     now: Date = new Date(),
   ): boolean {
     if (exam.isClosed) return false;
-    if (exam.publishStatus !== ExamPublishStatusEnum.PUBLISHED) return false;
-    if (now < exam.examWindowStart || now > exam.examWindowEnd) return false;
+    if (
+      exam.publishStatus !== ExamPublishStatusEnum.PUBLISHED &&
+      (exam.publishStatus as string) !== 'SCHEDULED'
+    ) {
+      return false;
+    }
+
+    const graceMs = (exam.graceMinutes ?? 15) * 60 * 1000;
+    const windowEndWithGrace = new Date(exam.examWindowEnd.getTime() + graceMs);
+
+    if (now < exam.examWindowStart || now > windowEndWithGrace) return false;
     return true;
   }
 
