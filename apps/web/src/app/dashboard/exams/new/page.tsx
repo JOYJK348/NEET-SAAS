@@ -4,7 +4,9 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
-import { useCreateExam, useCheckExamConflict } from '@/features/offline-exams/hooks/use-admin-exams';
+import { useCreateExam, useCheckExamConflict, adminExamKeys } from '@/features/offline-exams/hooks/use-admin-exams';
+import { adminExamsService } from '@/features/offline-exams/services/admin-exams-service';
+import { useQueryClient } from '@tanstack/react-query';
 import type { SectionConfigItem } from '@/features/offline-exams/types/admin-exams';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +23,36 @@ import {
   Loader2,
   AlertCircle,
   ChevronRight,
+  Sparkles,
+  Upload,
+  ShieldCheck,
+  FileCheck,
+  Edit3,
+  RefreshCw,
+  Download,
+  Copy,
+  FileDown,
+  HelpCircle,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
+
+export interface ParsedQuestionItem {
+  questionNumber: number;
+  questionText: string;
+  questionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE';
+  options: { label: string; text: string }[];
+  correctAnswer: string | null;
+  marks: number;
+  negativeMarks: number;
+  explanation: string | null;
+  status: 'VALID' | 'WARNING' | 'NEEDS_REVIEW' | 'INVALID';
+}
 
 function CreateExamContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   const { courses } = useCourses();
@@ -55,6 +82,126 @@ function CreateExamContent() {
   const [negativeMarkingValue, setNegativeMarkingValue] = useState(1);
   const [allowLateUpload, setAllowLateUpload] = useState(true);
   const [allowReplaceUpload, setAllowReplaceUpload] = useState(true);
+  const [questionPaperFile, setQuestionPaperFile] = useState<File | null>(null);
+  const [isParsingQuestions, setIsParsingQuestions] = useState(false);
+  const [parsedJobId, setParsedJobId] = useState<string | null>(null);
+  const [parsedQuestionsPreview, setParsedQuestionsPreview] = useState<ParsedQuestionItem[]>([]);
+
+  const handleExtractAndPreview = async (file: File) => {
+    setIsParsingQuestions(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await api.post<any>('/online-exams/parse-preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setParsedJobId(data.jobId);
+      setParsedQuestionsPreview(data.questions || []);
+
+      toast.success(`Extracted ${data.totalQuestionsFound || 0} Questions from ${file.name}! ⚡`, {
+        description: `${data.validCount || 0} Valid, ${data.needsReviewCount || 0} Need Review.`,
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to parse questions document.';
+      toast.error(msg);
+    } finally {
+      setIsParsingQuestions(false);
+    }
+  };
+
+  const handleSetCorrectAnswer = (questionNumber: number, label: string) => {
+    setParsedQuestionsPreview((prev) =>
+      prev.map((q) => {
+        if (q.questionNumber === questionNumber) {
+          return {
+            ...q,
+            correctAnswer: label,
+            status: 'VALID',
+          };
+        }
+        return q;
+      }),
+    );
+  };
+
+  const [copiedSample, setCopiedSample] = useState(false);
+
+  const handleDownloadSampleTemplate = () => {
+    const sampleContent = `NEET MCQ QUESTION PAPER SAMPLE TEMPLATE
+=============================================
+
+1. [Physics] Which physical quantity is measured in Newtons?
+A) Mass
+B) Force
+C) Pressure
+D) Energy
+Answer: B
+
+2. [Chemistry] What is the pH value of pure water at 25°C?
+A) 0
+B) 7
+C) 14
+D) 1
+Answer: B
+
+3. [Biology] Which organelle is responsible for cellular respiration in eukaryotic cells?
+A) Mitochondria
+B) Ribosome
+C) Chloroplast
+D) Golgi apparatus
+Answer: A
+
+4. [Biology] In humans, how many pairs of chromosomes are present in a somatic cell?
+A) 22
+B) 23
+C) 46
+D) 44
+Answer: B
+
+5. [Physics] The rate of change of momentum of a body is directly proportional to the applied:
+A) Acceleration
+B) Force
+C) Velocity
+D) Work done
+Answer: B
+`;
+
+    const blob = new Blob([sampleContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'NEET_Sample_Question_Paper_Template.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success('Sample Question Paper Template Downloaded! 📄', {
+      description: 'You can open, edit, or copy this sample format in MS Word or Google Docs.',
+    });
+  };
+
+  const handleCopySampleFormat = () => {
+    const textToCopy = `1. [Physics] Which physical quantity is measured in Newtons?
+A) Mass
+B) Force
+C) Pressure
+D) Energy
+Answer: B
+
+2. [Chemistry] What is the pH value of pure water at 25°C?
+A) 0
+B) 7
+C) 14
+D) 1
+Answer: B`;
+
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedSample(true);
+    toast.success('Sample format copied to clipboard!');
+    setTimeout(() => setCopiedSample(false), 2000);
+  };
 
   const [sections, setSections] = useState<SectionConfigItem[]>([
     { name: 'Physics', maxMarks: 180 },
@@ -215,7 +362,60 @@ function CreateExamContent() {
         sectionConfig: sections,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (createdExam: any) => {
+          const examId = createdExam?.id || createdExam?.data?.id;
+
+          if (questionPaperFile && examId) {
+            const loadingToastId = toast.loading('Uploading & Processing Question Paper Document...');
+            try {
+              // 1. Upload Question Paper PDF/DOCX to storage and attach file ID to exam record
+              await adminExamsService.uploadQuestionPaper(examId, questionPaperFile);
+
+              // 2. If ONLINE mode, also handle CBT parsing & question commits
+              if (mode === 'ONLINE') {
+                let jobIdToCommit = parsedJobId;
+                let questionsToCommit = parsedQuestionsPreview;
+
+                if (!jobIdToCommit || questionsToCommit.length === 0) {
+                  const formData = new FormData();
+                  formData.append('file', questionPaperFile);
+                  const importRes = await api.post<any>(`/online-exams/${examId}/import/upload`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                  });
+                  jobIdToCommit = importRes?.jobId;
+                  questionsToCommit = importRes?.questions || [];
+                }
+
+                if (jobIdToCommit && questionsToCommit.length > 0) {
+                  await api.post<any>(`/online-exams/${examId}/import/commit`, {
+                    jobId: jobIdToCommit,
+                    questions: questionsToCommit,
+                  });
+                }
+              }
+
+              // Invalidate React Query cache so table list immediately reflects QP Uploaded state
+              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+
+              toast.success(
+                mode === 'ONLINE'
+                  ? 'Exam created & Question Paper attached + CBT questions parsed! ⚡'
+                  : 'Exam created & Question Paper PDF uploaded! 📄',
+                { id: loadingToastId },
+              );
+            } catch (err: any) {
+              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+              toast.error(
+                'Exam created, but question paper processing warning: ' +
+                  (err?.response?.data?.message || err?.message || 'Check file'),
+                { id: loadingToastId },
+              );
+            }
+          } else {
+            await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+            toast.success('Exam schedule created successfully as DRAFT');
+          }
+
           router.push('/dashboard/exams');
         },
         onError: () => {
@@ -242,13 +442,21 @@ function CreateExamContent() {
             <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
               <span>Exams Schedule</span>
               <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
-              <span>Step {step} of 4</span>
+              <span className="px-2 py-0.5 rounded-md bg-blue-100/80 font-bold text-[#0052CC]">
+                {mode === 'ONLINE' ? 'Online CBT Mode' : mode === 'HYBRID' ? 'Hybrid Mode' : 'Offline OMR Mode'}
+              </span>
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-[#0B2447]">
-              Create New Exam
+              {mode === 'ONLINE'
+                ? 'Create Online CBT Exam ⚡'
+                : mode === 'HYBRID'
+                  ? 'Create Hybrid Exam'
+                  : 'Create Offline OMR Exam'}
             </h1>
             <p className="text-xs text-slate-600 font-medium">
-              Configure exam schedules, target batches, total marks, and dynamic subject sections.
+              {mode === 'ONLINE'
+                ? 'Configure online CBT test schedule, student countdown timer, negative marking, and bulk PDF/DOCX question import.'
+                : 'Configure exam schedules, target batches, total marks, and dynamic subject sections for OMR evaluation.'}
             </p>
           </div>
         </div>
@@ -279,6 +487,7 @@ function CreateExamContent() {
                 <button
                   key={s.num}
                   type="button"
+                  suppressHydrationWarning
                   onClick={() => {
                     if (allowed) {
                       setStep(s.num as any);
@@ -351,6 +560,7 @@ function CreateExamContent() {
                     )}
                   </div>
                   <select
+                    suppressHydrationWarning
                     value={courseId}
                     onChange={(e) => {
                       const selectedId = e.target.value;
@@ -466,6 +676,7 @@ function CreateExamContent() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700 uppercase">Exam Type</Label>
                   <select
+                    suppressHydrationWarning
                     value={examType}
                     onChange={(e) => setExamType(e.target.value)}
                     className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-[#0052CC]"
@@ -481,6 +692,7 @@ function CreateExamContent() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700 uppercase">Exam Mode</Label>
                   <select
+                    suppressHydrationWarning
                     value={mode}
                     onChange={(e) => setMode(e.target.value)}
                     className="w-full bg-white border border-slate-200 rounded-xl h-11 px-3 text-xs font-medium focus:outline-none focus:border-[#0052CC]"
@@ -491,6 +703,17 @@ function CreateExamContent() {
                   </select>
                 </div>
               </div>
+
+              {mode === 'ONLINE' && (
+                <div className="p-4 bg-indigo-50/80 border border-indigo-200 rounded-2xl space-y-1.5 text-xs text-indigo-950 animate-in fade-in duration-200 shadow-2xs">
+                  <div className="flex items-center gap-2 font-extrabold text-[#0052CC]">
+                    <Sparkles className="w-4 h-4 text-[#0052CC]" /> Online Computer-Based Test (CBT) Active
+                  </div>
+                  <p className="font-medium text-slate-700 leading-relaxed">
+                    Students will take this exam directly in their web browser with a server-synced countdown timer, realtime debounced autosave, and instant auto-evaluated scorecards. You will be able to bulk import PDF/DOCX question papers right after saving this draft.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -639,6 +862,40 @@ function CreateExamContent() {
                 </div>
               </div>
 
+              {/* Negative Marking Scheme Configuration */}
+              <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-[#0B2447]">Negative Marking Scheme</p>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Deduct marks for wrong MCQ choices (e.g. NEET -1 marking)
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={negativeMarkingEnabled}
+                    onChange={(e) => setNegativeMarkingEnabled(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-300 text-[#0052CC] focus:ring-[#0052CC]"
+                  />
+                </div>
+
+                {negativeMarkingEnabled && (
+                  <div className="flex items-center gap-3 pt-2 border-t border-slate-200/80">
+                    <Label className="text-xs font-bold text-slate-700">
+                      Deduction per Wrong Choice:
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={negativeMarkingValue}
+                      onChange={(e) => setNegativeMarkingValue(Number(e.target.value))}
+                      className="w-24 rounded-xl h-9 text-xs font-bold text-center border-slate-200"
+                    />
+                    <span className="text-xs text-slate-500 font-medium">marks (e.g. 1 mark)</span>
+                  </div>
+                )}
+              </div>
+
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -694,6 +951,264 @@ function CreateExamContent() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Question Paper & Document Upload Box */}
+              <div className="border border-slate-200 rounded-2xl p-5 bg-[#F8FAFC] space-y-4 shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-[#0052CC]" /> Question Paper Document Upload {mode === 'ONLINE' ? '(PDF / DOCX)' : '(PDF)'}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      {mode === 'ONLINE'
+                        ? 'Upload question paper PDF/DOCX for automatic OCR, text extraction & AI structured question parsing.'
+                        : 'Upload question paper PDF for student and tutor reference during exam window.'}
+                    </p>
+                  </div>
+                  {mode === 'ONLINE' && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        suppressHydrationWarning
+                        onClick={handleDownloadSampleTemplate}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                      >
+                        <FileDown className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Download Sample Template</span>
+                      </button>
+                      <span className="px-3 py-1 bg-indigo-50 border border-indigo-200 text-[#0052CC] rounded-xl text-[10px] font-black uppercase tracking-wider">
+                        ⚡ AI Parser Ready
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sample Document Formatting Guide Banner (Only for Online CBT) */}
+                {mode === 'ONLINE' && (
+                  <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#0B2447]">
+                        <HelpCircle className="w-4 h-4 text-[#0052CC]" />
+                        <span>Recommended Question Paper Formatting Guide</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          suppressHydrationWarning
+                          onClick={handleCopySampleFormat}
+                          className="text-[11px] text-[#0052CC] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedSample ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span className="text-emerald-600">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3 text-[#0052CC]" />
+                              <span>Copy Sample Format</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] font-medium text-slate-600 pt-1">
+                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                        <p className="font-extrabold text-slate-800">1. Question Numbering</p>
+                        <p className="text-slate-500">Start questions with <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">1.</code> or <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">Q1.</code> or <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">[Subject]</code> tag.</p>
+                      </div>
+                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                        <p className="font-extrabold text-slate-800">2. Options (A - D)</p>
+                        <p className="text-slate-500">Format options as <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">A) ... B) ... C) ... D) ...</code> (inline or newline).</p>
+                      </div>
+                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                        <p className="font-extrabold text-slate-800">3. Answer Key</p>
+                        <p className="text-slate-500">Include <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">Answer: B</code> or <code className="bg-white px-1 py-0.5 rounded border border-slate-200 text-blue-700 font-bold">Correct Answer: B</code> after options.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    id="page-qp-file-input"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      setQuestionPaperFile(f);
+                      if (f && mode === 'ONLINE') {
+                        handleExtractAndPreview(f);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="page-qp-file-input"
+                    className="w-full sm:w-auto px-5 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#0052CC] rounded-xl text-xs font-extrabold cursor-pointer transition text-center truncate shadow-2xs"
+                  >
+                    {questionPaperFile ? questionPaperFile.name : 'Select PDF / DOCX Question Paper...'}
+                  </label>
+
+                  {questionPaperFile ? (
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200 flex-1 truncate">
+                      <FileCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate">
+                        {questionPaperFile.name} ({(questionPaperFile.size / (1024 * 1024)).toFixed(2)} MB)
+                      </span>
+                      {mode === 'ONLINE' && (
+                        <button
+                          type="button"
+                          onClick={() => handleExtractAndPreview(questionPaperFile)}
+                          disabled={isParsingQuestions}
+                          className="ml-auto px-3 py-1 bg-[#0052CC] hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-[11px] font-black transition flex items-center gap-1 cursor-pointer"
+                        >
+                          {isParsingQuestions ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                              <span>Parsing Document...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 text-white" />
+                              <span>Re-parse Document</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 font-medium">No document attached yet (Optional)</p>
+                  )}
+                </div>
+
+                {/* Instant Document Question Preview Table */}
+                {mode === 'ONLINE' && isParsingQuestions && (
+                  <div className="p-6 bg-white border border-slate-200 rounded-2xl text-center space-y-2">
+                    <Loader2 className="w-7 h-7 animate-spin text-[#0052CC] mx-auto" />
+                    <p className="text-xs font-bold text-slate-800">
+                      Extracting & Parsing Questions from {questionPaperFile?.name}...
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      OCR & Text AST parser reading question text, options A-D, and answer keys.
+                    </p>
+                  </div>
+                )}
+
+                {mode === 'ONLINE' && parsedQuestionsPreview.length > 0 && !isParsingQuestions && (
+                  <div className="space-y-3 pt-2 animate-in fade-in duration-200">
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-blue-50/80 border border-blue-200 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-white text-[#0052CC] border border-blue-200 shadow-2xs">
+                          <FileCheck className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
+                            Extracted Questions Document Preview ({parsedQuestionsPreview.length} Questions Found)
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            Review extracted options & correct answers before saving this exam draft
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs font-extrabold">
+                        <span className="px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {parsedQuestionsPreview.filter((q) => q.status === 'VALID').length} Valid
+                        </span>
+                        {parsedQuestionsPreview.filter((q) => q.status === 'NEEDS_REVIEW' || !q.correctAnswer).length > 0 && (
+                          <span className="px-3 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl flex items-center gap-1 animate-pulse">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {parsedQuestionsPreview.filter((q) => q.status === 'NEEDS_REVIEW' || !q.correctAnswer).length} Needs Review
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Preview Table */}
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs max-h-80 overflow-y-auto bg-white">
+                      <table className="w-full text-left text-xs text-slate-700">
+                        <thead className="bg-slate-50 text-[#0B2447] uppercase font-extrabold text-[10px] border-b border-slate-200 sticky top-0 z-10">
+                          <tr>
+                            <th className="py-3 px-4 w-12 text-center">#</th>
+                            <th className="py-3 px-4">Question Text</th>
+                            <th className="py-3 px-4">Options</th>
+                            <th className="py-3 px-4 text-center">Answer Key</th>
+                            <th className="py-3 px-4 text-center">Marks</th>
+                            <th className="py-3 px-4 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium">
+                          {parsedQuestionsPreview.map((q) => {
+                            const isNeedsReview = q.status === 'NEEDS_REVIEW' || !q.correctAnswer;
+                            return (
+                              <tr
+                                key={q.questionNumber}
+                                className={`transition-colors ${
+                                  isNeedsReview ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-slate-50/80'
+                                }`}
+                              >
+                                <td className="py-3 px-4 font-black text-center text-[#0B2447]">
+                                  {q.questionNumber}
+                                </td>
+
+                                <td className="py-3 px-4 font-extrabold text-[#0B2447] max-w-xs truncate">
+                                  {q.questionText}
+                                </td>
+
+                                <td className="py-3 px-4 text-slate-600 font-semibold">
+                                  <span className="px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200 text-[11px]">
+                                    {q.options.length} Options ({q.options.map((o) => o.label).join(',')})
+                                  </span>
+                                </td>
+
+                                <td className="py-3 px-4 text-center">
+                                  {q.correctAnswer ? (
+                                    <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black rounded-lg">
+                                      Option {q.correctAnswer}
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center justify-center gap-1">
+                                      {['A', 'B', 'C', 'D'].map((lbl) => (
+                                        <button
+                                          key={lbl}
+                                          type="button"
+                                          onClick={() => handleSetCorrectAnswer(q.questionNumber, lbl)}
+                                          className="px-2 py-1 bg-white border border-amber-300 text-amber-900 hover:bg-emerald-600 hover:text-white rounded-md text-[11px] font-black transition cursor-pointer"
+                                        >
+                                          {lbl}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+
+                                <td className="py-3 px-4 text-center font-bold text-slate-800">
+                                  +{q.marks} / -{q.negativeMarks}
+                                </td>
+
+                                <td className="py-3 px-4 text-center">
+                                  {q.status === 'VALID' ? (
+                                    <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold rounded-md">
+                                      VALID
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-extrabold rounded-md">
+                                      NEEDS REVIEW
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -759,7 +1274,7 @@ function CreateExamContent() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-slate-600 font-medium">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-slate-600 font-medium">
                   <p>
                     Title:{' '}
                     <span className="text-[#0B2447] font-extrabold">
@@ -767,9 +1282,12 @@ function CreateExamContent() {
                     </span>
                   </p>
                   <p>
-                    Type/Mode:{' '}
+                    Type / Mode:{' '}
                     <span className="text-[#0B2447] font-extrabold">
-                      {examType} / {mode}
+                      {examType} /{' '}
+                      <span className={mode === 'ONLINE' ? 'text-[#0052CC] font-black' : 'text-slate-800'}>
+                        {mode === 'ONLINE' ? 'Online CBT ⚡' : mode === 'HYBRID' ? 'Hybrid 🔄' : 'Offline OMR 📝'}
+                      </span>
                     </span>
                   </p>
                   <p>
@@ -777,9 +1295,23 @@ function CreateExamContent() {
                     <span className="text-[#0B2447] font-extrabold">{durationMinutes} mins</span>
                   </p>
                   <p>
-                    Marks:{' '}
+                    Total Marks:{' '}
                     <span className="text-[#0B2447] font-extrabold">
-                      {totalMarks} (Pass: {passingMarks})
+                      {totalMarks} (Passing: {passingMarks})
+                    </span>
+                  </p>
+                  <p>
+                    Negative Marking:{' '}
+                    <span className="text-[#0B2447] font-extrabold">
+                      {negativeMarkingEnabled ? `Enabled (-${negativeMarkingValue} per wrong)` : 'Disabled'}
+                    </span>
+                  </p>
+                  <p>
+                    Questions:{' '}
+                    <span className="text-[#0052CC] font-extrabold">
+                      {parsedQuestionsPreview.length > 0
+                        ? `${parsedQuestionsPreview.length} Extracted Questions (Ready for Import)`
+                        : 'Manual / Pending Import'}
                     </span>
                   </p>
                   <p>
@@ -789,9 +1321,9 @@ function CreateExamContent() {
                     </span>
                   </p>
                   <p>
-                    Selected Batches:{' '}
+                    Target Batches:{' '}
                     <span className="text-[#0052CC] font-extrabold">
-                      {selectedBatchIds.length} Batches
+                      {selectedBatchIds.length} Batches Selected
                     </span>
                   </p>
                 </div>
@@ -925,7 +1457,9 @@ function CreateExamContent() {
 export default function CreateExamPage() {
   return (
     <DashboardLayout>
-      <CreateExamContent />
+      <div suppressHydrationWarning>
+        <CreateExamContent />
+      </div>
     </DashboardLayout>
   );
 }

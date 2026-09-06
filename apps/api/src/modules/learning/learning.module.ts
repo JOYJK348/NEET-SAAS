@@ -18,6 +18,12 @@ import { PublishChecklistService } from './services/publish-checklist.service';
 import { ExamApprovalService } from './services/exam-approval.service';
 import { ExamAnalyticsService } from './services/exam-analytics.service';
 
+import { OnlineCbtController } from './controllers/online-cbt.controller';
+import { DocumentExtractorService } from './services/document-extractor.service';
+import { StructuredQuestionParserService } from './services/structured-question-parser.service';
+import { QuestionImportService } from './services/question-import.service';
+import { OnlineCbtService } from './services/online-cbt.service';
+
 @Module({
   imports: [PrismaModule],
   controllers: [
@@ -25,6 +31,7 @@ import { ExamAnalyticsService } from './services/exam-analytics.service';
     AdminExamsController,
     StudentExamsController,
     TutorExamsController,
+    OnlineCbtController,
   ],
   providers: [
     TenantScopedPrisma,
@@ -39,6 +46,10 @@ import { ExamAnalyticsService } from './services/exam-analytics.service';
     PublishChecklistService,
     ExamApprovalService,
     ExamAnalyticsService,
+    DocumentExtractorService,
+    StructuredQuestionParserService,
+    QuestionImportService,
+    OnlineCbtService,
   ],
   exports: [
     TopicItemService,
@@ -52,6 +63,10 @@ import { ExamAnalyticsService } from './services/exam-analytics.service';
     PublishChecklistService,
     ExamApprovalService,
     ExamAnalyticsService,
+    DocumentExtractorService,
+    StructuredQuestionParserService,
+    QuestionImportService,
+    OnlineCbtService,
   ],
 })
 export class LearningModule {}

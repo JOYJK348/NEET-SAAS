@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useChildSwitcher } from '@/features/parent-portal/context/child-switcher-context';
 import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
 import type {
@@ -30,14 +31,21 @@ import {
   ChevronRight,
   ShieldCheck,
   RotateCcw,
+  Search,
+  Filter,
+  ArrowRight,
+  Laptop,
 } from 'lucide-react';
 import { formatDate } from '@/features/students/utils/student-utils';
 import { cn } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function ParentExamsPage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'COMPLETED' | 'UPCOMING'>('ALL');
+  const queryClient = useQueryClient();
 
   const { data, isLoading: isExamsLoading, refetch } = useQuery<ParentExamsData>({
     queryKey: ['parent', 'exams', selectedChildId || 'default'],
@@ -47,18 +55,28 @@ export default function ParentExamsPage() {
     refetchOnMount: 'always',
   });
 
-  const isLoading = (isExamsLoading && !data) || isSwitcherLoading;
+  const prefetchExamResult = (examId: string) => {
+    if (!selectedChildId || !examId) return;
+    queryClient.prefetchQuery({
+      queryKey: ['parent', 'examResult', selectedChildId, examId],
+      queryFn: () => parentPortalService.getExamResult(selectedChildId, examId),
+      staleTime: 10 * 60 * 1000,
+    });
+  };
 
-  if (isLoading || isSwitcherLoading) {
-    return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#FAFAFA]">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
+  const isLoading = (isExamsLoading && !data) || isSwitcherLoading;
 
   const upcoming = data?.upcoming || [];
   const completed = data?.completed || [];
+
+  // Automatic background prefetch for all completed exams once data is loaded
+  useEffect(() => {
+    if (selectedChildId && completed && completed.length > 0) {
+      completed.forEach((exam) => {
+        prefetchExamResult(exam.id);
+      });
+    }
+  }, [selectedChildId, completed]);
 
   const activeExam: CompletedExamItem | null =
     completed.find((e) => e.id === selectedExamId) || completed[0] || null;
@@ -79,6 +97,14 @@ export default function ParentExamsPage() {
       : 0;
 
   const topRank = completed.length > 0 ? Math.min(...completed.map((c) => c.rank || 999)) : 0;
+
+  const filteredCompleted = completed.filter(
+    (e) => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  const filteredUpcoming = upcoming.filter(
+    (e) => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   const getSubjectTheme = (subject: string) => {
     const s = subject.toLowerCase();
@@ -130,232 +156,424 @@ export default function ParentExamsPage() {
   const getSubjectBadge = (pct: number) => {
     if (pct >= 85)
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-          High Mastery
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+          High Mastery 🌟
         </span>
       );
     if (pct >= 75)
       return (
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-          Good Progress
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
+          Good Progress 👍
         </span>
       );
     return (
-      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-        Practice Needed
+      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+        Practice Needed 🎯
       </span>
     );
   };
 
   return (
-    <div className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans">
+    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
       {/* ── ISML LMS Light Blue Header Banner ── */}
-      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200">
-        <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
-          <span>Parent Portal</span>
-          <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
-          <span>Examinations & Performance</span>
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Parent Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Examinations & Performance</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
+            <span>Examinations & Score Profiles</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
+              Student Progress 🎓
+            </span>
+          </h1>
+          <p className="text-xs text-slate-600 font-medium">
+            Track test performance, evaluate subject concept breakdown, and review faculty evaluation notes for{' '}
+            <strong className="text-[#0B2447] font-bold">
+              {selectedChild?.name || 'Student'}
+            </strong>
+          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-[#0052CC]" />
-              Examinations & Evaluation Profile
-            </h1>
-            <p className="text-xs text-slate-600 font-medium mt-1">
-              Track test performance, evaluate subject concept breakdown, and review faculty
-              evaluation notes for{' '}
-              <strong className="text-[#0B2447] font-bold">
-                {selectedChild?.name || 'Student'}
-              </strong>
+        <button
+          suppressHydrationWarning
+          onClick={() => refetch()}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-[#0052CC] hover:bg-slate-50 shadow-2xs transition shrink-0 self-start sm:self-auto cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4 text-[#0052CC]" />
+          <span>Refresh Data</span>
+        </button>
+      </div>
+
+      {/* ── Top KPI Stats Cards Row (4 Cards) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-blue-300 flex items-center gap-3.5">
+          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
+            <BarChart3 className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Average Score
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5 font-mono">
+              {avgPercentage}%
             </p>
           </div>
+        </Card>
 
-          {/* Quick Metrics Badges */}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetch()}
-              className="bg-white border-blue-200 text-[#0052CC] hover:bg-blue-100 text-xs font-extrabold gap-1.5 rounded-xl h-11 px-3.5 shadow-2xs cursor-pointer"
-              title="Sync Latest Exam Data"
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-amber-300 flex items-center gap-3.5">
+          <div className="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 shrink-0">
+            <Award className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Top Rank Achieved
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5 font-mono">
+              {topRank > 0 && topRank < 999 ? `#${topRank}` : 'N/A'}
+            </p>
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-emerald-300 flex items-center gap-3.5">
+          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 shrink-0">
+            <CheckCircle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Completed Tests
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-0.5 font-mono">
+              {completed.length}
+            </p>
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-indigo-300 flex items-center gap-3.5">
+          <div className="p-3 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-600 shrink-0">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              Upcoming Exams
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold text-indigo-700 mt-0.5 font-mono">
+              {upcoming.length}
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* ── Search Bar & Filter Control Bar ── */}
+      <div className="bg-white border border-slate-200 p-3 sm:p-4 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC] flex items-center justify-center font-bold shrink-0">
+            <Filter className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="text-xs font-black text-[#0B2447] uppercase tracking-wider">Exam Category Filters</h2>
+            <p className="text-[11px] text-slate-500 font-medium">Search and filter child exam records</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              suppressHydrationWarning
+              placeholder="Search exam title..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-1.5 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0052CC] transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
+            <button
+              type="button"
+              suppressHydrationWarning
+              onClick={() => setActiveTab('ALL')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5',
+                activeTab === 'ALL'
+                  ? 'bg-[#0052CC] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900',
+              )}
             >
-              <RotateCcw className="w-4 h-4 text-[#0052CC]" /> Refresh
-            </Button>
-            <div className="bg-white p-3 rounded-xl border border-blue-200 text-center shadow-2xs min-w-[90px]">
-              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                Avg Score
-              </p>
-              <p className="text-base font-extrabold font-mono text-[#0052CC] mt-0.5">
-                {avgPercentage}%
-              </p>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-blue-200 text-center shadow-2xs min-w-[90px]">
-              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                Top Rank
-              </p>
-              <p className="text-base font-extrabold font-mono text-amber-600 mt-0.5">
-                {topRank > 0 && topRank < 999 ? `#${topRank}` : 'N/A'}
-              </p>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-blue-200 text-center shadow-2xs min-w-[90px]">
-              <p className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-                Tests Taken
-              </p>
-              <p className="text-base font-extrabold font-mono text-emerald-600 mt-0.5">
-                {completed.length}
-              </p>
-            </div>
+              <span>All ({completed.length + upcoming.length})</span>
+            </button>
+
+            <button
+              type="button"
+              suppressHydrationWarning
+              onClick={() => setActiveTab('COMPLETED')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5',
+                activeTab === 'COMPLETED'
+                  ? 'bg-emerald-700 text-white shadow-2xs'
+                  : 'text-emerald-700 hover:text-emerald-900',
+              )}
+            >
+              <span>Evaluated ({completed.length})</span>
+            </button>
+
+            <button
+              type="button"
+              suppressHydrationWarning
+              onClick={() => setActiveTab('UPCOMING')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5',
+                activeTab === 'UPCOMING'
+                  ? 'bg-indigo-700 text-white shadow-2xs'
+                  : 'text-indigo-700 hover:text-indigo-900',
+              )}
+            >
+              <span>Upcoming ({upcoming.length})</span>
+            </button>
           </div>
         </div>
       </div>
 
+      {/* ── Evaluated Exams List ── */}
+      {(activeTab === 'ALL' || activeTab === 'COMPLETED') && (
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-emerald-600" />
+            Completed & Evaluated Exams History ({filteredCompleted.length})
+          </h3>
 
-      {/* ── Interactive Exam Selector & Subject Breakdown Section ── */}
-      <div className="space-y-4 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-[#0052CC]" />
-              Subject Concept Strength & Marks Breakdown
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Select an exam below to inspect subject-wise scores & mastery percentages
-            </p>
-          </div>
-          {activeExam && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 self-start sm:self-auto">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#0052CC]" />
-              Selected: {activeExam.title}
-            </span>
-          )}
-        </div>
-
-        {/* Exam Selection Pills */}
-        {completed.length > 0 ? (
-          <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
-            {completed.map((exam) => {
-              const isSelected = (selectedExamId || activeExam?.id) === exam.id;
-              return (
-                <button
-                  key={exam.id}
-                  type="button"
-                  onClick={() => setSelectedExamId(exam.id)}
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-xl border text-xs font-bold transition-all shrink-0 cursor-pointer text-left',
-                    isSelected
-                      ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs font-extrabold'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50',
-                  )}
-                >
-                  <FileSpreadsheet
-                    className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-[#0052CC]'}`}
-                  />
-                  <div>
-                    <p className="font-extrabold">{exam.title}</p>
-                    <p
-                      className={`text-[10px] font-mono mt-0.5 ${
-                        isSelected ? 'text-blue-100' : 'text-slate-400'
-                      }`}
-                    >
-                      {exam.totalScore} / {exam.totalPossible} Marks ({exam.percentage}%)
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <Card className="p-4 rounded-2xl bg-white border border-slate-200 text-xs text-slate-400 font-medium shadow-2xs">
-            No completed exam records available to select.
-          </Card>
-        )}
-
-        {/* Active Exam Subject Cards */}
-        {activeSubjectBreakdown.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {activeSubjectBreakdown.map((item) => {
-              const theme = getSubjectTheme(item.subject);
-              const isInactive = item.isActive === false || Boolean(item.inactiveMessage);
-
-              return (
-                <Card
-                  key={item.subject}
-                  className={cn(
-                    'p-5 rounded-2xl bg-white border shadow-2xs space-y-4 transition-all flex flex-col justify-between',
-                    isInactive
-                      ? 'border-rose-200 bg-rose-50/20 opacity-75'
-                      : `border-slate-200 hover:border-blue-300`,
-                  )}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC] shrink-0">
-                          {theme.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-extrabold text-sm text-[#0B2447] truncate">
-                            {item.subject}
-                          </h4>
-                          <p className="text-[11px] font-mono font-bold text-slate-500 mt-0.5">
-                            {item.obtained} / {item.total} Marks
+          {filteredCompleted.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredCompleted.map((exam) => {
+                const isSelected = (selectedExamId || activeExam?.id) === exam.id;
+                return (
+                  <Card
+                    key={exam.id}
+                    className={cn(
+                      'rounded-2xl border p-5 space-y-4 shadow-2xs transition-all flex flex-col justify-between',
+                      isSelected
+                        ? 'border-[#0052CC] bg-blue-50/40'
+                        : 'border-slate-200 bg-white hover:border-blue-300',
+                    )}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-extrabold text-base text-[#0B2447]">{exam.title}</h4>
+                          <p className="text-xs text-slate-400 font-medium mt-0.5">
+                            Evaluated on {formatDate(exam.evaluatedAt)}
                           </p>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-md text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          Rank #{exam.rank}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase font-bold block">
+                            Total Marks
+                          </span>
+                          <span className="font-extrabold font-mono text-[#0B2447] text-sm">
+                            {exam.totalScore} / {exam.totalPossible}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase font-bold block">
+                            Percentage
+                          </span>
+                          <span className="font-extrabold font-mono text-emerald-600 text-sm">
+                            {exam.percentage}%
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {isInactive ? (
-                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1.5">
-                        <span>⚠️</span> Currently this subject is inactive
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex justify-between items-center text-xs font-bold">
-                          <span className="text-slate-500">Subject Mastery</span>
-                          <span className="font-mono text-[#0B2447] text-sm font-extrabold">
-                            {item.percentage}%
-                          </span>
-                        </div>
-                        <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div
-                            className={cn(
-                              'h-full rounded-full transition-all duration-500',
-                              theme.bar,
-                            )}
-                            style={{ width: `${item.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <button
+                        type="button"
+                        suppressHydrationWarning
+                        onClick={() => setSelectedExamId(exam.id)}
+                        className="text-xs font-extrabold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        Inspect Breakdown
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    {isInactive ? (
-                      <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
-                        Inactive
-                      </span>
-                    ) : (
-                      getSubjectBadge(item.percentage)
-                    )}
-                    <span className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[100px]">
-                      {activeExam ? activeExam.title : 'Exam'}
-                    </span>
-                  </div>
-                </Card>
-              );
-            })}
+                      <Link
+                        href={`/dashboard/parent/exams/${exam.id}`}
+                        onMouseEnter={() => prefetchExamResult(exam.id)}
+                        onFocus={() => prefetchExamResult(exam.id)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs transition-all cursor-pointer"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Detailed Scorecard 🎓
+                      </Link>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-400 font-medium shadow-2xs">
+              No completed exam records found matching selected criteria.
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Interactive Exam Selector & Subject Breakdown Section ── */}
+      {(activeTab === 'ALL' || activeTab === 'COMPLETED') && (
+        <div className="space-y-4 pt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-[#0052CC]" />
+                Subject Concept Strength & Marks Breakdown
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Select an exam below to inspect subject-wise scores & mastery percentages
+              </p>
+            </div>
+            {activeExam && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0052CC] bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 self-start sm:self-auto">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#0052CC]" />
+                Selected: {activeExam.title}
+              </span>
+            )}
           </div>
-        ) : (
-          <Card className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs text-slate-400 font-medium shadow-2xs">
-            No subject breakdown available for the selected exam.
-          </Card>
-        )}
-      </div>
+
+          {/* Exam Selection Pills */}
+          {completed.length > 0 ? (
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+              {completed.map((exam) => {
+                const isSelected = (selectedExamId || activeExam?.id) === exam.id;
+                return (
+                  <button
+                    key={exam.id}
+                    type="button"
+                    suppressHydrationWarning
+                    onClick={() => setSelectedExamId(exam.id)}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-xl border text-xs font-bold transition-all shrink-0 cursor-pointer text-left',
+                      isSelected
+                        ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs font-extrabold'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50',
+                    )}
+                  >
+                    <FileSpreadsheet
+                      className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-[#0052CC]'}`}
+                    />
+                    <div>
+                      <p className="font-extrabold">{exam.title}</p>
+                      <p
+                        className={`text-[10px] font-mono mt-0.5 ${
+                          isSelected ? 'text-blue-100' : 'text-slate-400'
+                        }`}
+                      >
+                        {exam.totalScore} / {exam.totalPossible} Marks ({exam.percentage}%)
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-4 rounded-2xl bg-white border border-slate-200 text-xs text-slate-400 font-medium shadow-2xs">
+              No completed exam records available to select.
+            </Card>
+          )}
+
+          {/* Active Exam Subject Cards Grid */}
+          {activeSubjectBreakdown.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {activeSubjectBreakdown.map((item) => {
+                const theme = getSubjectTheme(item.subject);
+                const isInactive = item.isActive === false || Boolean(item.inactiveMessage);
+
+                return (
+                  <Card
+                    key={item.subject}
+                    className={cn(
+                      'p-5 rounded-2xl bg-white border shadow-2xs space-y-4 transition-all flex flex-col justify-between',
+                      isInactive
+                        ? 'border-rose-200 bg-rose-50/20 opacity-75'
+                        : `border-slate-200 hover:border-blue-300`,
+                    )}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC] shrink-0">
+                            {theme.icon}
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-sm text-[#0B2447] truncate">
+                              {item.subject}
+                            </h4>
+                            <p className="text-[11px] font-mono font-bold text-slate-500 mt-0.5">
+                              {item.obtained} / {item.total} Marks
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {isInactive ? (
+                        <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold flex items-center gap-1.5">
+                          <span>⚠️</span> Currently this subject is inactive
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex justify-between items-center text-xs font-bold">
+                            <span className="text-slate-500">Subject Mastery</span>
+                            <span className="font-mono text-[#0B2447] text-sm font-extrabold">
+                              {item.percentage}%
+                            </span>
+                          </div>
+                          <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all duration-500',
+                                theme.bar,
+                              )}
+                              style={{ width: `${item.percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      {isInactive ? (
+                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                          Inactive
+                        </span>
+                      ) : (
+                        getSubjectBadge(item.percentage)
+                      )}
+                      <span className="text-[10px] font-bold text-slate-400 uppercase truncate max-w-[100px]">
+                        {activeExam ? activeExam.title : 'Exam'}
+                      </span>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className="p-6 rounded-2xl bg-white border border-slate-200 text-center text-xs text-slate-400 font-medium shadow-2xs">
+              No subject breakdown available for the selected exam.
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* ── Faculty Evaluation Remarks Card ── */}
-      {activeExam?.tutorNotes && (
+      {(activeTab === 'ALL' || activeTab === 'COMPLETED') && activeExam?.tutorNotes && (
         <Card className="p-6 rounded-2xl bg-white border border-blue-200 shadow-2xs space-y-3">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <MessageSquare className="h-5 w-5 text-[#0052CC]" />
@@ -370,88 +588,48 @@ export default function ParentExamsPage() {
         </Card>
       )}
 
-      {/* ── Evaluated Exams List ── */}
-      <div className="space-y-3 pt-4">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-          <CheckCircle className="h-4 w-4 text-emerald-600" />
-          Completed & Evaluated Exams History ({completed.length})
-        </h3>
+      {/* ── Upcoming Exams Section ── */}
+      {(activeTab === 'ALL' || activeTab === 'UPCOMING') && (
+        <div className="space-y-3 pt-4">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-indigo-600" />
+            Upcoming Scheduled Examinations ({filteredUpcoming.length})
+          </h3>
 
-        {completed.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {completed.map((exam) => {
-              const isSelected = (selectedExamId || activeExam?.id) === exam.id;
-              return (
-                <Card
-                  key={exam.id}
-                  className={cn(
-                    'rounded-2xl border p-5 space-y-4 shadow-2xs transition-all flex flex-col justify-between',
-                    isSelected
-                      ? 'border-[#0052CC] bg-blue-50/40'
-                      : 'border-slate-200 bg-white hover:border-blue-300',
-                  )}
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-extrabold text-base text-[#0B2447]">{exam.title}</h4>
-                        <p className="text-xs text-slate-400 font-medium mt-0.5">
-                          Evaluated on {formatDate(exam.evaluatedAt)}
-                        </p>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-md text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                        Rank #{exam.rank}
-                      </span>
+          {filteredUpcoming.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredUpcoming.map((uExam: any, idx: number) => (
+                <Card key={uExam.id || idx} className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-2xs">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-base text-[#0B2447]">{uExam.title}</h4>
+                      <p className="text-xs text-slate-500 line-clamp-1">{uExam.description || 'Upcoming NEET Mock Test Series'}</p>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-xs">
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">
-                          Total Marks
-                        </span>
-                        <span className="font-extrabold font-mono text-[#0B2447] text-sm">
-                          {exam.totalScore} / {exam.totalPossible}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 text-[10px] uppercase font-bold block">
-                          Percentage
-                        </span>
-                        <span className="font-extrabold font-mono text-emerald-600 text-sm">
-                          {exam.percentage}%
-                        </span>
-                      </div>
-                    </div>
+                    <span className="px-2.5 py-1 rounded-md text-xs font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                      Scheduled
+                    </span>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedExamId(exam.id)}
-                      className="text-xs font-extrabold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      Inspect Breakdown
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-
-                    <a
-                      href={`/dashboard/parent/exams/${exam.id}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs shadow-2xs transition-all"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      Detailed Result →
-                    </a>
+                  <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-100">
+                    <span className="flex items-center gap-1 font-bold text-[#0B2447]">
+                      <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
+                      {uExam.durationMinutes || 120} mins
+                    </span>
+                    <span className="flex items-center gap-1 text-slate-500 font-mono">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      Window: {formatDate(uExam.examWindowStart || uExam.scheduledStartAt)}
+                    </span>
                   </div>
                 </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <Card className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-400 font-medium shadow-2xs">
-            No completed exam records available.
-          </Card>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <Card className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-xs text-slate-400 font-medium shadow-2xs">
+              No upcoming exam schedules found.
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }

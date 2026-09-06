@@ -148,9 +148,12 @@ export class ExamApprovalService {
         ? `${studentUser.firstName} ${studentUser.lastName}`.trim()
         : 'Student';
 
-      const evaluatorName = sub.evaluatedByUserId
-        ? evaluatorMap.get(sub.evaluatedByUserId) || 'Assigned Tutor'
-        : null;
+      const evaluatorName =
+        sub.evaluatedByUserId === 'SYSTEM_CBT' || exam.mode === 'ONLINE'
+          ? 'Auto-Calculated (CBT Engine)'
+          : sub.evaluatedByUserId
+            ? evaluatorMap.get(sub.evaluatedByUserId) || 'Assigned Tutor'
+            : null;
 
       return {
         id: sub.id,
@@ -171,6 +174,7 @@ export class ExamApprovalService {
     return {
       examId: exam.id,
       title: exam.title,
+      mode: exam.mode,
       publishStatus: exam.publishStatus,
       isClosed: exam.isClosed,
       evaluationLockedAt: exam.evaluationLockedAt,

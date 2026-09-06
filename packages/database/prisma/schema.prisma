@@ -1796,7 +1796,7 @@ model QuestionPaperQuestions {
   id             String    @id @default(uuid())
   tenantId       String
   paperId        String
-  questionId     String    @unique
+  questionId     String
   section        String
   marks          Decimal
   negativeMarks  Decimal
@@ -1815,7 +1815,6 @@ model QuestionPaperQuestions {
   @@unique([tenantId, id])
   @@unique([paperId, questionId])
   @@unique([paperId, displayOrder])
-  @@unique([questionId, version])
 }
 
 model ExamRegistrations {
@@ -1898,7 +1897,7 @@ model ExamAnswers {
   id               String               @id @default(uuid())
   tenantId         String
   attemptId        String
-  questionId       String               @unique
+  questionId       String
   selectedOption   String
   answerText       String
   isCorrect        Boolean
@@ -1923,7 +1922,6 @@ model ExamAnswers {
 
   @@unique([tenantId, id])
   @@unique([attemptId, questionId])
-  @@unique([questionId, version])
 }
 
 model ExamResults {
@@ -2064,7 +2062,7 @@ model Questions {
 model QuestionOptions {
   id             String     @id @default(uuid())
   tenantId       String
-  questionId     String     @unique
+  questionId     String
   optionOrder    Int        @default(1)
   optionLabel    String
   optionText     String
@@ -2084,7 +2082,6 @@ model QuestionOptions {
 
   @@unique([tenantId, id])
   @@unique([questionId, optionLabel])
-  @@unique([questionId, version])
 }
 
 model QuestionExplanations {
@@ -2144,7 +2141,7 @@ model QuestionTags {
 model QuestionTagMappings {
   id             String     @id @default(uuid())
   tenantId       String
-  questionId     String     @unique
+  questionId     String
   tagId          String
   createdAt      DateTime   @default(now())
   createdBy      String
@@ -2160,7 +2157,6 @@ model QuestionTagMappings {
 
   @@unique([tenantId, id])
   @@unique([questionId, tagId])
-  @@unique([questionId, version])
 }
 
 model QuestionVersions {
@@ -2260,6 +2256,7 @@ model QuestionUsage {
 model QuestionImportJobs {
   id                String                 @id @default(uuid())
   tenantId          String
+  examId            String?
   fileName          String
   fileType          String
   fileSizeBytes     BigInt
@@ -2273,6 +2270,7 @@ model QuestionImportJobs {
   failedRows        Int                    @default(0)
   skippedRows       Int                    @default(0)
   status            ImportStatusEnum
+  parsedJson        Json?
   errorLog          Json
   startedAt         DateTime
   completedAt       DateTime

@@ -105,6 +105,7 @@ export interface ReviewSubmissionListItem {
 export interface ReviewSummaryResponse {
   examId: string;
   title: string;
+  mode?: string;
   publishStatus: ExamPublishStatus;
   isClosed: boolean;
   evaluationLockedAt?: string | null;

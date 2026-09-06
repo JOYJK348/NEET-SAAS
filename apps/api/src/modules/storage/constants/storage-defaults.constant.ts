@@ -12,11 +12,22 @@ export const MAX_FILE_SIZES: Record<FileCategoryEnum, number> = {
 };
 
 export const ALLOWED_MIME_TYPES: Record<FileCategoryEnum, readonly string[]> = {
-  QUESTION_PAPER: ['application/pdf'],
+  QUESTION_PAPER: [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'text/plain',
+  ],
   ANSWER_SHEET: ['application/pdf', 'image/jpeg', 'image/png'],
   LIVE_RECORDING: ['video/mp4', 'video/webm'],
   PROFILE_PHOTO: ['image/jpeg', 'image/png', 'image/webp'],
-  DOCUMENT: ['application/pdf', 'image/jpeg', 'image/png'],
+  DOCUMENT: [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'image/jpeg',
+    'image/png',
+  ],
   IMAGE: ['image/jpeg', 'image/png', 'image/webp'],
   SPREADSHEET: [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

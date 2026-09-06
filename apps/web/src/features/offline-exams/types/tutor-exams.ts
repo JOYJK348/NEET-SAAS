@@ -6,6 +6,7 @@ export interface TutorExamItem {
   batchId: string;
   subjectId: string;
   totalMarks: number;
+  mode?: string;
   scheduledStartAt: string;
   scheduledEndAt: string;
   publishStatus: string;
@@ -36,6 +37,7 @@ export interface TutorSubmissionListItem {
 export interface TutorSubmissionsBucketsResponse {
   examId: string;
   title: string;
+  mode?: string;
   sectionConfig: SectionConfigItem[];
   isEvaluationLocked: boolean;
   answerKeyFileId?: string | null;
@@ -66,10 +68,34 @@ export interface SectionMarksBreakdownInput {
   maxMarks: number;
 }
 
+export interface CbtQuestionBreakdownItem {
+  questionIndex: number;
+  questionId: string;
+  questionText: string;
+  selectedOption: string;
+  correctOption: string;
+  isCorrect: boolean;
+  marksAwarded: number;
+  marks: number;
+  negativeMarks: number;
+  options?: { label: string; text: string; isCorrect: boolean }[];
+  explanation?: { solutionText?: string; shortExplanation?: string } | null;
+}
+
+export interface CbtSubmissionStats {
+  correct: number;
+  wrong: number;
+  skipped: number;
+  percentage: number;
+  passFail: boolean;
+  grade?: string;
+}
+
 export interface TutorSubmissionDetailResponse {
   id: string;
   examId: string;
   examTitle: string;
+  examMode?: string;
   totalMarks: number;
   passingMarks: number;
   sectionConfig: SectionConfigItem[];
@@ -87,6 +113,8 @@ export interface TutorSubmissionDetailResponse {
   obtainedMarks: number;
   marksBreakdown?: SectionMarksBreakdownInput[] | null;
   tutorNotes?: string | null;
+  cbtStats?: CbtSubmissionStats | null;
+  cbtBreakdown?: CbtQuestionBreakdownItem[] | null;
   isResultsPublished: boolean;
   isEvaluationLocked: boolean;
   answerSheetSignedUrl?: string | null;

@@ -358,8 +358,8 @@ export class AdminExamsService {
       throw new NotFoundException('Exam not found');
     }
 
-    if (existing.publishStatus !== 'DRAFT') {
-      throw new BadRequestException('Cannot modify non-draft exam');
+    if (existing.publishStatus === 'RESULT_PUBLISHED') {
+      throw new BadRequestException('Cannot modify exam after results have been published');
     }
 
     const newWindowStart = dto.examWindowStart
@@ -606,9 +606,9 @@ export class AdminExamsService {
       throw new NotFoundException('Exam not found');
     }
 
-    if (!exam.questionPaperFileId) {
+    if (exam.mode !== 'ONLINE' && !exam.questionPaperFileId) {
       throw new BadRequestException(
-        'Cannot publish exam without uploading Question Paper PDF first.',
+        'Cannot publish offline exam without uploading Question Paper PDF first.',
       );
     }
 

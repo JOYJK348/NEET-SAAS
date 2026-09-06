@@ -251,3 +251,19 @@ export function useUploadAnswerKey() {
     },
   });
 }
+
+export function useUpdateExam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateExamPayload> }) =>
+      adminExamsService.updateExam(id, data),
+    onSuccess: () => {
+      toast.success('Exam details updated successfully!');
+      queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update exam details';
+      toast.error(msg);
+    },
+  });
+}

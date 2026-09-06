@@ -100,6 +100,10 @@ describe('TutorExamsService', () => {
       logEvent: jest.fn().mockResolvedValue({ id: 'tl-1' }),
     };
 
+    const mockOnlineCbtService: any = {
+      seedSampleQuestionsIfEmpty: jest.fn().mockResolvedValue(undefined),
+    };
+
     service = new TutorExamsService(
       mockPrismaService,
       mockTenantScoped,
@@ -107,6 +111,7 @@ describe('TutorExamsService', () => {
       mockExamClosureService,
       mockExamStateService,
       mockTimelineService,
+      mockOnlineCbtService,
     );
   });
 

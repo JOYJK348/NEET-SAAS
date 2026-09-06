@@ -28,7 +28,9 @@ import {
   Clock,
   Calendar,
   Layers,
+  ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
 
 function ExamAnalyticsContent() {
   const params = useParams();
@@ -72,43 +74,36 @@ function ExamAnalyticsContent() {
   const marks = analytics?.marksAnalytics;
 
   return (
-    <div className="space-y-6 p-4 lg:p-6 bg-[#FAFAFA] min-h-screen text-[#111827]">
-      {/* Signature Violet Gradient Header Banner */}
-      <div className="bg-gradient-to-br from-violet-600 via-violet-600 to-indigo-600 rounded-2xl p-4 sm:p-6 text-white shadow-md shadow-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-white border-0 shrink-0"
-            onClick={() => router.push('/dashboard/exams')}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-violet-200" />
-              <span className="text-[10px] sm:text-xs font-semibold text-violet-200 uppercase tracking-wider">
-                Post-Publish Performance Analytics & Scorecard
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black leading-tight text-white flex items-center gap-2">
-              {analytics?.title || exam?.title || 'Exam Analytics'} 📊
-            </h1>
-            <p className="text-violet-200 text-xs mt-0.5">
-              Comprehensive report of student marks, ranks distribution, section performance, and
-              pass rates.
-            </p>
+    <div className="space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
+      {/* ── Header Banner — ISML LMS Light Blue Style ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <Link href="/dashboard/exams" className="hover:underline flex items-center gap-1">
+              <ArrowLeft className="w-3.5 h-3.5 text-[#0052CC]" />
+              Exam Management
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Performance Analytics</span>
           </div>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
+            <span>{analytics?.title || exam?.title || 'Exam Analytics'}</span>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
+              Post-Publish Analytics 📊
+            </span>
+          </h1>
+          <p className="text-xs text-slate-600 font-medium">
+            Comprehensive report of student marks, ranks distribution, section performance, and pass rates
+          </p>
         </div>
 
-        <Button
-          variant="outline"
+        <button
           onClick={() => router.push('/dashboard/exams')}
-          className="px-4 gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 rounded-xl text-xs font-bold shrink-0"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-2xs transition shrink-0 self-start sm:self-auto cursor-pointer"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Exams
-        </Button>
+          <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
+          <span>Back to Exams</span>
+        </button>
       </div>
 
       {/* KPI Stats Cards */}

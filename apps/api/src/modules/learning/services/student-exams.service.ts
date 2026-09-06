@@ -219,6 +219,8 @@ export class StudentExamsService {
           id: exam.id,
           title: exam.title,
           description: exam.description,
+          mode: exam.mode,
+          examType: exam.examType,
           totalMarks: Number(exam.totalMarks),
           passingMarks: Number(exam.passingMarks),
           durationMinutes: exam.durationMinutes,

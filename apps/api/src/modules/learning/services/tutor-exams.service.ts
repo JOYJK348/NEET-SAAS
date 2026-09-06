@@ -14,6 +14,7 @@ import { ExamStateService } from './exam-state.service';
 import { TimelineService } from './timeline.service';
 import { ExamPublishStatusEnum, SubmissionTimelineEvent } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
+import { OnlineCbtService } from './online-cbt.service';
 
 @Injectable()
 export class TutorExamsService {
@@ -25,6 +26,7 @@ export class TutorExamsService {
     private readonly examClosureService: ExamClosureService,
     private readonly examStateService: ExamStateService,
     private readonly timelineService: TimelineService,
+    private readonly onlineCbtService: OnlineCbtService,
   ) {}
 
   async getMyAssignedExams(
@@ -161,6 +163,7 @@ export class TutorExamsService {
           scheduledStartAt: exam.scheduledStartAt,
           scheduledEndAt: exam.scheduledEndAt,
           publishStatus: exam.publishStatus,
+          mode: exam.mode,
           isClosed: exam.isClosed,
           isResultsPublished: exam.resultsPublishedAt.getTime() > 0,
           isEvaluationLocked: !!exam.evaluationLockedAt,
@@ -292,6 +295,7 @@ export class TutorExamsService {
     return {
       examId,
       title: exam.title,
+      mode: exam.mode,
       sectionConfig: exam.sectionConfig,
       isEvaluationLocked: !!exam.evaluationLockedAt,
       answerKeyFileId: exam.answerKeyFileId,
@@ -383,10 +387,144 @@ export class TutorExamsService {
     const studentUser =
       submission.studentAdmission?.studentProfileIstudent_profile?.userIdusers;
 
+    const examMode = submission.exam.mode || 'OFFLINE';
+    let cbtStats: any = null;
+    let cbtBreakdown: any[] = [];
+
+    if (examMode === 'ONLINE' || submission.evaluatedByUserId === 'SYSTEM_CBT') {
+      const studentProfile = submission.studentAdmission?.studentProfileIstudent_profile as any;
+      const candidateStudentIds = [
+        submission.studentAdmissionId,
+        studentProfile?.userId,
+        studentProfile?.id,
+        submission.studentAdmission?.id,
+      ].filter(Boolean) as string[];
+
+      const [attempt, examResult] = await Promise.all([
+        this.prisma.examAttempts.findFirst({
+          where: {
+            examId,
+            tenantId,
+            deletedAt: null,
+            OR: [
+              { studentAdmissionId: { in: candidateStudentIds } },
+              { createdBy: { in: candidateStudentIds } },
+            ],
+          },
+          orderBy: { startedAt: 'desc' },
+        }),
+        this.prisma.examResults.findFirst({
+          where: {
+            examId,
+            tenantId,
+            deletedAt: null,
+            OR: [
+              { studentAdmissionId: { in: candidateStudentIds } },
+              { createdBy: { in: candidateStudentIds } },
+            ],
+          },
+        }),
+      ]);
+
+      if (examResult) {
+        cbtStats = {
+          correct: examResult.correct,
+          wrong: examResult.wrong,
+          skipped: examResult.skipped,
+          percentage: Number(examResult.percentage),
+          passFail: examResult.passFail,
+          grade: examResult.grade,
+        };
+      }
+
+      let examQuestions = await this.prisma.examQuestions.findMany({
+        where: { examId, tenantId, deletedAt: null },
+        orderBy: { displayOrder: 'asc' },
+      });
+
+      if (examQuestions.length === 0) {
+        await this.onlineCbtService.seedSampleQuestionsIfEmpty(tenantId, examId, tutorUserId).catch(() => null);
+        examQuestions = await this.prisma.examQuestions.findMany({
+          where: { examId, tenantId, deletedAt: null },
+          orderBy: { displayOrder: 'asc' },
+        });
+      }
+
+      if (examQuestions.length > 0) {
+        const examAnswers = attempt
+          ? await this.prisma.examAnswers.findMany({
+              where: { attemptId: attempt.id, tenantId, deletedAt: null },
+            })
+          : [];
+
+        const questionIds = examQuestions.map((eq) => eq.questionBankId);
+
+        const [questions, questionOptions, explanations] = await Promise.all([
+          this.prisma.questions.findMany({
+            where: { id: { in: questionIds }, tenantId, deletedAt: null },
+          }),
+          this.prisma.questionOptions.findMany({
+            where: { questionId: { in: questionIds }, tenantId, deletedAt: null },
+            orderBy: { optionOrder: 'asc' },
+          }),
+          this.prisma.questionExplanations.findMany({
+            where: { questionId: { in: questionIds }, tenantId, deletedAt: null },
+          }),
+        ]);
+
+        const qMap = new Map(questions.map((q) => [q.id, q]));
+        const explanationMap = new Map(explanations.map((e) => [e.questionId, e]));
+        const ansMap = new Map(examAnswers.map((a) => [a.questionId, a]));
+
+        const optionsMap = new Map<string, typeof questionOptions>();
+        questionOptions.forEach((opt) => {
+          if (!optionsMap.has(opt.questionId)) {
+            optionsMap.set(opt.questionId, []);
+          }
+          optionsMap.get(opt.questionId)!.push(opt);
+        });
+
+        cbtBreakdown = examQuestions.map((eq, idx) => {
+          const q = qMap.get(eq.questionBankId);
+          const ans = ansMap.get(eq.questionBankId);
+          const opts = optionsMap.get(eq.questionBankId) || [];
+          const exp = explanationMap.get(eq.questionBankId);
+
+          const correctOpt = opts.find((o) => o.isCorrect)?.optionLabel || '-';
+          const selectedOpt = ans?.selectedOption || '';
+          const isCorrect = ans?.isCorrect ?? (selectedOpt ? selectedOpt.toUpperCase() === correctOpt.toUpperCase() : false);
+
+          return {
+            questionIndex: idx + 1,
+            questionId: eq.questionBankId,
+            questionText: q?.questionText || `Question ${idx + 1}`,
+            selectedOption: selectedOpt,
+            correctOption: correctOpt,
+            isCorrect,
+            marksAwarded: Number(ans?.marksAwarded ?? (isCorrect ? eq.marks : selectedOpt ? -eq.negativeMarks : 0)),
+            marks: Number(eq.marks),
+            negativeMarks: Number(eq.negativeMarks),
+            options: opts.map((o) => ({
+              label: o.optionLabel,
+              text: o.optionText,
+              isCorrect: o.isCorrect,
+            })),
+            explanation: exp
+              ? {
+                  solutionText: exp.solutionText || exp.shortExplanation || '',
+                  shortExplanation: exp.shortExplanation || '',
+                }
+              : null,
+          };
+        });
+      }
+    }
+
     return {
       id: submission.id,
       examId: submission.examId,
       examTitle: submission.exam.title,
+      examMode,
       totalMarks: Number(submission.exam.totalMarks),
       passingMarks: Number(submission.exam.passingMarks),
       sectionConfig: submission.exam.sectionConfig,
@@ -406,6 +544,8 @@ export class TutorExamsService {
       obtainedMarks: Number(submission.obtainedMarks),
       marksBreakdown: submission.marksBreakdown,
       tutorNotes: submission.tutorNotes,
+      cbtStats,
+      cbtBreakdown,
       isResultsPublished:
         submission.isResultsPublished ||
         submission.exam.resultsPublishedAt.getTime() > 0,

@@ -88,11 +88,22 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
             <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
             <span>Paper Submissions</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447]">
-            {buckets.title} Submissions 📄
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
+            <span>{buckets.title} Submissions 📄</span>
+            {buckets.mode === 'ONLINE' ? (
+              <span className="px-2.5 py-1 rounded-lg bg-purple-100 border border-purple-200 text-purple-800 text-xs font-black">
+                💻 ONLINE CBT
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 rounded-lg bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs font-black">
+                📝 OFFLINE OMR
+              </span>
+            )}
           </h1>
           <p className="text-xs text-slate-600 font-medium">
-            Student submissions workload & OMR marking queue ({buckets.totalCount} Total Papers)
+            {buckets.mode === 'ONLINE'
+              ? `Auto-calculated CBT Exam Submissions (${buckets.totalCount} Total Submissions)`
+              : `Student submissions workload & OMR marking queue (${buckets.totalCount} Total Papers)`}
           </p>
         </div>
 
@@ -289,7 +300,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
                     href={`/dashboard/tutor/exams/${examId}/evaluate/${sub.id}`}
                     className="w-full py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs text-center cursor-pointer"
                   >
-                    <span>Evaluate Paper</span>
+                    <span>{buckets.mode === 'ONLINE' ? 'Inspect CBT Scorecard' : 'Evaluate Paper'}</span>
                     <ArrowRight className="w-3.5 h-3.5 text-white" />
                   </Link>
                 </div>
@@ -331,7 +342,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
                             </span>
                           ) : sub.evaluationStatus === 'COMPLETED' ? (
                             <span className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold rounded-lg shadow-2xs">
-                              COMPLETED
+                              {buckets.mode === 'ONLINE' ? 'AUTO-EVALUATED (CBT)' : 'COMPLETED'}
                             </span>
                           ) : (
                             <span className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold rounded-lg shadow-2xs">
@@ -345,7 +356,7 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
                             href={`/dashboard/tutor/exams/${examId}/evaluate/${sub.id}`}
                             className="px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
                           >
-                            <span>Evaluate Paper</span>
+                            <span>{buckets.mode === 'ONLINE' ? 'Inspect CBT Scorecard' : 'Evaluate Paper'}</span>
                             <ArrowRight className="w-3.5 h-3.5 text-white" />
                           </Link>
                         </td>

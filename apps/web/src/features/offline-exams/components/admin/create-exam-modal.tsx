@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useBatches, useCourses } from '@/features/students/hooks/use-students';
-import { useCreateExam, useCheckExamConflict } from '../../hooks/use-admin-exams';
+import { useCreateExam, useCheckExamConflict, adminExamKeys } from '../../hooks/use-admin-exams';
+import { adminExamsService } from '../../services/admin-exams-service';
+import { useQueryClient } from '@tanstack/react-query';
 import type { SectionConfigItem } from '../../types/admin-exams';
 import { toast } from 'sonner';
 import {
   Calendar,
   Clock,
+  FileCheck,
   FileText,
   HelpCircle,
   Layers,
@@ -53,6 +56,9 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   const [negativeMarkingValue, setNegativeMarkingValue] = useState(1);
   const [allowLateUpload, setAllowLateUpload] = useState(true);
   const [allowReplaceUpload, setAllowReplaceUpload] = useState(true);
+  const [questionPaperFile, setQuestionPaperFile] = useState<File | null>(null);
+
+  const queryClient = useQueryClient();
 
   const [sections, setSections] = useState<SectionConfigItem[]>([
     { name: 'Physics', maxMarks: 180 },
@@ -183,7 +189,25 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
         sectionConfig: sections,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (createdExam: any) => {
+          const examId = createdExam?.id || createdExam?.data?.id;
+          if (questionPaperFile && examId) {
+            const toastId = toast.loading('Uploading Question Paper PDF...');
+            try {
+              await adminExamsService.uploadQuestionPaper(examId, questionPaperFile);
+              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+              toast.success('Exam created & Question Paper PDF uploaded! 📄', { id: toastId });
+            } catch (err: any) {
+              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+              toast.error(
+                'Exam created, but QP upload failed: ' +
+                  (err?.response?.data?.message || err?.message || 'Check file'),
+                { id: toastId },
+              );
+            }
+          } else {
+            await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+          }
           onClose();
         },
       },
@@ -198,7 +222,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
           <div>
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <FileText className="w-5 h-5 text-indigo-600" />
-              Create Offline OMR Exam
+              {mode === 'ONLINE' ? 'Create Online CBT Exam' : mode === 'HYBRID' ? 'Create Hybrid Exam' : 'Create Offline OMR Exam'}
             </h2>
             <p className="text-xs text-slate-500 mt-0.5 font-medium">
               Step {step} of 4:{' '}
@@ -208,7 +232,7 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                   ? 'Schedule & Window'
                   : step === 3
                     ? 'Marks & Sections'
-                    : 'Rules & Settings'}
+                    : 'Rules & Finish'}
             </p>
           </div>
           <button
@@ -515,6 +539,35 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                 </div>
               </div>
 
+              {/* Negative Marking Settings */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-slate-900">Negative Marking Scheme</p>
+                    <p className="text-[11px] text-slate-500">Deduct marks for wrong MCQ choices (e.g. NEET -1 marking)</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={negativeMarkingEnabled}
+                    onChange={(e) => setNegativeMarkingEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                </div>
+                {negativeMarkingEnabled && (
+                  <div className="flex items-center gap-3 pt-1">
+                    <label className="text-xs font-semibold text-slate-700">Deduction per Wrong Answer:</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={negativeMarkingValue}
+                      onChange={(e) => setNegativeMarkingValue(Number(e.target.value))}
+                      className="w-24 bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500"
+                    />
+                    <span className="text-xs text-slate-500 font-medium">marks (e.g. 1 mark)</span>
+                  </div>
+                )}
+              </div>
+
               {/* Section Configuration */}
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 space-y-3">
                 <div className="flex items-center justify-between">
@@ -570,6 +623,43 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Question Paper PDF Upload */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-indigo-600" />
+                      Question Paper Document Upload (PDF / DOCX)
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Attach Question Paper file for student and tutor reference during exam.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <input
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    id="modal-qp-file-input"
+                    onChange={(e) => setQuestionPaperFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="modal-qp-file-input"
+                    className="flex-1 py-2 px-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-xl text-xs font-semibold cursor-pointer truncate text-slate-700 transition shadow-2xs text-center"
+                  >
+                    {questionPaperFile ? questionPaperFile.name : 'Select PDF / DOCX Question Paper...'}
+                  </label>
+                  {questionPaperFile && (
+                    <span className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0">
+                      <FileCheck className="w-4 h-4 text-emerald-600" />
+                      {(questionPaperFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

@@ -19,6 +19,8 @@ export interface StudentExamItem {
   id: string;
   title: string;
   description?: string;
+  mode?: string;
+  examType?: string;
   totalMarks: number;
   passingMarks: number;
   durationMinutes: number;
@@ -51,6 +53,8 @@ export interface StudentExamDetailResponse extends StudentExamItem {
   submission?: {
     id: string;
     status: string;
+    evaluationStatus?: string;
+    isResultsPublished?: boolean;
     startedAt?: string | null;
     calculatedEndAt?: string | null;
     graceEndAt?: string | null;
