@@ -96,13 +96,26 @@ export function TutorSubmissionsBucketsView({ examId }: TutorSubmissionsBucketsP
           </p>
         </div>
 
-        <Link
-          href="/dashboard/tutor/exams"
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-2xs transition shrink-0 self-start sm:self-auto"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
-          <span>Back to Exams</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto">
+          {buckets.answerKeySignedUrl && (
+            <a
+              href={buckets.answerKeySignedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 border border-emerald-700 text-xs font-extrabold text-white hover:bg-emerald-700 shadow-2xs transition shrink-0 cursor-pointer"
+            >
+              <FileCheck className="w-4 h-4 text-white" />
+              <span>View Answer Key PDF</span>
+            </a>
+          )}
+          <Link
+            href="/dashboard/tutor/exams"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-extrabold text-slate-700 hover:bg-slate-50 shadow-2xs transition shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
+            <span>Back to Exams</span>
+          </Link>
+        </div>
       </div>
 
       {/* ── Search & Bucket Category Filter Bar ── */}

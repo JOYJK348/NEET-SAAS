@@ -139,22 +139,39 @@ export class TutorExamsService {
       ),
     );
 
-    const data = exams.map((exam) => ({
-      id: exam.id,
-      title: exam.title,
-      batchId: exam.batchId,
-      subjectId: exam.subjectId,
-      totalMarks: Number(exam.totalMarks),
-      scheduledStartAt: exam.scheduledStartAt,
-      scheduledEndAt: exam.scheduledEndAt,
-      publishStatus: exam.publishStatus,
-      isClosed: exam.isClosed,
-      isResultsPublished: exam.resultsPublishedAt.getTime() > 0,
-      isEvaluationLocked: !!exam.evaluationLockedAt,
-      pendingEvaluations: pendingMap.get(exam.id) ?? 0,
-      completedEvaluations: completedMap.get(exam.id) ?? 0,
-      returnedEvaluations: returnedMap.get(exam.id) ?? 0,
-    }));
+    const data = await Promise.all(
+      exams.map(async (exam) => {
+        let answerKeySignedUrl: string | null = null;
+        if (exam.answerKeyFileId) {
+          answerKeySignedUrl = await this.storageService
+            .createSignedUrl({
+              tenantId,
+              fileUploadId: exam.answerKeyFileId,
+              download: false,
+            })
+            .catch(() => null);
+        }
+
+        return {
+          id: exam.id,
+          title: exam.title,
+          batchId: exam.batchId,
+          subjectId: exam.subjectId,
+          totalMarks: Number(exam.totalMarks),
+          scheduledStartAt: exam.scheduledStartAt,
+          scheduledEndAt: exam.scheduledEndAt,
+          publishStatus: exam.publishStatus,
+          isClosed: exam.isClosed,
+          isResultsPublished: exam.resultsPublishedAt.getTime() > 0,
+          isEvaluationLocked: !!exam.evaluationLockedAt,
+          answerKeyFileId: exam.answerKeyFileId,
+          answerKeySignedUrl,
+          pendingEvaluations: pendingMap.get(exam.id) ?? 0,
+          completedEvaluations: completedMap.get(exam.id) ?? 0,
+          returnedEvaluations: returnedMap.get(exam.id) ?? 0,
+        };
+      }),
+    );
 
     const totalPages = Math.ceil(total / take);
     return {
@@ -261,11 +278,24 @@ export class TutorExamsService {
       }
     }
 
+    let answerKeySignedUrl: string | null = null;
+    if (exam.answerKeyFileId) {
+      answerKeySignedUrl = await this.storageService
+        .createSignedUrl({
+          tenantId,
+          fileUploadId: exam.answerKeyFileId,
+          download: false,
+        })
+        .catch(() => null);
+    }
+
     return {
       examId,
       title: exam.title,
       sectionConfig: exam.sectionConfig,
       isEvaluationLocked: !!exam.evaluationLockedAt,
+      answerKeyFileId: exam.answerKeyFileId,
+      answerKeySignedUrl,
       totalCount: submissions.length,
       todaysPending,
       overdue,

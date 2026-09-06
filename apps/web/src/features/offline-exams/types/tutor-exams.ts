@@ -12,6 +12,8 @@ export interface TutorExamItem {
   isClosed: boolean;
   isResultsPublished: boolean;
   isEvaluationLocked: boolean;
+  answerKeyFileId?: string | null;
+  answerKeySignedUrl?: string | null;
   pendingEvaluations: number;
   completedEvaluations: number;
   returnedEvaluations: number;
@@ -36,6 +38,8 @@ export interface TutorSubmissionsBucketsResponse {
   title: string;
   sectionConfig: SectionConfigItem[];
   isEvaluationLocked: boolean;
+  answerKeyFileId?: string | null;
+  answerKeySignedUrl?: string | null;
   totalCount: number;
   todaysPending: TutorSubmissionListItem[];
   overdue: TutorSubmissionListItem[];

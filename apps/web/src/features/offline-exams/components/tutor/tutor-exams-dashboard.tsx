@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  FileCheck,
   RotateCcw,
   Sparkles,
   Award,
@@ -187,6 +188,17 @@ export function TutorExamsDashboard() {
                           {bName}
                         </span>
                       ))}
+                      {exam.answerKeySignedUrl && (
+                        <a
+                          href={exam.answerKeySignedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 hover:bg-emerald-100 transition"
+                        >
+                          <FileCheck className="w-3 h-3 text-emerald-600" />
+                          Answer Key
+                        </a>
+                      )}
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 bg-slate-50 text-[#0B2447] border border-slate-200 px-2.5 py-1 rounded-xl text-xs font-extrabold shrink-0">
@@ -218,14 +230,26 @@ export function TutorExamsDashboard() {
                 </div>
 
                 {/* Open Submissions Action Button */}
-                <div className="pt-1">
+                <div className="pt-1 flex items-center gap-2">
                   <Link
                     href={`/dashboard/tutor/exams/${exam.id}`}
-                    className="w-full py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs text-center cursor-pointer"
+                    className="flex-1 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 shadow-2xs text-center cursor-pointer"
                   >
                     <span>Open Submissions</span>
                     <ArrowRight className="w-3.5 h-3.5 text-white" />
                   </Link>
+                  {exam.answerKeySignedUrl && (
+                    <a
+                      href={exam.answerKeySignedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1 shadow-2xs cursor-pointer shrink-0"
+                      title="View Answer Key PDF"
+                    >
+                      <FileCheck className="w-4 h-4 text-emerald-600" />
+                      <span>Key</span>
+                    </a>
+                  )}
                 </div>
               </div>
             ))
@@ -273,6 +297,17 @@ export function TutorExamsDashboard() {
                             {bName}
                           </span>
                         ))}
+                        {exam.answerKeySignedUrl && (
+                          <a
+                            href={exam.answerKeySignedUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 hover:bg-emerald-100 transition"
+                          >
+                            <FileCheck className="w-3 h-3 text-emerald-600" />
+                            Answer Key
+                          </a>
+                        )}
                       </div>
                     </td>
 
@@ -308,13 +343,26 @@ export function TutorExamsDashboard() {
                     </td>
 
                     <td className="py-4 px-5 text-right">
-                      <Link
-                        href={`/dashboard/tutor/exams/${exam.id}`}
-                        className="px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                      >
-                        <span>Open Submissions</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-white" />
-                      </Link>
+                      <div className="inline-flex items-center gap-2 justify-end">
+                        {exam.answerKeySignedUrl && (
+                          <a
+                            href={exam.answerKeySignedUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          >
+                            <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>View Key</span>
+                          </a>
+                        )}
+                        <Link
+                          href={`/dashboard/tutor/exams/${exam.id}`}
+                          className="px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition-all inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        >
+                          <span>Open Submissions</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-white" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
