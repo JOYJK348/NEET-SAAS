@@ -19,7 +19,7 @@ export function useTutorTimetable(
     queryFn: () => timetableService.getTimetable(dateFrom, dateTo),
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
-    refetchInterval: 2000,
+    refetchInterval: (query) => (query.state.status === 'error' ? false : 30000),
     retry: 2,
   });
 

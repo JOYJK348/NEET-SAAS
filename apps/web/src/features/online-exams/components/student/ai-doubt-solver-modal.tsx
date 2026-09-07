@@ -97,7 +97,7 @@ export function AiDoubtSolverModal({
         if (isMounted) {
           const msg =
             err?.response?.data?.message || err?.message || 'Failed to generate AI Doubt explanation';
-          toast.error(msg);
+          toast.error(msg, { id: 'ai-doubt-explanation-error' });
         }
       } finally {
         if (isMounted) {
@@ -139,7 +139,7 @@ export function AiDoubtSolverModal({
       setChatMessages([...newHistory, { role: 'assistant', content: res.reply }]);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to send query';
-      toast.error(msg);
+      toast.error(msg, { id: 'ai-doubt-chat-error' });
       setChatMessages([
         ...newHistory,
         {

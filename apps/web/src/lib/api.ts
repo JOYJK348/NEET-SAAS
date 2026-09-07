@@ -143,6 +143,8 @@ class ApiClient {
     reject: (reason: unknown) => void;
   }> = [];
 
+  private lastToastTimes: Map<string, number> = new Map();
+
   constructor() {
     this.client = axios.create({
       headers: {
@@ -153,6 +155,120 @@ class ApiClient {
     });
 
     this.setupInterceptors();
+  }
+
+  private shouldShowToast(toastKey: string, cooldownMs = 6000): boolean {
+    const now = Date.now();
+    const lastTime = this.lastToastTimes.get(toastKey) || 0;
+    if (now - lastTime < cooldownMs) {
+      return false;
+    }
+    this.lastToastTimes.set(toastKey, now);
+    return true;
+  }
+
+  private handleGlobalError(error: AxiosError): void {
+    // Suppress toasts for intentional request cancellations (AbortSignal / fast typing / route changes / tab switches)
+    if (isCancellationError(error)) {
+      return;
+    }
+
+    const status = error.response?.status;
+    const rawMessage = (error.response?.data as { message?: string })?.message || error.message;
+    const message = sanitizeErrorMessage(rawMessage, status);
+
+    // Don't show toast for 401 (handled by refresh), 422 (validation errors handled by forms),
+    // or 400 VALIDATION_ERROR (handled by forms inline)
+    if (status === 401 || status === 422) {
+      return;
+    }
+    if (status === 400) {
+      const responseData = error.response?.data as Record<string, unknown> | undefined;
+      if (responseData?.code === 'VALIDATION_ERROR') return;
+    }
+
+    // Determine unique toast key and sonner ID to prevent duplicate stacked toast boxes
+    let toastKey = '';
+    let toastId = '';
+
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      toastKey = 'request-timed-out';
+      toastId = 'request-timed-out';
+    } else if (!status) {
+      toastKey = 'network-error';
+      toastId = 'network-error';
+    } else {
+      toastKey = `error-${status}-${message}`;
+      toastId = `api-error-${status}`;
+    }
+
+    // Suppress repeated toast spam within 6 seconds
+    if (!this.shouldShowToast(toastKey, 6000)) {
+      return;
+    }
+
+    // Show user-friendly error messages with fixed sonner toast IDs
+    switch (status) {
+      case 400:
+        toast.error('Bad Request', { id: toastId, description: message });
+        break;
+      case 403:
+        toast.error('Access Denied', {
+          id: toastId,
+          description: "You don't have permission to perform this action",
+        });
+        break;
+      case 404:
+        toast.error('Not Found', {
+          id: toastId,
+          description: message || 'The requested resource was not found',
+        });
+        break;
+      case 409: {
+        const isCourseDependency =
+          typeof message === 'string' && message.startsWith('Cannot delete course:');
+        const displayMessage = isCourseDependency
+          ? 'This course cannot be deleted because it is currently being used by active batches, admissions, exams, learning materials, or fee structures. Please remove or archive those dependencies first.'
+          : message;
+        toast.error('Conflict', { id: toastId, description: displayMessage });
+        break;
+      }
+      case 429:
+        toast.error('Too Many Requests', { id: toastId, description: 'Please try again later' });
+        break;
+      case 500:
+        toast.error('Server Error', {
+          id: toastId,
+          description: message || 'An unexpected error occurred. Please try again later.',
+        });
+        break;
+      case 503:
+        toast.error('Service Unavailable', {
+          id: toastId,
+          description: message || 'The service is temporarily unavailable. Please try again later.',
+        });
+        break;
+      default:
+        if (status && status >= 500) {
+          toast.error('Server Error', {
+            id: toastId,
+            description: message || 'An unexpected error occurred. Please try again later.',
+          });
+        } else if (!status) {
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            toast.error('Request Timed Out', {
+              id: toastId,
+              description: 'The operation took too long to complete. Please try again.',
+            });
+          } else {
+            toast.error('Network Error', {
+              id: toastId,
+              description:
+                message || 'Unable to connect to the server. Please check your connection.',
+            });
+          }
+        }
+    }
   }
 
   private setupInterceptors(): void {
@@ -294,82 +410,7 @@ class ApiClient {
     );
   }
 
-  private handleGlobalError(error: AxiosError): void {
-    // Suppress toasts for intentional request cancellations (AbortSignal / fast typing / route changes / tab switches)
-    if (isCancellationError(error)) {
-      return;
-    }
 
-    const status = error.response?.status;
-    const rawMessage = (error.response?.data as { message?: string })?.message || error.message;
-    const message = sanitizeErrorMessage(rawMessage, status);
-
-    // Don't show toast for 401 (handled by refresh), 422 (validation errors handled by forms),
-    // or 400 VALIDATION_ERROR (handled by forms inline)
-    if (status === 401 || status === 422) {
-      return;
-    }
-    if (status === 400) {
-      const responseData = error.response?.data as Record<string, unknown> | undefined;
-      if (responseData?.code === 'VALIDATION_ERROR') return;
-    }
-
-    // Show user-friendly error messages
-    switch (status) {
-      case 400:
-        toast.error('Bad Request', { description: message });
-        break;
-      case 403:
-        toast.error('Access Denied', {
-          description: "You don't have permission to perform this action",
-        });
-        break;
-      case 404:
-        toast.error('Not Found', {
-          description: message || 'The requested resource was not found',
-        });
-        break;
-      case 409: {
-        const isCourseDependency =
-          typeof message === 'string' && message.startsWith('Cannot delete course:');
-        const displayMessage = isCourseDependency
-          ? 'This course cannot be deleted because it is currently being used by active batches, admissions, exams, learning materials, or fee structures. Please remove or archive those dependencies first.'
-          : message;
-        toast.error('Conflict', { description: displayMessage });
-        break;
-      }
-      case 429:
-        toast.error('Too Many Requests', { description: 'Please try again later' });
-        break;
-      case 500:
-        toast.error('Server Error', {
-          description: message || 'An unexpected error occurred. Please try again later.',
-        });
-        break;
-      case 503:
-        toast.error('Service Unavailable', {
-          description: message || 'The service is temporarily unavailable. Please try again later.',
-        });
-        break;
-      default:
-        if (status && status >= 500) {
-          toast.error('Server Error', {
-            description: message || 'An unexpected error occurred. Please try again later.',
-          });
-        } else if (!status) {
-          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            toast.error('Request Timed Out', {
-              description: 'The operation took too long to complete. Please try again.',
-            });
-          } else {
-            toast.error('Network Error', {
-              description:
-                message || 'Unable to connect to the server. Please check your connection.',
-            });
-          }
-        }
-    }
-  }
 
   // Public methods for API calls
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
