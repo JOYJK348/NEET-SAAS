@@ -621,7 +621,7 @@ function UnifiedStudentScheduleHub({
                       <span>Watch Recordings</span>
                     </Link>
                     <Link
-                      href="/dashboard/exams"
+                      href="/dashboard/student/exams"
                       className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold shadow-2xs hover:bg-slate-50 flex items-center gap-1.5 transition cursor-pointer"
                     >
                       <FileText className="w-3.5 h-3.5 text-[#0052CC]" />
@@ -788,8 +788,8 @@ function StudentOverviewContent() {
           );
         })()
       ) : (
-        /* 🤖 2ND SECTION: AI DOUBT ASSISTANT FEATURE BANNER (HIGH IMPACT DARK NAVY THEME - MINIMAL NO ICONS) */
-        <div className="w-full bg-gradient-to-r from-[#061539] via-[#092256] to-[#0D2D6C] border border-blue-900/50 rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 font-sans text-white">
+        /* 🤖 2ND SECTION: AI DOUBT ASSISTANT FEATURE BANNER (VIBRANT GRADIENT BLUE-PURPLE WITH RED BUTTON) */
+        <div className="w-full bg-gradient-to-r from-[#0052CC] via-[#2563EB] to-[#5841E3] border border-blue-400/40 rounded-2xl p-4 sm:p-5 shadow-md shadow-blue-900/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 font-sans text-white">
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-black uppercase tracking-wider bg-[#F31260] text-white px-2.5 py-0.5 rounded-full shadow-2xs flex items-center gap-1">
@@ -802,7 +802,7 @@ function StudentOverviewContent() {
               <span className="sm:hidden">Stuck on a Difficult Question?</span>
               <span className="hidden sm:inline">Stuck on a Complex Question or Concept?</span>
             </h3>
-            <p className="text-[11px] sm:text-xs text-sky-200/90 font-medium leading-normal">
+            <p className="text-[11px] sm:text-xs text-sky-100 font-medium leading-normal">
               <span className="sm:hidden">Get instant step-by-step solutions & logic.</span>
               <span className="hidden sm:inline">
                 Ask our AI Doubt Solver for step-by-step logic, key formulas, and detailed breakdowns.
@@ -811,7 +811,7 @@ function StudentOverviewContent() {
           </div>
 
           <Link
-            href="/dashboard/exams"
+            href="/dashboard/student/ai-doubt"
             className="w-full sm:w-auto bg-[#F31260] hover:bg-[#E10E54] active:scale-98 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shrink-0 shadow-md shadow-rose-950/30 flex items-center justify-center gap-2 cursor-pointer transition-all tracking-wide uppercase"
           >
             <span className="sm:hidden">ASK AI DOUBTS</span>
@@ -850,7 +850,7 @@ function StudentOverviewContent() {
         </Link>
 
         <Link
-          href="/dashboard/exams"
+          href="/dashboard/student/exams"
           className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-[#ECFDF5] border border-emerald-200/80 shadow-2xs hover:border-emerald-500 hover:bg-[#D1FAE5] transition-all group"
         >
           <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-2xs">
