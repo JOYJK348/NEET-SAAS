@@ -38,7 +38,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
         <div className={cn('transition-all duration-300', isMobile ? '' : 'lg:pl-64')}>
           <Header isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />
-          <main className={cn('p-4 lg:p-6 pb-6', 'transition-all duration-300')}>{children}</main>
+          <main className={cn('p-3 sm:p-5 lg:p-6 pb-6', 'transition-all duration-300')}>{children}</main>
         </div>
       </div>
     </ChildSwitcherProvider>

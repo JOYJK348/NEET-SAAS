@@ -11,6 +11,7 @@ export interface AutosaveAnswerDto {
 @Injectable()
 export class OnlineCbtService {
   private readonly logger = new Logger(OnlineCbtService.name);
+  private resultCache = new Map<string, { data: any; expiresAt: number }>();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -407,6 +408,8 @@ export class OnlineCbtService {
 
     // Evaluate each question in transaction
     await this.prisma.$transaction(async (tx) => {
+      const answerUpdatePromises: Promise<any>[] = [];
+
       for (const eq of examQuestions) {
         const qId = eq.questionBankId;
         const qMarks = Number(eq.marks);
@@ -433,17 +436,23 @@ export class OnlineCbtService {
         totalObtainedMarks += marksAwarded;
 
         if (studentAns) {
-          await tx.examAnswers.update({
-            where: { id: studentAns.id },
-            data: {
-              isCorrect,
-              marksAwarded,
-              evaluationStatus: EvaluationStatusEnum.COMPLETED,
-              evaluatedAt: now,
-              updatedBy: validUserId,
-            },
-          });
+          answerUpdatePromises.push(
+            tx.examAnswers.update({
+              where: { id: studentAns.id },
+              data: {
+                isCorrect,
+                marksAwarded,
+                evaluationStatus: EvaluationStatusEnum.COMPLETED,
+                evaluatedAt: now,
+                updatedBy: validUserId,
+              },
+            }),
+          );
         }
+      }
+
+      if (answerUpdatePromises.length > 0) {
+        await Promise.all(answerUpdatePromises);
       }
 
       // Floor total marks to zero if negative
@@ -568,6 +577,7 @@ export class OnlineCbtService {
       }
     });
 
+    this.resultCache.delete(`${tenantId}:${exam.id}:${studentUserId}`);
     return this.getExamResult(tenantId, exam.id, studentUserId);
   }
 
@@ -575,20 +585,60 @@ export class OnlineCbtService {
    * Get student exam result & scorecard with detailed question-by-question solution review.
    */
   async getExamResult(tenantId: string, examId: string, studentUserId: string) {
-    const studentProfile = await this.prisma.studentProfiles.findFirst({
-      where: { userId: studentUserId, deletedAt: null },
-    });
+    const cacheKey = `${tenantId}:${examId}:${studentUserId}`;
+    const cached = this.resultCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
+    const [studentProfile, admission] = await Promise.all([
+      this.prisma.studentProfiles.findFirst({
+        where: { userId: studentUserId, deletedAt: null },
+      }),
+      this.prisma.studentAdmissions.findFirst({
+        where: {
+          tenantId,
+          deletedAt: null,
+          OR: [
+            { id: studentUserId },
+            { studentProfileIstudent_profile: { userId: studentUserId } },
+          ],
+        },
+      }),
+    ]);
 
     const possibleStudentIds = Array.from(
       new Set(
         [
           studentUserId,
+          admission?.id,
           (studentProfile as any)?.id,
           studentProfile?.userId,
           (studentProfile as any)?.studentAdmissionId,
         ].filter(Boolean) as string[],
       ),
     );
+
+    // Fetch existing attempt for this exam
+    let attempt = await this.prisma.examAttempts.findFirst({
+      where: {
+        examId,
+        tenantId,
+        deletedAt: null,
+        OR: [
+          ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
+          ...possibleStudentIds.map((id) => ({ createdBy: id })),
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (attempt?.studentAdmissionId && !possibleStudentIds.includes(attempt.studentAdmissionId)) {
+      possibleStudentIds.push(attempt.studentAdmissionId);
+    }
+    if (attempt?.createdBy && !possibleStudentIds.includes(attempt.createdBy)) {
+      possibleStudentIds.push(attempt.createdBy);
+    }
 
     // 1. Primary lookup by candidate student IDs
     let result = await this.prisma.examResults.findFirst({
@@ -620,72 +670,51 @@ export class OnlineCbtService {
       });
     }
 
-    // 3. Fallback lookup: check if an attempt exists and auto-evaluate
-    if (!result) {
-      const existingAttempt = await this.prisma.examAttempts.findFirst({
-        where: {
-          examId,
-          tenantId,
-          deletedAt: null,
-          OR: [
-            ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
-            ...possibleStudentIds.map((id) => ({ createdBy: id })),
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (existingAttempt) {
-        return this.submitExamAttempt(tenantId, studentUserId, existingAttempt.id);
-      }
+    // 3. Fallback lookup: auto-evaluate only if attempt exists and NOT submitted yet
+    if (!result && attempt && attempt.status !== 'SUBMITTED' && attempt.status !== 'AUTO_SUBMITTED') {
+      return this.submitExamAttempt(tenantId, studentUserId, attempt.id);
     }
 
-    const exam = await this.prisma.exams.findFirst({
-      where: { id: examId, tenantId },
-    });
+    if (!attempt && result?.attemptId) {
+      attempt = await this.prisma.examAttempts.findFirst({
+        where: {
+          id: result.attemptId,
+          tenantId,
+        },
+      });
+    }
+
+    // Fetch all exam questions and exam details in parallel
+    const [exam, examQuestions] = await Promise.all([
+      this.prisma.exams.findFirst({
+        where: { id: examId, tenantId },
+      }),
+      this.prisma.examQuestions.findMany({
+        where: { examId, tenantId, deletedAt: null },
+        orderBy: { displayOrder: 'asc' },
+      }),
+    ]);
 
     if (!result && !exam) {
       throw new NotFoundException('Exam or scorecard not available.');
     }
 
-    // Fetch attempt details with fallback lookup
-    let attempt = result?.attemptId
-      ? await this.prisma.examAttempts.findFirst({
-          where: {
-            id: result.attemptId,
-            tenantId,
-          },
-        })
-      : null;
-
-    if (!attempt) {
-      attempt = await this.prisma.examAttempts.findFirst({
-        where: {
-          examId,
-          tenantId,
-          deletedAt: null,
-          OR: [
-            ...possibleStudentIds.map((id) => ({ studentAdmissionId: id })),
-            ...possibleStudentIds.map((id) => ({ createdBy: id })),
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-    }
-
-    // Fetch all exam questions in display order
-    const examQuestions = await this.prisma.examQuestions.findMany({
-      where: { examId, tenantId, deletedAt: null },
-      orderBy: { displayOrder: 'asc' },
-    });
-
     const questionIds = examQuestions.map((eq) => eq.questionBankId);
 
-    const studentAnswers = attempt
-      ? await this.prisma.examAnswers.findMany({
-          where: { attemptId: attempt.id, tenantId },
-        })
-      : [];
+    const attemptIdToSearch = attempt?.id || result?.attemptId;
+
+    const studentAnswers = await this.prisma.examAnswers.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        OR: [
+          ...(attemptIdToSearch ? [{ attemptId: attemptIdToSearch }] : []),
+          ...possibleStudentIds.map((id) => ({ createdBy: id })),
+          ...possibleStudentIds.map((id) => ({ evaluatedBy: id })),
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
     const [questions, questionOptions, explanations] = await Promise.all([
       this.prisma.questions.findMany({
@@ -744,7 +773,7 @@ export class OnlineCbtService {
       };
     });
 
-    return {
+    const finalResult = {
       resultId: result?.id || `res-${examId}`,
       attemptId: attempt?.id || result?.attemptId || examId,
       examId,
@@ -766,6 +795,9 @@ export class OnlineCbtService {
       publishedAt: result?.publishedAt || new Date(),
       questionsReview,
     };
+
+    this.resultCache.set(cacheKey, { data: finalResult, expiresAt: Date.now() + 120000 });
+    return finalResult;
   }
 
   /**

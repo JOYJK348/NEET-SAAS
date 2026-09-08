@@ -41,8 +41,28 @@ export function useStudentResult(id: string) {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 3,
-    staleTime: 1000 * 10,
+    staleTime: 1000 * 60 * 5,
   });
+}
+
+export function usePrefetchExamResult() {
+  const queryClient = useQueryClient();
+  return (id: string) => {
+    if (!id) return;
+    queryClient.prefetchQuery({
+      queryKey: ['cbt-result', id],
+      queryFn: async () => {
+        const { api } = await import('@/lib/api');
+        return api.get(`/online-exams/${id}/result`);
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+    queryClient.prefetchQuery({
+      queryKey: studentExamKeys.detail(id),
+      queryFn: () => studentExamsService.getExamDetail(id),
+      staleTime: 5 * 60 * 1000,
+    });
+  };
 }
 
 export function useStartExam() {

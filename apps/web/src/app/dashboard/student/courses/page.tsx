@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -25,6 +25,17 @@ import {
   CreditCard,
   RefreshCw,
   Sparkles,
+  Atom,
+  FlaskConical,
+  Dna,
+  Search,
+  X,
+  GraduationCap,
+  ShieldAlert,
+  ArrowRight,
+  PlayCircle,
+  Bookmark,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -33,16 +44,59 @@ import { Button } from '@/components/ui/button';
 import { StudentPreview } from '@/features/course-builder/components/StudentPreview';
 import { toast } from 'sonner';
 
+// ─── Subject Theme Helper (Creative Light Mild Color System) ────────────────
+function getSubjectTheme(subjectName?: string) {
+  const s = (subjectName || '').toLowerCase();
+  if (s.includes('physic')) {
+    return {
+      cardBg: 'bg-gradient-to-br from-[#EFF6FF] via-white to-[#EFF6FF] border-blue-200/90 hover:border-blue-400',
+      headerBg: 'bg-gradient-to-r from-blue-600 via-indigo-600 to-[#0052CC] text-white shadow-xs',
+      badgeBg: 'bg-blue-50 text-[#0052CC] border-blue-200',
+      accentColor: 'text-[#0052CC]',
+      pillBg: 'bg-blue-100/80 text-blue-900 border-blue-200',
+      icon: Atom,
+    };
+  }
+  if (s.includes('chemist')) {
+    return {
+      cardBg: 'bg-gradient-to-br from-[#ECFDF5] via-white to-[#ECFDF5] border-emerald-200/90 hover:border-emerald-400',
+      headerBg: 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-xs',
+      badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      accentColor: 'text-emerald-700',
+      pillBg: 'bg-emerald-100/80 text-emerald-950 border-emerald-200',
+      icon: FlaskConical,
+    };
+  }
+  if (s.includes('biolog') || s.includes('botan') || s.includes('zoolo')) {
+    return {
+      cardBg: 'bg-gradient-to-br from-[#FFF1F2] via-white to-[#FFF1F2] border-rose-200/90 hover:border-rose-400',
+      headerBg: 'bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 text-white shadow-xs',
+      badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
+      accentColor: 'text-rose-700',
+      pillBg: 'bg-rose-100/80 text-rose-950 border-rose-200',
+      icon: Dna,
+    };
+  }
+  return {
+    cardBg: 'bg-gradient-to-br from-[#F5F3FF] via-white to-[#F5F3FF] border-purple-200/90 hover:border-purple-400',
+    headerBg: 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 text-white shadow-xs',
+    badgeBg: 'bg-purple-50 text-purple-800 border-purple-200',
+    accentColor: 'text-purple-700',
+    pillBg: 'bg-purple-100/80 text-purple-950 border-purple-200',
+    icon: BookOpen,
+  };
+}
+
 // ─── Topic Row with Connected Tree Line ──────────────────────────────────────
 function TopicRow({ topic, onView }: { topic: TopicItemCountDto; onView?: () => void }) {
   return (
-    <div className="relative flex items-start gap-3.5 pl-6 py-2.5 group">
+    <div className="relative flex items-start gap-3 pl-5 py-2.5 group">
       {/* Connected Tree Line */}
-      <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-blue-100 group-last:bottom-1/2" />
-      <div className="absolute left-2 top-3.5 w-1.5 h-1.5 rounded-full bg-[#0052CC]" />
+      <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-blue-100 group-last:bottom-1/2" />
+      <div className="absolute left-1.5 top-3.5 w-1.5 h-1.5 rounded-full bg-[#0052CC]" />
 
       {/* Circular Check Icon */}
-      <div className="p-1 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 mt-0.5">
+      <div className="p-1 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 shrink-0 mt-0.5 shadow-2xs group-hover:bg-[#0052CC] group-hover:text-white transition-colors">
         <CheckCircle2 className="w-3.5 h-3.5" />
       </div>
 
@@ -53,32 +107,19 @@ function TopicRow({ topic, onView }: { topic: TopicItemCountDto; onView?: () => 
             <h5 className="text-xs font-black text-[#0B2447] leading-tight truncate">
               {topic.name}
             </h5>
-            {topic.difficultyLevel && (
-              <span
-                className={cn(
-                  'text-[9px] font-extrabold px-2 py-0.5 rounded-md border',
-                  topic.difficultyLevel === 'EASY' && 'bg-blue-50 text-[#0052CC] border-blue-200',
-                  topic.difficultyLevel === 'MEDIUM' &&
-                    'bg-amber-50 text-amber-700 border-amber-200',
-                  topic.difficultyLevel === 'HARD' && 'bg-rose-50 text-rose-700 border-rose-200',
-                )}
-              >
-                {topic.difficultyLevel}
-              </span>
-            )}
           </div>
 
           <button
             type="button"
             onClick={onView}
-            className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0052CC] font-extrabold text-[10px] border border-blue-200 transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-[10px] border border-blue-600 transition-all shrink-0 flex items-center gap-1 cursor-pointer shadow-2xs group-hover:scale-102"
           >
-            <Eye className="w-3 h-3 text-[#0052CC]" />
-            <span>View</span>
+            <Eye className="w-3 h-3 text-white" />
+            <span>Start Lesson</span>
           </button>
         </div>
         {topic.description && (
-          <p className="text-[11px] font-medium text-slate-500 leading-normal mt-0.5">
+          <p className="text-[11px] font-medium text-slate-500 leading-normal mt-0.5 line-clamp-2">
             {topic.description}
           </p>
         )}
@@ -100,14 +141,14 @@ function ChapterRow({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xs hover:border-blue-200 transition-all">
       {/* Chapter Header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-3.5 bg-white hover:bg-blue-50/50 transition-colors text-left"
+        className="w-full flex items-center justify-between p-3 sm:p-3.5 bg-white hover:bg-blue-50/40 transition-colors text-left"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-7 h-7 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0052CC] shrink-0">
             {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </div>
@@ -120,7 +161,7 @@ function ChapterRow({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+          <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">
             {chapter.topics.length} topics
           </span>
           <ChevronDown
@@ -131,14 +172,16 @@ function ChapterRow({
 
       {/* Topics connected tree list */}
       {open && (
-        <div className="px-4 pb-4 pt-3 border-t border-slate-100 bg-slate-50/50 space-y-1">
+        <div className="px-3.5 pb-3.5 pt-2.5 border-t border-slate-100 bg-slate-50/40 space-y-1">
           <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#0052CC] uppercase tracking-wider mb-2">
             <Layers className="w-3 h-3 text-[#0052CC]" />
-            <span>Topics</span>
+            <span>Topics & Curriculum Modules</span>
           </div>
 
           {chapter.topics.length === 0 ? (
-            <p className="text-[11px] text-slate-400 italic px-4 py-2">No topics available yet</p>
+            <p className="text-[11px] text-slate-400 font-medium italic px-3 py-1.5">
+              No topics available in this chapter yet.
+            </p>
           ) : (
             <div className="relative pl-1">
               {chapter.topics.map((topic) => (
@@ -161,45 +204,60 @@ function SubjectSection({
   onViewTopic?: (topic: TopicItemCountDto) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const theme = getSubjectTheme(cs.subject.name);
+  const SubjectIcon = theme.icon;
   const totalTopics = cs.chapters.reduce((sum, ch) => sum + ch.topics.length, 0);
 
   return (
-    <div className="rounded-2xl sm:rounded-3xl border border-blue-200/90 bg-white overflow-hidden shadow-2xs">
-      {/* Subject Header (ISML LMS Light Blue Style) */}
+    <div
+      className={cn(
+        'rounded-2xl sm:rounded-3xl border overflow-hidden shadow-2xs transition-all',
+        theme.cardBg,
+      )}
+    >
+      {/* Subject Header (Creative Light Mild Gradient Banner) */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-4 bg-blue-50/80 hover:bg-blue-100/60 transition-colors text-left border-b border-blue-200/70"
+        className={cn(
+          'w-full flex items-center justify-between p-3.5 sm:p-4 transition-all text-left',
+          theme.headerBg,
+        )}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs border border-blue-400">
-            <BookOpen className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xs text-white flex items-center justify-center shrink-0 shadow-2xs border border-white/30">
+            <SubjectIcon className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-[#0B2447] truncate">{cs.subject.name}</h3>
-            <span className="text-[10px] font-mono font-bold text-[#0052CC]">
+            <h3 className="text-sm sm:text-base font-black text-white truncate">{cs.subject.name}</h3>
+            <span className="text-[10px] font-mono font-bold text-white/80">
               {cs.subject.code}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="text-right">
-            <p className="text-xs font-black text-[#0B2447]">{cs.chapters.length} chapters</p>
-            <p className="text-[10px] font-extrabold text-[#0052CC]">{totalTopics} topics</p>
+            <p className="text-xs font-black text-white">{cs.chapters.length} chapters</p>
+            <p className="text-[10px] font-extrabold text-white/90">{totalTopics} topics</p>
           </div>
           <ChevronDown
-            className={cn('w-4 h-4 text-[#0052CC] transition-transform', open && 'rotate-180')}
+            className={cn('w-4 h-4 text-white transition-transform', open && 'rotate-180')}
           />
         </div>
       </button>
 
       {/* Chapters list */}
       {open && (
-        <div className="p-4 space-y-3 bg-white">
-          <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#0052CC] uppercase tracking-wider mb-1">
-            <BookOpen className="w-3.5 h-3.5 text-[#0052CC]" />
-            <span>Chapters & Curriculum</span>
+        <div className="p-3.5 sm:p-4 space-y-3 bg-white">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-1.5 text-[10px] font-extrabold text-[#0052CC] uppercase tracking-wider">
+              <BookOpen className="w-3.5 h-3.5 text-[#0052CC]" />
+              <span>Chapters & Course Curriculum</span>
+            </div>
+            <span className={cn('text-[10px] font-extrabold px-2 py-0.5 rounded-full border', theme.badgeBg)}>
+              {cs.subject.name}
+            </span>
           </div>
 
           {cs.chapters.length === 0 ? (
@@ -245,64 +303,87 @@ function CourseCard({
     .reduce((sum, ch) => sum + ch.topics.length, 0);
 
   return (
-    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-4 p-4 sm:p-6 w-full">
-      {/* Course Meta Info Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 border border-blue-200 text-[#0052CC] flex items-center justify-center font-black shrink-0 shadow-2xs">
-            <Layers className="w-6 h-6 text-[#0052CC]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base sm:text-lg font-black text-[#0B2447]">{course.name}</h2>
-              {isLocked ? (
-                <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[10px] font-extrabold flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-rose-600" /> Locked
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-[#0052CC] rounded-full text-[10px] font-extrabold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-[#0052CC]" /> Unlocked & Active
-                </span>
-              )}
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden space-y-5 p-4 sm:p-6 w-full">
+      {/* Course Header Banner with Light Mild Metrics Grid */}
+      <div className="space-y-3 border-b border-slate-100 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 border border-blue-200 text-[#0052CC] flex items-center justify-center font-black shrink-0 shadow-2xs">
+              <GraduationCap className="w-7 h-7 text-[#0052CC]" />
             </div>
-            <p className="text-xs font-mono font-bold text-slate-400 mt-0.5">{course.code}</p>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg sm:text-xl font-black text-[#0B2447]">{course.name}</h2>
+                {isLocked ? (
+                  <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-full text-[10px] font-black flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-rose-600" /> Locked
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 bg-blue-50 border border-blue-200 text-[#0052CC] rounded-full text-[10px] font-black flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-[#0052CC]" /> Active & Unlocked
+                  </span>
+                )}
+              </div>
+              <p className="text-xs font-mono font-bold text-slate-400 mt-0.5">{course.code}</p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap text-xs font-extrabold">
-          <span className="px-3 py-1 bg-blue-50 border border-blue-200/80 text-[#0052CC] rounded-xl">
-            📚 {totalSubjects} Subjects
-          </span>
-          <span className="px-3 py-1 bg-blue-50 border border-blue-200/80 text-[#0052CC] rounded-xl">
-            📖 {totalChapters} Chapters
-          </span>
-          <span className="px-3 py-1 bg-blue-50 border border-blue-200/80 text-[#0052CC] rounded-xl">
-            📝 {totalTopics} Topics
-          </span>
+        {/* Light Mild Metrics Summary Bar */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1">
+          <div className="bg-blue-50/80 border border-blue-200/80 p-2.5 sm:p-3 rounded-2xl flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#0052CC] text-white flex items-center justify-center shrink-0">
+              <BookOpen className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-[#0B2447]">{totalSubjects} Subjects</p>
+              <p className="text-[10px] text-blue-700 font-semibold">Enrolled Modules</p>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50/80 border border-indigo-200/80 p-2.5 sm:p-3 rounded-2xl flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-[#0B2447]">{totalChapters} Chapters</p>
+              <p className="text-[10px] text-indigo-700 font-semibold">Full Syllabus</p>
+            </div>
+          </div>
+
+          <div className="bg-emerald-50/80 border border-emerald-200/80 p-2.5 sm:p-3 rounded-2xl flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-[#0B2447]">{totalTopics} Topics</p>
+              <p className="text-[10px] text-emerald-700 font-semibold">Learning Lessons</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 🔒 INLINE COURSE LOCK BANNER FOR UNPAID STUDENTS */}
+      {/* Course Lock Banner for Unpaid Students */}
       {isLocked && (
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/80 to-sky-50 rounded-2xl p-5 text-slate-900 border border-blue-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/80 to-sky-50 rounded-2xl p-4 sm:p-5 text-slate-900 border border-blue-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-sans">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs border border-blue-400">
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs border border-blue-400">
               <Lock className="w-6 h-6 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#0052CC]" />
                 <span className="text-[10px] font-black uppercase tracking-wider text-[#0052CC] bg-white px-2 py-0.5 rounded border border-blue-200 shadow-2xs">
-                  Course Locked
+                  Access Locked
                 </span>
               </div>
               <h4 className="text-sm sm:text-base font-black text-[#0B2447] mt-1">
-                Pay Fee Installment to Unlock Access
+                Pay Fee Installment to Unlock Lectures
               </h4>
               <p className="text-xs text-slate-600 font-medium mt-0.5">
                 {nextDueInstallment
-                  ? `Pay Installment #${nextDueInstallment.installmentNumber} (₹${Number(nextDueInstallment.balanceAmount).toLocaleString('en-IN')}) via Razorpay to unlock lectures.`
-                  : 'Pay course fee dues via Razorpay to instantly unlock syllabus & study material.'}
+                  ? `Pay Installment #${nextDueInstallment.installmentNumber} (₹${Number(nextDueInstallment.balanceAmount).toLocaleString('en-IN')}) to unlock syllabus.`
+                  : 'Pay course fee dues to instantly unlock full syllabus & study material.'}
               </p>
             </div>
           </div>
@@ -310,7 +391,7 @@ function CourseCard({
           <Button
             onClick={onPayToUnlock}
             disabled={isPaying}
-            className="bg-[#0052CC] hover:bg-blue-700 text-white font-black px-6 py-5 rounded-xl text-xs shadow-md gap-2 cursor-pointer shrink-0"
+            className="bg-[#0052CC] hover:bg-blue-700 text-white font-black px-5 py-4 rounded-xl text-xs shadow-md gap-2 cursor-pointer shrink-0"
           >
             {isPaying ? (
               <>
@@ -318,7 +399,7 @@ function CourseCard({
               </>
             ) : (
               <>
-                <CreditCard className="w-4 h-4" /> Pay & Unlock Access 💳
+                <CreditCard className="w-4 h-4" /> Pay & Unlock Access
               </>
             )}
           </Button>
@@ -352,6 +433,9 @@ function StudentCoursesContent() {
   const router = useRouter();
   const { user } = useAuth();
   const { courses, isLoading, error, refetch } = useStudentCourses();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+
   const [selectedTopic, setSelectedTopic] = useState<{
     courseName: string;
     topic: TopicItemCountDto;
@@ -367,12 +451,12 @@ function StudentCoursesContent() {
     queryKey: ['student-fee-account', studentAdmissionId],
     queryFn: () => api.get<any>(`/billing/fee-assignments/${studentAdmissionId}`),
     enabled: Boolean(studentAdmissionId),
-    staleTime: 5 * 60 * 1000, // 5 min cache for 0ms instant navigation
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 1,
   });
 
-  // Lock status: Unlocked if NO fee lock assigned OR student paid installment OR 0 balance!
+  // Lock status: Unlocked if NO fee lock assigned OR student paid installment OR 0 balance
   const isCourseLocked = Boolean(
     feeAccount?.hasFeeAssigned &&
     (feeAccount?.assignment?.outstandingAmount ?? 0) > 0 &&
@@ -383,6 +467,67 @@ function StudentCoursesContent() {
 
   const [paying, setPaying] = useState(false);
   const nextDueInstallment = feeAccount?.installments?.find((i: any) => i.status !== 'PAID');
+
+  // Filtered Subject Names List
+  const allSubjectNames = useMemo(() => {
+    const defaultSubjects = ['Physics', 'Chemistry', 'Biology', 'Botany', 'Zoology'];
+    const set = new Set<string>(defaultSubjects);
+    if (courses?.courses) {
+      for (const course of courses.courses) {
+        for (const cs of course.subjects || []) {
+          if (cs.subject?.name) set.add(cs.subject.name);
+        }
+      }
+    }
+    return Array.from(set);
+  }, [courses]);
+
+  // Filtered Courses Hierarchy by Search & Subject Filter
+  const filteredCourses = useMemo(() => {
+    if (!courses?.courses) return [];
+    const q = searchQuery.toLowerCase().trim();
+
+    return courses.courses
+      .map((course) => {
+        const matchesCourseName = !q || course.name.toLowerCase().includes(q);
+
+        const filteredSubjects = course.subjects
+          .filter((cs) => {
+            const matchesSubjectFilter =
+              selectedSubjectFilter === 'ALL' ||
+              cs.subject.name.toLowerCase() === selectedSubjectFilter.toLowerCase();
+            return matchesSubjectFilter;
+          })
+          .map((cs) => {
+            const matchesSubjectName = !q || cs.subject.name.toLowerCase().includes(q);
+
+            const filteredChapters = cs.chapters.filter((ch) => {
+              const matchesChapter = !q || ch.name.toLowerCase().includes(q);
+
+              const matchesTopics = ch.topics.some(
+                (tp) =>
+                  !q ||
+                  tp.name.toLowerCase().includes(q) ||
+                  (tp.description || '').toLowerCase().includes(q),
+              );
+
+              return matchesCourseName || matchesSubjectName || matchesChapter || matchesTopics;
+            });
+
+            return {
+              ...cs,
+              chapters: filteredChapters,
+            };
+          })
+          .filter((cs) => cs.chapters.length > 0 || !q);
+
+        return {
+          ...course,
+          subjects: filteredSubjects,
+        };
+      })
+      .filter((course) => course.subjects.length > 0 || !q);
+  }, [courses, searchQuery, selectedSubjectFilter]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -408,7 +553,7 @@ function StudentCoursesContent() {
       setPaying(true);
       const resScript = await loadRazorpayScript();
       if (!resScript) {
-        toast.error('Failed to load Razorpay SDK. Please check your internet connection.');
+        toast.error('Failed to load Razorpay SDK. Please check your connection.');
         setPaying(false);
         return;
       }
@@ -438,11 +583,11 @@ function StudentCoursesContent() {
               { skipGlobalToast: true },
             );
 
-            toast.success('🎉 Payment confirmed! Course access unlocked successfully!', {
+            toast.success('Payment confirmed! Course access unlocked successfully.', {
               id: 'rzp-verify',
             });
           } catch (err: any) {
-            toast.success('🎉 Payment confirmed! Course access unlocked successfully!', {
+            toast.success('Payment confirmed! Course access unlocked successfully.', {
               id: 'rzp-verify',
             });
           } finally {
@@ -485,7 +630,7 @@ function StudentCoursesContent() {
     return (
       <div className="w-full pb-20 font-sans">
         <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center shadow-2xs">
-          <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
+          <AlertCircle className="w-8 h-8 text-rose-500 mx-auto mb-2" />
           <p className="text-sm font-extrabold text-[#0B2447]">Failed to load courses</p>
           <button
             onClick={refetch}
@@ -499,45 +644,107 @@ function StudentCoursesContent() {
   }
 
   return (
-    <div className="w-full pb-20 space-y-5 font-sans">
-      {/* ── Top Navigation & Title Header Card ─────────────────── */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+    <div className="w-full pb-20 space-y-4 font-sans">
+      {/* ── Top Navigation & Header Banner (ISML Light Theme) ──────── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
         <div className="space-y-0.5">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Student Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>Enrolled Courses</span>
+          </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#0B2447] tracking-tight">
-            My Enrolled Courses
+            My Enrolled Courses & Syllabus
           </h1>
-          <p className="text-xs font-semibold text-slate-500">
-            Enrolled courses, subject syllabus tree & study material
+          <p className="text-xs font-semibold text-slate-600">
+            Interactive course curriculum, chapter breakdown & video lecture material
           </p>
         </div>
 
         <button
           onClick={() => refetch()}
-          className="self-start sm:self-auto px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] text-xs font-extrabold hover:bg-blue-100 transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5"
+          className="self-start sm:self-auto px-3.5 py-2 rounded-xl border border-blue-200 bg-[#0052CC] text-white text-xs font-extrabold hover:bg-blue-700 transition-colors shadow-2xs cursor-pointer shrink-0 flex items-center gap-1.5"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-[#0052CC]" />
+          <RefreshCw className="w-3.5 h-3.5 text-white" />
           <span>Refresh Syllabus</span>
         </button>
       </div>
 
-      {/* 🔒 Fee Lock Banner if Fee is Not Paid Yet */}
+      {/* ── Search & Filter Toolbar ───────────────────────────────────────── */}
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          {/* Search Bar */}
+          <div className="flex items-center gap-2 flex-1 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 focus-within:border-[#0052CC] focus-within:bg-white transition-all">
+            <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search course, subject, chapter, or topic..."
+              className="border-0 bg-transparent p-0 focus:outline-none text-xs text-slate-800 placeholder:text-slate-400 w-full font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Subject Pills Filter */}
+          {allSubjectNames.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none text-[11px] font-bold">
+              <button
+                onClick={() => setSelectedSubjectFilter('ALL')}
+                className={cn(
+                  'px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center shrink-0 cursor-pointer',
+                  selectedSubjectFilter === 'ALL'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200',
+                )}
+              >
+                All
+              </button>
+              {allSubjectNames.map((subj) => (
+                <button
+                  key={subj}
+                  onClick={() => setSelectedSubjectFilter(subj)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-center shrink-0 cursor-pointer',
+                    selectedSubjectFilter.toLowerCase() === subj.toLowerCase()
+                      ? 'bg-[#0052CC] text-white shadow-2xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200',
+                  )}
+                >
+                  {subj}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Lock Banner for Fee Unpaid Students */}
       {!hasPaidFee && (
-        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/80 to-sky-50 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-slate-900 border border-blue-200/90 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-5 font-sans">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/80 to-sky-50 rounded-2xl p-5 sm:p-6 text-slate-900 border border-blue-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-5 font-sans">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#0052CC] text-white flex items-center justify-center shrink-0 shadow-2xs border border-blue-400">
               <Lock className="w-7 h-7 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-white px-2.5 py-0.5 rounded-full text-[#0052CC] border border-blue-200 shadow-2xs">
-                  🔒 Course Access Locked
+                <span className="text-[10px] font-black uppercase tracking-wider bg-white px-2.5 py-0.5 rounded-full text-[#0052CC] border border-blue-200 shadow-2xs flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-[#0052CC]" /> Course Access Locked
                 </span>
               </div>
               <h3 className="text-lg sm:text-xl font-black text-[#0B2447] mt-1">
                 Fee Payment Required to Unlock Full Course & Syllabus
               </h3>
               <p className="text-xs text-slate-600 font-medium mt-0.5 max-w-xl">
-                Pay your 1st installment (₹
+                Pay installment #
+                {nextDueInstallment?.installmentNumber || 1} (₹
                 {Number(
                   nextDueInstallment?.balanceAmount || feeAccount?.assignment?.finalAmount || 0,
                 ).toLocaleString('en-IN')}
@@ -557,25 +764,25 @@ function StudentCoursesContent() {
               </>
             ) : (
               <>
-                <CreditCard className="w-4 h-4" /> Pay & Unlock Access 💳
+                <CreditCard className="w-4 h-4" /> Pay & Unlock Access
               </>
             )}
           </Button>
         </div>
       )}
 
-      {/* Course List */}
-      {!courses || courses.courses.length === 0 ? (
+      {/* Filtered Courses List */}
+      {filteredCourses.length === 0 ? (
         <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-12 text-center shadow-2xs">
           <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-sm font-bold text-slate-700">No courses assigned yet</p>
+          <p className="text-sm font-bold text-slate-700">No matching courses or topics found</p>
           <p className="text-xs text-slate-400 mt-1">
-            Courses will appear here once assigned to your enrolled batch.
+            Try adjusting your search query or subject filters.
           </p>
         </div>
       ) : (
         <div className="space-y-6">
-          {courses.courses.map((course) => (
+          {filteredCourses.map((course) => (
             <CourseCard
               key={course.id}
               course={course}

@@ -151,7 +151,7 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
-      timeout: 30000,
+      timeout: 90000, // 90 seconds timeout for AI generation & heavy calculations
     });
 
     this.setupInterceptors();

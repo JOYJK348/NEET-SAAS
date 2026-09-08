@@ -37,49 +37,43 @@ import { toast } from 'sonner';
 // ─── Subject Header Icon Themes ──────────────────────────────────────────
 const SUBJECT_THEMES: Record<
   string,
-  { bg: string; iconBg: string; text: string; icon: any; emoji: string }
+  { bg: string; iconBg: string; text: string; icon: any }
 > = {
   physics: {
     bg: 'bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: Atom,
-    emoji: '⚛️',
   },
   chemistry: {
     bg: 'bg-gradient-to-r from-blue-50 via-sky-50 to-indigo-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: FlaskConical,
-    emoji: '🧪',
   },
   biology: {
     bg: 'bg-gradient-to-r from-blue-50 via-emerald-50/50 to-sky-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: Leaf,
-    emoji: '🌿',
   },
   botany: {
     bg: 'bg-gradient-to-r from-blue-50 via-teal-50/50 to-sky-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: Leaf,
-    emoji: '🌱',
   },
   zoology: {
     bg: 'bg-gradient-to-r from-blue-50 via-indigo-50/70 to-sky-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: Leaf,
-    emoji: '🦋',
   },
   maths: {
     bg: 'bg-gradient-to-r from-blue-50 via-amber-50/40 to-sky-50 border-blue-200/90',
     iconBg: 'bg-[#0052CC] text-white shadow-2xs',
     text: 'text-[#0B2447]',
     icon: Calculator,
-    emoji: '📐',
   },
 };
 
@@ -92,7 +86,6 @@ function getSubjectTheme(subjectName: string) {
       iconBg: 'bg-[#0052CC] text-white shadow-2xs',
       text: 'text-[#0B2447]',
       icon: BookOpen,
-      emoji: '📚',
     }
   );
 }
@@ -338,8 +331,9 @@ function TopicContentView({ item }: { item: TopicItem }) {
               {item.title}
             </h4>
             {item.durationMins && (
-              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0">
-                ⏱️ {item.durationMins} min read
+              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 shrink-0 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-[#0052CC]" />
+                <span>{item.durationMins} min read</span>
               </span>
             )}
           </div>
@@ -498,8 +492,9 @@ function TopicContentView({ item }: { item: TopicItem }) {
           <div className="flex items-center justify-between p-3.5 sm:p-4 border-b border-slate-100">
             <h4 className="text-xs sm:text-sm font-black text-[#0B2447]">{item.title}</h4>
             {item.durationMins && (
-              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
-                🎥 {item.durationMins} min
+              <span className="text-[10px] font-extrabold text-[#0052CC] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 flex items-center gap-1">
+                <Video className="w-3 h-3 text-[#0052CC]" />
+                <span>{item.durationMins} min</span>
               </span>
             )}
           </div>
@@ -585,7 +580,7 @@ export function StudentPreview({
   const handleMarkCompleted = () => {
     setIsCompleted((prev) => !prev);
     if (!isCompleted) {
-      toast.success('🎉 Lesson marked as completed!');
+      toast.success('Lesson marked as completed!');
     }
   };
 
@@ -634,8 +629,9 @@ export function StudentPreview({
           >
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#0052CC] bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-                  {theme.emoji} {subjectKey.toUpperCase()}
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#0052CC] bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs flex items-center gap-1">
+                  <ThemeIcon className="w-3 h-3 text-[#0052CC]" />
+                  <span>{subjectKey.toUpperCase()}</span>
                 </span>
                 <span className="text-[10px] font-bold text-slate-500">NEET Syllabus</span>
               </div>
@@ -758,7 +754,7 @@ export function StudentPreview({
             )}
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>{isCompleted ? 'Completed ✅' : 'Mark Completed'}</span>
+            <span>{isCompleted ? 'Completed' : 'Mark Completed'}</span>
           </button>
         </div>
       </div>

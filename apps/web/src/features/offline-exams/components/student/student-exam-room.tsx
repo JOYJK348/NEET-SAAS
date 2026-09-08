@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   useGetQuestionPaperUrl,
   useHeartbeat,
+  usePrefetchExamResult,
   useStudentExamDetail,
   useUploadAnswerSheet,
 } from '../../hooks/use-student-exams';
@@ -14,6 +15,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Download,
   FileCheck,
@@ -59,6 +61,14 @@ const getEffectiveDuration = (exam?: {
 
 export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   const router = useRouter();
+  const prefetchExamResult = usePrefetchExamResult();
+
+  useEffect(() => {
+    if (examId) {
+      prefetchExamResult(examId);
+    }
+  }, [examId, prefetchExamResult]);
+
   const { data: exam, isLoading, refetch } = useStudentExamDetail(examId);
 
   const isStarted = !!exam?.submission?.startedAt;
@@ -213,59 +223,61 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   };
 
   return (
-    <div className="w-full pb-20 space-y-5 font-sans text-[#0F172A]">
-      {/* Top Header Card */}
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+    <div className="w-full pb-20 space-y-4 font-sans text-[#0F172A]">
+      {/* Top Navigation & Header Banner (ISML Light Theme) */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
         <div className="space-y-0.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
-              OFFLINE OMR EXAM ROOM
-            </span>
-            <span className="text-xs text-slate-500 font-mono font-bold bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-              Duration: {getEffectiveDuration(exam)} mins
+          <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
+            <span>Student Portal</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
+            <span>OMR Exam Room</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap pt-0.5">
+            <h1 className="text-xl sm:text-2xl font-black text-[#0B2447] tracking-tight">
+              {exam.title}
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100/90 text-indigo-900 border border-indigo-300 uppercase tracking-wider">
+              Offline OMR Mode
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#0B2447] tracking-tight mt-1">
-            {exam.title}
-          </h1>
         </div>
 
         <button
           onClick={() => router.push('/dashboard/student/exams')}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0052CC] border border-blue-200 text-xs font-extrabold transition shadow-2xs cursor-pointer shrink-0"
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white text-xs font-extrabold transition shadow-2xs cursor-pointer shrink-0"
         >
-          <ArrowLeft className="w-4 h-4 text-[#0052CC]" />
-          <span>Student Exams Dashboard</span>
+          <ArrowLeft className="w-4 h-4 text-white" />
+          <span>Back to Exams</span>
         </button>
       </div>
 
       {/* Real-time Session Sync Bar */}
-      <div className="bg-blue-50/70 p-3 rounded-2xl border border-blue-100/90 flex items-center justify-between gap-3 flex-wrap text-xs text-slate-700 font-medium">
-        <div className="flex items-center gap-2 text-emerald-700 font-black">
+      <div className="bg-blue-50/80 p-3 rounded-2xl border border-blue-200 flex items-center justify-between gap-3 flex-wrap text-xs text-slate-700 font-medium shadow-2xs">
+        <div className="flex items-center gap-2 text-emerald-800 font-black">
           <Wifi className={`w-4 h-4 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
           <span>Session Active & Heartbeat Synchronized</span>
         </div>
         <div className="text-slate-500 font-mono text-xs flex items-center gap-1.5">
           <span>Last Heartbeat:</span>
-          <strong className="text-[#0B2447] font-black bg-white px-2 py-0.5 rounded-md border border-blue-100">
+          <strong className="text-[#0B2447] font-black bg-white px-2.5 py-0.5 rounded-md border border-blue-200">
             {lastSyncedAt ? lastSyncedAt.toLocaleTimeString() : 'Just now'}
           </strong>
         </div>
       </div>
 
       {/* Main Workspace Layout (Left Timer & QP PDF, Right Answer Sheet Upload) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
         {/* Left Column: Big Timer & Question Paper PDF */}
-        <div className="lg:col-span-2 space-y-5">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-5">
           {/* Live Countdown Timer Box */}
           <div
             className={`p-6 sm:p-8 rounded-2xl sm:rounded-3xl border text-center space-y-2 shadow-2xs ${
               isExpired
-                ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                ? 'bg-rose-50/90 border-rose-300 text-rose-800'
                 : isGrace
-                  ? 'bg-amber-50/80 border-amber-200 text-amber-900 animate-pulse'
+                  ? 'bg-amber-50/90 border-amber-300 text-amber-900 animate-pulse'
                   : currentRemainingSec < 600
-                    ? 'bg-rose-50/80 border-rose-200 text-rose-800 animate-pulse'
+                    ? 'bg-rose-50/90 border-rose-300 text-rose-800 animate-pulse'
                     : 'bg-[#0B2447] border-[#0B2447] text-white'
             }`}
           >
@@ -277,12 +289,12 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
             </div>
             <p className="text-4xl sm:text-6xl font-black font-mono tracking-tight">{timerFormatted}</p>
             {isGrace && (
-              <p className="text-xs font-bold text-amber-700 bg-amber-100/70 py-1 px-3 rounded-lg inline-block">
+              <p className="text-xs font-bold text-amber-800 bg-amber-100/90 py-1 px-3 rounded-lg inline-block border border-amber-300">
                 Regular exam window completed! Please submit before grace period expires.
               </p>
             )}
             {isExpired && (
-              <p className="text-xs font-bold text-rose-700 bg-rose-100/70 py-1 px-3 rounded-lg inline-block">
+              <p className="text-xs font-bold text-rose-800 bg-rose-100/90 py-1 px-3 rounded-lg inline-block border border-rose-300">
                 Exam window expired. Answer sheet upload is closed.
               </p>
             )}
@@ -310,7 +322,7 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
               </button>
             </div>
 
-            <div className="bg-blue-50/60 p-4 rounded-2xl border border-blue-100 text-xs text-slate-700 space-y-2">
+            <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-200 text-xs text-slate-700 space-y-2">
               <p className="font-black text-[#0B2447] flex items-center gap-1.5">
                 Exam Instructions & Conduct:
               </p>
@@ -338,7 +350,7 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
             {/* File Dropzone Box */}
             <div className="border-2 border-dashed border-slate-200 rounded-2xl p-5 text-center space-y-3 bg-slate-50/60 hover:border-blue-400 transition">
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0052CC] border border-blue-200 flex items-center justify-center mx-auto">
-                <FileCheck className="w-6 h-6" />
+                <FileCheck className="w-6 h-6 text-[#0052CC]" />
               </div>
               <div>
                 <p className="text-xs font-black text-[#0B2447]">Select OMR Sheet File</p>
@@ -375,7 +387,7 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {uploadMutation.isPending ? 'Uploading Answer Sheet...' : 'Submit OMR Answer Sheet 🚀'}
+              {uploadMutation.isPending ? 'Uploading Answer Sheet...' : 'Submit OMR Answer Sheet'}
             </button>
           </div>
 

@@ -355,7 +355,7 @@ export function StudentCbtWorkspace({
         isAutoSubmit,
       });
 
-      toast.success(isAutoSubmit ? 'Exam Auto-Submitted' : 'Exam Successfully Submitted! 🎓');
+      toast.success(isAutoSubmit ? 'Exam Auto-Submitted' : 'Exam Successfully Submitted!');
       onSubmitted(attempt.id);
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to submit exam.';

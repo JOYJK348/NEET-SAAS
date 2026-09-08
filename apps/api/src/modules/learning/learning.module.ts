@@ -25,6 +25,7 @@ import { StructuredQuestionParserService } from './services/structured-question-
 import { QuestionImportService } from './services/question-import.service';
 import { OnlineCbtService } from './services/online-cbt.service';
 import { AiDoubtService } from './services/ai-doubt.service';
+import { GeminiProviderService } from './services/gemini-provider.service';
 
 @Module({
   imports: [PrismaModule, RedisModule],
@@ -53,6 +54,7 @@ import { AiDoubtService } from './services/ai-doubt.service';
     QuestionImportService,
     OnlineCbtService,
     AiDoubtService,
+    GeminiProviderService,
   ],
   exports: [
     TopicItemService,
@@ -71,6 +73,7 @@ import { AiDoubtService } from './services/ai-doubt.service';
     QuestionImportService,
     OnlineCbtService,
     AiDoubtService,
+    GeminiProviderService,
   ],
 })
 export class LearningModule {}

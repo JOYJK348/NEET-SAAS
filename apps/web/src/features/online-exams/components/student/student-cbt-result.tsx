@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import {
@@ -24,7 +25,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { AiDoubtSolverModal } from './ai-doubt-solver-modal';
+import { AiDoubtSolverView, AiDoubtSolverQuestionItem } from './ai-doubt-solver-modal';
 
 export interface CbtResultQuestionReview {
   questionId?: string;
@@ -93,34 +94,67 @@ function cleanResultOptionText(rawText: string, label: string) {
 }
 
 export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
-  const [result, setResult] = useState<CbtResultData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [activeAiQuestion, setActiveAiQuestion] = useState<{
-    questionId: string;
-    questionNumber: number;
-    questionText: string;
-    options: { label: string; text: string; isCorrect: boolean }[];
-    selectedOption: string | null;
-    correctOption: string;
-  } | null>(null);
+  const [reviewFilter, setReviewFilter] = useState<'ALL' | 'WRONG' | 'CORRECT' | 'SKIPPED'>('ALL');
+  const [activeAiQuestion, setActiveAiQuestion] = useState<AiDoubtSolverQuestionItem | null>(null);
+
+  const { data: result = null, isLoading } = useQuery<CbtResultData>({
+    queryKey: ['cbt-result', examId],
+    queryFn: () => api.get<CbtResultData>(`/online-exams/${examId}/result`),
+    enabled: !!examId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   useEffect(() => {
-    async function fetchResult() {
-      setIsLoading(true);
-      try {
-        const res = await api.get<CbtResultData>(`/online-exams/${examId}/result`);
-        setResult(res);
-      } catch (err: any) {
-        const msg = err?.response?.data?.message || err?.message || 'Failed to load exam result';
-        toast.error(msg);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    if (!result?.questionsReview || (!result.attemptId && !result.examId)) return;
+    const attemptId = result.attemptId || result.examId;
+    result.questionsReview.forEach((q) => {
+      const qId = q.questionId || `q-${q.questionNumber}`;
+      api
+        .post(`/online-exams/attempts/${attemptId}/questions/${qId}/ai-explanation`, {}, { skipGlobalToast: true })
+        .catch(() => {});
+    });
+  }, [result]);
 
-    fetchResult();
-  }, [examId]);
+  // If student opened the AI Doubt Workspace for a question, render as dedicated FULL PAGE
+  if (activeAiQuestion && result) {
+    const formattedQuestionsForDoubt: AiDoubtSolverQuestionItem[] = result.questionsReview.map((q) => {
+      const { text: cleanQText } = cleanResultQuestionText(q.questionText);
+      return {
+        questionId: q.questionId || `q-${q.questionNumber}`,
+        questionNumber: q.questionNumber,
+        questionText: cleanQText,
+        options: q.options.map((opt) => ({
+          label: opt.label,
+          text: cleanResultOptionText(opt.text, opt.label) || opt.text,
+          isCorrect: opt.isCorrect,
+        })),
+        selectedOption: q.selectedOption,
+        correctOption: q.correctOption,
+        initialExplanationText: q.explanation?.solutionText || q.explanation?.shortExplanation || null,
+      };
+    });
+
+    return (
+      <AiDoubtSolverView
+        attemptId={result.attemptId || result.examId}
+        questionId={activeAiQuestion.questionId}
+        questionNumber={activeAiQuestion.questionNumber}
+        questionText={activeAiQuestion.questionText}
+        options={activeAiQuestion.options}
+        selectedOption={activeAiQuestion.selectedOption}
+        correctOption={activeAiQuestion.correctOption}
+        initialExplanationText={activeAiQuestion.initialExplanationText}
+        examTitle={result.examTitle}
+        totalQuestions={result.questionsReview.length}
+        allQuestions={formattedQuestionsForDoubt}
+        onClose={() => setActiveAiQuestion(null)}
+        onNavigateQuestion={(q) => setActiveAiQuestion(q)}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -159,6 +193,13 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
   const percentage = Number(result.percentage || 0);
 
   const isPassed = result.passFail === 'PASS' || obtainedMarks >= (result.passingMarks || 0);
+
+  const filteredQuestions = (result.questionsReview || []).filter((q) => {
+    if (reviewFilter === 'WRONG') return !q.isCorrect && Boolean(q.selectedOption);
+    if (reviewFilter === 'CORRECT') return q.isCorrect;
+    if (reviewFilter === 'SKIPPED') return !q.selectedOption;
+    return true;
+  });
 
   return (
     <div className="w-full pb-20 space-y-5 font-sans text-[#0F172A]">
@@ -210,7 +251,7 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
               isPassed ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-rose-600 text-white shadow-2xs'
             }`}
           >
-            {isPassed ? 'PASSED 🏆' : 'NEEDS PRACTICE'}
+            {isPassed ? 'PASSED' : 'NEEDS PRACTICE'}
           </div>
         </div>
       </div>
@@ -256,189 +297,273 @@ export function StudentCbtResult({ examId, onBack }: StudentCbtResultProps) {
 
       {/* Question-by-Question Solution Review Section */}
       <div className="space-y-4 pt-2">
-        <div className="flex items-center justify-between border-b border-slate-200/90 pb-3 gap-2 flex-wrap sm:flex-nowrap">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC] flex items-center justify-center font-bold">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-[#0B2447]">
-                Question-by-Question Solution & Explanation Review
-              </h3>
-              <p className="text-xs text-slate-500 font-semibold">
-                Review your answers, correct options, and step-by-step explanations
-              </p>
-            </div>
+        {/* Section Header & Filter Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div>
+            <h3 className="text-base font-black text-[#0B2447] flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#0052CC]" />
+              Detailed Solutions & Mistake Breakdown
+            </h3>
+            <p className="text-xs text-slate-500 font-semibold">
+              Filter by your choices to review exact option selections and step-by-step solutions
+            </p>
           </div>
 
-          <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-[#0052CC] font-black text-xs rounded-xl">
-            {result.questionsReview?.length || 0} Questions Total
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setReviewFilter('ALL')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                reviewFilter === 'ALL'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All ({result.questionsReview?.length || 0})
+            </button>
+            <button
+              onClick={() => setReviewFilter('WRONG')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                reviewFilter === 'WRONG'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+              }`}
+            >
+              Wrong ({wrongCount})
+            </button>
+            <button
+              onClick={() => setReviewFilter('CORRECT')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                reviewFilter === 'CORRECT'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              Correct ({correctCount})
+            </button>
+            <button
+              onClick={() => setReviewFilter('SKIPPED')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                reviewFilter === 'SKIPPED'
+                  ? 'bg-slate-700 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Unattempted ({skippedCount})
+            </button>
+
+            {expandedIndex !== null && (
+              <button
+                onClick={() => setExpandedIndex(null)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer ml-1"
+              >
+                Close All
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Question Cards List - Single Accordion */}
         <div className="space-y-3">
-          {result.questionsReview?.map((q, idx) => {
-            const isExpanded = expandedIndex === idx;
-            const { text: cleanQText, subjectTag } = cleanResultQuestionText(q.questionText);
+          {filteredQuestions.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 font-semibold text-xs">
+              No questions found for the selected filter option.
+            </div>
+          ) : (
+            filteredQuestions.map((q, idx) => {
+              const isExpanded = expandedIndex === idx;
+              const { text: cleanQText, subjectTag } = cleanResultQuestionText(q.questionText);
 
-            const statusBadge = q.isCorrect ? (
-              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
-                CORRECT (+{q.marksAwarded || 4})
-              </span>
-            ) : q.selectedOption ? (
-              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
-                WRONG ({q.marksAwarded || -1}) • Selected: {q.selectedOption}
-              </span>
-            ) : (
-              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-300">
-                UNATTEMPTED (0)
-              </span>
-            );
+              const statusBadge = q.isCorrect ? (
+                <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  CORRECT (+{q.marksAwarded || 4}) • Ans: ({q.correctOption})
+                </span>
+              ) : q.selectedOption ? (
+                <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300">
+                  WRONG ({q.marksAwarded || -1}) • Your Choice: ({q.selectedOption}) | Correct: ({q.correctOption})
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-300">
+                  UNATTEMPTED (0) • Correct: ({q.correctOption})
+                </span>
+              );
 
-            return (
-              <Card
-                key={idx}
-                className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:border-slate-300 transition"
-              >
-                {/* Question Header Bar */}
-                <div
-                  onClick={() => setExpandedIndex(isExpanded ? null : idx)}
-                  className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/80 transition"
+              return (
+                <Card
+                  key={q.questionId || idx}
+                  className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs hover:border-slate-300 transition"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                        q.isCorrect
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : q.selectedOption
-                            ? 'bg-rose-600 text-white shadow-md'
-                            : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {q.questionNumber}
-                    </span>
+                  {/* Question Header Bar */}
+                  <div
+                    onClick={() => {
+                      setExpandedIndex(expandedIndex === idx ? null : idx);
+                    }}
+                    className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/80 transition"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                          q.isCorrect
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : q.selectedOption
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {q.questionNumber}
+                      </span>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {subjectTag && (
-                          <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-extrabold rounded-md">
-                            {subjectTag}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {subjectTag && (
+                            <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-extrabold rounded-md">
+                              {subjectTag}
+                            </span>
+                          )}
+                          <p className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
+                            {cleanQText}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      {statusBadge}
+                      {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Details & Solutions */}
+                  {isExpanded && (
+                    <div className="p-5 border-t border-slate-100 bg-slate-50/60 space-y-4 text-xs">
+                      {/* Question Text Box */}
+                      <div className="font-medium text-slate-900 leading-relaxed bg-white p-4 rounded-2xl border border-slate-200 text-xs sm:text-sm">
+                        <p className="font-bold text-slate-500 text-[11px] uppercase tracking-wider mb-1.5">
+                          Question {q.questionNumber}:
+                        </p>
+                        {cleanQText}
+                      </div>
+
+                      {/* Student Selection vs Correct Answer Highlight Bar */}
+                      <div
+                        className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between gap-3 flex-wrap ${
+                          q.isCorrect
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-950 font-bold'
+                            : q.selectedOption
+                              ? 'bg-rose-50 border-rose-200 text-rose-950 font-bold'
+                              : 'bg-slate-100 border-slate-200 text-slate-800 font-bold'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase">Your Selection:</span>
+                          {q.selectedOption ? (
+                            <span
+                              className={`px-2.5 py-0.5 rounded-lg text-xs font-black ${
+                                q.isCorrect ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                              }`}
+                            >
+                              Option {q.selectedOption}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-slate-300 text-slate-700">
+                              Unattempted
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black uppercase text-slate-600">Correct Answer:</span>
+                          <span className="px-2.5 py-0.5 bg-emerald-600 text-white rounded-lg text-xs font-black">
+                            Option {q.correctOption}
                           </span>
-                        )}
-                        <p className="text-xs sm:text-sm font-extrabold text-slate-900 truncate">
-                          {cleanQText}
+                        </div>
+                      </div>
+
+                      {/* Options Review Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {q.options.map((opt) => {
+                          const cleanedOptText = cleanResultOptionText(opt.text, opt.label);
+                          const isUserChoice = q.selectedOption === opt.label;
+                          const isCorrectChoice = opt.isCorrect || opt.label === q.correctOption;
+
+                          let optClass = 'bg-white border-slate-200 text-slate-800';
+                          if (isCorrectChoice) {
+                            optClass =
+                              'bg-emerald-50/90 border-emerald-400 text-emerald-900 font-extrabold ring-1 ring-emerald-400/40';
+                          } else if (isUserChoice) {
+                            optClass =
+                              'bg-rose-50/90 border-rose-400 text-rose-900 font-extrabold ring-1 ring-rose-400/40';
+                          }
+
+                          return (
+                            <div
+                              key={opt.label}
+                              className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${optClass}`}
+                            >
+                              <span className="font-black text-xs shrink-0 w-5">{opt.label}.</span>
+                              <span className="flex-1 font-medium leading-relaxed">{cleanedOptText}</span>
+                              {isCorrectChoice && (
+                                <span className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-md shrink-0">
+                                  CORRECT
+                                </span>
+                              )}
+                              {isUserChoice && !isCorrectChoice && (
+                                <span className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-black rounded-md shrink-0">
+                                  YOUR ANSWER
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Solution Explanation Box & AI Doubt Button */}
+                      <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3 text-slate-900">
+                        <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                          <h5 className="font-extrabold text-blue-900 text-xs flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Explanation & Solution:
+                          </h5>
+
+                          <button
+                            onClick={() =>
+                              setActiveAiQuestion({
+                                questionId: q.questionId || `q-${q.questionNumber}`,
+                                questionNumber: q.questionNumber,
+                                questionText: cleanQText,
+                                options: q.options.map((opt) => ({
+                                  label: opt.label,
+                                  text: cleanResultOptionText(opt.text, opt.label) || opt.text,
+                                  isCorrect: opt.isCorrect,
+                                })),
+                                selectedOption: q.selectedOption,
+                                correctOption: q.correctOption,
+                                initialExplanationText: q.explanation?.solutionText || q.explanation?.shortExplanation || null,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 hover:from-blue-700 hover:to-slate-800 text-white text-xs font-black transition shadow-xs cursor-pointer shrink-0"
+                          >
+                            <Bot className="w-3.5 h-3.5 text-blue-200" />
+                            <span>Ask AI Doubt Solver</span>
+                          </button>
+                        </div>
+
+                        <p className="text-xs font-normal leading-relaxed text-slate-800 pt-0.5">
+                          {q.explanation?.solutionText ||
+                            q.explanation?.shortExplanation ||
+                            'Correct Answer is Option ' + q.correctOption + '.'}
                         </p>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    {statusBadge}
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Expanded Details & Solutions */}
-                {isExpanded && (
-                  <div className="p-5 border-t border-slate-100 bg-slate-50/60 space-y-4 text-xs">
-                    <div className="font-medium text-slate-900 leading-relaxed bg-white p-4 rounded-2xl border border-slate-200 text-xs sm:text-sm">
-                      <p className="font-bold text-slate-500 text-[11px] uppercase tracking-wider mb-1.5">
-                        Question {q.questionNumber}:
-                      </p>
-                      {cleanQText}
-                    </div>
-
-                    {/* Options Review Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {q.options.map((opt) => {
-                        const cleanedOptText = cleanResultOptionText(opt.text, opt.label);
-                        const isUserChoice = q.selectedOption === opt.label;
-                        const isCorrectChoice = opt.isCorrect || opt.label === q.correctOption;
-
-                        let optClass = 'bg-white border-slate-200 text-slate-800';
-                        if (isCorrectChoice) {
-                          optClass = 'bg-emerald-50/90 border-emerald-400 text-emerald-900 font-extrabold ring-1 ring-emerald-400/40';
-                        } else if (isUserChoice) {
-                          optClass = 'bg-rose-50/90 border-rose-400 text-rose-900 font-extrabold ring-1 ring-rose-400/40';
-                        }
-
-                        return (
-                          <div
-                            key={opt.label}
-                            className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${optClass}`}
-                          >
-                            <span className="font-black text-xs shrink-0 w-5">{opt.label}.</span>
-                            <span className="flex-1 font-medium leading-relaxed">{cleanedOptText}</span>
-                            {isCorrectChoice && (
-                              <span className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-black rounded-md shrink-0">
-                                CORRECT
-                              </span>
-                            )}
-                            {isUserChoice && !isCorrectChoice && (
-                              <span className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-black rounded-md shrink-0">
-                                YOUR ANSWER
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Solution Explanation Box & AI Doubt Button */}
-                    <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl space-y-3 text-slate-900">
-                      <div className="flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
-                        <h5 className="font-extrabold text-blue-900 text-xs flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Explanation & Solution:
-                        </h5>
-
-                        <button
-                          onClick={() =>
-                            setActiveAiQuestion({
-                              questionId: q.questionId || `q-${q.questionNumber}`,
-                              questionNumber: q.questionNumber,
-                              questionText: cleanQText,
-                              options: q.options,
-                              selectedOption: q.selectedOption,
-                              correctOption: q.correctOption,
-                            })
-                          }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-slate-900 hover:from-blue-700 hover:to-slate-800 text-white text-xs font-black transition shadow-xs cursor-pointer shrink-0"
-                        >
-                          <Bot className="w-3.5 h-3.5 text-blue-200" />
-                          <span>Ask AI Doubt Solver</span>
-                        </button>
-                      </div>
-
-                      <p className="text-xs font-normal leading-relaxed text-slate-800 pt-0.5">
-                        {q.explanation?.solutionText || q.explanation?.shortExplanation || 'Correct Answer is ' + q.correctOption + '.'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+                  )}
+                </Card>
+              );
+            })
+          )}
         </div>
       </div>
-
-      {/* AI Doubt Solver Modal */}
-      {activeAiQuestion && (
-        <AiDoubtSolverModal
-          isOpen={Boolean(activeAiQuestion)}
-          onClose={() => setActiveAiQuestion(null)}
-          attemptId={result.attemptId || result.examId}
-          questionId={activeAiQuestion.questionId}
-          questionNumber={activeAiQuestion.questionNumber}
-          questionText={activeAiQuestion.questionText}
-          options={activeAiQuestion.options}
-          selectedOption={activeAiQuestion.selectedOption}
-          correctOption={activeAiQuestion.correctOption}
-        />
-      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useStartExam, useStudentExams } from '../../hooks/use-student-exams';
+import { usePrefetchExamResult, useStartExam, useStudentExams } from '../../hooks/use-student-exams';
 import type { StudentExamItem } from '../../types/student-exams';
 import { Card } from '@/components/ui/card';
 import {
@@ -32,6 +32,7 @@ import {
   LayoutGrid,
   List,
   Trophy,
+  GraduationCap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +77,57 @@ const getEffectiveDuration = (exam: {
   return exam.durationMinutes || 120;
 };
 
+// ─── Exam Card Light Mild Theme Helper ──────────────────────────────────────
+function getExamCardTheme({
+  isLive,
+  isSubmitted,
+  isExpired,
+  isOnlineMode,
+}: {
+  isLive: boolean;
+  isSubmitted: boolean;
+  isExpired: boolean;
+  isOnlineMode: boolean;
+}) {
+  if (isLive) {
+    return {
+      cardBg:
+        'bg-gradient-to-br from-emerald-100/70 via-white to-teal-50/50 border-emerald-400 ring-2 ring-emerald-400/30 shadow-md',
+      badgeBg: 'bg-[#F31260] text-white border-rose-500 font-black',
+      headerAccent: 'text-emerald-950',
+    };
+  }
+  if (isSubmitted) {
+    return {
+      cardBg:
+        'bg-gradient-to-br from-blue-50/70 via-white to-sky-50/50 border-blue-200/90 shadow-2xs hover:border-blue-300',
+      badgeBg: 'bg-emerald-100/90 text-emerald-800 border-emerald-300 font-black',
+      headerAccent: 'text-[#0B2447]',
+    };
+  }
+  if (isExpired) {
+    return {
+      cardBg: 'bg-slate-50/80 border-slate-200 opacity-85 shadow-2xs',
+      badgeBg: 'bg-slate-100 text-slate-600 border-slate-300 font-extrabold',
+      headerAccent: 'text-slate-700',
+    };
+  }
+  if (isOnlineMode) {
+    return {
+      cardBg:
+        'bg-gradient-to-br from-purple-50/60 via-white to-indigo-50/40 border-purple-200/90 hover:border-purple-300 shadow-2xs',
+      badgeBg: 'bg-purple-100/90 text-purple-800 border-purple-300 font-black',
+      headerAccent: 'text-[#0B2447]',
+    };
+  }
+  return {
+    cardBg:
+      'bg-gradient-to-br from-indigo-50/60 via-white to-blue-50/40 border-indigo-200/90 hover:border-indigo-300 shadow-2xs',
+    badgeBg: 'bg-indigo-100/90 text-indigo-800 border-indigo-300 font-black',
+    headerAccent: 'text-[#0B2447]',
+  };
+}
+
 export function StudentExamsDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'ALL' | 'UPCOMING' | 'LIVE' | 'SUBMITTED' | 'RESULTS'>('ALL');
@@ -94,12 +146,23 @@ export function StudentExamsDashboard() {
 
   const { data: response, isLoading } = useStudentExams();
   const startExamMutation = useStartExam();
+  const prefetchExamResult = usePrefetchExamResult();
 
   const rawExamList: StudentExamItem[] = Array.isArray(response)
     ? response
     : Array.isArray((response as any)?.data)
       ? (response as any).data
       : [];
+
+  useEffect(() => {
+    if (rawExamList.length > 0) {
+      rawExamList.forEach((exam) => {
+        if (exam.id) {
+          prefetchExamResult(exam.id);
+        }
+      });
+    }
+  }, [rawExamList, prefetchExamResult]);
 
   // 1. Deduplicate by unique exam ID
   const uniqueExamsMap = new Map<string, StudentExamItem>();
@@ -257,10 +320,10 @@ export function StudentExamsDashboard() {
   };
 
   return (
-    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
+    <div suppressHydrationWarning className="w-full space-y-5 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
       {/* ── Header Banner — ISML LMS Light Blue Style ── */}
-      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-2 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-5 rounded-2xl shadow-2xs space-y-1.5 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+        <div className="space-y-0.5">
           <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
             <Link href="/dashboard/student" className="hover:underline flex items-center gap-1">
               <ArrowLeft className="w-3.5 h-3.5 text-[#0052CC]" />
@@ -269,14 +332,14 @@ export function StudentExamsDashboard() {
             <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
             <span>NEET Mock & Test Series</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
             <span>Student Exam Portal</span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
-              NEET Mock & Test Series 🎓
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-[#0052CC] border border-blue-200 uppercase tracking-wider flex items-center gap-1">
+              <GraduationCap className="w-3 h-3 text-[#0052CC]" /> NEET Test Series
             </span>
           </h1>
-          <p className="text-xs text-slate-600 font-medium">
-            Online CBT & Offline OMR Examinations Dashboard — View Schedule, Start Timers & Scorecards
+          <p className="text-xs text-slate-600 font-semibold">
+            Online CBT & Offline OMR Examinations Dashboard — Schedule, Live Test Timers & Scorecards
           </p>
         </div>
 
@@ -291,64 +354,64 @@ export function StudentExamsDashboard() {
 
       {/* ── KPI Summary Stats Cards Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-blue-300">
+        <Card className="rounded-2xl border border-blue-200/80 bg-blue-50/70 p-3.5 sm:p-4 shadow-2xs transition-all hover:border-blue-300">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 text-[#0052CC] shrink-0">
-              <BookOpen className="h-5 w-5" />
+            <div className="p-2.5 rounded-xl bg-[#0052CC] text-white shrink-0 shadow-2xs">
+              <BookOpen className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-black text-blue-900 uppercase tracking-wider truncate">
                 Total Exams
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+              <p className="text-xl sm:text-2xl font-black text-[#0B2447] mt-0.5">
                 {examList.length}
               </p>
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-rose-300">
+        <Card className="rounded-2xl border border-rose-200/80 bg-rose-50/70 p-3.5 sm:p-4 shadow-2xs transition-all hover:border-rose-300">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 shrink-0">
-              <Clock className="h-5 w-5" />
+            <div className="p-2.5 rounded-xl bg-rose-600 text-white shrink-0 shadow-2xs">
+              <Clock className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-black text-rose-900 uppercase tracking-wider truncate">
                 Live & Active
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-rose-700 mt-0.5">
+              <p className="text-xl sm:text-2xl font-black text-rose-700 mt-0.5">
                 {liveCount}
               </p>
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-indigo-300">
+        <Card className="rounded-2xl border border-indigo-200/80 bg-indigo-50/70 p-3.5 sm:p-4 shadow-2xs transition-all hover:border-indigo-300">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-600 shrink-0">
-              <Calendar className="h-5 w-5" />
+            <div className="p-2.5 rounded-xl bg-indigo-600 text-white shrink-0 shadow-2xs">
+              <Calendar className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-black text-indigo-900 uppercase tracking-wider truncate">
                 Upcoming Exams
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-indigo-700 mt-0.5">
+              <p className="text-xl sm:text-2xl font-black text-indigo-800 mt-0.5">
                 {upcomingCount}
               </p>
             </div>
           </div>
         </Card>
 
-        <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs transition-all hover:border-teal-300">
+        <Card className="rounded-2xl border border-teal-200/80 bg-teal-50/70 p-3.5 sm:p-4 shadow-2xs transition-all hover:border-teal-300">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl border border-teal-200 bg-teal-50 text-teal-600 shrink-0">
-              <Trophy className="h-5 w-5" />
+            <div className="p-2.5 rounded-xl bg-teal-600 text-white shrink-0 shadow-2xs">
+              <Trophy className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
+              <p className="text-[10px] font-black text-teal-900 uppercase tracking-wider truncate">
                 Results & Rank
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-teal-700 mt-0.5">
+              <p className="text-xl sm:text-2xl font-black text-teal-800 mt-0.5">
                 {resultsCount}
               </p>
             </div>
@@ -363,12 +426,12 @@ export function StudentExamsDashboard() {
             <Monitor className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xs font-black text-[#0B2447] uppercase tracking-wider">Delivery Mode Switcher</h2>
-            <p className="text-[11px] text-slate-500 font-medium">Filter test series by examination mode</p>
+            <h2 className="text-xs font-black text-[#0B2447] uppercase tracking-wider">Examination Mode Filter</h2>
+            <p className="text-[11px] text-slate-500 font-medium">Switch between CBT and OMR exams</p>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           {/* Search Input */}
           <div className="relative w-full sm:w-60">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -552,14 +615,16 @@ export function StudentExamsDashboard() {
                       <tr key={exam.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-extrabold text-[#0B2447] text-sm">{exam.title}</span>
+                            <span className="font-black text-[#0B2447] text-sm">{exam.title}</span>
                             {isOnlineMode ? (
-                              <span className="px-2.5 py-0.5 rounded-full bg-purple-100 border border-purple-300 text-purple-800 text-[11px] font-black shadow-2xs">
-                                💻 ONLINE CBT
+                              <span className="px-2.5 py-0.5 rounded-full bg-purple-100 border border-purple-300 text-purple-900 text-[10px] font-black shadow-2xs flex items-center gap-1">
+                                <Laptop className="w-3 h-3 text-purple-700" />
+                                Online CBT
                               </span>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 border border-indigo-300 text-indigo-800 text-[11px] font-black shadow-2xs">
-                                📝 OFFLINE OMR
+                              <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 border border-indigo-300 text-indigo-900 text-[10px] font-black shadow-2xs flex items-center gap-1">
+                                <FileText className="w-3 h-3 text-indigo-700" />
+                                Offline OMR
                               </span>
                             )}
                           </div>
@@ -589,14 +654,14 @@ export function StudentExamsDashboard() {
                         <td className="py-4 px-5">
                           <span
                             className={cn(
-                              'px-2.5 py-1 rounded-full text-xs font-extrabold inline-block shadow-2xs',
+                              'px-2.5 py-1 rounded-full text-xs font-black inline-block shadow-2xs',
                               isSubmittedCard || isResultPub(exam)
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-emerald-100/90 text-emerald-800 border border-emerald-300'
                                 : isLockedOrExpired
-                                  ? 'bg-slate-100 text-slate-500 border border-slate-300'
+                                  ? 'bg-slate-100 text-slate-600 border border-slate-300'
                                   : exam.studentExamStatus === 'LIVE'
-                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                    : 'bg-blue-50 text-[#0052CC] border border-blue-200',
+                                    ? 'bg-[#F31260] text-white border border-rose-500 uppercase tracking-wider'
+                                    : 'bg-blue-100/90 text-[#0052CC] border border-blue-300',
                             )}
                           >
                             {isSubmittedCard || isResultPub(exam)
@@ -613,14 +678,14 @@ export function StudentExamsDashboard() {
                               href={`/dashboard/student/exams/${exam.id}`}
                               className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-2xs transition inline-flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Award className="w-3.5 h-3.5 text-white" /> Scorecard & Solutions 🎓
+                              <Award className="w-3.5 h-3.5 text-white" /> Scorecard & Solutions
                             </Link>
                           ) : !isOnlineMode && isResultPub(exam) ? (
                             <Link
                               href={`/dashboard/student/exams/${exam.id}`}
                               className="px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition inline-flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Award className="w-3.5 h-3.5 text-white" /> View Scorecard 🏆
+                              <Award className="w-3.5 h-3.5 text-white" /> View Scorecard
                             </Link>
                           ) : isStarted ? (
                             <Link
@@ -636,7 +701,7 @@ export function StudentExamsDashboard() {
                               className="px-3.5 py-1.5 bg-[#0052CC] hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl text-xs font-black shadow-2xs transition inline-flex items-center gap-1.5 cursor-pointer"
                             >
                               <Play className="w-3.5 h-3.5 fill-white text-white" />
-                              Ready to Start 🚀
+                              Ready to Start
                             </button>
                           )}
                         </td>
@@ -649,7 +714,7 @@ export function StudentExamsDashboard() {
           </div>
         </Card>
       ) : (
-        /* Mobile Cards & Responsive Grid View */
+        /* Mobile Cards & Responsive Light Mild Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {isLoading ? (
             <div className="col-span-full py-20 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-2xs space-y-2">
@@ -668,6 +733,7 @@ export function StudentExamsDashboard() {
               const isStarted = !!exam.submission?.startedAt;
               const isSubmittedCard = !!exam.submission?.submittedAt || exam.submission?.status === 'SUBMITTED';
               const isOnlineMode = checkIsOnlineMode(exam);
+              const isLive = isExamLive(exam);
 
               let cardTimer: { label: string; style: string } | null = null;
               let isTimerExpired = false;
@@ -696,8 +762,8 @@ export function StudentExamsDashboard() {
                   const m = Math.floor(remSec / 60);
                   const s = remSec % 60;
                   cardTimer = {
-                    label: `⏳ ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
-                    style: 'bg-emerald-50 text-emerald-700 border-emerald-200 animate-pulse',
+                    label: `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+                    style: 'bg-emerald-100/90 text-emerald-800 border-emerald-300 animate-pulse',
                   };
                 } else if (nowMs < graceEndMs) {
                   const remSec = Math.max(0, Math.floor((graceEndMs - nowMs) / 1000));
@@ -705,109 +771,123 @@ export function StudentExamsDashboard() {
                   const s = remSec % 60;
                   cardTimer = {
                     label: `Grace: ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
-                    style: 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse',
+                    style: 'bg-amber-100/90 text-amber-900 border-amber-300 animate-pulse',
                   };
                 } else {
                   cardTimer = {
                     label: 'Time Expired',
-                    style: 'bg-rose-50 text-rose-700 border-rose-200',
+                    style: 'bg-rose-100 text-rose-800 border-rose-300',
                   };
                   isTimerExpired = true;
                 }
               } else if (isWindowExpired && !isSubmittedCard) {
                 cardTimer = {
                   label: 'Time Expired',
-                  style: 'bg-rose-50 text-rose-700 border-rose-200',
+                  style: 'bg-rose-100 text-rose-800 border-rose-300',
                 };
               }
 
               const isLockedOrExpired = exam.isSubmissionLocked || isTimerExpired || isWindowExpired;
 
+              const cardTheme = getExamCardTheme({
+                isLive,
+                isSubmitted: isSubmittedCard || isResultPub(exam),
+                isExpired: isLockedOrExpired,
+                isOnlineMode,
+              });
+
               return (
                 <div
                   key={exam.id}
-                  className="border-l-4 border-l-[#0052CC] bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between space-y-4 w-full"
+                  className={cn(
+                    'rounded-2xl sm:rounded-3xl p-4 sm:p-5 transition-all flex flex-col justify-between space-y-4 w-full border',
+                    cardTheme.cardBg,
+                  )}
                 >
                   <div className="space-y-3">
+                    {/* Top Header Row: Delivery Mode + Status Badge */}
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {/* Mode Badge Pill */}
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border shadow-2xs',
+                            'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border shadow-2xs',
                             isOnlineMode
-                              ? 'bg-purple-100 border-purple-300 text-purple-800'
-                              : 'bg-indigo-100 border-indigo-300 text-indigo-800',
+                              ? 'bg-purple-100/90 border-purple-300 text-purple-900'
+                              : 'bg-indigo-100/90 border-indigo-300 text-indigo-900',
                           )}
                         >
-                          {isOnlineMode ? <Laptop className="w-3 h-3 text-purple-700" /> : <FileText className="w-3 h-3 text-indigo-700" />}
+                          {isOnlineMode ? (
+                            <Laptop className="w-3 h-3 text-purple-700" />
+                          ) : (
+                            <FileText className="w-3 h-3 text-indigo-700" />
+                          )}
                           {isOnlineMode ? 'Online CBT' : 'Offline OMR'}
                         </span>
 
                         {/* Status Badge Pill */}
                         <span
                           className={cn(
-                            'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-2xs',
-                            isSubmittedCard || isResultPub(exam)
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : isLockedOrExpired
-                                ? 'bg-slate-100 text-slate-500 border border-slate-300'
-                                : exam.studentExamStatus === 'LIVE'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                  : 'bg-blue-50 text-[#0052CC] border border-blue-200',
+                            'px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider shadow-2xs border',
+                            cardTheme.badgeBg,
                           )}
                         >
                           {isSubmittedCard || isResultPub(exam)
-                            ? 'SUBMITTED'
+                            ? 'Submitted'
                             : isLockedOrExpired
-                              ? 'EXPIRED / CLOSED'
-                              : exam.studentExamStatus}
+                              ? 'Expired / Closed'
+                              : isLive
+                                ? 'LIVE NOW'
+                                : exam.studentExamStatus}
                         </span>
                       </div>
 
+                      {/* Timer Chip */}
                       {cardTimer ? (
                         <span
                           className={cn(
-                            'text-xs flex items-center gap-1 font-mono font-black px-2 py-0.5 rounded-md border',
+                            'text-xs flex items-center gap-1 font-mono font-black px-2.5 py-0.5 rounded-lg border shadow-2xs',
                             cardTimer.style,
                           )}
                         >
-                          {cardTimer.label}
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span>{cardTimer.label}</span>
                         </span>
                       ) : (
-                        <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        <span className="text-xs text-[#0052CC] flex items-center gap-1 font-mono font-black bg-blue-100/90 px-2.5 py-0.5 rounded-lg border border-blue-300 shadow-2xs">
                           <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
-                          {getEffectiveDuration(exam)} mins
+                          <span>{getEffectiveDuration(exam)} mins</span>
                         </span>
                       )}
                     </div>
 
+                    {/* Title & Description */}
                     <div>
-                      <h3 className="text-base font-black text-[#0B2447] leading-snug">
+                      <h3 className={cn('text-base font-black leading-snug', cardTheme.headerAccent)}>
                         {exam.title}
                       </h3>
-                      <p className="text-xs text-slate-500 font-medium mt-1 line-clamp-2">
+                      <p className="text-xs text-slate-600 font-semibold mt-1 line-clamp-2">
                         {exam.description || 'Standard NEET Academy Mock Test Series.'}
                       </p>
                     </div>
 
-                    {/* Window Details Box */}
-                    <div className="bg-blue-50/60 p-3 rounded-2xl border border-blue-100/90 space-y-1.5 text-xs text-slate-700 font-medium">
-                      <div className="flex items-center justify-between text-slate-500 gap-2">
-                        <span className="shrink-0 font-semibold text-slate-600">Window Start:</span>
+                    {/* Light Mild Window Meta Container */}
+                    <div className="bg-white/80 backdrop-blur-xs p-3 rounded-2xl border border-slate-200/90 space-y-1.5 text-xs text-slate-700 font-medium shadow-2xs">
+                      <div className="flex items-center justify-between text-slate-600 gap-2">
+                        <span className="shrink-0 font-extrabold text-slate-700">Window Start:</span>
                         <span className="font-bold text-[#0B2447] font-mono text-right truncate">
                           {formatExamDateTime(exam.examWindowStart)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-slate-500 gap-2">
-                        <span className="shrink-0 font-semibold text-slate-600">Window End:</span>
+                      <div className="flex items-center justify-between text-slate-600 gap-2">
+                        <span className="shrink-0 font-extrabold text-slate-700">Window End:</span>
                         <span className="font-bold text-[#0B2447] font-mono text-right truncate">
                           {formatExamDateTime(exam.examWindowEnd)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-blue-100">
-                        <span className="font-semibold text-slate-600">Grace Period:</span>
-                        <span className="font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span className="font-extrabold text-slate-700">Grace Period:</span>
+                        <span className="font-black text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-md border border-amber-300 shadow-2xs">
                           +{exam.graceMinutes} mins
                         </span>
                       </div>
@@ -815,41 +895,46 @@ export function StudentExamsDashboard() {
                   </div>
 
                   {/* Card Action Controls */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-2.5 border-t border-slate-200/80 flex items-center justify-between">
                     {isOnlineMode && (isSubmittedCard || isResultPub(exam)) ? (
                       <Link
                         href={`/dashboard/student/exams/${exam.id}`}
-                        className="w-full text-center px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full text-center px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Award className="w-4 h-4 text-white" /> View Scorecard & Solutions 🎓
+                        <Award className="w-4 h-4 text-white" />
+                        <span>View Scorecard & Solutions</span>
                       </Link>
                     ) : !isOnlineMode && isSubmittedCard ? (
                       <button
                         disabled
-                        className="w-full text-center px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed opacity-80"
+                        className="w-full text-center px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-xs font-extrabold shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed opacity-90"
                       >
-                        <FileText className="w-4 h-4 text-slate-400" /> Submitted (OMR Sheet Under Evaluation)
+                        <FileText className="w-4 h-4 text-slate-500" />
+                        <span>Submitted (OMR Under Evaluation)</span>
                       </button>
                     ) : !isOnlineMode && isResultPub(exam) ? (
                       <Link
                         href={`/dashboard/student/exams/${exam.id}`}
                         className="w-full text-center px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Award className="w-4 h-4 text-white" /> View Scorecard & Rank 🏆
+                        <Award className="w-4 h-4 text-white" />
+                        <span>View Scorecard & Rank</span>
                       </Link>
                     ) : isLockedOrExpired ? (
                       <button
                         disabled
-                        className="w-full text-center px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-400 rounded-xl text-xs font-extrabold shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed opacity-70"
+                        className="w-full text-center px-4 py-2.5 bg-slate-100 border border-slate-200 text-slate-500 rounded-xl text-xs font-extrabold shadow-2xs flex items-center justify-center gap-2 cursor-not-allowed opacity-80"
                       >
-                        <Lock className="w-4 h-4 text-slate-400" /> Time Expired (Exam Closed)
+                        <Lock className="w-4 h-4 text-slate-400" />
+                        <span>Time Expired (Exam Closed)</span>
                       </button>
                     ) : isStarted ? (
                       <Link
                         href={`/dashboard/student/exams/${exam.id}`}
                         className="w-full text-center px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        Enter Exam Room <ArrowRight className="w-4 h-4" />
+                        <span>Enter Exam Room</span>
+                        <ArrowRight className="w-4 h-4 text-white" />
                       </Link>
                     ) : (
                       <button
@@ -858,7 +943,7 @@ export function StudentExamsDashboard() {
                         className="w-full px-4 py-2.5 bg-[#0052CC] hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Play className="w-4 h-4 fill-white text-white" />
-                        Ready to Start Exam 🚀
+                        <span>Ready to Start Exam</span>
                       </button>
                     )}
                   </div>
@@ -876,7 +961,7 @@ export function StudentExamsDashboard() {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-black text-[#0B2447] flex items-center gap-2">
                 <Play className="w-4.5 h-4.5 text-[#0052CC] fill-[#0052CC]" />
-                Start Exam Confirmation
+                <span>Start Exam Confirmation</span>
               </h3>
               <button
                 onClick={() => setStartingExam(null)}
@@ -921,7 +1006,7 @@ export function StudentExamsDashboard() {
                 disabled={startExamMutation.isPending}
                 className="px-5 py-2 bg-[#0052CC] hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-2xs transition flex items-center gap-2 cursor-pointer"
               >
-                {startExamMutation.isPending ? 'Starting...' : 'I am Ready — Start Now 🚀'}
+                {startExamMutation.isPending ? 'Starting...' : 'I am Ready — Start Now'}
               </button>
             </div>
           </div>

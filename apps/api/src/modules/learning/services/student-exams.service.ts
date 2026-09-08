@@ -490,15 +490,43 @@ export class StudentExamsService {
     return { success: true, lastSeenAt: now };
   }
 
+  private detailCache = new Map<string, { data: any; expiresAt: number }>();
+
   async getExamDetail(tenantId: string, userId: string, examId: string) {
-    const { admission, batchIds, batchId } = await this.getStudentAdmission(
+    const cacheKey = `${tenantId}:${examId}:${userId}`;
+    const cached = this.detailCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
+    const { admission, batchIds } = await this.getStudentAdmission(
       tenantId,
       userId,
     );
 
-    const exam = await this.prisma.exams.findFirst({
-      where: { id: examId, tenantId, deletedAt: null },
-    });
+    const [exam, submission] = await Promise.all([
+      this.prisma.exams.findFirst({
+        where: { id: examId, tenantId, deletedAt: null },
+      }),
+      admission?.id
+        ? this.prisma.examSubmissions.findFirst({
+            where: {
+              tenantId,
+              examId,
+              studentAdmissionId: admission.id,
+              deletedAt: null,
+            },
+            include: {
+              submissionFiles: {
+                orderBy: { uploadedAt: 'desc' },
+              },
+              timeline: {
+                orderBy: { createdAt: 'asc' },
+              },
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!exam) {
       throw new NotFoundException('Exam not found');
@@ -519,28 +547,11 @@ export class StudentExamsService {
     }
 
     const now = new Date();
-    await this.examClosureService.checkAndTriggerLazyClosure(
+    this.examClosureService.checkAndTriggerLazyClosure(
       tenantId,
       examId,
       'system',
-    );
-
-    const submission = await this.prisma.examSubmissions.findFirst({
-      where: {
-        tenantId,
-        examId,
-        studentAdmissionId: admission.id,
-        deletedAt: null,
-      },
-      include: {
-        submissionFiles: {
-          orderBy: { uploadedAt: 'desc' },
-        },
-        timeline: {
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
+    ).catch(() => {});
 
     const derivedStatus = this.examStateService.getExamState(exam, now);
     const canStart = this.examStateService.canStudentStart(exam, now);
@@ -589,7 +600,7 @@ export class StudentExamsService {
         .catch(() => null);
     }
 
-    return {
+    const finalDetail = {
       ...exam,
       totalMarks: Number(exam.totalMarks),
       passingMarks: Number(exam.passingMarks),
@@ -600,6 +611,9 @@ export class StudentExamsService {
       answerSheetSignedUrl,
       submission,
     };
+
+    this.detailCache.set(cacheKey, { data: finalDetail, expiresAt: Date.now() + 60000 });
+    return finalDetail;
   }
 
   async uploadAnswerSheet(
