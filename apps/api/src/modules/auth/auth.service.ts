@@ -89,7 +89,7 @@ export class AuthService {
         const createdSession = await this.sessionService.createLoginSession(
           {
             userId: user.id,
-            tenantId: roleContext.tenantId,
+            tenantId: roleContext.tenantId ?? user.tenantId ?? null,
             refreshTokenHash,
             expiresAt: refreshTokenExpiresAt,
             ipAddress: context.ipAddress,
@@ -363,6 +363,12 @@ export class AuthService {
       },
       include: {
         student_profiless: true,
+        tenant: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -372,8 +378,10 @@ export class AuthService {
 
   private assertUserCanLogin(user: {
     status: string;
+    tenantId?: string | null;
     lockedUntil: Date | null;
     student_profiless?: { academicStatus: string } | null;
+    tenant?: { id: string; status: string } | null;
   }): void {
     if (user.status !== 'ACTIVE') {
       throw new ForbiddenException('Account is not active');
@@ -388,6 +396,12 @@ export class AuthService {
       user.student_profiless.academicStatus !== 'ACTIVE'
     ) {
       throw new ForbiddenException('Account is not active');
+    }
+
+    if (user.tenantId && user.tenant && user.tenant.status !== 'ACTIVE') {
+      throw new ForbiddenException(
+        `Tenant account is ${user.tenant.status.toLowerCase()}. Please contact platform support.`,
+      );
     }
   }
 
@@ -663,6 +677,103 @@ export class AuthService {
     return {
       message:
         'Password reset successfully. Please sign in with your new password.',
+    };
+  }
+
+  /**
+   * Seed/Upsert Platform Admin Account platformadmin@gmail.com with Platform@123
+   */
+  async seedPlatformAdmin(): Promise<{ message: string; email: string; roleCode: string }> {
+    const email = 'platformadmin@gmail.com';
+    const plainPassword = 'Platform@123';
+    const passwordHash = await this.passwordService.hashPassword(plainPassword);
+
+    let role = await this.prismaService.roles.findFirst({
+      where: { code: 'PLATFORM_ADMIN', deletedAt: null },
+    });
+
+    if (!role) {
+      role = await this.prismaService.roles.create({
+        data: {
+          tenantId: '',
+          code: 'PLATFORM_ADMIN',
+          name: 'Platform Administrator',
+          roleType: 'SYSTEM',
+          isDefault: true,
+          isEditable: false,
+          isDeletable: false,
+          priority: 100,
+          metadata: {},
+          createdBy: 'system',
+          updatedBy: 'system',
+        },
+      });
+    }
+
+    let user = await this.prismaService.users.findFirst({
+      where: { email, deletedAt: null },
+    });
+
+    if (user) {
+      user = await this.prismaService.users.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          userType: ('PLATFORM_ADMIN' as any),
+          isSuperAdmin: true,
+          status: 'ACTIVE',
+          forcePasswordChange: false,
+          failedAttempts: 0,
+          lockedUntil: null,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      user = await this.prismaService.users.create({
+        data: {
+          tenantId: '',
+          branchId: '',
+          email,
+          firstName: 'Platform',
+          lastName: 'Admin',
+          userType: ('PLATFORM_ADMIN' as any),
+          isSuperAdmin: true,
+          status: 'ACTIVE',
+          passwordHash,
+          forcePasswordChange: false,
+          createdBy: 'system',
+          updatedBy: 'system',
+        },
+      });
+    }
+
+    const userRole = await this.prismaService.userRoles.findFirst({
+      where: { userId: user.id, roleId: role.id, deletedAt: null },
+    });
+
+    if (!userRole) {
+      await this.prismaService.userRoles.create({
+        data: {
+          tenantId: '',
+          userId: user.id,
+          roleId: role.id,
+          effectiveFrom: new Date(),
+          effectiveTo: new Date('2099-12-31'),
+          assignedBy: 'system',
+          assignmentReason: 'Platform Administrator Global Account Allocation',
+          revokedBy: '',
+          revokedReason: '',
+          metadata: {},
+          createdBy: 'system',
+          updatedBy: 'system',
+        },
+      });
+    }
+
+    return {
+      message: 'Platform Admin account created/updated successfully.',
+      email,
+      roleCode: 'PLATFORM_ADMIN',
     };
   }
 }

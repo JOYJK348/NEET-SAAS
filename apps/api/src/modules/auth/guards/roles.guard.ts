@@ -49,6 +49,23 @@ export class RolesGuard implements CanActivate {
     }
 
     const tokenRole = (user.roleCode || '').toUpperCase();
+
+    const requiresPlatformAdmin = requiredRoles.some(
+      (r) => r.toUpperCase() === 'PLATFORM_ADMIN' || r.toUpperCase() === 'PLATFORM_OWNER',
+    );
+
+    if (requiresPlatformAdmin) {
+      const isPlatformUser =
+        tokenRole === 'PLATFORM_ADMIN' ||
+        tokenRole === 'PLATFORM_OWNER' ||
+        (user.tenantId === null && (ADMIN_ROLES.has(tokenRole) || tokenRole === 'SUPER_ADMIN'));
+
+      if (isPlatformUser) {
+        return true;
+      }
+      throw new ForbiddenException('Insufficient role: Platform Admin privilege required');
+    }
+
     if (
       ADMIN_ROLES.has(tokenRole) ||
       tokenRole.startsWith('TENANT_ADMIN') ||

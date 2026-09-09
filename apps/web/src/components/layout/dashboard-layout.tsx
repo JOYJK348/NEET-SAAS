@@ -4,9 +4,8 @@ import { ReactNode, useState, useEffect } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, BookOpen, TrendingUp, Menu } from 'lucide-react';
+import { useAuth } from '@/providers/auth-provider';
 
 import { ChildSwitcherProvider } from '@/features/parent-portal/context/child-switcher-context';
 
@@ -18,6 +17,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const isPlatformAdmin =
+    pathname?.startsWith('/platform-admin') ||
+    user?.roleCode === 'PLATFORM_ADMIN' ||
+    (user as any)?.userType === 'PLATFORM_ADMIN';
 
   useEffect(() => {
     const checkMobile = () => {
@@ -30,15 +35,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <ChildSwitcherProvider>
-      <div className="min-h-screen bg-background">
-        <Sidebar
-          isMobile={isMobile}
-          isMobileOpen={isMobileOpen}
-          setIsMobileOpen={setIsMobileOpen}
-        />
-        <div className={cn('transition-all duration-300', isMobile ? '' : 'lg:pl-64')}>
+      <div className="min-h-screen bg-[#F8FAFC]">
+        {!isPlatformAdmin && (
+          <Sidebar
+            isMobile={isMobile}
+            isMobileOpen={isMobileOpen}
+            setIsMobileOpen={setIsMobileOpen}
+          />
+        )}
+        <div className={cn('transition-all duration-300 w-full', isPlatformAdmin || isMobile ? 'pl-0' : 'lg:pl-64')}>
           <Header isMobile={isMobile} setIsMobileOpen={setIsMobileOpen} />
-          <main className={cn('p-3 sm:p-5 lg:p-6 pb-6', 'transition-all duration-300')}>{children}</main>
+          <main className="p-4 sm:p-6 lg:p-8 pb-12 w-full transition-all duration-300">
+            {children}
+          </main>
         </div>
       </div>
     </ChildSwitcherProvider>

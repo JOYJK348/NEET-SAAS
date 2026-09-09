@@ -35,17 +35,38 @@ export async function prefetchCriticalData(
   roleCode?: string,
 ) {
   const role = (roleCode || '').toUpperCase();
+  const isPlatformAdmin = role === 'PLATFORM_ADMIN' || role === 'SUPER_ADMIN';
   const isTutor = role === 'TUTOR' || role === 'FACULTY';
   const isStudent = role === 'STUDENT';
   const isParent = role === 'PARENT';
-  const isAdmin =
+  const isTenantAdmin =
     !role ||
     role === 'TENANT_ADMIN' ||
-    role.startsWith('TENANT_ADMIN') ||
-    role === 'SUPER_ADMIN' ||
-    role === 'PLATFORM_ADMIN';
+    role.startsWith('TENANT_ADMIN');
 
   try {
+    if (isPlatformAdmin) {
+      // Platform Admin prefetching: Platform Dashboard Metrics & Institutes Directory
+      await Promise.allSettled([
+        queryClient.prefetchQuery({
+          queryKey: ['platform-dashboard-metrics'],
+          queryFn: ({ signal }) =>
+            api.get('/platform-admin/dashboard', { signal, skipGlobalToast: true }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: ['platform-tenants', 1, '', 'ALL'],
+          queryFn: ({ signal }) =>
+            api.get('/platform-admin/tenants', {
+              params: { page: 1, limit: 10, search: '', status: 'ALL' },
+              signal,
+              skipGlobalToast: true,
+            }),
+          staleTime: STALE_TIMES.DEFAULT,
+        }),
+      ]);
+      return;
+    }
     if (isTutor) {
       // Tutor-specific prefetching: Overview, Weekly Timetable, Assigned Batches, Recordings
       await Promise.allSettled([
@@ -191,7 +212,7 @@ export async function prefetchCriticalData(
       return;
     }
 
-    if (isAdmin) {
+    if (isTenantAdmin) {
       // Tenant Admin prefetching
       await Promise.allSettled([
         // 1. Tenant Dashboard Overview

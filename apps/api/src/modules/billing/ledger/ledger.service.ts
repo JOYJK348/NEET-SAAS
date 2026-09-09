@@ -12,6 +12,9 @@ export class FeeLedgerService {
       courseId?: string;
     },
   ) {
+    if (!tenantId) {
+      return [];
+    }
     const whereCondition: any = {
       tenantId,
       deletedAt: null,
@@ -96,6 +99,14 @@ export class FeeLedgerService {
   }
 
   async getCollectionReport(tenantId: string) {
+    if (!tenantId) {
+      return {
+        totalCollected: 0,
+        totalCount: 0,
+        byMethod: {},
+        recentPayments: [],
+      };
+    }
     const payments = await this.prisma.feePayments.findMany({
       where: { tenantId, deletedAt: null },
       orderBy: { paymentDate: 'desc' },
@@ -119,6 +130,14 @@ export class FeeLedgerService {
   }
 
   async getBillingDashboardKpis(tenantId: string) {
+    if (!tenantId) {
+      return {
+        totalAssignedFee: 0,
+        totalCollected: 0,
+        totalOutstanding: 0,
+        overdueCount: 0,
+      };
+    }
     const assignments = await this.prisma.studentFeeAssignments.findMany({
       where: { tenantId, deletedAt: null },
     });

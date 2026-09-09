@@ -119,19 +119,24 @@ export class AuthController {
     status: 429,
     description: 'Too many requests — rate limit exceeded',
   })
-  login(
+  async login(
     @Body() dto: LoginDto,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    return this.authService.login(
-      dto,
-      {
-        ipAddress: this.getIpAddress(request),
-        rawUserAgent: request.headers['user-agent'] || 'unknown',
-      },
-      response,
-    );
+    try {
+      return await this.authService.login(
+        dto,
+        {
+          ipAddress: this.getIpAddress(request),
+          rawUserAgent: request.headers['user-agent'] || 'unknown',
+        },
+        response,
+      );
+    } catch (error: any) {
+      console.error('LOGIN_CONTROLLER_ERROR:', error);
+      throw error;
+    }
   }
 
   @Post('refresh')
@@ -311,6 +316,14 @@ export class AuthController {
   })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Get('seed-platform-admin')
+  @ApiOperation({
+    summary: 'Seed Platform Admin Account (platformadmin@gmail.com / Platform@123)',
+  })
+  seedPlatformAdmin() {
+    return this.authService.seedPlatformAdmin();
   }
 
   private getIpAddress(request: Request): string {

@@ -28,7 +28,7 @@ export class TenantScopedPrisma {
     options?: { includeDeleted?: boolean },
   ): Record<string, unknown> {
     return {
-      tenantId,
+      ...(tenantId ? { tenantId } : {}),
       ...(options?.includeDeleted ? {} : { deletedAt: null }),
       ...extra,
     };

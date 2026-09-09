@@ -44,6 +44,48 @@ import {
 
 function PlatformAdminDashboard() {
   const { user } = useAuth();
+  const { data, isLoading } = useQuery<{
+    metrics: {
+      tenants: { total: number; active: number; inactive: number; suspended: number };
+      users: { students: number; staff: number; tenantAdmins: number; totalUsers: number };
+    };
+    recentAuditLogs: Array<any>;
+  }>({
+    queryKey: ['platform-dashboard-overview-real'],
+    queryFn: () => api.get('/platform-admin/dashboard'),
+  });
+
+  const metrics = data?.metrics;
+  const realStats = [
+    {
+      name: 'Total Institutes',
+      value: isLoading ? '...' : (metrics?.tenants.total ?? 0).toString(),
+      change: 'Registered Tenants in DB',
+      color: 'bg-blue-50 text-[#0052CC]',
+      icon: Building2,
+    },
+    {
+      name: 'Active Institutes',
+      value: isLoading ? '...' : (metrics?.tenants.active ?? 0).toString(),
+      change: 'Operational Tenants',
+      color: 'bg-emerald-50 text-emerald-600',
+      icon: CheckCircle2,
+    },
+    {
+      name: 'Suspended / Inactive',
+      value: isLoading ? '...' : ((metrics?.tenants.suspended ?? 0) + (metrics?.tenants.inactive ?? 0)).toString(),
+      change: 'Blocked Login Privileges',
+      color: 'bg-amber-50 text-amber-600',
+      icon: Clock,
+    },
+    {
+      name: 'System Accounts',
+      value: isLoading ? '...' : (metrics?.users.totalUsers ?? 0).toString(),
+      change: `${metrics?.users.students ?? 0} Students • ${metrics?.users.tenantAdmins ?? 0} Admins`,
+      color: 'bg-indigo-50 text-indigo-600',
+      icon: Users,
+    },
+  ];
 
   return (
     <div className="space-y-6 pb-8 text-[#0F172A] font-sans">
@@ -118,14 +160,14 @@ function PlatformAdminDashboard() {
           <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600 font-medium">
             <span className="inline-flex items-center gap-1 text-[#0052CC] font-bold bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs">
               <Building2 className="w-3.5 h-3.5 text-[#0052CC]" />
-              Active Tenants: {platformStats[0]?.value || '12'}
+              Active Tenants: {metrics?.tenants.active ?? 0}
             </span>
             <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-semibold">
               Uptime: 99.98%
             </span>
             <span className="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200/80 shadow-2xs font-bold text-slate-800">
               <Users className="w-3.5 h-3.5 text-[#0052CC]" />
-              1,240 Total Students Online
+              {metrics?.users.students ?? 0} Total Students Enrolled
             </span>
           </div>
         </div>
@@ -248,7 +290,7 @@ function PlatformAdminDashboard() {
 
       {/* 📚 4. OVERVIEW KPI STAT CARDS GRID */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {platformStats.map((stat, index) => {
+        {realStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
             <div
@@ -778,6 +820,12 @@ function DashboardPageContent() {
       router.push('/auth/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.roleCode === 'PLATFORM_ADMIN') {
+      router.replace('/platform-admin/dashboard');
+    }
+  }, [isLoading, isAuthenticated, user, router]);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated && user?.roleCode === 'TUTOR') {

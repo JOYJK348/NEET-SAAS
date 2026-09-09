@@ -27,6 +27,7 @@ import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboa
 import { LiveModule } from './modules/live/live.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PyqModule } from './modules/pyq/pyq.module';
+import { PlatformModule } from './modules/platform/platform.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { MailModule } from './modules/mail/mail.module';
 
@@ -63,6 +64,7 @@ import { MailModule } from './modules/mail/mail.module';
     LiveModule,
     BillingModule,
     PyqModule,
+    PlatformModule,
     HealthModule,
   ],
   controllers: [],

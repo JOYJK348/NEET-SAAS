@@ -113,20 +113,24 @@ export function Header({ isMobile, setIsMobileOpen }: HeaderProps) {
       ? 'Review Admin'
       : rawFullName;
 
+  const isPlatformAdmin = pathname?.startsWith('/platform-admin') || normalizedRole.startsWith('PLATFORM_ADMIN');
+
   return (
     <header className="sticky top-0 z-30 w-full h-16 bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/90 backdrop-blur-md border-b border-blue-200/80 shadow-2xs transition-all duration-200 font-sans">
       <div className="flex h-full items-center justify-between px-4 lg:px-6 gap-4">
         {/* Left Section - Mobile Hamburger & Clean Brand Context */}
         <div className="flex items-center gap-3 min-w-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden h-9 w-9 text-slate-700 hover:bg-white/80 border border-slate-200/80 shadow-2xs"
-            onClick={() => setIsMobileOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </Button>
+          {!isPlatformAdmin && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden h-9 w-9 text-slate-700 hover:bg-white/80 border border-slate-200/80 shadow-2xs cursor-pointer"
+              onClick={() => setIsMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          )}
 
           {/* Clean Top Bar Header Title */}
           <div className="flex items-center gap-2.5 min-w-0">

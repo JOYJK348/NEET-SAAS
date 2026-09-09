@@ -523,7 +523,7 @@ export class ScheduleService {
 
     return this.prisma.schedules.findMany({
       where: {
-        tenantId,
+        ...(tenantId && { tenantId }),
         deletedAt: null,
         ...(branchId && { branchId }),
         ...(academicYearId && { academicYearId }),

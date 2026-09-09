@@ -25,7 +25,10 @@ export async function paginate<T>(
     [query.sortBy || 'createdAt']: query.sortOrder || 'desc',
   } as Record<string, 'asc' | 'desc'>;
 
-  const baseWhere = { ...where, tenantId, deletedAt: null };
+  const baseWhere: Record<string, unknown> = { ...where, deletedAt: null };
+  if (tenantId) {
+    baseWhere.tenantId = tenantId;
+  }
 
   const [total, data] = await Promise.all([
     model.count({ where: baseWhere }),

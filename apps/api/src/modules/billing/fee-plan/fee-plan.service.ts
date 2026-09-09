@@ -7,6 +7,9 @@ export class FeePlanService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAllFeePlans(tenantId: string) {
+    if (!tenantId) {
+      return [];
+    }
     const plans = await this.prisma.feeStructures.findMany({
       where: { tenantId, deletedAt: null },
       orderBy: { createdAt: 'desc' },

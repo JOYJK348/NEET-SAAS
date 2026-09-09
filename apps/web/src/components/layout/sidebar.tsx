@@ -73,6 +73,15 @@ interface NavItem {
 }
 
 export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const isPlatformAdmin =
+    pathname?.startsWith('/platform-admin') ||
+    user?.roleCode === 'PLATFORM_ADMIN' ||
+    (user as any)?.userType === 'PLATFORM_ADMIN';
+
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     Organization: true,
     Academics: true,
@@ -91,9 +100,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
     Learning: true,
   });
 
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
+  if (isPlatformAdmin) {
+    return null;
+  }
 
   // Lock body scroll on mobile when sidebar drawer is open
   useEffect(() => {
@@ -260,9 +269,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
   ];
 
   const platformNavigation = [
-    { name: 'Platform Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Institutes / Tenants', href: '/dashboard/institutes', icon: Building2 },
-    { name: 'Platform Reports', href: '/dashboard/platform-reports', icon: BarChart },
+    { name: 'Platform Overview', href: '/platform-admin/dashboard', icon: LayoutDashboard },
+    { name: 'Tenants Directory', href: '/platform-admin/tenants', icon: Building2 },
   ];
 
   const tenantNavigation = [
