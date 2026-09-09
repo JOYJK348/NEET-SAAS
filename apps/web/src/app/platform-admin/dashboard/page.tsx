@@ -501,9 +501,10 @@ export default function PlatformAdminDashboardPage() {
           </div>
         </div>
 
-        {/* Table Container */}
+        {/* Table / Card List Container */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* DESKTOP TABLE VIEW (hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold uppercase tracking-wider">
                 <tr>
@@ -525,7 +526,7 @@ export default function PlatformAdminDashboardPage() {
                   </tr>
                 ) : !tenantsData?.items || tenantsData.items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400 font-medium">
                       No institutes matching current search/filter criteria.
                     </td>
                   </tr>
@@ -652,6 +653,141 @@ export default function PlatformAdminDashboardPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* MOBILE / TABLET CARD VIEW (block md:hidden) */}
+          <div className="block md:hidden p-4">
+            {tenantsLoading ? (
+              <div className="py-12 text-center text-slate-400 space-y-2">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0052CC]" />
+                <p className="text-xs font-extrabold">Loading institutes directory...</p>
+              </div>
+            ) : !tenantsData?.items || tenantsData.items.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-xs font-medium">
+                No institutes matching current search/filter criteria.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {tenantsData.items.map((tenant) => (
+                  <div
+                    key={tenant.id}
+                    className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs hover:border-blue-300 transition-all space-y-3.5 relative"
+                  >
+                    {/* Top Row: Avatar + Name + Code + Status Toggle */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200/80 text-[#0052CC] flex items-center justify-center font-black shrink-0 text-sm shadow-2xs">
+                          {tenant.code.slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <button
+                            onClick={() => router.push(`/platform-admin/tenants/${tenant.id}`)}
+                            className="font-extrabold text-slate-900 hover:text-[#0052CC] transition-colors truncate text-left block text-sm cursor-pointer"
+                          >
+                            {tenant.name}
+                          </button>
+                          <span className="font-mono text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md inline-block mt-0.5">
+                            {tenant.code}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status Switch */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={tenant.status === 'ACTIVE'}
+                          disabled={statusMutation.isPending}
+                          onClick={() => {
+                            const nextStatus = tenant.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+                            setSelectedTenantForStatus(tenant);
+                            statusMutation.mutate({
+                              tenantId: tenant.id,
+                              status: nextStatus,
+                              reason: `Quick toggle to ${nextStatus}`,
+                            });
+                          }}
+                          className={cn(
+                            'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50',
+                            tenant.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-300'
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out',
+                              tenant.status === 'ACTIVE' ? 'translate-x-4' : 'translate-x-0'
+                            )}
+                          />
+                        </button>
+                        <span
+                          className={cn(
+                            'text-[10px] font-black uppercase tracking-wider',
+                            tenant.status === 'ACTIVE' ? 'text-emerald-700' : 'text-slate-500'
+                          )}
+                        >
+                          {tenant.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Email & Primary Admin info */}
+                    <div className="space-y-1.5 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 text-xs">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium">Contact Email:</span>
+                        <span className="font-mono text-slate-700 font-semibold truncate max-w-[170px]">
+                          {tenant.email}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 font-medium">Primary Admin:</span>
+                        <span className="font-bold text-slate-800 truncate max-w-[170px]">
+                          {tenant.primaryAdmin ? tenant.primaryAdmin.name : 'Unassigned'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Metrics Pills */}
+                    <div className="flex items-center justify-between gap-2 text-[11px] pt-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-slate-800 bg-blue-50 text-[#0052CC] border border-blue-100 px-2 py-0.5 rounded-md">
+                          {tenant.metrics.totalUsers} Users
+                        </span>
+                        <span className="font-extrabold text-slate-800 bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded-md">
+                          {tenant.metrics.branchesCount} Branches
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(tenant.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {/* Bottom Action Buttons */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.push(`/platform-admin/tenants/${tenant.id}`)}
+                        className="flex-1 h-8 bg-blue-50 text-[#0052CC] hover:bg-blue-100 border-blue-200/80 rounded-xl text-xs font-extrabold gap-1.5 cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>View Details</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setTenantToDelete(tenant)}
+                        className="h-8 px-3 bg-red-50 text-red-600 hover:bg-red-100 border-red-200/80 rounded-xl text-xs font-extrabold gap-1.5 cursor-pointer shrink-0"
+                        title="Delete Institute"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Pagination Footer */}
