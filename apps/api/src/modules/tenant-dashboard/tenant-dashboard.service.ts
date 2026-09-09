@@ -35,7 +35,7 @@ export class TenantDashboardService {
       }),
       // 2. Total Active Batches
       this.prisma.batches.count({
-        where: { tenantId, isActive: true, deletedAt: null },
+        where: { tenantId, deletedAt: null, status: { not: 'ARCHIVED' } },
       }),
       // 3. Total Mock Tests / Exams
       this.prisma.exams.count({
@@ -88,7 +88,7 @@ export class TenantDashboardService {
       }),
       // 9. Running Batches
       this.prisma.batches.findMany({
-        where: { tenantId, isActive: true, deletedAt: null },
+        where: { tenantId, deletedAt: null, status: { not: 'ARCHIVED' } },
         orderBy: { createdAt: 'desc' },
         take: 4,
       }),

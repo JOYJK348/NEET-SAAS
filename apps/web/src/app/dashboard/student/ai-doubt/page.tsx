@@ -220,7 +220,7 @@ function AiDoubtSolverPageContent() {
   }
 
   return (
-    <div className="w-full pb-20 space-y-4 font-sans text-slate-900 bg-white min-h-screen">
+    <div className="max-w-5xl mx-auto space-y-4 font-sans text-slate-900 pb-10">
       {/* Sleek Header Banner */}
       <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 p-4 sm:p-5 rounded-2xl shadow-2xs border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-0.5">
@@ -238,7 +238,7 @@ function AiDoubtSolverPageContent() {
               24/7 Active
             </span>
           </h1>
-          <p className="text-xs text-slate-600 font-medium">
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
             Ask any academic doubt, question, formula, or concept clarification
           </p>
         </div>
@@ -253,9 +253,9 @@ function AiDoubtSolverPageContent() {
       </div>
 
       {/* Main Conversational Chat Workspace */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl flex flex-col min-h-[520px] shadow-2xs overflow-hidden">
+      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden">
         {/* Chat Messages Window Stream */}
-        <div className="flex-1 p-3.5 sm:p-5 space-y-4 overflow-y-auto bg-slate-50/30">
+        <div className="p-4 sm:p-6 space-y-4 max-h-[60vh] overflow-y-auto bg-slate-50/30">
           {/* Welcome Message */}
           <div className="flex justify-start">
             <div className="max-w-[92%] sm:max-w-[85%] p-4 rounded-2xl bg-slate-100/90 text-slate-800 text-xs sm:text-sm font-medium leading-relaxed space-y-2 break-words">

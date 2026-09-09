@@ -738,8 +738,8 @@ function StudentOverviewContent() {
         </Link>
       </div>
 
-      {/* 🔴 2ND SECTION: LIVE CLASS BANNER OR AI DOUBT ASSISTANT BANNER (HIGH IMPACT DARK NAVY THEME) ── */}
-      {overview && overview.liveNow && overview.liveNow.length > 0 ? (
+      {/* 🔴 2ND SECTION: LIVE CLASS BANNER (WHEN LIVE CLASS IS ACTIVE) ── */}
+      {overview && overview.liveNow && overview.liveNow.length > 0 && (
         (() => {
           const activeLiveSession = overview.liveNow[0];
           return (
@@ -787,42 +787,10 @@ function StudentOverviewContent() {
             </div>
           );
         })()
-      ) : (
-        /* 🤖 2ND SECTION: AI DOUBT ASSISTANT FEATURE BANNER (VIBRANT GRADIENT BLUE-PURPLE WITH RED BUTTON) */
-        <div className="w-full bg-gradient-to-r from-[#0052CC] via-[#2563EB] to-[#5841E3] border border-blue-400/40 rounded-2xl p-4 sm:p-5 shadow-md shadow-blue-900/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 font-sans text-white">
-          <div className="space-y-1.5 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-black uppercase tracking-wider bg-[#F31260] text-white px-2.5 py-0.5 rounded-full shadow-2xs flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                AI DOUBT SOLVER
-              </span>
-              <span className="text-xs font-extrabold text-[#38BDF8]">Instant 24/7 Academic Solver</span>
-            </div>
-            <h3 className="text-xs sm:text-base font-extrabold text-white leading-snug">
-              <span className="sm:hidden">Stuck on a Difficult Question?</span>
-              <span className="hidden sm:inline">Stuck on a Complex Question or Concept?</span>
-            </h3>
-            <p className="text-[11px] sm:text-xs text-sky-100 font-medium leading-normal">
-              <span className="sm:hidden">Get instant step-by-step solutions & logic.</span>
-              <span className="hidden sm:inline">
-                Ask our AI Doubt Solver for step-by-step logic, key formulas, and detailed breakdowns.
-              </span>
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard/student/ai-doubt"
-            className="w-full sm:w-auto bg-[#F31260] hover:bg-[#E10E54] active:scale-98 text-white font-extrabold px-5 py-2.5 rounded-xl text-xs shrink-0 shadow-md shadow-rose-950/30 flex items-center justify-center gap-2 cursor-pointer transition-all tracking-wide uppercase"
-          >
-            <span className="sm:hidden">ASK AI DOUBTS</span>
-            <span className="hidden sm:inline">ASK AI DOUBT SOLVER</span>
-            <ArrowRight className="w-4 h-4 text-white shrink-0" />
-          </Link>
-        </div>
       )}
 
       {/* ── 3. Quick Action Apps Grid (Light Mild Colored Background Theme) ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <Link
           href="/dashboard/timetable"
           className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-[#EFF6FF] border border-blue-200/80 shadow-2xs hover:border-[#0052CC] hover:bg-[#E0F2FE] transition-all group"
@@ -897,7 +865,21 @@ function StudentOverviewContent() {
           </div>
           <div className="mt-3">
             <p className="text-xs font-black text-[#0B2447]">Fee Accounts</p>
-            <p className="text-[10px] text-rose-700 font-bold mt-0.5">Dues & Receipts</p>
+            <p className="text-[10px] text-rose-700 font-bold mt-0.5">Dues &amp; Receipts</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/dashboard/student/ai-doubt"
+          className="flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300/80 shadow-2xs hover:border-[#0052CC] hover:shadow-md transition-all group relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0052CC] to-indigo-600 text-white flex items-center justify-center shadow-2xs relative z-10">
+            <BrainCircuit className="w-4.5 h-4.5" />
+          </div>
+          <div className="mt-3 relative z-10">
+            <p className="text-xs font-black text-[#0B2447]">AI Tutor</p>
+            <p className="text-[10px] text-[#0052CC] font-bold mt-0.5">24/7 Doubt Solver</p>
           </div>
         </Link>
       </div>

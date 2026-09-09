@@ -10,6 +10,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { RedisService } from '../../../common/redis/redis.service';
 
 import { GeminiProviderService, QuestionContext } from './gemini-provider.service';
+import { AiTutorDomainGuardService, TutorDomainStatus } from './ai-tutor-domain-guard.service';
 
 export interface StructuredAiExplanation {
   stepByStepSolution: string[];
@@ -47,7 +48,8 @@ export class AiDoubtService {
     private readonly redis: RedisService,
     private readonly configService: ConfigService,
     private readonly geminiProvider: GeminiProviderService,
-  ) {}
+    private readonly domainGuard: AiTutorDomainGuardService,
+  ) { }
 
   /**
    * Generates or fetches cached AI Doubt Explanation for a question in a submitted CBT attempt.
@@ -220,6 +222,7 @@ export class AiDoubtService {
 
   /**
    * Process follow-up chat doubt queries per question context using Gemini as primary provider.
+   * When attemptId or questionId is 'general', runs in standalone chatbot mode (no exam context).
    */
   async sendAiChatFollowup(
     tenantId: string,
@@ -232,6 +235,47 @@ export class AiDoubtService {
   ): Promise<{ reply: string; fallbackUsed?: boolean }> {
     if (!userMessage || userMessage.trim().length === 0) {
       throw new BadRequestException('Message cannot be empty.');
+    }
+
+    // ── STANDALONE / GENERAL CHATBOT MODE ──────────────────────────────────────
+    // When called from the standalone AI Doubt Solver page (no specific exam context)
+    const isGeneralMode =
+      !attemptId ||
+      attemptId === 'general' ||
+      !questionId ||
+      questionId === 'general';
+
+    if (isGeneralMode) {
+      const generalContext: import('./gemini-provider.service').QuestionContext = {
+        questionText: '',
+        options: [],
+        correctOptionLabel: '',
+        selectedOption: null,
+        subject: 'NEET/JEE General Academic',
+        chapter: 'Any Chapter',
+        staticExplanationText: null,
+      };
+
+      // ── DOMAIN GUARD ENFORCEMENT BEFORE LLM ──
+      const domainResult = this.domainGuard.checkDomain(userMessage.trim(), generalContext, history);
+      if (domainResult.status === TutorDomainStatus.REJECTED) {
+        this.logger.log(`[DomainGuard] Blocked non-NEET message: "${userMessage.trim()}"`);
+        return {
+          reply: domainResult.reply || this.domainGuard.DEFAULT_REJECT_RESPONSE,
+          fallbackUsed: true,
+        };
+      }
+
+      const geminiRes = await this.geminiProvider.generateChatFollowup(
+        generalContext,
+        userMessage.trim(),
+        history,
+      );
+
+      return {
+        reply: geminiRes.reply,
+        fallbackUsed: geminiRes.fallbackUsed,
+      };
     }
 
     const attempt = await this.resolveSubmittedAttempt(tenantId, studentUserId, userRole, attemptId);
@@ -288,6 +332,16 @@ export class AiDoubtService {
       chapter: (question as any)?.chapterName || (question as any)?.chapter,
       staticExplanationText: staticExplanation?.solutionText || staticExplanation?.shortExplanation || null,
     };
+
+    // ── DOMAIN GUARD ENFORCEMENT BEFORE LLM ──
+    const domainResult = this.domainGuard.checkDomain(userMessage.trim(), context, history);
+    if (domainResult.status === TutorDomainStatus.REJECTED) {
+      this.logger.log(`[DomainGuard] Blocked non-NEET message in question context mode: "${userMessage.trim()}"`);
+      return {
+        reply: domainResult.reply || this.domainGuard.DEFAULT_REJECT_RESPONSE,
+        fallbackUsed: true,
+      };
+    }
 
     // Primary: Call Gemini Provider Service
     const geminiRes = await this.geminiProvider.generateChatFollowup(

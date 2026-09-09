@@ -599,7 +599,7 @@ export function AiDoubtSolverView({
         </div>
 
         {/* Frameless Seamless Conversational Workspace */}
-        <div className="flex-1 flex flex-col min-h-[480px]">
+        <div className="space-y-4">
           {/* Header */}
           <div className="py-2 px-1 flex items-center justify-between gap-2 border-b border-slate-100">
             <div className="min-w-0">
@@ -631,7 +631,7 @@ export function AiDoubtSolverView({
           </div>
 
           {/* Chat Window Stream */}
-          <div className="flex-1 py-3 space-y-3.5 overflow-y-auto">
+          <div className="py-3 space-y-3.5 max-h-[50vh] overflow-y-auto">
             {/* Initial Welcome */}
             <div className="flex justify-start">
               <div className="max-w-[92%] sm:max-w-[85%] p-4 rounded-2xl bg-slate-100/90 text-slate-800 text-xs sm:text-sm font-medium leading-relaxed space-y-2 break-words">
@@ -677,7 +677,7 @@ export function AiDoubtSolverView({
           </div>
 
           {/* Clean Input Bar */}
-          <div className="pt-3 flex items-center gap-2">
+          <div className="pt-3 pb-1 bg-white border-t border-slate-200/90 flex items-center gap-2">
             <div className="flex-1 bg-slate-100 border border-slate-200 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 rounded-2xl p-1 flex items-center transition">
               <input
                 type="text"

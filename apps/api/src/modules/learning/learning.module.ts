@@ -26,6 +26,7 @@ import { QuestionImportService } from './services/question-import.service';
 import { OnlineCbtService } from './services/online-cbt.service';
 import { AiDoubtService } from './services/ai-doubt.service';
 import { GeminiProviderService } from './services/gemini-provider.service';
+import { AiTutorDomainGuardService } from './services/ai-tutor-domain-guard.service';
 
 @Module({
   imports: [PrismaModule, RedisModule],
@@ -55,6 +56,7 @@ import { GeminiProviderService } from './services/gemini-provider.service';
     OnlineCbtService,
     AiDoubtService,
     GeminiProviderService,
+    AiTutorDomainGuardService,
   ],
   exports: [
     TopicItemService,
@@ -74,6 +76,7 @@ import { GeminiProviderService } from './services/gemini-provider.service';
     OnlineCbtService,
     AiDoubtService,
     GeminiProviderService,
+    AiTutorDomainGuardService,
   ],
 })
 export class LearningModule {}
