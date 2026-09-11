@@ -154,19 +154,10 @@ export function StudentExamsDashboard() {
       ? (response as any).data
       : [];
 
-  useEffect(() => {
-    if (rawExamList.length > 0) {
-      rawExamList.forEach((exam) => {
-        if (exam.id) {
-          prefetchExamResult(exam.id);
-        }
-      });
-    }
-  }, [rawExamList, prefetchExamResult]);
-
   // 1. Deduplicate by unique exam ID
   const uniqueExamsMap = new Map<string, StudentExamItem>();
   rawExamList.forEach((exam) => {
+    if (exam.publishStatus === 'ARCHIVED' || (exam as any).deletedAt) return;
     if (!uniqueExamsMap.has(exam.id)) {
       uniqueExamsMap.set(exam.id, exam);
     }
@@ -215,25 +206,22 @@ export function StudentExamsDashboard() {
     e.publishStatus === 'RESULT_PUBLISHED' ||
     !!e.submission?.isResultsPublished ||
     e.submission?.evaluationStatus === 'PUBLISHED' ||
-    e.submission?.evaluationStatus === 'COMPLETED' ||
-    (checkIsOnlineMode(e) && (
-      !!e.submission?.submittedAt ||
-      e.submission?.status === 'SUBMITTED' ||
-      e.submission?.status === 'COMPLETED'
-    ));
+    e.submission?.evaluationStatus === 'COMPLETED';
 
   const isSubmitted = (e: StudentExamItem) => {
     if (isResultPub(e)) return false;
     if (!!e.submission?.submittedAt) return true;
     if (
-      e.submission?.status === 'SUBMITTED' ||
-      e.submission?.status === 'LATE' ||
-      e.submission?.status === 'COMPLETED'
+      (e.submission?.status === 'SUBMITTED' ||
+        e.submission?.status === 'LATE' ||
+        e.submission?.status === 'COMPLETED') &&
+      !!e.submission?.submittedAt
     )
       return true;
     if (
-      e.submission?.evaluationStatus === 'UNDER_EVALUATION' ||
-      e.submission?.evaluationStatus === 'APPROVED'
+      (e.submission?.evaluationStatus === 'UNDER_EVALUATION' ||
+        e.submission?.evaluationStatus === 'APPROVED') &&
+      !!e.submission?.submittedAt
     )
       return true;
     return false;
@@ -312,9 +300,11 @@ export function StudentExamsDashboard() {
 
   const handleConfirmStart = () => {
     if (!startingExam) return;
-    startExamMutation.mutate(startingExam.id, {
+    const targetExamId = startingExam.id;
+    startExamMutation.mutate(targetExamId, {
       onSuccess: () => {
         setStartingExam(null);
+        router.push(`/dashboard/student/exams/${targetExamId}`);
       },
     });
   };

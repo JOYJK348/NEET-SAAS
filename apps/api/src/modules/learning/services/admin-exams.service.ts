@@ -187,17 +187,50 @@ export class AdminExamsService {
     }
 
     // 2. Check overlapping class timetables/schedules
+    // 2. Check overlapping class timetables/schedules & live classes
     try {
       const activeSchedules = await this.prisma.schedules.findMany({
         where: {
           tenantId,
           deletedAt: null,
+          status: 'ACTIVE',
           batchId: { in: targetBatchIds },
         },
       });
 
-      const batchIdsInSched = Array.from(new Set(activeSchedules.map((s) => s.batchId)));
-      const subjectIdsInSched = Array.from(new Set(activeSchedules.map((s) => s.subjectId)));
+      const activeLiveClasses = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          status: { notIn: ['CANCELLED', 'ENDED', 'ARCHIVED'] as any },
+          batchId: { in: targetBatchIds },
+          AND: [
+            { scheduledStart: { lt: windowEnd } },
+            { scheduledEnd: { gt: windowStart } },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          batchId: true,
+          subjectId: true,
+          scheduledStart: true,
+          scheduledEnd: true,
+        },
+      });
+
+      const batchIdsInSched = Array.from(
+        new Set([
+          ...activeSchedules.map((s) => s.batchId),
+          ...activeLiveClasses.map((lc) => lc.batchId),
+        ]),
+      );
+      const subjectIdsInSched = Array.from(
+        new Set([
+          ...activeSchedules.map((s) => s.subjectId),
+          ...activeLiveClasses.map((lc) => lc.subjectId),
+        ]),
+      );
 
       const schedBatches: Array<{ id: string; name: string }> =
         batchIdsInSched.length > 0
@@ -252,6 +285,31 @@ export class AdminExamsService {
             });
           }
         }
+      }
+
+      for (const lc of activeLiveClasses) {
+        const startFmt = lc.scheduledStart.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+        const endFmt = lc.scheduledEnd.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+        const batchName = batchMap.get(lc.batchId) || 'Batch';
+
+        conflicts.push({
+          type: 'CLASS_SCHEDULE',
+          title: lc.title,
+          batchName,
+          windowStart: startFmt,
+          windowEnd: endFmt,
+          message: `Live Class "${lc.title}" (${batchName}) scheduled (${startFmt} – ${endFmt})`,
+        });
       }
     } catch {
       // Ignore schedule check errors
@@ -726,13 +784,79 @@ export class AdminExamsService {
       throw new NotFoundException('Exam not found');
     }
 
+    const now = new Date();
+
+    // 1. Soft-delete target exam and update status to INACTIVE & publishStatus to ARCHIVED
     await this.prisma.exams.update({
       where: { id: examId },
       data: {
-        deletedAt: new Date(),
+        deletedAt: now,
+        status: ExamStatusEnum.INACTIVE,
+        publishStatus: 'ARCHIVED',
       },
     });
 
-    return { success: true, message: 'Exam deleted successfully' };
+    // 2. Soft-delete all matching exam batch instances
+    await this.prisma.exams.updateMany({
+      where: {
+        tenantId,
+        title: exam.title,
+        examWindowStart: exam.examWindowStart,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+        status: ExamStatusEnum.INACTIVE,
+        publishStatus: 'ARCHIVED',
+      },
+    });
+
+    // 3. Soft-delete linked examSubmissions
+    await this.prisma.examSubmissions.updateMany({
+      where: {
+        tenantId,
+        examId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: now,
+      },
+    });
+
+    // 4. Clear overlapping LiveClasses and Schedules for this batch & time window so the slot is 100% freed
+    try {
+      if (exam.batchId && exam.batchId !== 'ALL') {
+        await this.prisma.liveClasses.updateMany({
+          where: {
+            tenantId,
+            batchId: exam.batchId,
+            scheduledStart: { lte: exam.examWindowEnd },
+            scheduledEnd: { gte: exam.examWindowStart },
+            deletedAt: null,
+          },
+          data: {
+            deletedAt: now,
+            status: 'CANCELLED' as any,
+            cancelledAt: now,
+          },
+        });
+
+        await this.prisma.schedules.updateMany({
+          where: {
+            tenantId,
+            batchId: exam.batchId,
+            deletedAt: null,
+          },
+          data: {
+            deletedAt: now,
+            status: 'CANCELLED' as any,
+          },
+        });
+      }
+    } catch {
+      // Best-effort slot cleanup
+    }
+
+    return { success: true, message: 'Exam and schedule slot deleted successfully' };
   }
 }

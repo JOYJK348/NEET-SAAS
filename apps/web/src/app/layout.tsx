@@ -22,8 +22,6 @@ export const metadata: Metadata = {
   description: 'Enterprise Academic LMS & Coaching Management System',
 };
 
-import Script from 'next/script';
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,13 +33,9 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${outfit.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body
-        suppressHydrationWarning
-        className="min-h-full flex flex-col font-sans bg-[#F8FAFC] text-[#0F172A] selection:bg-[#0052CC] selection:text-white"
-      >
-        <Script
+      <head>
+        <script
           id="error-suppressor"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
@@ -74,6 +68,11 @@ export default function RootLayout({
             `,
           }}
         />
+      </head>
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col font-sans bg-[#F8FAFC] text-[#0F172A] selection:bg-[#0052CC] selection:text-white"
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

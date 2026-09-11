@@ -86,11 +86,17 @@ export function AdminExamsDashboard() {
   const { batches } = useBatches();
   const batchMap = new Map(batches.map((b) => [b.id, b.name]));
 
-  const { data: response, isLoading, refetch } = useAdminExams({ limit: 100 });
+  const { data: response, isLoading, isFetching, refetch } = useAdminExams({ limit: 100 });
   const publishExamMutation = usePublishExam();
   const deleteExamMutation = useDeleteExam();
 
-  const rawExams = response?.data || [];
+  const rawExams = Array.isArray(response)
+    ? response
+    : Array.isArray((response as any)?.data)
+      ? (response as any).data
+      : (response as any)?.exams || [];
+
+  const showLoader = isLoading && rawExams.length === 0;
 
   // Sort rawExams newest first (createdAt DESC / scheduledStartAt DESC)
   const sortedRawExams = [...rawExams].sort((a, b) => {
@@ -108,7 +114,8 @@ export function AdminExamsDashboard() {
   sortedRawExams.forEach((exam) => {
     const titleKey = exam.title.trim().toLowerCase();
     const dateKey = new Date(exam.examWindowStart || exam.scheduledStartAt || 0).toISOString().slice(0, 10);
-    const groupKey = `${titleKey}-${dateKey}-${exam.publishStatus}`;
+    const modeKey = (exam.mode || 'OFFLINE').toUpperCase();
+    const groupKey = `${titleKey}-${dateKey}-${exam.publishStatus}-${modeKey}`;
 
     let batchName = batchMap.get(exam.batchId);
     if (!batchName) {
@@ -339,7 +346,7 @@ export function AdminExamsDashboard() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Total Exams
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
+              <p suppressHydrationWarning className="text-xl sm:text-2xl font-extrabold text-[#0B2447] mt-0.5">
                 {exams.length}
               </p>
             </div>
@@ -356,7 +363,7 @@ export function AdminExamsDashboard() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Online CBT
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-purple-700 mt-0.5">
+              <p suppressHydrationWarning className="text-xl sm:text-2xl font-extrabold text-purple-700 mt-0.5">
                 {onlineCount}
               </p>
             </div>
@@ -373,7 +380,7 @@ export function AdminExamsDashboard() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Offline OMR
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-[#0052CC] mt-0.5">
+              <p suppressHydrationWarning className="text-xl sm:text-2xl font-extrabold text-[#0052CC] mt-0.5">
                 {offlineCount}
               </p>
             </div>
@@ -390,7 +397,7 @@ export function AdminExamsDashboard() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Review Queue
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5">
+              <p suppressHydrationWarning className="text-xl sm:text-2xl font-extrabold text-amber-700 mt-0.5">
                 {
                   exams.filter(
                     (e) => e.publishStatus === 'UNDER_REVIEW' || e.publishStatus === 'ADMIN_REVIEW',
@@ -411,7 +418,7 @@ export function AdminExamsDashboard() {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
                 Results Live
               </p>
-              <p className="text-xl sm:text-2xl font-extrabold text-teal-700 mt-0.5">
+              <p suppressHydrationWarning className="text-xl sm:text-2xl font-extrabold text-teal-700 mt-0.5">
                 {exams.filter((e) => e.publishStatus === 'RESULT_PUBLISHED').length}
               </p>
             </div>
@@ -586,7 +593,7 @@ export function AdminExamsDashboard() {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
         {/* Mobile View (< 768px): Sleek Cards */}
         <div className="block md:hidden p-4 space-y-4">
-          {isLoading ? (
+          {showLoader ? (
             <div className="py-12 text-center text-slate-400 font-semibold text-xs flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-[#0052CC]" /> Loading exam schedules...
             </div>
@@ -764,7 +771,7 @@ export function AdminExamsDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {isLoading ? (
+              {showLoader ? (
                 <tr>
                   <td colSpan={4} className="py-16 text-center text-slate-400 font-semibold">
                     <div className="flex items-center justify-center gap-2">

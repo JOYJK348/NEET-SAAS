@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import {
   AlertCircle,
   CheckCircle2,
+  Download,
   Edit3,
   FileCheck,
   FileText,
@@ -58,6 +59,61 @@ export function BulkImportModal({
   const [editingQuestion, setEditingQuestion] = useState<ParsedQuestionItem | null>(null);
 
   if (!isOpen) return null;
+
+  const handleDownloadSampleTemplate = () => {
+    const sampleContent = `NEET MCQ QUESTION PAPER SAMPLE TEMPLATE
+=============================================
+
+1. [Physics] Which physical quantity is measured in Newtons?
+A) Mass
+B) Force
+C) Pressure
+D) Energy
+Answer: B
+
+2. [Chemistry] What is the pH value of pure water at 25°C?
+A) 0
+B) 7
+C) 14
+D) 1
+Answer: B
+
+3. [Biology] Which organelle is responsible for cellular respiration in eukaryotic cells?
+A) Mitochondria
+B) Ribosome
+C) Chloroplast
+D) Golgi apparatus
+Answer: A
+
+4. [Biology] In humans, how many pairs of chromosomes are present in a somatic cell?
+A) 22
+B) 23
+C) 46
+D) 44
+Answer: B
+
+5. [Physics] The rate of change of momentum of a body is directly proportional to the applied:
+A) Acceleration
+B) Force
+C) Velocity
+D) Work done
+Answer: B
+`;
+
+    const blob = new Blob([sampleContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'NEET_Sample_Question_Paper_Template.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success('Sample Question Paper Template Downloaded! 📄', {
+      description: 'You can open, edit, or copy this sample format in MS Word or Google Docs.',
+    });
+  };
 
   const handleUploadAndParse = async () => {
     if (!file) {
@@ -185,6 +241,18 @@ export function BulkImportModal({
                   Support text & scanned PDFs with 100+ questions. Parser automatically extracts
                   questions, options, and answer keys.
                 </p>
+              </div>
+
+              {/* Sample Template Download Option */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleTemplate}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  <span>Download Sample Template</span>
+                </button>
               </div>
 
               <div className="flex flex-col sm:flex-row items-center gap-3 justify-center pt-2">

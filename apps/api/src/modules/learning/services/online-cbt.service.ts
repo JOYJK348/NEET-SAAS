@@ -256,11 +256,7 @@ export class OnlineCbtService {
     const durationMs = ((exam.durationMinutes || 180) + (exam.graceMinutes || 15)) * 60 * 1000;
     const timeSpentMs = now.getTime() - attempt.startedAt.getTime();
 
-    if (timeSpentMs > durationMs) {
-      // Auto-submit expired attempt
-      await this.submitExamAttempt(tenantId, studentUserId, attemptId);
-      return { status: 'EXPIRED', remainingSeconds: 0 };
-    }
+    // Allow student to save answers without premature auto-submission on expiration
 
     // Safe enum mapping for DB: AnswerStatusEnum can be UNATTEMPTED, FLAGGED, CORRECT, INCORRECT, PARTIAL
     let dbAnswerStatus: AnswerStatusEnum = AnswerStatusEnum.UNATTEMPTED;
@@ -472,98 +468,114 @@ export class OnlineCbtService {
         },
       });
 
-      // Upsert ExamResults record
-      await tx.examResults.upsert({
+      // Upsert ExamResults record safely
+      const existingResult = await tx.examResults.findFirst({
         where: {
-          examId_studentAdmissionId: {
-            examId: exam.id,
-            studentAdmissionId: attempt.studentAdmissionId,
-          },
-        },
-        create: {
-          tenantId,
           examId: exam.id,
-          attemptId,
           studentAdmissionId: attempt.studentAdmissionId,
-          resultStatus: 'PUBLISHED' as any,
-          totalMarks: totalExamMarks,
-          obtainedMarks: finalObtainedMarks,
-          correct: correctCount,
-          wrong: wrongCount,
-          skipped: skippedCount,
-          percentage,
-          percentile: 100,
-          rank: 1,
-          passingMarks: Number(exam.passingMarks || 0),
-          passFail,
-          grade: passFail ? 'PASS' : 'FAIL',
-          isFinal: true,
-          reEvaluationRequested: false,
-          reEvaluatedAt: new Date(0),
-          reEvaluatedBy: validUserId,
-          aiEvaluationMetadata: {},
-          resultHash: '',
-          publishedAt: now,
-          publishedBy: validUserId,
-          createdBy: validUserId,
-          updatedBy: validUserId,
-        },
-        update: {
-          obtainedMarks: finalObtainedMarks,
-          correct: correctCount,
-          wrong: wrongCount,
-          skipped: skippedCount,
-          percentage,
-          passFail,
-          updatedBy: validUserId,
         },
       });
 
-      // Upsert ExamSubmissions record only if validStudentAdmissionId is present
-      if (validStudentAdmissionId) {
-        await tx.examSubmissions.upsert({
-          where: {
-            examId_studentAdmissionId: {
-              examId: exam.id,
-              studentAdmissionId: validStudentAdmissionId,
-            },
-          },
-          create: {
-            tenantId,
-            examId: exam.id,
-            studentAdmissionId: validStudentAdmissionId,
-            status: 'SUBMITTED' as any,
-            evaluationStatus: 'COMPLETED' as any,
-            evaluationApproved: false,
-            evaluationVersion: 1,
+      if (existingResult) {
+        await tx.examResults.update({
+          where: { id: existingResult.id },
+          data: {
             obtainedMarks: finalObtainedMarks,
-            submittedAt: now,
-            evaluatedAt: now,
-            evaluatedByUserId: validUserId,
-            marksBreakdown: [
-              { sectionName: 'Correct Answers', obtainedMarks: correctCount * 4, maxMarks: correctCount * 4 },
-              { sectionName: 'Wrong Answers', obtainedMarks: -wrongCount, maxMarks: 0 },
-              { sectionName: 'Skipped Questions', obtainedMarks: 0, maxMarks: 0 },
-            ],
-            tutorNotes: `Auto-evaluated by CBT Engine (${correctCount} Correct, ${wrongCount} Wrong, ${skippedCount} Skipped). Total Score: ${finalObtainedMarks}/${totalExamMarks}`,
-            isResultsPublished: true,
-            resultsPublishedAt: now,
-            createdBy: validUserId,
-            updatedBy: validUserId,
-          },
-          update: {
-            status: 'SUBMITTED' as any,
-            evaluationStatus: 'COMPLETED' as any,
-            obtainedMarks: finalObtainedMarks,
-            submittedAt: now,
-            evaluatedAt: now,
-            evaluatedByUserId: validUserId,
-            tutorNotes: `Auto-evaluated by CBT Engine (${correctCount} Correct, ${wrongCount} Wrong, ${skippedCount} Skipped). Total Score: ${finalObtainedMarks}/${totalExamMarks}`,
-            isResultsPublished: true,
-            resultsPublishedAt: now,
+            correct: correctCount,
+            wrong: wrongCount,
+            skipped: skippedCount,
+            percentage,
+            passFail,
+            deletedAt: null,
             updatedBy: validUserId,
           },
         });
+      } else {
+        await tx.examResults.create({
+          data: {
+            tenantId,
+            examId: exam.id,
+            attemptId,
+            studentAdmissionId: attempt.studentAdmissionId,
+            resultStatus: 'PUBLISHED' as any,
+            totalMarks: totalExamMarks,
+            obtainedMarks: finalObtainedMarks,
+            correct: correctCount,
+            wrong: wrongCount,
+            skipped: skippedCount,
+            percentage,
+            percentile: 100,
+            rank: 1,
+            passingMarks: Number(exam.passingMarks || 0),
+            passFail,
+            grade: passFail ? 'PASS' : 'FAIL',
+            isFinal: true,
+            reEvaluationRequested: false,
+            reEvaluatedAt: new Date(0),
+            reEvaluatedBy: validUserId,
+            aiEvaluationMetadata: {},
+            resultHash: '',
+            publishedAt: now,
+            publishedBy: validUserId,
+            createdBy: validUserId,
+            updatedBy: validUserId,
+          },
+        });
+      }
+
+      // Upsert ExamSubmissions record only if validStudentAdmissionId is present
+      if (validStudentAdmissionId) {
+        const existingSub = await tx.examSubmissions.findFirst({
+          where: {
+            examId: exam.id,
+            studentAdmissionId: validStudentAdmissionId,
+          },
+        });
+
+        if (existingSub) {
+          await tx.examSubmissions.update({
+            where: { id: existingSub.id },
+            data: {
+              status: 'SUBMITTED' as any,
+              evaluationStatus: 'COMPLETED' as any,
+              obtainedMarks: finalObtainedMarks,
+              submittedAt: now,
+              evaluatedAt: now,
+              evaluatedByUserId: validUserId,
+              tutorNotes: `Auto-evaluated by CBT Engine (${correctCount} Correct, ${wrongCount} Wrong, ${skippedCount} Skipped). Total Score: ${finalObtainedMarks}/${totalExamMarks}`,
+              isResultsPublished: true,
+              resultsPublishedAt: now,
+              deletedAt: null,
+              updatedBy: validUserId,
+            },
+          });
+        } else {
+          await tx.examSubmissions.create({
+            data: {
+              tenantId,
+              examId: exam.id,
+              studentAdmissionId: validStudentAdmissionId,
+              status: 'SUBMITTED' as any,
+              evaluationStatus: 'COMPLETED' as any,
+              evaluationApproved: false,
+              evaluationVersion: 1,
+              obtainedMarks: finalObtainedMarks,
+              submittedAt: now,
+              evaluatedAt: now,
+              evaluatedByUserId: validUserId,
+              marksBreakdown: [
+                { sectionName: 'Correct Answers', obtainedMarks: correctCount * 4, maxMarks: correctCount * 4 },
+                { sectionName: 'Wrong Answers', obtainedMarks: -wrongCount, maxMarks: 0 },
+                { sectionName: 'Skipped Questions', obtainedMarks: 0, maxMarks: 0 },
+              ],
+              tutorNotes: `Auto-evaluated by CBT Engine (${correctCount} Correct, ${wrongCount} Wrong, ${skippedCount} Skipped). Total Score: ${finalObtainedMarks}/${totalExamMarks}`,
+              isResultsPublished: true,
+              resultsPublishedAt: now,
+              createdBy: validUserId,
+              updatedBy: validUserId,
+            },
+          });
+        }
 
         // Automatically set exam publishStatus = RESULT_PUBLISHED for Online CBT exams
         await tx.exams.update({
@@ -670,9 +682,9 @@ export class OnlineCbtService {
       });
     }
 
-    // 3. Fallback lookup: auto-evaluate only if attempt exists and NOT submitted yet
+    // 3. Fallback lookup: if no result yet and attempt is not submitted, return null / unavailable
     if (!result && attempt && attempt.status !== 'SUBMITTED' && attempt.status !== 'AUTO_SUBMITTED') {
-      return this.submitExamAttempt(tenantId, studentUserId, attempt.id);
+      return null;
     }
 
     if (!attempt && result?.attemptId) {

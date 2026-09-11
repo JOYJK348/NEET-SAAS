@@ -33,27 +33,27 @@ export class StudentExamsService {
     private readonly timelineService: TimelineService,
   ) {}
 
+  private admissionCache = new Map<string, { data: any; expiresAt: number }>();
+
   private async getStudentAdmission(tenantId: string, userId: string) {
+    const cacheKey = `${tenantId}:${userId}`;
+    const cached = this.admissionCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+
     let admission = await this.prisma.studentAdmissions.findFirst({
-      where: { studentProfileId: userId, deletedAt: null },
+      where: {
+        tenantId,
+        deletedAt: null,
+        OR: [
+          { studentProfileId: userId },
+          { id: userId },
+          { studentProfileIstudent_profile: { userId } },
+        ],
+      },
       orderBy: [{ admissionStatus: 'asc' }, { createdAt: 'desc' }],
     });
-
-    if (!admission) {
-      const profile = await this.prisma.studentProfiles.findFirst({
-        where: { userId, deletedAt: null },
-      });
-
-      if (profile) {
-        admission = await this.prisma.studentAdmissions.findFirst({
-          where: {
-            studentProfileId: profile.userId,
-            deletedAt: null,
-          },
-          orderBy: [{ admissionStatus: 'asc' }, { createdAt: 'desc' }],
-        });
-      }
-    }
 
     if (!admission) {
       admission = await this.prisma.studentAdmissions.findFirst({
@@ -107,8 +107,9 @@ export class StudentExamsService {
     }
 
     const batchId = batchIds[0] ?? null;
-
-    return { admission, batchIds, batchId };
+    const result = { admission, batchIds, batchId };
+    this.admissionCache.set(cacheKey, { data: result, expiresAt: Date.now() + 60000 });
+    return result;
   }
 
   async getMyExams(
@@ -149,7 +150,6 @@ export class StudentExamsService {
           'UNDER_REVIEW',
           'ADMIN_REVIEW',
           'RESULT_PUBLISHED',
-          'ARCHIVED',
         ],
       },
       deletedAt: null,
@@ -166,91 +166,88 @@ export class StudentExamsService {
       }),
     ]);
 
+    const examIds = exams.map((e) => e.id);
+    const allSubmissions = admission?.id && examIds.length > 0
+      ? await this.prisma.examSubmissions.findMany({
+          where: {
+            tenantId,
+            examId: { in: examIds },
+            studentAdmissionId: admission.id,
+            deletedAt: null,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+
+    const submissionMap = new Map<string, typeof allSubmissions[0]>();
+    allSubmissions.forEach((sub) => {
+      if (!submissionMap.has(sub.examId)) {
+        submissionMap.set(sub.examId, sub);
+      }
+    });
+
     const now = new Date();
 
-    const data = await Promise.all(
-      exams.map(async (exam) => {
-        try {
-          await this.examClosureService.checkAndTriggerLazyClosure(
-            tenantId,
-            exam.id,
-            'system',
-          );
-        } catch {
-          // Ignore closure errors during exam list fetch to guarantee 200 OK
+    const data = exams.map((exam) => {
+      const submission = submissionMap.get(exam.id) || null;
+      const derivedStatus = this.examStateService.getExamState(exam, now);
+      const canStart = this.examStateService.canStudentStart(exam, now);
+
+      let remainingSeconds = 0;
+      if (submission?.calculatedEndAt) {
+        let endMs = submission.calculatedEndAt.getTime();
+        if (exam.examWindowEnd && endMs > exam.examWindowEnd.getTime()) {
+          endMs = exam.examWindowEnd.getTime();
         }
+        const graceMs =
+          submission.graceEndAt?.getTime() ??
+          endMs + (exam.graceMinutes || 0) * 60 * 1000;
+        const nowMs = now.getTime();
 
-        const submission = admission?.id
-          ? await this.prisma.examSubmissions.findFirst({
-              where: {
-                tenantId,
-                examId: exam.id,
-                studentAdmissionId: admission.id,
-                deletedAt: null,
-              },
-              orderBy: { createdAt: 'desc' },
-            })
-          : null;
-
-        const derivedStatus = this.examStateService.getExamState(exam, now);
-        const canStart = this.examStateService.canStudentStart(exam, now);
-
-        let remainingSeconds = 0;
-        if (submission?.calculatedEndAt) {
-          let endMs = submission.calculatedEndAt.getTime();
-          if (exam.examWindowEnd && endMs > exam.examWindowEnd.getTime()) {
-            endMs = exam.examWindowEnd.getTime();
-          }
-          const graceMs =
-            submission.graceEndAt?.getTime() ??
-            endMs + (exam.graceMinutes || 0) * 60 * 1000;
-          const nowMs = now.getTime();
-
-          if (nowMs < endMs) {
-            remainingSeconds = Math.floor((endMs - nowMs) / 1000);
-          } else if (nowMs < graceMs) {
-            remainingSeconds = Math.floor((graceMs - nowMs) / 1000);
-          } else {
-            remainingSeconds = 0;
-          }
+        if (nowMs < endMs) {
+          remainingSeconds = Math.floor((endMs - nowMs) / 1000);
+        } else if (nowMs < graceMs) {
+          remainingSeconds = Math.floor((graceMs - nowMs) / 1000);
+        } else {
+          remainingSeconds = 0;
         }
+      }
 
-        return {
-          id: exam.id,
-          title: exam.title,
-          description: exam.description,
-          mode: exam.mode,
-          examType: exam.examType,
-          totalMarks: Number(exam.totalMarks),
-          passingMarks: Number(exam.passingMarks),
-          durationMinutes: exam.durationMinutes,
-          graceMinutes: exam.graceMinutes,
-          examWindowStart: exam.examWindowStart,
-          examWindowEnd: exam.examWindowEnd,
-          publishStatus: exam.publishStatus,
-          studentExamStatus: derivedStatus,
-          canStart,
-          remainingSeconds,
-          isSubmissionLocked: exam.isSubmissionLocked || exam.isClosed,
-          submission: submission
-            ? {
-                id: submission.id,
-                status: submission.status,
-                evaluationStatus: submission.evaluationStatus,
-                isResultsPublished:
-                  submission.isResultsPublished ||
-                  (exam.resultsPublishedAt &&
-                    exam.resultsPublishedAt.getTime() > 0),
-                startedAt: submission.startedAt,
-                calculatedEndAt: submission.calculatedEndAt,
-                graceEndAt: submission.graceEndAt,
-                submittedAt: submission.submittedAt,
-                obtainedMarks: Number(submission.obtainedMarks),
-              }
-            : null,
-        };
-      }),
-    );
+      return {
+        id: exam.id,
+        title: exam.title,
+        description: exam.description,
+        mode: exam.mode,
+        examType: exam.examType,
+        totalMarks: Number(exam.totalMarks),
+        passingMarks: Number(exam.passingMarks),
+        durationMinutes: exam.durationMinutes,
+        graceMinutes: exam.graceMinutes,
+        examWindowStart: exam.examWindowStart,
+        examWindowEnd: exam.examWindowEnd,
+        publishStatus: exam.publishStatus,
+        studentExamStatus: derivedStatus,
+        canStart,
+        remainingSeconds,
+        isSubmissionLocked: exam.isSubmissionLocked || exam.isClosed,
+        submission: submission
+          ? {
+              id: submission.id,
+              status: submission.submittedAt ? submission.status : 'STARTED',
+              evaluationStatus: submission.evaluationStatus,
+              isResultsPublished:
+                submission.isResultsPublished ||
+                (exam.resultsPublishedAt &&
+                  exam.resultsPublishedAt.getTime() > 0),
+              startedAt: submission.startedAt,
+              calculatedEndAt: submission.calculatedEndAt,
+              graceEndAt: submission.graceEndAt,
+              submittedAt: submission.submittedAt,
+              obtainedMarks: Number(submission.obtainedMarks),
+            }
+          : null,
+      };
+    });
 
     const totalPages = Math.ceil(total / take);
     return {
@@ -327,22 +324,29 @@ export class StudentExamsService {
           tenantId,
           examId,
           studentAdmissionId: admission.id,
-          deletedAt: null,
         },
       });
 
-      if (existing?.startedAt) {
+      if (existing) {
+        if (!existing.startedAt || existing.deletedAt !== null) {
+          const updated = await tx.examSubmissions.update({
+            where: { id: existing.id },
+            data: {
+              startedAt: existing.startedAt || startedAt,
+              calculatedEndAt: existing.calculatedEndAt || calculatedEndAt,
+              graceEndAt: existing.graceEndAt || graceEndAt,
+              lastSeenAt: startedAt,
+              deletedAt: null,
+              updatedBy: userId,
+            },
+          });
+          return updated;
+        }
         return existing;
       }
 
-      const created = await tx.examSubmissions.upsert({
-        where: {
-          examId_studentAdmissionId: {
-            examId,
-            studentAdmissionId: admission.id,
-          },
-        },
-        create: {
+      const created = await tx.examSubmissions.create({
+        data: {
           tenantId,
           examId,
           studentAdmissionId: admission.id,
@@ -354,13 +358,6 @@ export class StudentExamsService {
           evaluationStatus: 'PENDING',
           obtainedMarks: 0.0,
           createdBy: userId,
-          updatedBy: userId,
-        },
-        update: {
-          startedAt,
-          calculatedEndAt,
-          graceEndAt,
-          lastSeenAt: startedAt,
           updatedBy: userId,
         },
       });
@@ -490,15 +487,7 @@ export class StudentExamsService {
     return { success: true, lastSeenAt: now };
   }
 
-  private detailCache = new Map<string, { data: any; expiresAt: number }>();
-
   async getExamDetail(tenantId: string, userId: string, examId: string) {
-    const cacheKey = `${tenantId}:${examId}:${userId}`;
-    const cached = this.detailCache.get(cacheKey);
-    if (cached && Date.now() < cached.expiresAt) {
-      return cached.data;
-    }
-
     const { admission, batchIds } = await this.getStudentAdmission(
       tenantId,
       userId,
@@ -600,7 +589,7 @@ export class StudentExamsService {
         .catch(() => null);
     }
 
-    const finalDetail = {
+    return {
       ...exam,
       totalMarks: Number(exam.totalMarks),
       passingMarks: Number(exam.passingMarks),
@@ -611,9 +600,6 @@ export class StudentExamsService {
       answerSheetSignedUrl,
       submission,
     };
-
-    this.detailCache.set(cacheKey, { data: finalDetail, expiresAt: Date.now() + 60000 });
-    return finalDetail;
   }
 
   async uploadAnswerSheet(

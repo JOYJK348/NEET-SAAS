@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { adminExamsService } from '../services/admin-exams-service';
@@ -16,12 +17,55 @@ export const adminExamKeys = {
   checklist: (id: string) => [...adminExamKeys.all, 'checklist', id] as const,
 };
 
+const CACHE_KEY = 'NEET_ADMIN_EXAMS_CACHE';
+
+function getCachedExams() {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed) return parsed;
+    }
+  } catch {
+    // Ignore storage parse error
+  }
+  return undefined;
+}
+
+export function setCachedExams(data: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage write error
+  }
+}
+
 export function useAdminExams(params?: Record<string, any>) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const key = adminExamKeys.list(params);
+    const existing = queryClient.getQueryData(key);
+    if (!existing) {
+      const cached = getCachedExams();
+      if (cached) {
+        queryClient.setQueryData(key, cached);
+      }
+    }
+  }, [queryClient, params]);
+
   return useQuery({
     queryKey: adminExamKeys.list(params),
-    queryFn: () => adminExamsService.getExams(params),
+    queryFn: async () => {
+      const res = await adminExamsService.getExams(params);
+      setCachedExams(res);
+      return res;
+    },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    placeholderData: (previousData) => previousData,
     retry: 3,
     staleTime: 0,
   });
@@ -127,8 +171,12 @@ export function useCreateExam() {
   return useMutation({
     mutationFn: (data: CreateExamPayload) => adminExamsService.createExam(data),
     onSuccess: () => {
-      toast.success('Exam created successfully as DRAFT');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CACHE_KEY);
+      }
+      toast.success('Exam created successfully! ⚡');
       queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+      queryClient.refetchQueries({ queryKey: adminExamKeys.all });
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Failed to create exam schedule';
@@ -150,6 +198,7 @@ export function usePublishExam() {
     onSuccess: () => {
       toast.success('Exam published successfully to student portal');
       queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['student-exams'] });
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Failed to publish exam';
@@ -163,8 +212,12 @@ export function useDeleteExam() {
   return useMutation({
     mutationFn: (id: string) => adminExamsService.deleteExam(id),
     onSuccess: () => {
-      toast.success('Exam deleted successfully');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CACHE_KEY);
+      }
+      toast.success('Exam & schedule slot deleted successfully!');
       queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['student-exams'] });
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message || err?.message || 'Failed to delete exam';

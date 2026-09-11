@@ -10,14 +10,12 @@ import { toast } from 'sonner';
 import {
   Calendar,
   Clock,
-  FileCheck,
   FileText,
   HelpCircle,
   Layers,
   Plus,
   Settings,
   Trash2,
-  Upload,
   X,
 } from 'lucide-react';
 
@@ -56,7 +54,6 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
   const [negativeMarkingValue, setNegativeMarkingValue] = useState(1);
   const [allowLateUpload, setAllowLateUpload] = useState(true);
   const [allowReplaceUpload, setAllowReplaceUpload] = useState(true);
-  const [questionPaperFile, setQuestionPaperFile] = useState<File | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -189,25 +186,13 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
         sectionConfig: sections,
       },
       {
-        onSuccess: async (createdExam: any) => {
-          const examId = createdExam?.id || createdExam?.data?.id;
-          if (questionPaperFile && examId) {
-            const toastId = toast.loading('Uploading Question Paper PDF...');
-            try {
-              await adminExamsService.uploadQuestionPaper(examId, questionPaperFile);
-              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
-              toast.success('Exam created & Question Paper PDF uploaded! 📄', { id: toastId });
-            } catch (err: any) {
-              await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
-              toast.error(
-                'Exam created, but QP upload failed: ' +
-                  (err?.response?.data?.message || err?.message || 'Check file'),
-                { id: toastId },
-              );
-            }
-          } else {
-            await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+        onSuccess: async () => {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('NEET_ADMIN_EXAMS_CACHE');
           }
+          await queryClient.invalidateQueries({ queryKey: adminExamKeys.all });
+          await queryClient.refetchQueries({ queryKey: adminExamKeys.all });
+          toast.success('Exam created successfully! ⚡');
           onClose();
         },
       },
@@ -623,43 +608,6 @@ export function CreateExamModal({ isOpen, onClose }: CreateExamModalProps) {
                       </button>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Question Paper PDF Upload */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <Upload className="w-4 h-4 text-indigo-600" />
-                      Question Paper Document Upload (PDF / DOCX)
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      Attach Question Paper file for student and tutor reference during exam.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-1">
-                  <input
-                    type="file"
-                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    id="modal-qp-file-input"
-                    onChange={(e) => setQuestionPaperFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="modal-qp-file-input"
-                    className="flex-1 py-2 px-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-xl text-xs font-semibold cursor-pointer truncate text-slate-700 transition shadow-2xs text-center"
-                  >
-                    {questionPaperFile ? questionPaperFile.name : 'Select PDF / DOCX Question Paper...'}
-                  </label>
-                  {questionPaperFile && (
-                    <span className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl flex items-center gap-1.5 shrink-0">
-                      <FileCheck className="w-4 h-4 text-emerald-600" />
-                      {(questionPaperFile.size / (1024 * 1024)).toFixed(2)} MB
-                    </span>
-                  )}
                 </div>
               </div>
             </div>

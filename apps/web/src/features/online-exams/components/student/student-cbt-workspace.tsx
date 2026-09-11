@@ -177,7 +177,12 @@ export function StudentCbtWorkspace({
         const data = await api.post<CbtAttempt>(`/online-exams/${examId}/start`);
         setAttempt(data);
         setAnswers(data.savedAnswers || {});
-        setTimeLeft(data.timeRemainingSeconds || data.durationMinutes * 60);
+        const fullDurationSec = (data.durationMinutes || 180) * 60;
+        const initialTime = data.timeRemainingSeconds && data.timeRemainingSeconds > 60 
+          ? data.timeRemainingSeconds 
+          : fullDurationSec;
+        setTimeLeft(initialTime);
+        setIsStarted(true);
 
         if (data.questions && data.questions.length > 0) {
           setVisited({ [data.questions[0].id]: true });
@@ -201,8 +206,7 @@ export function StudentCbtWorkspace({
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          toast.warning('Time is Up! Auto-submitting exam attempt...');
-          handleFinalSubmit(true);
+          toast.info('Exam duration completed. Please click Submit Exam when ready.');
           return 0;
         }
         return prev - 1;
