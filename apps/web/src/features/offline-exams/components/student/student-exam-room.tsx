@@ -119,10 +119,10 @@ export function StudentExamRoom({ examId }: StudentExamRoomProps) {
       exam.studentExamStatus === 'RESULT_PUBLISHED' ||
       exam.publishStatus === 'RESULT_PUBLISHED' ||
       !!exam.submission?.isResultsPublished ||
-      exam.submission?.status === 'SUBMITTED' ||
-      exam.submission?.status === 'COMPLETED' ||
+      (!!exam.submission?.submittedAt && exam.submission?.status === 'SUBMITTED') ||
+      (!!exam.submission?.submittedAt && exam.submission?.status === 'COMPLETED') ||
       exam.submission?.evaluationStatus === 'PUBLISHED' ||
-      exam.submission?.evaluationStatus === 'COMPLETED';
+      (!!exam.submission?.submittedAt && exam.submission?.evaluationStatus === 'COMPLETED');
 
     if (isResultPublished) {
       return (

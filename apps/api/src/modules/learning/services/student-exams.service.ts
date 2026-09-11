@@ -598,7 +598,13 @@ export class StudentExamsService {
       remainingSeconds,
       questionPaperSignedUrl,
       answerSheetSignedUrl,
-      submission,
+      submission: submission
+        ? {
+            ...submission,
+            status: submission.submittedAt ? submission.status : 'STARTED',
+            obtainedMarks: Number(submission.obtainedMarks),
+          }
+        : null,
     };
   }
 
