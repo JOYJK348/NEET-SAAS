@@ -137,7 +137,7 @@ export async function prefetchCriticalData(
         queryClient.prefetchQuery({
           queryKey: ['student-exams'],
           queryFn: ({ signal }) =>
-            api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+            api.get('/student/exams', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         }),
         queryClient.prefetchQuery({

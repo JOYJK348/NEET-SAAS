@@ -420,7 +420,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
           queryClient.prefetchQuery({
             queryKey: ['student-exams'],
             queryFn: ({ signal }) =>
-              api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+              api.get('/student/exams', { signal, skipGlobalToast: true }),
             staleTime: STALE_TIMES.DEFAULT,
           });
         } else if (href === '/dashboard/student/recordings' || href === '/dashboard/recordings') {
@@ -564,7 +564,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
         queryClient.prefetchQuery({
           queryKey: ['student-exams'],
           queryFn: ({ signal }) =>
-            api.get('/offline-exams/student-exams', { signal, skipGlobalToast: true }),
+            api.get('/student/exams', { signal, skipGlobalToast: true }),
           staleTime: STALE_TIMES.DEFAULT,
         });
         queryClient.prefetchQuery({

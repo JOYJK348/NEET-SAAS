@@ -61,14 +61,6 @@ const getEffectiveDuration = (exam?: {
 
 export function StudentExamRoom({ examId }: StudentExamRoomProps) {
   const router = useRouter();
-  const prefetchExamResult = usePrefetchExamResult();
-
-  useEffect(() => {
-    if (examId) {
-      prefetchExamResult(examId);
-    }
-  }, [examId, prefetchExamResult]);
-
   const { data: exam, isLoading, refetch } = useStudentExamDetail(examId);
 
   const isStarted = !!exam?.submission?.startedAt;

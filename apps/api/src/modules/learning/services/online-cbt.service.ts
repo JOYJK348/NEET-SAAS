@@ -682,8 +682,7 @@ export class OnlineCbtService {
       });
     }
 
-    // 3. Fallback lookup: if no result yet and attempt is not submitted, return null / unavailable
-    if (!result && attempt && attempt.status !== 'SUBMITTED' && attempt.status !== 'AUTO_SUBMITTED') {
+    if (!result) {
       return null;
     }
 
