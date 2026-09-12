@@ -68,13 +68,47 @@ interface FilterState {
   subjectId: string;
 }
 
+import { useAuth } from '@/providers/auth-provider';
+import { useEffect } from 'react';
+
 export default function TimetablePage() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.roleCode === 'STUDENT') {
+      router.replace('/dashboard/student/timetable');
+    } else if (user?.roleCode === 'TUTOR') {
+      router.replace('/dashboard/tutor/timetable');
+    }
+  }, [user, router]);
+
   const [viewMode, setViewMode] = useState<'MONTH' | 'WEEK' | 'LIST'>('LIST');
 
   // Calendar Date Navigation State
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const weekRange = useMemo(() => {
+    const d = new Date(currentDate);
+    const dow = d.getDay();
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const fmt = (dt: Date) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+
+    return {
+      dateFrom: fmt(monday),
+      dateTo: fmt(sunday),
+    };
+  }, [currentDate]);
 
   const [filters, setFilters] = useState<FilterState>({
     batchId: '',
@@ -94,6 +128,8 @@ export default function TimetablePage() {
     isError,
     refetch,
   } = useWeeklyView({
+    dateFrom: weekRange.dateFrom,
+    dateTo: weekRange.dateTo,
     ...(filters.batchId && { batchId: filters.batchId }),
     ...(filters.staffProfileId && { staffProfileId: filters.staffProfileId }),
     ...(filters.subjectId && { subjectId: filters.subjectId }),
@@ -125,12 +161,23 @@ export default function TimetablePage() {
       : ((tutorsData as any)?.data ?? (tutorsData as any)?.tutors ?? []);
     return raw.map((t: any) => ({
       id: t.id || t.userId,
+      userId: t.userId || t.id,
       firstName: t.firstName,
       lastName: t.lastName,
       employeeCode: t.employeeCode || '',
       subjects: t.subjects || [],
     }));
   }, [tutorsData]);
+
+  const getTutorName = (staffProfileId?: string) => {
+    if (!staffProfileId) return undefined;
+    const t = tutors.find(
+      (tut: any) => tut.id === staffProfileId || tut.userId === staffProfileId,
+    );
+    if (!t) return undefined;
+    const fullName = `${t.firstName || ''} ${t.lastName || ''}`.trim();
+    return fullName || undefined;
+  };
 
   const subjects = useMemo(() => {
     const raw = Array.isArray(subjectsData)
@@ -633,9 +680,7 @@ export default function TimetablePage() {
                             {dateSchedules.slice(0, 2).map((sch: ScheduleDetail, sIdx: number) => {
                               const subName =
                                 subjects.find((s: any) => s.id === sch.subjectId)?.name || 'Class';
-                              const tutorName = tutors.find(
-                                (t: any) => t.id === sch.staffProfileId,
-                              )?.firstName;
+                              const tutorName = getTutorName(sch.staffProfileId);
 
                               return (
                                 <div key={sch.id || sIdx}>
@@ -714,7 +759,7 @@ export default function TimetablePage() {
                           schedule={s}
                           subjectName={subjects.find((sub: any) => sub.id === s.subjectId)?.name}
                           batchName={batches.find((b: any) => b.id === s.batchId)?.name}
-                          tutorName={tutors.find((t: any) => t.id === s.staffProfileId)?.firstName}
+                          tutorName={getTutorName(s.staffProfileId)}
                           onAction={handleSessionAction}
                           onHistory={handleSessionHistory}
                         />
@@ -803,7 +848,7 @@ export default function TimetablePage() {
                           schedule={s}
                           subjectName={subjects.find((sub: any) => sub.id === s.subjectId)?.name}
                           batchName={batches.find((b: any) => b.id === s.batchId)?.name}
-                          tutorName={tutors.find((t: any) => t.id === s.staffProfileId)?.firstName}
+                          tutorName={getTutorName(s.staffProfileId)}
                           onAction={handleSessionAction}
                           onHistory={handleSessionHistory}
                         />
@@ -853,9 +898,7 @@ export default function TimetablePage() {
                                 subjects.find((sub: any) => sub.id === s.subjectId)?.name
                               }
                               batchName={batches.find((b: any) => b.id === s.batchId)?.name}
-                              tutorName={
-                                tutors.find((t: any) => t.id === s.staffProfileId)?.firstName
-                              }
+                              tutorName={getTutorName(s.staffProfileId)}
                               onAction={handleSessionAction}
                               onHistory={handleSessionHistory}
                             />

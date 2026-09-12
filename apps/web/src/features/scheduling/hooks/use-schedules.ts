@@ -87,7 +87,7 @@ export function useWeeklyView(params?: QueryScheduleParams) {
   return useQuery({
     queryKey: scheduleKeys.weeklyView(params),
     queryFn: () => getWeeklyView(params),
-    staleTime: STALE_TIMES.TIMETABLE,
+    staleTime: 0,
     refetchOnMount: 'always',
     placeholderData: keepPreviousData,
   });

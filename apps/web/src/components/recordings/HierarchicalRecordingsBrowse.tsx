@@ -166,8 +166,22 @@ export function HierarchicalRecordingsBrowse({
     });
   }, [searchFilteredRecordings, selectedCourse, selectedBatch, selectedSubject]);
 
+  // Auto-expand single course/batch if only 1 exists so student directly sees available subjects & recordings
+  const [userResetCourse, setUserResetCourse] = useState(false);
+
+  // Auto-expand when only 1 course exists
+  if (coursesList.length === 1 && !selectedCourse && !userResetCourse) {
+    setSelectedCourse(coursesList[0].name);
+  }
+
+  // Auto-expand when only 1 batch exists
+  if (batchesList.length === 1 && selectedCourse && !selectedBatch && !userResetCourse) {
+    setSelectedBatch(batchesList[0].name);
+  }
+
   // Handle Breadcrumb Reset / Back Action
   const resetToCourses = () => {
+    setUserResetCourse(true);
     setSelectedCourse(null);
     setSelectedBatch(null);
     setSelectedSubject(null);

@@ -114,6 +114,8 @@ export interface QueryScheduleParams {
   deliveryMode?: AttendanceModeType;
   status?: ScheduleStatusEnum;
   onDate?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
 export interface QueryRoomParams {

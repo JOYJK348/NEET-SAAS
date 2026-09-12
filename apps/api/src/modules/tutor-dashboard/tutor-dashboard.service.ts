@@ -542,14 +542,13 @@ export class TutorDashboardService {
         liveStatus = 'UPCOMING';
       } else {
         // Same day (Today)
-        const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
+        const isTutorLive = matchingLiveClass?.status === 'LIVE';
         if (
-          matchingLiveClass?.status === 'LIVE' ||
-          (now >= new Date(realStart.getTime() - 15 * 60 * 1000) &&
-            now <= graceEnd)
+          isTutorLive ||
+          (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now < realEnd)
         ) {
           liveStatus = 'LIVE_NOW';
-        } else if (isFinished || now > graceEnd) {
+        } else if (isFinished || now >= realEnd) {
           liveStatus = 'COMPLETED';
         } else {
           liveStatus = 'UPCOMING';

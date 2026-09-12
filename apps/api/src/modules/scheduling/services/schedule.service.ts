@@ -551,6 +551,168 @@ export class ScheduleService {
    */
   async getWeeklyView(tenantId: string, query: QueryScheduleDto) {
     const schedules = await this.findAll(tenantId, query);
+    const allSlots: any[] = [];
+    const addedScheduleIds = new Set<string>();
+
+    const formatTimeStr = (dt: any): string => {
+      if (!dt) return '00:00';
+      if (typeof dt === 'string') {
+        if (dt.includes(':') && !dt.includes('T')) return dt.slice(0, 5);
+        const parsed = new Date(dt);
+        if (!isNaN(parsed.getTime())) {
+          const h = parsed.getHours().toString().padStart(2, '0');
+          const m = parsed.getMinutes().toString().padStart(2, '0');
+          return `${h}:${m}`;
+        }
+        return dt;
+      }
+      if (dt instanceof Date && !isNaN(dt.getTime())) {
+        const h = dt.getHours().toString().padStart(2, '0');
+        const m = dt.getMinutes().toString().padStart(2, '0');
+        return `${h}:${m}`;
+      }
+      return '00:00';
+    };
+
+    const weekdaysList: WeekdayType[] = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+    ];
+
+    const fromDate = query.dateFrom ? new Date(`${query.dateFrom}T00:00:00`) : undefined;
+    const toDate = query.dateTo ? new Date(`${query.dateTo}T23:59:59.999`) : undefined;
+
+    // 1. Merge AttendanceSessions created by Admin/Tutor
+    try {
+      const attendanceSessions = await this.prisma.attendanceSessions.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          sessionStatus: { not: 'CANCELLED' },
+          ...(query.batchId && { batchId: query.batchId }),
+          ...(query.subjectId && { subjectId: query.subjectId }),
+          ...(query.staffProfileId && { staffProfileId: query.staffProfileId }),
+          ...(fromDate && toDate && {
+            attendanceDate: {
+              gte: fromDate,
+              lte: toDate,
+            },
+          }),
+        },
+      });
+
+      for (const att of attendanceSessions) {
+        const d = new Date(att.attendanceDate || att.startsAt);
+        const dayOfWeek = weekdaysList[d.getDay()];
+        const startTime = formatTimeStr(att.startsAt);
+        const endTime = formatTimeStr(att.endsAt);
+
+        addedScheduleIds.add(att.id);
+        if (att.scheduleId) addedScheduleIds.add(att.scheduleId);
+
+        allSlots.push({
+          id: att.id,
+          scheduleId: att.scheduleId,
+          tenantId: att.tenantId,
+          branchId: att.branchId || 'main-branch',
+          academicYearId: 'ay_default',
+          batchId: att.batchId,
+          subjectId: att.subjectId,
+          staffProfileId: att.staffProfileId || '467e42dc-f301-452c-b6d1-0f122ef6bd2f',
+          dayOfWeek,
+          startTime,
+          endTime,
+          effectiveFrom: att.attendanceDate || att.startsAt,
+          effectiveUntil: att.attendanceDate || att.endsAt,
+          deliveryMode: 'ONLINE',
+          roomId: null,
+          meetingProvider: null,
+          meetingLink: null,
+          meetingCode: null,
+          meetingPassword: null,
+          status: (att.sessionStatus as string) === 'COMPLETED' ? 'ENDED' : 'ACTIVE',
+          notes: null,
+          createdAt: att.createdAt,
+          updatedAt: att.updatedAt,
+          version: 1,
+          room: null,
+        });
+      }
+    } catch {
+      /* empty */
+    }
+
+    // 2. Merge LiveClasses
+    try {
+      const liveClasses = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          ...(query.batchId && { batchId: query.batchId }),
+          ...(query.subjectId && { subjectId: query.subjectId }),
+          ...(fromDate && toDate && {
+            scheduledStart: {
+              gte: fromDate,
+              lte: toDate,
+            },
+          }),
+        },
+      });
+
+      for (const lc of liveClasses) {
+        if (!addedScheduleIds.has(lc.id)) {
+          const d = new Date(lc.scheduledStart);
+          const dayOfWeek = weekdaysList[d.getDay()];
+          const startTime = formatTimeStr(lc.scheduledStart);
+          const endTime = formatTimeStr(lc.scheduledEnd);
+
+          addedScheduleIds.add(lc.id);
+
+          allSlots.push({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            branchId: 'main-branch',
+            academicYearId: 'ay_default',
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            staffProfileId: lc.createdBy || '467e42dc-f301-452c-b6d1-0f122ef6bd2f',
+            dayOfWeek,
+            startTime,
+            endTime,
+            effectiveFrom: lc.scheduledStart,
+            effectiveUntil: lc.scheduledEnd,
+            deliveryMode: 'ONLINE',
+            roomId: null,
+            meetingProvider: null,
+            meetingLink: null,
+            meetingCode: null,
+            meetingPassword: null,
+            status: lc.status || 'ACTIVE',
+            notes: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            version: 1,
+            room: null,
+          });
+        }
+      }
+    } catch {
+      /* empty */
+    }
+
+    // 3. Fallback to template schedules for days with NO real attendance sessions
+    const daysWithRealSessions = new Set(allSlots.map((s) => s.dayOfWeek));
+
+    for (const s of schedules) {
+      if (!daysWithRealSessions.has(s.dayOfWeek as WeekdayType) && !addedScheduleIds.has(s.id)) {
+        allSlots.push(s);
+      }
+    }
 
     // Group by dayOfWeek
     const weeklyView: Record<WeekdayType, typeof schedules> = {
@@ -563,8 +725,10 @@ export class ScheduleService {
       SUNDAY: [],
     };
 
-    for (const s of schedules) {
-      weeklyView[s.dayOfWeek].push(s);
+    for (const s of allSlots) {
+      if (weeklyView[s.dayOfWeek as WeekdayType]) {
+        weeklyView[s.dayOfWeek as WeekdayType].push(s);
+      }
     }
 
     // Sort each day by startTime

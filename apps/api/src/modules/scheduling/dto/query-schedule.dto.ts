@@ -42,4 +42,12 @@ export class QueryScheduleDto {
   @IsDateString()
   @IsOptional()
   onDate?: string;
+
+  @IsString()
+  @IsOptional()
+  dateFrom?: string;
+
+  @IsString()
+  @IsOptional()
+  dateTo?: string;
 }

@@ -127,16 +127,28 @@ export function getClassStatus(
 
   const isLive = ['LIVE_NOW', 'LIVE', 'STARTED', 'IN_PROGRESS'].includes(statusStr);
 
-  // Scheduled end time reached -> NO NEW JOINS ALLOWED!
+  // Scheduled end time reached -> NO NEW JOINS ALLOWED & CLASS IS ENDED!
   if (isScheduledEndPassed) {
+    const isExplicitLive = session.status === 'LIVE';
+    if (isExplicitLive) {
+      return {
+        canJoin: true,
+        isEnded: false,
+        isUpcoming: false,
+        isCancelled: false,
+        isLive: true,
+        buttonLabel: options?.isTutor ? 'Join Live Class 🎥' : 'Join Class 🚀',
+        statusBadgeText: 'LIVE NOW',
+      };
+    }
     return {
       canJoin: false,
-      isEnded: false,
+      isEnded: true,
       isUpcoming: false,
       isCancelled: false,
-      isLive: isLive,
+      isLive: false,
       buttonLabel: 'Class Ended ⏱',
-      statusBadgeText: isLive ? 'GRACE PERIOD' : 'ENDED',
+      statusBadgeText: 'COMPLETED',
     };
   }
 

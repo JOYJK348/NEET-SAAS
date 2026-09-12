@@ -667,13 +667,13 @@ export class StudentDashboardService {
         let liveStatus: 'UPCOMING' | 'LIVE_NOW' | 'COMPLETED' = 'UPCOMING';
 
         if (isToday) {
-          const graceEnd = new Date(realEnd.getTime() + 15 * 60 * 1000);
+          const isTutorLive = matchingLiveClass?.status === 'LIVE';
           if (
-            matchingLiveClass?.status === 'LIVE' ||
-            (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now <= graceEnd)
+            isTutorLive ||
+            (now >= new Date(realStart.getTime() - 15 * 60 * 1000) && now < realEnd)
           ) {
             liveStatus = 'LIVE_NOW';
-          } else if (isFinished || now > graceEnd) {
+          } else if (isFinished || now >= realEnd) {
             liveStatus = 'COMPLETED';
           }
         } else if (sessionDateKey < todayKey || isFinished) {
@@ -734,10 +734,18 @@ export class StudentDashboardService {
     dateTo?: string,
   ) {
     const ctx = await this.resolveStudentContext(tenantId, userId);
-    const batchIds = ctx.activeEnrollments.map((e) => e.batchId);
+    let batchIds = ctx.activeEnrollments.map((e) => e.batchId);
 
     if (batchIds.length === 0) {
-      return { fromDate: '', toDate: '', timetable: [] };
+      const tenantBatches = await this.prisma.batches.findMany({
+        where: { tenantId, deletedAt: null },
+        select: { id: true },
+      });
+      batchIds = tenantBatches.map((b) => b.id);
+    }
+
+    if (batchIds.length === 0) {
+      return { fromDate: dateFrom || '', toDate: dateTo || '', timetable: [] };
     }
 
     // Default: current week (Mon–Sun)
@@ -761,7 +769,7 @@ export class StudentDashboardService {
           return d;
         })();
 
-    const sessions = await this.prisma.attendanceSessions.findMany({
+    let sessions = await this.prisma.attendanceSessions.findMany({
       where: {
         tenantId,
         batchId: { in: batchIds },
@@ -770,6 +778,116 @@ export class StudentDashboardService {
       },
       orderBy: [{ attendanceDate: 'asc' }, { startsAt: 'asc' }],
     });
+
+    // Merge active/SCHEDULED LiveClasses
+    try {
+      const liveClasses = await this.prisma.liveClasses.findMany({
+        where: {
+          tenantId,
+          deletedAt: null,
+          scheduledStart: { gte: fromDate, lte: toDate },
+          batchId: { in: batchIds },
+        },
+      });
+
+      for (const lc of liveClasses) {
+        const exists = sessions.some(
+          (s) =>
+            s.id === lc.id ||
+            (s.batchId === lc.batchId && s.subjectId === lc.subjectId),
+        );
+        if (!exists) {
+          sessions.push({
+            id: lc.id,
+            tenantId: lc.tenantId,
+            batchId: lc.batchId,
+            subjectId: lc.subjectId,
+            branchId: 'main-branch',
+            scheduleId: null,
+            attendanceDate: lc.scheduledStart || fromDate,
+            startsAt: lc.scheduledStart || fromDate,
+            endsAt: lc.scheduledEnd || toDate,
+            sessionStatus: lc.status === 'LIVE' ? 'STARTED' : 'SCHEDULED',
+            sessionSource: 'SCHEDULED',
+            overrideType: null,
+            cancelledReason: null,
+            createdAt: lc.createdAt,
+            updatedAt: lc.updatedAt,
+            deletedAt: null,
+          } as any);
+        }
+      }
+    } catch {
+      /* empty */
+    }
+
+    // Dynamic recurring schedule projector across requested date range
+    const weekdays = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+    ] as const;
+
+    const recurringSchedules = await this.prisma.schedules.findMany({
+      where: {
+        tenantId,
+        batchId: { in: batchIds },
+        effectiveFrom: { lte: toDate },
+      },
+    });
+
+    const existingSessionKeys = new Set(
+      sessions.map(
+        (s) => `${s.batchId}_${s.subjectId}_${this.toLocalDateKey(s.attendanceDate)}`
+      )
+    );
+
+    const curDate = new Date(fromDate);
+    while (curDate <= toDate) {
+      const dayName = weekdays[curDate.getDay()];
+      const dateKey = this.toLocalDateKey(curDate);
+
+      const dayMatches = recurringSchedules.filter(
+        (sch) => sch.dayOfWeek === dayName,
+      );
+
+      if (dayMatches.length > 0) {
+        for (const sch of dayMatches) {
+          const key = `${sch.batchId}_${sch.subjectId}_${dateKey}`;
+          if (!existingSessionKeys.has(key)) {
+            const sTime = this.parseISTDateTime(dateKey, sch.startTime);
+            const eTime = this.parseISTDateTime(dateKey, sch.endTime);
+            const curAttDate = new Date(dateKey + 'T00:00:00.000Z');
+
+            sessions.push({
+              id: `${sch.id}-${dateKey}`,
+              tenantId,
+              batchId: sch.batchId,
+              subjectId: sch.subjectId,
+              branchId: sch.branchId,
+              scheduleId: sch.id,
+              attendanceDate: curAttDate,
+              startsAt: sTime,
+              endsAt: eTime,
+              sessionStatus: 'SCHEDULED',
+              sessionSource: 'SCHEDULED',
+              overrideType: null,
+              cancelledReason: null,
+              createdAt: curAttDate,
+              updatedAt: curAttDate,
+              deletedAt: null,
+            } as any);
+            existingSessionKeys.add(key);
+          }
+        }
+      }
+
+      curDate.setDate(curDate.getDate() + 1);
+    }
 
     // Deduplicate by session id (authoritative dedup key)
     const uniqueSessions = Array.from(
