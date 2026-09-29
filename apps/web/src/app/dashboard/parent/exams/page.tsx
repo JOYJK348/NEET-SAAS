@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useChildSwitcher } from '@/features/parent-portal/context/child-switcher-context';
 import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
@@ -9,7 +9,6 @@ import type {
   CompletedExamItem,
 } from '@/features/parent-portal/types/parent-portal';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   FileText,
@@ -33,18 +32,24 @@ import {
   RotateCcw,
   Search,
   Filter,
-  ArrowRight,
-  Laptop,
+  PieChart as PieChartIcon,
+  HelpCircle,
+  Zap,
 } from 'lucide-react';
 import { formatDate } from '@/features/students/utils/student-utils';
 import { cn } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { DonutChart, DonutSegment } from '@/features/parent-portal/components/charts/DonutChart';
+import { TrendLineChart, TrendDataPoint } from '@/features/parent-portal/components/charts/TrendLineChart';
+import { SubjectBarChart, SubjectScoreItem } from '@/features/parent-portal/components/charts/SubjectBarChart';
+import { ScoreGaugeMeter } from '@/features/parent-portal/components/charts/ScoreGaugeMeter';
 
 export default function ParentExamsPage() {
   const { selectedChildId, selectedChild, isLoading: isSwitcherLoading } = useChildSwitcher();
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'COMPLETED' | 'UPCOMING'>('ALL');
+  const [chartViewTab, setChartViewTab] = useState<'ALL_CHARTS' | 'MARKS_PIE' | 'PROGRESSION'>('ALL_CHARTS');
   const queryClient = useQueryClient();
 
   const { data, isLoading: isExamsLoading, refetch } = useQuery<ParentExamsData>({
@@ -105,6 +110,61 @@ export default function ParentExamsPage() {
   const filteredUpcoming = upcoming.filter(
     (e) => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  // 1. Donut Segments for active exam (Marks breakdown across subjects)
+  const donutSegments: DonutSegment[] = useMemo(() => {
+    if (!activeSubjectBreakdown || activeSubjectBreakdown.length === 0) return [];
+    const colors: Record<string, string> = {
+      physics: '#0052CC',
+      chemistry: '#10B981',
+      botany: '#F59E0B',
+      zoology: '#8B5CF6',
+      biology: '#EC4899',
+    };
+    return activeSubjectBreakdown.map((sb) => {
+      const s = sb.subject.toLowerCase();
+      let color = '#64748B';
+      for (const [k, c] of Object.entries(colors)) {
+        if (s.includes(k)) {
+          color = c;
+          break;
+        }
+      }
+      return {
+        label: sb.subject,
+        value: sb.obtained > 0 ? sb.obtained : 1,
+        color,
+        subtext: `${sb.obtained}/${sb.total} Marks (${sb.percentage}%)`,
+      };
+    });
+  }, [activeSubjectBreakdown]);
+
+  // 2. Trend Data across all completed exams (chronological progression)
+  const examTrendData: TrendDataPoint[] = useMemo(() => {
+    if (!completed || completed.length === 0) return [];
+    const sorted = [...completed].sort(
+      (a, b) => new Date(a.evaluatedAt || 0).getTime() - new Date(b.evaluatedAt || 0).getTime(),
+    );
+    return sorted.map((e) => ({
+      label: e.title.length > 18 ? e.title.substring(0, 18) + '...' : e.title,
+      score: e.percentage,
+      marks: e.totalScore,
+      maxMarks: e.totalPossible,
+      date: e.evaluatedAt ? formatDate(e.evaluatedAt) : undefined,
+    }));
+  }, [completed]);
+
+  // 3. Subject Bar Chart data for active exam
+  const subjectBarData: SubjectScoreItem[] = useMemo(() => {
+    if (!activeSubjectBreakdown || activeSubjectBreakdown.length === 0) return [];
+    return activeSubjectBreakdown.map((sb) => ({
+      subject: sb.subject,
+      percentage: sb.percentage,
+      obtained: sb.obtained,
+      total: sb.total,
+      targetBenchmark: 80,
+    }));
+  }, [activeSubjectBreakdown]);
 
   const getSubjectTheme = (subject: string) => {
     const s = subject.toLowerCase();
@@ -173,24 +233,32 @@ export default function ParentExamsPage() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#F8FAFC]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
-      {/* ── ISML LMS Light Blue Header Banner ── */}
-      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+      {/* ── Header Banner ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-3xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
             <span>Parent Portal</span>
             <ChevronRight className="w-3.5 h-3.5 text-[#0052CC]" />
-            <span>Examinations & Performance</span>
+            <span>Examinations & Visual Score Profiles</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B2447] flex items-center gap-2 flex-wrap">
-            <span>Examinations & Score Profiles</span>
+            <span>Examinations & Visual Analytics</span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-blue-100 text-[#0052CC] border border-blue-200 uppercase tracking-wider">
-              Student Progress 🎓
+              Score Intelligence 🎓
             </span>
           </h1>
           <p className="text-xs text-slate-600 font-medium">
-            Track test performance, evaluate subject concept breakdown, and review faculty evaluation notes for{' '}
+            Visual charts, subject mark shares, NEET projection gauges, and test progression for{' '}
             <strong className="text-[#0B2447] font-bold">
               {selectedChild?.name || 'Student'}
             </strong>
@@ -243,7 +311,7 @@ export default function ParentExamsPage() {
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">
-              Completed Tests
+              Evaluated Tests
             </p>
             <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 mt-0.5 font-mono">
               {completed.length}
@@ -266,6 +334,266 @@ export default function ParentExamsPage() {
         </Card>
       </div>
 
+      {/* ── Visual Performance Analytics Section ── */}
+      {completed.length > 0 && (
+        <Card className="rounded-3xl border border-blue-200 bg-white p-5 sm:p-6 shadow-2xs space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-blue-50 text-[#0052CC] border border-blue-200">
+                  <PieChartIcon className="w-5 h-5" />
+                </span>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-[#0B2447] tracking-tight">
+                    Visual Score & Concept Analytics
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pie charts, score trends, and subject benchmarks for in-depth parental insight
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual View Mode Tabs */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl self-start md:self-auto overflow-x-auto max-w-full">
+              <button
+                type="button"
+                onClick={() => setChartViewTab('ALL_CHARTS')}
+                className={cn(
+                  'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer',
+                  chartViewTab === 'ALL_CHARTS'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900',
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>All Visuals</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChartViewTab('MARKS_PIE')}
+                className={cn(
+                  'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer',
+                  chartViewTab === 'MARKS_PIE'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900',
+                )}
+              >
+                <PieChartIcon className="w-3.5 h-3.5" />
+                <span>Marks Pie Distribution</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChartViewTab('PROGRESSION')}
+                className={cn(
+                  'px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer',
+                  chartViewTab === 'PROGRESSION'
+                    ? 'bg-[#0052CC] text-white shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900',
+                )}
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Score Trajectory</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Exam Selector for Visual Charts */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-extrabold text-[#0B2447] flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-[#0052CC]" /> Select Exam for Visual Breakdown:
+              </span>
+              {activeExam && (
+                <span className="text-[11px] font-bold text-slate-500">
+                  Showing: <strong className="text-[#0052CC]">{activeExam.title}</strong>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+              {completed.map((exam) => {
+                const isSelected = (selectedExamId || activeExam?.id) === exam.id;
+                return (
+                  <button
+                    key={exam.id}
+                    type="button"
+                    onClick={() => setSelectedExamId(exam.id)}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all shrink-0 cursor-pointer text-left',
+                      isSelected
+                        ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs font-extrabold'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-white',
+                    )}
+                  >
+                    <FileSpreadsheet
+                      className={`h-3.5 w-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-[#0052CC]'}`}
+                    />
+                    <div className="truncate max-w-[160px]">
+                      <p className="truncate font-extrabold">{exam.title}</p>
+                      <p
+                        className={`text-[10px] font-mono ${
+                          isSelected ? 'text-blue-100' : 'text-slate-400'
+                        }`}
+                      >
+                        {exam.totalScore}/{exam.totalPossible} ({exam.percentage}%)
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── ALL CHARTS OR PIE VIEW ── */}
+          {(chartViewTab === 'ALL_CHARTS' || chartViewTab === 'MARKS_PIE') && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+              {/* Donut Chart: Subject Marks Contribution */}
+              <div className="lg:col-span-5 bg-slate-50/70 p-5 rounded-2xl border border-slate-200 flex flex-col items-center justify-between">
+                <div className="w-full text-center pb-2 border-b border-slate-200/60">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center justify-center gap-1.5">
+                    <PieChartIcon className="w-4 h-4 text-[#0052CC]" />
+                    Subject Marks Share
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Proportion of marks obtained across subjects in {activeExam?.title || 'this test'}
+                  </p>
+                </div>
+
+                <div className="my-4 w-full flex justify-center">
+                  <DonutChart
+                    data={donutSegments}
+                    size={220}
+                    strokeWidth={26}
+                    centerTitle={activeExam ? `${activeExam.percentage}%` : '100%'}
+                    centerSubtitle={activeExam ? `${activeExam.totalScore}/${activeExam.totalPossible}` : 'Score'}
+                  />
+                </div>
+
+                <div className="w-full text-center text-[11px] text-slate-500 font-medium pt-2 border-t border-slate-200/60">
+                  💡 Hover on each slice to inspect individual subject marks contribution
+                </div>
+              </div>
+
+              {/* Score Gauge Meter: NEET Readiness & Projected Cut-off */}
+              <div className="lg:col-span-4 bg-slate-50/70 p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                <div className="w-full text-center pb-2 border-b border-slate-200/60">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center justify-center gap-1.5">
+                    <Target className="w-4 h-4 text-[#0052CC]" />
+                    Score vs Govt MBBS Cut-Off
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Scaled against NEET target benchmark
+                  </p>
+                </div>
+
+                <div className="my-2 flex justify-center">
+                  <ScoreGaugeMeter
+                    score={activeExam?.totalScore || 0}
+                    maxScore={activeExam?.totalPossible || 720}
+                    targetScore={Math.round((activeExam?.totalPossible || 720) * 0.833)}
+                    rank={activeExam?.rank}
+                    label="Test Standing"
+                    className="border-none shadow-none bg-transparent p-0"
+                  />
+                </div>
+
+                <div className="w-full p-2.5 rounded-xl bg-white border border-slate-200 text-center text-xs font-bold text-slate-700">
+                  {activeExam && activeExam.percentage >= 80 ? (
+                    <span className="text-emerald-700 flex items-center justify-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" /> High Qualification Probability
+                    </span>
+                  ) : activeExam && activeExam.percentage >= 60 ? (
+                    <span className="text-blue-700 flex items-center justify-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5" /> Competitive Trajectory - Maintain Focus
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 flex items-center justify-center gap-1">
+                      <HelpCircle className="w-3.5 h-3.5" /> Targeted Revision Recommended
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Subject Benchmark Bar Comparison */}
+              <div className="lg:col-span-3 bg-slate-50/70 p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
+                <div className="w-full pb-2 border-b border-slate-200/60">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center gap-1.5">
+                    <BarChart3 className="w-4 h-4 text-[#0052CC]" />
+                    Subject Benchmarks
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Target: 80% Benchmark
+                  </p>
+                </div>
+
+                <div className="my-2 space-y-3">
+                  {subjectBarData.map((item) => {
+                    const isAbove = item.percentage >= (item.targetBenchmark || 80);
+                    return (
+                      <div key={item.subject} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-slate-700 truncate max-w-[100px]">
+                            {item.subject}
+                          </span>
+                          <span className="font-mono font-black text-[#0B2447]">
+                            {item.percentage}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all duration-700',
+                              isAbove ? 'bg-emerald-500' : 'bg-blue-600',
+                            )}
+                            style={{ width: `${Math.min(100, item.percentage)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/60 text-center font-medium">
+                  {activeExam?.title}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── ALL CHARTS OR PROGRESSION VIEW ── */}
+          {(chartViewTab === 'ALL_CHARTS' || chartViewTab === 'PROGRESSION') && (
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-[#0052CC]" />
+                    Historical Score Trajectory (All Completed Tests)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Visual curve showing student performance progression across consecutive examinations
+                  </p>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                  {completed.length} Tests Recorded
+                </span>
+              </div>
+
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200">
+                <TrendLineChart
+                  data={examTrendData}
+                  height={220}
+                  showAverageLine={true}
+                  isChronological={true}
+                />
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* ── Search Bar & Filter Control Bar ── */}
       <div className="bg-white border border-slate-200 p-3 sm:p-4 rounded-2xl shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -274,7 +602,7 @@ export default function ParentExamsPage() {
           </div>
           <div>
             <h2 className="text-xs font-black text-[#0B2447] uppercase tracking-wider">Exam Category Filters</h2>
-            <p className="text-[11px] text-slate-500 font-medium">Search and filter child exam records</p>
+            <p className="text-[11px] text-slate-500 font-medium">Search and filter student exam records</p>
           </div>
         </div>
 
@@ -357,7 +685,7 @@ export default function ParentExamsPage() {
                     className={cn(
                       'rounded-2xl border p-5 space-y-4 shadow-2xs transition-all flex flex-col justify-between',
                       isSelected
-                        ? 'border-[#0052CC] bg-blue-50/40'
+                        ? 'border-[#0052CC] bg-blue-50/40 ring-2 ring-blue-500/20'
                         : 'border-slate-200 bg-white hover:border-blue-300',
                     )}
                   >
@@ -401,8 +729,8 @@ export default function ParentExamsPage() {
                         onClick={() => setSelectedExamId(exam.id)}
                         className="text-xs font-extrabold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer"
                       >
-                        Inspect Breakdown
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        <PieChartIcon className="h-3.5 w-3.5" />
+                        Inspect in Charts
                       </button>
 
                       <Link
@@ -427,7 +755,7 @@ export default function ParentExamsPage() {
         </div>
       )}
 
-      {/* ── Interactive Exam Selector & Subject Breakdown Section ── */}
+      {/* ── Active Exam Subject Cards Grid ── */}
       {(activeTab === 'ALL' || activeTab === 'COMPLETED') && (
         <div className="space-y-4 pt-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -437,7 +765,7 @@ export default function ParentExamsPage() {
                 Subject Concept Strength & Marks Breakdown
               </h3>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Select an exam below to inspect subject-wise scores & mastery percentages
+                Detailed subject score tiles for {activeExam?.title || 'Selected Exam'}
               </p>
             </div>
             {activeExam && (
@@ -448,48 +776,6 @@ export default function ParentExamsPage() {
             )}
           </div>
 
-          {/* Exam Selection Pills */}
-          {completed.length > 0 ? (
-            <div className="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
-              {completed.map((exam) => {
-                const isSelected = (selectedExamId || activeExam?.id) === exam.id;
-                return (
-                  <button
-                    key={exam.id}
-                    type="button"
-                    suppressHydrationWarning
-                    onClick={() => setSelectedExamId(exam.id)}
-                    className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl border text-xs font-bold transition-all shrink-0 cursor-pointer text-left',
-                      isSelected
-                        ? 'bg-[#0052CC] text-white border-[#0052CC] shadow-2xs font-extrabold'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50/50',
-                    )}
-                  >
-                    <FileSpreadsheet
-                      className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-[#0052CC]'}`}
-                    />
-                    <div>
-                      <p className="font-extrabold">{exam.title}</p>
-                      <p
-                        className={`text-[10px] font-mono mt-0.5 ${
-                          isSelected ? 'text-blue-100' : 'text-slate-400'
-                        }`}
-                      >
-                        {exam.totalScore} / {exam.totalPossible} Marks ({exam.percentage}%)
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <Card className="p-4 rounded-2xl bg-white border border-slate-200 text-xs text-slate-400 font-medium shadow-2xs">
-              No completed exam records available to select.
-            </Card>
-          )}
-
-          {/* Active Exam Subject Cards Grid */}
           {activeSubjectBreakdown.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {activeSubjectBreakdown.map((item) => {

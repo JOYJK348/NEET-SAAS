@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { FeeAssignmentService } from '../billing/assignment/assignment.service';
+import { StudentDashboardService } from '../student-dashboard/student-dashboard.service';
 
 @Injectable()
 export class ParentDashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feeAssignmentService: FeeAssignmentService,
+    private readonly studentDashboardService: StudentDashboardService,
   ) {}
 
   // 1. Get all linked children for ChildSwitcher
@@ -1015,5 +1017,40 @@ export class ParentDashboardService {
       educationLevel: parentProfile?.educationLevel || 'Not specified',
       createdAt: parentUser?.createdAt ?? new Date(),
     };
+  }
+
+  // 10. Student Timetable for Parent Portal
+  async getTimetable(
+    tenantId: string,
+    parentUserId: string,
+    studentId: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ) {
+    // Check if student profile exists
+    let targetStudentUserId = studentId;
+    const student = await this.prisma.studentProfiles.findFirst({
+      where: { userId: studentId, tenantId, deletedAt: null },
+    });
+
+    if (!student) {
+      // Check if studentId is studentProfileId or admissionId
+      const adm = await this.prisma.studentAdmissions.findFirst({
+        where: { id: studentId, tenantId, deletedAt: null },
+        include: { studentProfileIstudent_profile: true },
+      });
+      if (adm?.studentProfileIstudent_profile?.userId) {
+        targetStudentUserId = adm.studentProfileIstudent_profile.userId;
+      } else {
+        throw new NotFoundException('Student not found');
+      }
+    }
+
+    return this.studentDashboardService.getTimetable(
+      tenantId,
+      targetStudentUserId,
+      dateFrom,
+      dateTo,
+    );
   }
 }

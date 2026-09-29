@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useChildSwitcher } from '@/features/parent-portal/context/child-switcher-context';
 import { parentPortalService } from '@/features/parent-portal/services/parent-portal-service';
 import type { ParentExamResultData } from '@/features/parent-portal/types/parent-portal';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   ArrowLeft,
@@ -26,14 +25,16 @@ import {
   Dna,
   BookOpen,
   ChevronRight,
-  ShieldCheck,
   User,
   Calendar,
+  PieChart as PieChartIcon,
+  Target,
 } from 'lucide-react';
 import { formatDate } from '@/features/students/utils/student-utils';
 import { cn } from '@/lib/utils';
-
 import { useQuery } from '@tanstack/react-query';
+import { DonutChart, DonutSegment } from '@/features/parent-portal/components/charts/DonutChart';
+import { ScoreGaugeMeter } from '@/features/parent-portal/components/charts/ScoreGaugeMeter';
 
 export default function ParentExamResultDetailPage() {
   const params = useParams();
@@ -47,14 +48,6 @@ export default function ParentExamResultDetailPage() {
     enabled: !!selectedChildId && !!examId,
     staleTime: 10 * 60 * 1000,
   });
-
-  if (isLoading && !data) {
-    return (
-      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#F8FAFC]">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
 
   const result = data || {
     examTitle: 'NEET Grand Mock Test',
@@ -80,6 +73,35 @@ export default function ParentExamResultDetailPage() {
       ? Math.round((result.totalMarksObtained / result.totalMarksPossible) * 100)
       : 0;
 
+  // Donut Segments for subject marks share
+  const donutSegments: DonutSegment[] = useMemo(() => {
+    if (!result.subjectBreakdown || result.subjectBreakdown.length === 0) return [];
+    const colors: Record<string, string> = {
+      physics: '#0052CC',
+      chemistry: '#10B981',
+      botany: '#F59E0B',
+      zoology: '#8B5CF6',
+      biology: '#EC4899',
+    };
+    return result.subjectBreakdown.map((sb) => {
+      const s = sb.subject.toLowerCase();
+      let color = '#64748B';
+      for (const [k, c] of Object.entries(colors)) {
+        if (s.includes(k)) {
+          color = c;
+          break;
+        }
+      }
+      const pct = sb.total > 0 ? Math.round((sb.obtained / sb.total) * 100) : 0;
+      return {
+        label: sb.subject,
+        value: sb.obtained > 0 ? sb.obtained : 1,
+        color,
+        subtext: `${sb.obtained}/${sb.total} Marks (${pct}%)`,
+      };
+    });
+  }, [result.subjectBreakdown]);
+
   const getSubjectIcon = (subject: string) => {
     const s = subject.toLowerCase();
     if (s.includes('physic')) return <Atom className="h-4 w-4 text-indigo-600 shrink-0" />;
@@ -89,10 +111,18 @@ export default function ParentExamResultDetailPage() {
     return <BookOpen className="h-4 w-4 text-blue-600 shrink-0" />;
   };
 
+  if (isLoading && !data) {
+    return (
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center bg-[#F8FAFC]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-20">
-      {/* ── Header Banner — ISML LMS Light Blue Style ── */}
-      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-2xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div suppressHydrationWarning className="w-full space-y-6 p-4 lg:p-6 bg-[#F8FAFC] min-h-screen text-[#0F172A] font-sans pb-24">
+      {/* ── Header Banner ── */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-indigo-50 to-sky-50 text-slate-900 p-4 sm:p-6 rounded-3xl shadow-2xs space-y-3 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1.5 min-w-0">
           <div className="flex items-center gap-2 text-xs font-mono text-[#0052CC]">
             <Link href="/dashboard/parent/exams" className="hover:underline flex items-center gap-1">
@@ -216,8 +246,78 @@ export default function ParentExamResultDetailPage() {
         </Card>
       </div>
 
+      {/* ── Visual Analytics Row: Donut Chart & Score Gauge ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Donut Chart: Subject Marks Contribution */}
+        <Card className="lg:col-span-6 rounded-3xl border border-blue-200 bg-white p-5 sm:p-6 shadow-2xs flex flex-col items-center justify-between">
+          <div className="w-full text-center pb-3 border-b border-slate-100">
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center justify-center gap-1.5">
+              <PieChartIcon className="w-4 h-4 text-[#0052CC]" />
+              Subject Marks Contribution Share
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Relative marks breakdown between Physics, Chemistry, Botany, Zoology
+            </p>
+          </div>
+
+          <div className="my-5 w-full flex justify-center">
+            <DonutChart
+              data={donutSegments}
+              size={210}
+              strokeWidth={24}
+              centerTitle={`${overallPercentage}%`}
+              centerSubtitle={`${result.totalMarksObtained}/${result.totalMarksPossible}`}
+            />
+          </div>
+
+          <div className="w-full text-center text-[11px] text-slate-500 font-medium pt-3 border-t border-slate-100">
+            💡 Hover on slices or legends to inspect each subject&apos;s score share
+          </div>
+        </Card>
+
+        {/* NEET Score Gauge */}
+        <Card className="lg:col-span-6 rounded-3xl border border-blue-200 bg-white p-5 sm:p-6 shadow-2xs flex flex-col justify-between">
+          <div className="w-full text-center pb-3 border-b border-slate-100">
+            <h3 className="text-xs font-black uppercase tracking-wider text-[#0B2447] flex items-center justify-center gap-1.5">
+              <Target className="w-4 h-4 text-[#0052CC]" />
+              Target & Cut-Off Gauge
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Comparison against Govt Medical College MBBS cutoff benchmark
+            </p>
+          </div>
+
+          <div className="my-4 flex justify-center">
+            <ScoreGaugeMeter
+              score={result.totalMarksObtained}
+              maxScore={result.totalMarksPossible || 720}
+              targetScore={Math.round((result.totalMarksPossible || 720) * 0.833)}
+              rank={result.rank}
+              label="Exam Standing"
+              className="border-none shadow-none bg-transparent p-0"
+            />
+          </div>
+
+          <div className="w-full p-3 rounded-2xl bg-blue-50/60 border border-blue-200 text-center text-xs font-bold text-slate-700">
+            {overallPercentage >= 80 ? (
+              <span className="text-emerald-700 flex items-center justify-center gap-1">
+                <Sparkles className="w-4 h-4" /> Strong Performance - Within Government Medical Merit Range
+              </span>
+            ) : overallPercentage >= 65 ? (
+              <span className="text-blue-700 flex items-center justify-center gap-1">
+                <TrendingUp className="w-4 h-4" /> Solid Foundation - Continuous Revision will Push to 600+
+              </span>
+            ) : (
+              <span className="text-amber-700 flex items-center justify-center gap-1">
+                <Target className="w-4 h-4" /> Recommended: Review incorrect questions with faculty tutor
+              </span>
+            )}
+          </div>
+        </Card>
+      </div>
+
       {/* ── Subject-wise Performance Breakdown Table Card ── */}
-      <Card className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden space-y-0">
+      <Card className="rounded-3xl border border-slate-200 bg-white shadow-2xs overflow-hidden space-y-0">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-[#0052CC]">
@@ -225,7 +325,7 @@ export default function ParentExamResultDetailPage() {
             </div>
             <div>
               <h3 className="text-xs font-extrabold text-[#0B2447] uppercase tracking-wider">
-                Subject-wise Performance Breakdown
+                Subject-wise Performance Breakdown Table
               </h3>
               <p className="text-xs text-slate-500 font-medium">
                 Detailed subject score card and accuracy percentage
@@ -293,7 +393,7 @@ export default function ParentExamResultDetailPage() {
       </Card>
 
       {/* ── Faculty & Tutor Academic Feedback Remarks Card ── */}
-      <Card className="p-5 rounded-2xl bg-white border border-blue-200 shadow-2xs space-y-3">
+      <Card className="p-5 rounded-3xl bg-white border border-blue-200 shadow-2xs space-y-3">
         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
           <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-700">
             <MessageSquare className="h-4 w-4" />

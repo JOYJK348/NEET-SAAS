@@ -10,6 +10,7 @@ import type {
   ParentNotificationItem,
   ParentProfileData,
 } from '../types/parent-portal';
+import type { StudentTimetableResponseDto } from '@/features/student-dashboard/types/student-dashboard.types';
 
 export const parentPortalService = {
   async getLinkedStudents(): Promise<LinkedStudent[]> {
@@ -19,6 +20,19 @@ export const parentPortalService = {
 
   async getOverview(studentId: string): Promise<ParentOverviewData> {
     const res = await api.get<any>(`/parent-dashboard/students/${studentId}/overview`);
+    return res?.data || res;
+  },
+
+  async getTimetable(
+    studentId: string,
+    dateFrom?: string,
+    dateTo?: string,
+  ): Promise<StudentTimetableResponseDto> {
+    const params = new URLSearchParams();
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const res = await api.get<any>(`/parent-dashboard/students/${studentId}/timetable${qs}`);
     return res?.data || res;
   },
 

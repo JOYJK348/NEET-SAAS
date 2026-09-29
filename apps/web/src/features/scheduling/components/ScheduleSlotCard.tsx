@@ -11,10 +11,13 @@ import {
   History,
   MoreVertical,
   Calendar,
+  BellRing,
+  CheckCircle2,
 } from 'lucide-react';
 import { ScheduleDetail } from '../types/schedule.types';
 import type { SessionAction } from './SessionOverrideDrawer';
 import { generateGoogleCalendarUrl } from '@/lib/google-calendar-url';
+import { toast } from 'sonner';
 
 // Rich subject color palettes
 const SUBJECT_COLORS: Record<
@@ -128,6 +131,18 @@ export function ScheduleSlotCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const storageKey = `neet_cal_notified_${schedule.id}`;
+  const [isNotified, setIsNotified] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      if (saved === 'true') {
+        setIsNotified(true);
+      }
+    }
+  }, [storageKey]);
+
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
@@ -140,19 +155,45 @@ export function ScheduleSlotCard({
   }, [menuOpen]);
 
   const menuItems: {
-    action: SessionAction | 'history';
+    action: SessionAction | 'history' | 'calendar_invite';
     label: string;
     icon: React.ComponentType<any>;
     danger?: boolean;
   }[] = [
+    {
+      action: 'calendar_invite',
+      label: isNotified ? '✓ Re-Notify via Google Cal' : 'Notify All (Google Cal)',
+      icon: isNotified ? CheckCircle2 : BellRing,
+    },
     { action: 'reschedule', label: 'Edit / Reschedule', icon: RefreshCw },
     { action: 'change_tutor', label: 'Change Tutor', icon: User },
     { action: 'cancel', label: 'Cancel Class', icon: Ban, danger: true },
     { action: 'history', label: 'View History', icon: History },
   ];
 
-  const handleMenuAction = (action: SessionAction | 'history') => {
+  const handleMenuAction = (action: SessionAction | 'history' | 'calendar_invite') => {
     setMenuOpen(false);
+    if (action === 'calendar_invite') {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(storageKey, 'true');
+        } catch {}
+      }
+      setIsNotified(true);
+      const gCalUrl = generateGoogleCalendarUrl({
+        title: `[NEET Class] ${subjectName || 'Class'} - ${batchName || 'Batch'}`,
+        description: `📚 Subject: ${subjectName || 'NEET Class'}\n🎓 Batch: ${batchName || 'Batch'}\n👨‍🏫 Tutor: ${tutorName || 'Faculty'}\n⏰ Schedule: ${schedule.dayOfWeek} (${schedule.startTime} - ${schedule.endTime})`,
+        location: schedule.meetingLink || (schedule.deliveryMode === 'ONLINE' ? 'Online Live Studio' : 'Academy Classroom'),
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        dayOfWeek: schedule.dayOfWeek,
+        isRecurring: true,
+        joiningLink: schedule.meetingLink || undefined,
+      });
+      window.open(gCalUrl, '_blank', 'noopener,noreferrer');
+      toast.success('Opened Google Calendar with pre-filled event details & reminders!');
+      return;
+    }
     if (action === 'history') {
       onHistory?.(schedule);
     } else {
@@ -303,24 +344,49 @@ export function ScheduleSlotCard({
           {formatOccurrenceDate(schedule.dayOfWeek)}
         </span>
 
-        <a
-          href={generateGoogleCalendarUrl({
-            title: `${subjectName || 'NEET Class'} - ${batchName || 'Scheduled Session'}`,
-            description: `Scheduled NEET Class for ${batchName || 'Batch'} with Tutor ${tutorName || 'Faculty'}.`,
-            startTime: schedule.startTime,
-            endTime: schedule.endTime,
-            dateStr: schedule.dayOfWeek,
-            joiningLink: schedule.meetingLink || undefined,
-          })}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="px-2.5 py-1 rounded-xl bg-white hover:bg-blue-50 text-[#0052CC] font-extrabold text-[10.5px] border border-blue-200 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-          title="Add this class to Google Calendar with 15-min reminder alert"
-        >
-          <Calendar className="w-3 h-3 text-[#0052CC] shrink-0" />
-          <span>Add to Calendar</span>
-        </a>
+        {isNotified ? (
+          <button
+            type="button"
+            disabled
+            onClick={(e) => e.stopPropagation()}
+            className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-extrabold text-[10.5px] border border-emerald-200 shadow-2xs flex items-center gap-1.5 opacity-90 cursor-default"
+            title="Weekly class reminders and notifications already set on Google Calendar"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>✓ Reminders Set</span>
+          </button>
+        ) : (
+          <a
+            href={generateGoogleCalendarUrl({
+              title: `[NEET Class] ${subjectName || 'Class'} - ${batchName || 'Scheduled Session'}`,
+              description: `📚 Subject: ${subjectName || 'NEET Class'}\n🎓 Batch: ${batchName || 'Batch'}\n👨‍🏫 Tutor: ${tutorName || 'Faculty'}\n⏰ Schedule: ${schedule.dayOfWeek} (${schedule.startTime} - ${schedule.endTime})`,
+              location: schedule.meetingLink || (isOnline ? 'Online Live Studio' : 'Academy Classroom'),
+              startTime: schedule.startTime,
+              endTime: schedule.endTime,
+              dayOfWeek: schedule.dayOfWeek,
+              isRecurring: true,
+              untilDate: schedule.effectiveUntil || undefined,
+              joiningLink: schedule.meetingLink || undefined,
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem(storageKey, 'true');
+                } catch {}
+              }
+              setIsNotified(true);
+              toast.success('Opening Google Calendar to send reminder notifications to all students & tutor!');
+            }}
+            className="px-2.5 py-1 rounded-xl bg-blue-50/90 hover:bg-blue-100/80 text-[#0052CC] font-extrabold text-[10.5px] border border-blue-200 hover:border-blue-400 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Send class reminder notification & calendar invite to all students and tutor"
+          >
+            <BellRing className="w-3.5 h-3.5 text-[#0052CC] shrink-0 animate-pulse" />
+            <span>Notify All (Calendar)</span>
+          </a>
+        )}
       </div>
     </div>
   );

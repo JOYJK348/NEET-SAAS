@@ -346,13 +346,27 @@ function BulkImportContent() {
 
             {/* Step 2: Upload Excel File Dropzone */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <span className="w-6 h-6 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 text-xs font-black flex items-center justify-center">
-                  2
-                </span>
-                <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider">
-                  Upload Excel Spreadsheet (.xlsx)
-                </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-blue-50 text-[#0052CC] border border-blue-200 text-xs font-black flex items-center justify-center">
+                    2
+                  </span>
+                  <h3 className="text-sm font-extrabold text-[#0B2447] uppercase tracking-wider">
+                    Upload Excel Spreadsheet (.xlsx)
+                  </h3>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownloadTemplate();
+                  }}
+                  className="gap-1.5 text-xs font-bold text-[#0052CC] border-blue-200 hover:bg-blue-50 hover:text-blue-700 rounded-xl h-8 px-3"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#0052CC]" /> Download Template (.xlsx)
+                </Button>
               </div>
 
               <div
@@ -395,6 +409,18 @@ function BulkImportContent() {
                         Supports Microsoft Excel Workbook (.xlsx) format
                       </span>
                     </div>
+                    <div className="mt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadTemplate();
+                        }}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0052CC] hover:text-blue-700 hover:underline bg-blue-50/80 px-3 py-1.5 rounded-lg border border-blue-200/70 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download Template (.xlsx)
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
@@ -409,7 +435,16 @@ function BulkImportContent() {
                 </Alert>
               )}
 
-              <div className="flex justify-end pt-2">
+              <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadTemplate}
+                  className="w-full sm:w-auto gap-2 text-xs font-bold text-[#0052CC] border-blue-200 hover:bg-blue-50 rounded-xl px-4 py-2.5"
+                >
+                  <Download className="w-4 h-4 text-[#0052CC]" /> Download Template (.xlsx)
+                </Button>
+
                 <Button
                   onClick={handleUpload}
                   disabled={!file || isUploading}

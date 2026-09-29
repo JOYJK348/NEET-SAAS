@@ -47,6 +47,10 @@ import type {
   CreateSchedulePayload,
   ConflictResult,
 } from '@/features/scheduling/types/schedule.types';
+import {
+  ScheduleCalendarSuccessModal,
+  CalendarModalScheduleInfo,
+} from '@/components/timetable/schedule-calendar-success-modal';
 
 const WEEKDAYS: WeekdayType[] = [
   'MONDAY',
@@ -152,6 +156,8 @@ function CreateScheduleForm() {
   const [conflictChecked, setConflictChecked] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [calendarModalInfo, setCalendarModalInfo] = useState<CalendarModalScheduleInfo | null>(null);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
   // Fetch Dropdown master data
   const { courses: coursesList = [] } = useCourses();
@@ -171,47 +177,59 @@ function CreateScheduleForm() {
 
   // Pre-fill form when scheduleToEdit data is fetched
   useEffect(() => {
-    if (scheduleToEdit && scheduleToEdit.id && scheduleToEdit.id !== loadedScheduleId) {
-      setLoadedScheduleId(scheduleToEdit.id);
+    if (scheduleToEdit && scheduleToEdit.id) {
       const bId = scheduleToEdit.batchId || scheduleToEdit.batch?.id || '';
       const matchedBatch = batchesData.find((b: any) => b.id === bId) as any;
       const cId =
-        matchedBatch?.courseId || matchedBatch?.course?.id || scheduleToEdit.courseId || '';
+        scheduleToEdit.courseId ||
+        matchedBatch?.courseId ||
+        matchedBatch?.course?.id ||
+        scheduleToEdit.batch?.courseId ||
+        scheduleToEdit.batch?.course?.id ||
+        '';
 
-      setForm({
-        courseId: cId,
-        batchId: bId,
-        studentAdmissionId: scheduleToEdit.studentAdmissionId || '',
-        subjectId: scheduleToEdit.subjectId || '',
-        staffProfileId: scheduleToEdit.staffProfileId || scheduleToEdit.staffProfile?.id || '',
-        dayOfWeek: scheduleToEdit.dayOfWeek || 'MONDAY',
-        startTime: scheduleToEdit.startTime || '08:00',
-        endTime: scheduleToEdit.endTime || '10:00',
-        effectiveFrom: scheduleToEdit.effectiveFrom
-          ? scheduleToEdit.effectiveFrom.split('T')[0]
-          : getTodayDateStr(),
-        effectiveUntil: scheduleToEdit.effectiveUntil
-          ? scheduleToEdit.effectiveUntil.split('T')[0]
-          : getNextYearDateStr(),
-        deliveryMode: scheduleToEdit.deliveryMode || 'CLASSROOM',
-        roomId: scheduleToEdit.roomId || '',
-        meetingLink: scheduleToEdit.meetingLink || '',
-        notes: scheduleToEdit.notes || '',
-        recordingEnabled: scheduleToEdit.recordingEnabled ?? true,
-        whiteboardEnabled: scheduleToEdit.whiteboardEnabled ?? true,
-        chatEnabled: scheduleToEdit.chatEnabled ?? true,
-      });
+      if (scheduleToEdit.id !== loadedScheduleId) {
+        setLoadedScheduleId(scheduleToEdit.id);
+        setForm({
+          courseId: cId,
+          batchId: bId,
+          studentAdmissionId: scheduleToEdit.studentAdmissionId || '',
+          subjectId: scheduleToEdit.subjectId || '',
+          staffProfileId: scheduleToEdit.staffProfileId || scheduleToEdit.staffProfile?.id || '',
+          dayOfWeek: scheduleToEdit.dayOfWeek || 'MONDAY',
+          startTime: scheduleToEdit.startTime || '08:00',
+          endTime: scheduleToEdit.endTime || '10:00',
+          effectiveFrom: scheduleToEdit.effectiveFrom
+            ? scheduleToEdit.effectiveFrom.split('T')[0]
+            : getTodayDateStr(),
+          effectiveUntil: scheduleToEdit.effectiveUntil
+            ? scheduleToEdit.effectiveUntil.split('T')[0]
+            : getNextYearDateStr(),
+          deliveryMode: scheduleToEdit.deliveryMode || 'CLASSROOM',
+          roomId: scheduleToEdit.roomId || '',
+          meetingLink: scheduleToEdit.meetingLink || '',
+          notes: scheduleToEdit.notes || '',
+          recordingEnabled: scheduleToEdit.recordingEnabled ?? true,
+          whiteboardEnabled: scheduleToEdit.whiteboardEnabled ?? true,
+          chatEnabled: scheduleToEdit.chatEnabled ?? true,
+        });
 
-      if (scheduleToEdit.scheduleType === 'ONE_TIME' || scheduleToEdit.isOneTime) {
-        setScheduleType('ONE_TIME');
-        if (scheduleToEdit.effectiveFrom) {
-          setSingleDate(scheduleToEdit.effectiveFrom.split('T')[0]);
+        if (scheduleToEdit.scheduleType === 'ONE_TIME' || scheduleToEdit.isOneTime) {
+          setScheduleType('ONE_TIME');
+          if (scheduleToEdit.effectiveFrom) {
+            setSingleDate(scheduleToEdit.effectiveFrom.split('T')[0]);
+          }
+        } else if (scheduleToEdit.scheduleType === 'ONE_TO_ONE' || scheduleToEdit.studentAdmissionId) {
+          setScheduleType('ONE_TO_ONE');
+        } else {
+          setScheduleType('RECURRING');
         }
-      } else {
-        setScheduleType('RECURRING');
+      } else if (cId && !form.courseId) {
+        // Late batch resolution: update courseId once batchesData finishes loading
+        setForm((f) => ({ ...f, courseId: cId }));
       }
     }
-  }, [scheduleToEdit, loadedScheduleId, batchesData]);
+  }, [scheduleToEdit, loadedScheduleId, batchesData, form.courseId]);
 
   // Fetch Subjects specifically mapped to selected Course
   const { data: courseSubjectsRes } = useQuery({
@@ -220,14 +238,58 @@ function CreateScheduleForm() {
     enabled: !!form.courseId,
   });
 
-  const courseMappedSubjectIds = useMemo(() => {
-    if (!courseSubjectsRes || !Array.isArray(courseSubjectsRes)) return new Set<string>();
-    return new Set(
-      courseSubjectsRes
-        .map((cs: any) => cs.subjectId || cs.subject?.id)
-        .filter((id): id is string => Boolean(id)),
-    );
-  }, [courseSubjectsRes]);
+  const allSubjects = useMemo(() => {
+    const rawMaster: any[] = Array.isArray(subjectsData)
+      ? subjectsData
+      : Array.isArray(subjectsData?.data)
+        ? subjectsData.data
+        : [];
+
+    const map = new Map<string, { id: string; name: string; shortName: string }>();
+
+    // 1. Add course-specific subjects first
+    if (Array.isArray(courseSubjectsRes)) {
+      for (const cs of courseSubjectsRes) {
+        const sub = cs.subject;
+        const subId = cs.subjectId || sub?.id;
+        if (subId) {
+          map.set(subId, {
+            id: subId,
+            name: sub?.name || cs.name || cs.subjectName || 'Subject',
+            shortName: sub?.code || cs.code || (sub?.name ? sub.name.slice(0, 3).toUpperCase() : 'SUB'),
+          });
+        }
+      }
+    }
+
+    // 2. Add all master subjects
+    for (const s of rawMaster) {
+      if (s?.id && !map.has(s.id)) {
+        map.set(s.id, {
+          id: s.id,
+          name: s.name || s.displayName || 'Subject',
+          shortName: s.code || (s.name ? s.name.slice(0, 3).toUpperCase() : 'SUB'),
+        });
+      }
+    }
+
+    // 3. Fallback known standard NEET subjects if DB queries are still resolving
+    const fallbackSubjects = [
+      { id: '9c356df4-00e4-44f6-826e-4f8d5000bf5a', name: 'Physics', shortName: 'PHY' },
+      { id: '4db42732-af82-446c-936f-9d3deeb4a47d', name: 'Chemistry', shortName: 'CHE' },
+      { id: '8dd7bdbd-bad7-46fb-8910-01f2403f73cc', name: 'Biology', shortName: 'BIO' },
+      { id: '796d0261-852a-42d1-8e1d-fbed2867d4e5', name: 'Botony', shortName: 'BOT' },
+      { id: '74152095-d7c5-4890-ba86-1b3fc4b12d50', name: 'Zoology', shortName: 'ZOO' },
+      { id: '7e3c4461-f779-4ad5-8590-6dad5c2a5ad6', name: 'maths', shortName: 'MAT' },
+    ];
+    for (const fb of fallbackSubjects) {
+      if (!map.has(fb.id)) {
+        map.set(fb.id, fb);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [subjectsData, courseSubjectsRes]);
 
   const batches = batchesData.map((b: any) => ({
     id: b.id,
@@ -244,14 +306,9 @@ function CreateScheduleForm() {
     id: t.userId || t.id,
     firstName: t.firstName,
     lastName: t.lastName,
+    email: t.email || t.user?.email || '',
     employeeCode: t.employeeCode || '',
     subjects: t.subjects || [],
-  }));
-
-  const allSubjects = (subjectsData?.data ?? []).map((s: any) => ({
-    id: s.id,
-    name: s.name,
-    shortName: s.code || s.name.slice(0, 3).toUpperCase(),
   }));
 
   const roomsList = (roomsData ?? []).map((r: any) => ({
@@ -267,17 +324,107 @@ function CreateScheduleForm() {
     : batches;
 
   const filteredSubjects = useMemo(() => {
-    if (form.courseId && courseMappedSubjectIds.size > 0) {
-      return allSubjects.filter((s: any) => courseMappedSubjectIds.has(s.id));
+    if (Array.isArray(courseSubjectsRes) && courseSubjectsRes.length > 0) {
+      const mappedIds = new Set(
+        courseSubjectsRes
+          .map((cs: any) => cs.subjectId || cs.subject?.id)
+          .filter(Boolean),
+      );
+      const filtered = allSubjects.filter((s) => mappedIds.has(s.id));
+      if (filtered.length > 0) {
+        if (form.subjectId && !filtered.some((s) => s.id === form.subjectId)) {
+          const currentSub = allSubjects.find((s) => s.id === form.subjectId);
+          if (currentSub) return [currentSub, ...filtered];
+        }
+        return filtered;
+      }
     }
     return allSubjects;
-  }, [form.courseId, courseMappedSubjectIds, allSubjects]);
+  }, [courseSubjectsRes, allSubjects, form.subjectId]);
 
   const selectedBatch = batches.find((b: any) => b.id === form.batchId);
 
-  const filteredTutors = form.subjectId
-    ? tutors.filter((t: any) => t.subjects?.some((sub: any) => sub.subjectId === form.subjectId))
-    : tutors;
+  // Helper to resolve canonical subject discipline (e.g. PHYSICS, CHEMISTRY, BIOLOGY, BOTANY, ZOOLOGY, MATHS)
+  const getSubjectDiscipline = useCallback(
+    (subjectIdOrName?: string): string => {
+      if (!subjectIdOrName) return '';
+      const match = allSubjects.find(
+        (s) => s.id === subjectIdOrName || s.name.toLowerCase() === subjectIdOrName.toLowerCase(),
+      );
+      const name = (match?.name || subjectIdOrName).toLowerCase().trim();
+      if (name.includes('phy')) return 'PHYSICS';
+      if (name.includes('chem')) return 'CHEMISTRY';
+      if (name.includes('botan') || name.includes('boton')) return 'BOTANY';
+      if (name.includes('zool')) return 'ZOOLOGY';
+      if (name.includes('bio')) return 'BIOLOGY';
+      if (name.includes('mat')) return 'MATHS';
+      return name.toUpperCase();
+    },
+    [allSubjects],
+  );
+
+  const tutorTeachesSubject = useCallback(
+    (tutor: any, targetSubjectId: string): boolean => {
+      if (!targetSubjectId) return true;
+      const targetDiscipline = getSubjectDiscipline(targetSubjectId);
+
+      const tutorSubjectIds = new Set<string>();
+      const tutorDisciplines = new Set<string>();
+
+      (tutor.subjects || []).forEach((s: any) => {
+        const sId = s.subjectId || s.id || (typeof s === 'string' ? s : '');
+        if (sId) {
+          tutorSubjectIds.add(sId);
+          const disc = getSubjectDiscipline(sId);
+          if (disc) tutorDisciplines.add(disc);
+        }
+      });
+
+      (tutor.batchAssignments || []).forEach((ba: any) => {
+        if (ba.subjectId) {
+          tutorSubjectIds.add(ba.subjectId);
+          const disc = getSubjectDiscipline(ba.subjectId);
+          if (disc) tutorDisciplines.add(disc);
+        }
+      });
+
+      // Direct subject ID match
+      if (tutorSubjectIds.has(targetSubjectId)) return true;
+
+      // Direct discipline match
+      if (targetDiscipline && tutorDisciplines.has(targetDiscipline)) return true;
+
+      // Botany / Zoology / Biology cross-matching if a tutor teaches Biology
+      if (
+        (targetDiscipline === 'BOTANY' || targetDiscipline === 'ZOOLOGY') &&
+        tutorDisciplines.has('BIOLOGY')
+      ) {
+        return true;
+      }
+      if (
+        targetDiscipline === 'BIOLOGY' &&
+        (tutorDisciplines.has('BOTANY') || tutorDisciplines.has('ZOOLOGY'))
+      ) {
+        return true;
+      }
+
+      // Check specialization / designation keywords
+      const spec = (tutor.specialization || '').toUpperCase();
+      const des = (tutor.designation || '').toUpperCase();
+      if (targetDiscipline && (spec.includes(targetDiscipline) || des.includes(targetDiscipline))) {
+        return true;
+      }
+
+      return false;
+    },
+    [getSubjectDiscipline],
+  );
+
+  // Strictly filter tutors to ONLY show faculty mapped to the currently selected subject
+  const filteredTutors = useMemo(() => {
+    if (!form.subjectId) return tutors;
+    return tutors.filter((t: any) => tutorTeachesSubject(t, form.subjectId));
+  }, [form.subjectId, tutors, tutorTeachesSubject]);
 
   const { mutate: runConflictCheck, isPending: checkingConflicts } = useCheckConflicts();
   const { mutateAsync: createSchedule, isPending: creating } = useCreateSchedule();
@@ -287,13 +434,14 @@ function CreateScheduleForm() {
       setForm((f) => {
         const next = { ...f, [key]: value };
         if (key === 'courseId') {
-          next.batchId = '';
-          next.subjectId = '';
-          next.staffProfileId = '';
+          if (next.batchId) {
+            const currentB = batches.find((b: any) => b.id === next.batchId);
+            if (currentB && currentB.courseId && value && currentB.courseId !== value) {
+              next.batchId = '';
+            }
+          }
         }
         if (key === 'batchId') {
-          next.subjectId = '';
-          next.staffProfileId = '';
           if (value) {
             const targetBatch = batches.find((b: any) => b.id === value);
             if (targetBatch?.courseId) {
@@ -310,7 +458,23 @@ function CreateScheduleForm() {
           }
         }
         if (key === 'subjectId') {
-          next.staffProfileId = '';
+          // If the newly selected subject doesn't match the currently assigned tutor, auto-adjust/reset tutor
+          if (next.staffProfileId && value) {
+            const currentTutor = tutors.find((t: any) => t.id === next.staffProfileId);
+            if (currentTutor && !tutorTeachesSubject(currentTutor, value)) {
+              const matching = tutors.filter((t: any) => tutorTeachesSubject(t, value));
+              next.staffProfileId = matching.length === 1 ? matching[0].id : '';
+            }
+          }
+        }
+        if (key === 'startTime' && value) {
+          const [sh, sm] = value.split(':').map(Number);
+          const [eh, em] = (next.endTime || '').split(':').map(Number);
+          // If endTime is missing, earlier than or equal to startTime, or 12h offset (e.g. 12:30 -> 01:00), auto advance endTime by 1 hour
+          if (!next.endTime || next.endTime <= value || (sh >= 12 && eh < 12)) {
+            const autoEndH = (sh + 1) % 24;
+            next.endTime = `${String(autoEndH).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`;
+          }
         }
         return next;
       });
@@ -334,6 +498,19 @@ function CreateScheduleForm() {
     },
     [batches, scheduleType],
   );
+
+  const applyDurationMinutes = (minutes: number) => {
+    const [sh, sm] = (form.startTime || '08:00').split(':').map(Number);
+    const totalStartMinutes = (sh || 0) * 60 + (sm || 0);
+    const totalEndMinutes = totalStartMinutes + minutes;
+    const endH = Math.floor(totalEndMinutes / 60) % 24;
+    const endM = totalEndMinutes % 60;
+    const calculatedEndTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    setForm((f) => ({ ...f, endTime: calculatedEndTime }));
+    setConflictResult(null);
+    setConflictChecked(false);
+    setErrors((e) => ({ ...e, endTime: undefined }));
+  };
 
   const handleSingleDateChange = (dateVal: string) => {
     setSingleDate(dateVal);
@@ -403,11 +580,41 @@ function CreateScheduleForm() {
     if (!form.dayOfWeek) newErrors.dayOfWeek = 'Day of week is required';
     if (!form.startTime) newErrors.startTime = 'Start time is required';
     if (!form.endTime) newErrors.endTime = 'End time is required';
-    if (form.startTime >= form.endTime) newErrors.endTime = 'End time must be after start time';
+
+    // Auto-heal 12h/24h conversion and end time if invalid
+    if (form.startTime && form.endTime) {
+      const [sh, sm] = form.startTime.split(':').map(Number);
+      let [eh, em] = form.endTime.split(':').map(Number);
+      if (sh >= 12 && eh < 12 && eh > 0) {
+        eh += 12;
+        form.endTime = `${String(eh).padStart(2, '0')}:${String(em || 0).padStart(2, '0')}`;
+      }
+      if (form.startTime >= form.endTime) {
+        const autoEndH = (sh + 1) % 24;
+        form.endTime = `${String(autoEndH).padStart(2, '0')}:${String(sm || 0).padStart(2, '0')}`;
+      }
+    }
+
     if (!form.effectiveFrom) newErrors.effectiveFrom = 'Start date is required';
     if (!form.effectiveUntil) newErrors.effectiveUntil = 'End date is required';
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (Object.keys(newErrors).length > 0) {
+      const missingLabels: string[] = [];
+      if (newErrors.batchId) missingLabels.push('Batch');
+      if (newErrors.studentAdmissionId) missingLabels.push('Target Student');
+      if (newErrors.subjectId) missingLabels.push('Subject');
+      if (newErrors.staffProfileId) missingLabels.push('Tutor');
+      if (newErrors.dayOfWeek) missingLabels.push('Day of Week');
+      if (newErrors.startTime) missingLabels.push('Start Time');
+      if (newErrors.endTime) missingLabels.push(newErrors.endTime);
+      if (newErrors.effectiveFrom) missingLabels.push('Start Date');
+      if (newErrors.effectiveUntil) missingLabels.push('End Date');
+
+      toast.error(`Please fill in required fields: ${missingLabels.join(', ')}`);
+      return false;
+    }
+    return true;
   };
 
   const buildPayload = (bypassStudent = false): CreateSchedulePayload | null => {
@@ -520,8 +727,35 @@ function CreateScheduleForm() {
           description: `Scheduled ${selectedBatch?.name || 'Class'} on ${WEEKDAY_FULL_LABELS[form.dayOfWeek || 'MONDAY']} (${form.startTime} - ${form.endTime}).`,
         });
       }
+
+      const targetTutor = tutors.find((t: any) => t.id === form.staffProfileId);
+      const targetSubject = allSubjects.find((s: any) => s.id === form.subjectId);
+      const modalInfo: CalendarModalScheduleInfo = {
+        isEdit: !!editId,
+        batchName: selectedBatch?.name || 'NEET Batch',
+        subjectName: targetSubject?.name || 'Subject',
+        tutorName: targetTutor ? `${targetTutor.firstName} ${targetTutor.lastName}` : 'Assigned Faculty',
+        tutorEmail: targetTutor?.email,
+        dayOfWeek: form.dayOfWeek || 'MONDAY',
+        startTime: form.startTime,
+        endTime: form.endTime,
+        startDate: form.effectiveFrom,
+        endDate: form.effectiveUntil,
+        isRecurring: scheduleType === 'RECURRING',
+        deliveryMode: form.deliveryMode,
+        meetingLink: form.meetingLink,
+        roomName: roomsList.find((r) => r.id === form.roomId)?.name,
+        students: displayStudents.map((st: any) => ({
+          id: st.id,
+          name: `${st.firstName || st.name || 'Student'} ${st.lastName || ''}`.trim(),
+          email: st.email || st.user?.email || st.studentProfile?.user?.email,
+          admissionNo: st.admissionNo || st.code,
+        })),
+      };
+
+      setCalendarModalInfo(modalInfo);
+      setIsCalendarModalOpen(true);
       void queryClient.invalidateQueries();
-      router.push('/dashboard/timetable');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || 'Failed to save class schedule';
       toast.error(msg);
@@ -614,22 +848,24 @@ function CreateScheduleForm() {
                   <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <select
                     value={form.batchId}
-                    disabled={!form.courseId}
                     onChange={(e) => set('batchId', e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      !form.courseId
-                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
-                        : 'bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC]'
-                    } ${errors.batchId ? 'border-rose-300 bg-rose-50' : ''}`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC] ${
+                      errors.batchId ? 'border-rose-300 bg-rose-50' : ''
+                    }`}
                   >
                     <option value="" className="text-slate-500 font-normal">
-                      {!form.courseId ? 'Select a course first...' : 'Select a batch...'}
+                      Select a batch...
                     </option>
                     {filteredBatches.map((b: any) => (
                       <option key={b.id} value={b.id} className="text-slate-800 font-bold">
-                        {b.name} ({b.code})
+                        {b.name} {b.code ? `(${b.code})` : ''}
                       </option>
                     ))}
+                    {form.batchId && !filteredBatches.some((b: any) => b.id === form.batchId) && (
+                      <option value={form.batchId} className="text-slate-800 font-bold">
+                        {batches.find((b: any) => b.id === form.batchId)?.name || 'NEET Crash Course 2027'}
+                      </option>
+                    )}
                   </select>
                 </div>
                 {errors.batchId && (
@@ -647,16 +883,13 @@ function CreateScheduleForm() {
                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0052CC]" />
                     <select
                       value={form.studentAdmissionId}
-                      disabled={!form.batchId}
                       onChange={(e) => set('studentAdmissionId', e.target.value)}
-                      className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                        !form.batchId
-                          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
-                          : 'bg-blue-50 text-[#0B2447] border-blue-200 cursor-pointer focus:border-[#0052CC]'
-                      } ${errors.studentAdmissionId ? 'border-rose-300 bg-rose-50' : ''}`}
+                      className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-blue-50 text-[#0B2447] border-blue-200 cursor-pointer focus:border-[#0052CC] ${
+                        errors.studentAdmissionId ? 'border-rose-300 bg-rose-50' : ''
+                      }`}
                     >
                       <option value="" className="text-slate-500 font-normal">
-                        {!form.batchId ? 'Select a batch first...' : 'Select enrolled student...'}
+                        Select enrolled student...
                       </option>
                       {displayStudents.map((st: any) => (
                         <option key={st.id} value={st.id} className="text-slate-800 font-bold">
@@ -683,22 +916,24 @@ function CreateScheduleForm() {
                   <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <select
                     value={form.subjectId}
-                    disabled={!form.batchId}
                     onChange={(e) => set('subjectId', e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      !form.batchId
-                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
-                        : 'bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC]'
-                    } ${errors.subjectId ? 'border-rose-300 bg-rose-50' : ''}`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC] ${
+                      errors.subjectId ? 'border-rose-300 bg-rose-50' : ''
+                    }`}
                   >
                     <option value="" className="text-slate-500 font-normal">
-                      {!form.batchId ? 'Select a batch first...' : 'Select a subject...'}
+                      Select a subject...
                     </option>
                     {filteredSubjects.map((s: any) => (
                       <option key={s.id} value={s.id} className="text-slate-800 font-bold">
                         {s.name}
                       </option>
                     ))}
+                    {form.subjectId && !filteredSubjects.some((s: any) => s.id === form.subjectId) && (
+                      <option value={form.subjectId} className="text-slate-800 font-bold">
+                        {allSubjects.find((s: any) => s.id === form.subjectId)?.name || 'Physics'}
+                      </option>
+                    )}
                   </select>
                 </div>
                 {errors.subjectId && (
@@ -715,16 +950,15 @@ function CreateScheduleForm() {
                   <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <select
                     value={form.staffProfileId}
-                    disabled={!form.subjectId}
                     onChange={(e) => set('staffProfileId', e.target.value)}
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      !form.subjectId
-                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-75'
-                        : 'bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC]'
-                    } ${errors.staffProfileId ? 'border-rose-300 bg-rose-50' : ''}`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-medium transition-all bg-slate-50 text-slate-800 border-slate-200 cursor-pointer focus:border-[#0052CC] ${
+                      errors.staffProfileId ? 'border-rose-300 bg-rose-50' : ''
+                    }`}
                   >
                     <option value="" className="text-slate-500 font-normal">
-                      {!form.subjectId ? 'Select a subject first...' : 'Select a tutor...'}
+                      {form.subjectId && filteredTutors.length === 0
+                        ? 'No tutors found for this subject'
+                        : 'Select a tutor...'}
                     </option>
                     {filteredTutors.map((t: any) => (
                       <option key={t.id} value={t.id} className="text-slate-800 font-bold">
@@ -851,35 +1085,59 @@ function CreateScheduleForm() {
             )}
 
             {/* Time Pickers */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">
-                  Start Time *
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0052CC]" />
-                  <input
-                    type="time"
-                    value={form.startTime}
-                    onChange={(e) => set('startTime', e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-[#0052CC]"
-                  />
+            <div className="space-y-2 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">
+                    Start Time *
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0052CC]" />
+                    <input
+                      type="time"
+                      value={form.startTime}
+                      onChange={(e) => set('startTime', e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-[#0052CC]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">
+                    End Time *
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="time"
+                      value={form.endTime}
+                      onChange={(e) => set('endTime', e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-[#0052CC]"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase">
-                  End Time *
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="time"
-                    value={form.endTime}
-                    onChange={(e) => set('endTime', e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:border-[#0052CC]"
-                  />
-                </div>
+              {/* Quick Class Duration Shortcuts */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[11px] font-bold text-slate-400 mr-1">Quick Duration:</span>
+                {[
+                  { label: '30 Mins', mins: 30 },
+                  { label: '45 Mins', mins: 45 },
+                  { label: '1 Hour', mins: 60 },
+                  { label: '1.5 Hours', mins: 90 },
+                  { label: '2 Hours', mins: 120 },
+                  { label: '3 Hours', mins: 180 },
+                ].map((preset) => (
+                  <button
+                    key={preset.mins}
+                    type="button"
+                    onClick={() => applyDurationMinutes(preset.mins)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-blue-50 hover:text-[#0052CC] text-slate-600 border border-slate-200 transition-all cursor-pointer"
+                  >
+                    +{preset.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -1150,6 +1408,19 @@ function CreateScheduleForm() {
           </div>
         </div>
       </div>
+
+      {/* Google Calendar 1-Click Invite & Auto-Reminder Modal */}
+      {isCalendarModalOpen && calendarModalInfo && (
+        <ScheduleCalendarSuccessModal
+          isOpen={isCalendarModalOpen}
+          onClose={() => {
+            setIsCalendarModalOpen(false);
+            router.push('/dashboard/timetable');
+          }}
+          onNavigateToTimetable={() => router.push('/dashboard/timetable')}
+          scheduleInfo={calendarModalInfo}
+        />
+      )}
     </DashboardLayout>
   );
 }

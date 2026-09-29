@@ -38,9 +38,11 @@ import {
   Check,
   CloudUpload,
   CheckCircle2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AttendanceReportModal } from '@/components/attendance/attendance-report-modal';
 import {
   saveRecordingChunk,
   loadAllRecordingChunks,
@@ -1436,6 +1438,7 @@ function TeacherStudioInner({
       attendanceStatus: string;
     }>;
   }>({ students: [] });
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
   const sessionTypeParam = searchParams?.get('sessionType');
@@ -1470,27 +1473,100 @@ function TeacherStudioInner({
     }
   }, [classId, sessionTypeParam, studentNameParam, studentAdmissionIdParam]);
 
+  // Pre-fetch on mount so attendance is instantly ready
+  useEffect(() => {
+    fetchLiveAttendance();
+  }, [fetchLiveAttendance]);
+
   useEffect(() => {
     if (activeTab === 'attendance') {
       fetchLiveAttendance();
     }
   }, [activeTab, fetchLiveAttendance]);
 
+  // Helper to detect if a student from roster is currently active in the LiveKit room
+  const getLiveParticipantForStudent = useCallback(
+    (st: { studentAdmissionId: string; studentName: string; admissionNumber?: string }) => {
+      const stName = (st.studentName || '').toLowerCase().trim();
+      const admNo = (st.admissionNumber || '').toLowerCase().trim();
+
+      return remoteParticipants.find((rp) => {
+        const rpName = (rp.name || rp.identity || '').toLowerCase().trim();
+        const rpIdentity = (rp.identity || '').toLowerCase().trim();
+        return (
+          rp.identity === st.studentAdmissionId ||
+          (stName && (rpName === stName || rpName.includes(stName) || stName.includes(rpName))) ||
+          (admNo && (rpIdentity.includes(admNo) || rpName.includes(admNo)))
+        );
+      });
+    },
+    [remoteParticipants],
+  );
+
   const toggleStudentStatus = (studentAdmissionId: string, newStatus: string) => {
     setAttendanceData((prev) => ({
       ...prev,
       students: prev.students.map((st) =>
-        st.studentAdmissionId === studentAdmissionId ? { ...st, attendanceStatus: newStatus } : st,
+        st.studentAdmissionId === studentAdmissionId
+          ? { ...st, attendanceStatus: st.attendanceStatus === newStatus ? '' : newStatus }
+          : st,
       ),
     }));
   };
 
   const handleMarkAllPresent = () => {
+    if (!attendanceData.students || attendanceData.students.length === 0) {
+      toast.error('No students available to mark');
+      return;
+    }
     setAttendanceData((prev) => ({
       ...prev,
       students: prev.students.map((st) => ({ ...st, attendanceStatus: 'PRESENT' })),
     }));
-    toast.success('Marked all students as Present!');
+    toast.success(`Marked all ${attendanceData.students.length} students as Present!`);
+  };
+
+  const handleMarkLivePresent = () => {
+    let count = 0;
+    setAttendanceData((prev) => ({
+      ...prev,
+      students: prev.students.map((st) => {
+        const liveP = getLiveParticipantForStudent(st);
+        if (liveP) {
+          count++;
+          return { ...st, attendanceStatus: 'PRESENT' };
+        }
+        return st;
+      }),
+    }));
+    if (count > 0) {
+      toast.success(`Marked ${count} student(s) currently in Live Room as Present!`);
+    } else {
+      toast.info('No students currently detected in Live Room.');
+    }
+  };
+
+  const handleMarkUnmarkedAbsent = () => {
+    let count = 0;
+    setAttendanceData((prev) => ({
+      ...prev,
+      students: prev.students.map((st) => {
+        if (!st.attendanceStatus) {
+          count++;
+          return { ...st, attendanceStatus: 'ABSENT' };
+        }
+        return st;
+      }),
+    }));
+    toast.success(`Marked ${count} unmarked student(s) as Absent.`);
+  };
+
+  const handleResetAttendance = () => {
+    setAttendanceData((prev) => ({
+      ...prev,
+      students: prev.students.map((st) => ({ ...st, attendanceStatus: '' })),
+    }));
+    toast.info('Cleared attendance selections.');
   };
 
   const handleSaveAttendance = async () => {
@@ -1511,7 +1587,7 @@ function TeacherStudioInner({
       }));
 
       await api.post(`/live-classes/${classId}/attendance`, { records }, { skipGlobalToast: true });
-      toast.success('Attendance saved & synced!');
+      toast.success('Attendance saved & synced successfully!');
     } catch (err) {
       console.error('[LiveKit Studio] Error saving attendance:', err);
       toast.error('Error saving attendance');
@@ -2781,80 +2857,252 @@ function TeacherStudioInner({
               {/* Attendance Sheet Tab */}
               {activeTab === 'attendance' && (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-800 shrink-0">
-                    <div>
-                      <p className="text-xs font-black text-slate-100">
-                        {attendanceData.batchName || 'Live Batch'}
-                      </p>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        {attendanceData.subjectName || 'NEET Subject'} •{' '}
-                        {attendanceData.students.length} Enrolled
-                      </p>
+                  {/* Header & Quick Actions */}
+                  <div className="pb-2.5 border-b border-slate-800 shrink-0 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-black text-slate-100 flex items-center gap-1.5">
+                          <span>{attendanceData.batchName || 'Live Batch'}</span>
+                          {attendanceLoading && (
+                            <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1 mt-0.5">
+                          <span>{attendanceData.subjectName || 'NEET Subject'}</span>
+                          <span>•</span>
+                          <span className="font-bold text-slate-300">
+                            {attendanceData.students.length} Enrolled
+                          </span>
+                          {(() => {
+                            const liveCount = attendanceData.students.filter((s) =>
+                              Boolean(getLiveParticipantForStudent(s)),
+                            ).length;
+                            return (
+                              liveCount > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                                    {liveCount} in Live Room
+                                  </span>
+                                </>
+                              )
+                            );
+                          })()}
+                        </p>
+                      </div>
+
+                      {/* Prominent Attendance Report Button */}
+                      <button
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-black flex items-center gap-1.5 transition shadow-sm cursor-pointer"
+                        title="Generate and Download Attendance Report (CSV/PDF)"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                        <span>Report</span>
+                      </button>
                     </div>
-                    <button
-                      onClick={handleMarkAllPresent}
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black hover:bg-emerald-500/30 transition cursor-pointer"
-                    >
-                      Mark All Present
-                    </button>
+
+                    {/* Action Buttons Row */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={handleMarkAllPresent}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[10px] font-black transition cursor-pointer flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" />
+                        <span>Mark All Present</span>
+                      </button>
+
+                      <button
+                        onClick={handleMarkLivePresent}
+                        className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 text-[10px] font-black transition cursor-pointer flex items-center gap-1"
+                        title="Mark all students currently connected to Live Room as Present"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                        <span>Mark Live</span>
+                      </button>
+
+                      <button
+                        onClick={handleMarkUnmarkedAbsent}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-300 border border-slate-700 text-[10px] font-medium transition cursor-pointer"
+                        title="Fill rest as Absent"
+                      >
+                        Mark Absent
+                      </button>
+
+                      <button
+                        onClick={handleResetAttendance}
+                        className="px-1.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 text-[10px] font-medium transition cursor-pointer"
+                        title="Clear selections"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
 
-                  {attendanceLoading ? (
+                  {/* Student List View */}
+                  {attendanceLoading && attendanceData.students.length === 0 ? (
                     <div className="flex-1 flex items-center justify-center text-slate-400 gap-2">
                       <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                       <span className="text-xs font-semibold">Loading roster...</span>
                     </div>
+                  ) : attendanceData.students.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                      <Users className="w-8 h-8 text-slate-600 mb-2" />
+                      <p className="text-xs font-bold text-slate-300">No students found</p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        No enrolled students found for this batch.
+                      </p>
+                    </div>
                   ) : (
                     <div className="flex-1 overflow-y-auto space-y-2 pr-1 py-2">
-                      {attendanceData.students.map((st) => (
-                        <div
-                          key={st.studentAdmissionId}
-                          className="flex items-center justify-between p-2.5 bg-slate-800/70 border border-slate-700/80 rounded-xl"
-                        >
-                          <div className="min-w-0 pr-2">
-                            <p className="text-xs font-bold text-slate-100 truncate">
-                              {st.studentName}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-mono">
-                              #{st.admissionNumber || 'ADM'}
-                            </p>
+                      {attendanceData.students.map((st) => {
+                        const liveParticipant = getLiveParticipantForStudent(st);
+                        const isLiveNow = Boolean(liveParticipant);
+
+                        return (
+                          <div
+                            key={st.studentAdmissionId}
+                            className={`p-2.5 rounded-xl border transition-all duration-150 ${
+                              isLiveNow
+                                ? 'bg-gradient-to-r from-emerald-950/40 via-slate-800/90 to-slate-800/90 border-emerald-500/50 shadow-sm shadow-emerald-500/10'
+                                : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              {/* Student Info & Live Indicator */}
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                                    isLiveNow
+                                      ? 'bg-emerald-600 text-white ring-2 ring-emerald-400/60 shadow-md'
+                                      : 'bg-slate-700 text-slate-300 border border-slate-600'
+                                  }`}
+                                >
+                                  {(st.studentName || 'S').charAt(0).toUpperCase()}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs font-bold text-slate-100 truncate">
+                                      {st.studentName}
+                                    </p>
+                                    {isLiveNow ? (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-black text-emerald-300 tracking-wider">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                                        LIVE
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-500 border border-slate-700 text-[9px] font-medium">
+                                        Offline
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <p className="text-[10px] text-slate-400 font-mono">
+                                      #{st.admissionNumber || 'ADM'}
+                                    </p>
+                                    {isLiveNow && (
+                                      <div className="flex items-center gap-1">
+                                        {liveParticipant?.isMicrophoneEnabled ? (
+                                          <Mic className="w-3 h-3 text-emerald-400" />
+                                        ) : (
+                                          <MicOff className="w-3 h-3 text-slate-500" />
+                                        )}
+                                        {liveParticipant?.isCameraEnabled ? (
+                                          <Video className="w-3 h-3 text-emerald-400" />
+                                        ) : (
+                                          <VideoOff className="w-3 h-3 text-slate-500" />
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Attendance Status Selection Pills */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                {[
+                                  { key: 'PRESENT', label: 'P', title: 'Present' },
+                                  { key: 'ABSENT', label: 'A', title: 'Absent' },
+                                  { key: 'LATE', label: 'L', title: 'Late' },
+                                ].map(({ key, label, title }) => {
+                                  const isSelected = st.attendanceStatus === key;
+                                  return (
+                                    <button
+                                      key={key}
+                                      onClick={() => toggleStudentStatus(st.studentAdmissionId, key)}
+                                      title={`Mark ${title}`}
+                                      className={`w-7 h-7 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center ${
+                                        isSelected
+                                          ? key === 'PRESENT'
+                                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-md shadow-emerald-600/30'
+                                            : key === 'ABSENT'
+                                              ? 'bg-rose-600 text-white ring-2 ring-rose-400 shadow-md shadow-rose-600/30'
+                                              : 'bg-amber-500 text-white ring-2 ring-amber-300 shadow-md shadow-amber-500/30'
+                                          : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
+                                      }`}
+                                    >
+                                      {label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {['PRESENT', 'ABSENT', 'LATE'].map((status) => (
-                              <button
-                                key={status}
-                                onClick={() => toggleStudentStatus(st.studentAdmissionId, status)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-black transition cursor-pointer ${
-                                  st.attendanceStatus === status
-                                    ? status === 'PRESENT'
-                                      ? 'bg-emerald-600 text-white shadow-md'
-                                      : status === 'ABSENT'
-                                        ? 'bg-rose-600 text-white shadow-md'
-                                        : 'bg-amber-500 text-white shadow-md'
-                                    : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
-                                }`}
-                              >
-                                {status.charAt(0)}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 
-                  <button
-                    onClick={handleSaveAttendance}
-                    disabled={attendanceSaving}
-                    className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-                  >
-                    {attendanceSaving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Check className="w-4 h-4" />
-                    )}
-                    <span>Save Attendance</span>
-                  </button>
+                  {/* Summary & Save Action */}
+                  <div className="pt-2 border-t border-slate-800 shrink-0 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] px-1 font-semibold text-slate-400">
+                      <span className="text-emerald-400 font-bold">
+                        P:{' '}
+                        {
+                          attendanceData.students.filter(
+                            (s) => s.attendanceStatus === 'PRESENT',
+                          ).length
+                        }
+                      </span>
+                      <span className="text-rose-400 font-bold">
+                        A:{' '}
+                        {
+                          attendanceData.students.filter(
+                            (s) => s.attendanceStatus === 'ABSENT',
+                          ).length
+                        }
+                      </span>
+                      <span className="text-amber-400 font-bold">
+                        L:{' '}
+                        {
+                          attendanceData.students.filter(
+                            (s) => s.attendanceStatus === 'LATE',
+                          ).length
+                        }
+                      </span>
+                      <span className="text-slate-500">
+                        Unmarked:{' '}
+                        {
+                          attendanceData.students.filter((s) => !s.attendanceStatus).length
+                        }
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleSaveAttendance}
+                      disabled={attendanceSaving}
+                      className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl text-xs font-black transition shadow-md flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      {attendanceSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Check className="w-4 h-4" />
+                      )}
+                      <span>Save Attendance</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -3034,76 +3282,164 @@ function TeacherStudioInner({
 
                 {activeTab === 'attendance' && (
                   <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-800 shrink-0">
-                      <div>
-                        <p className="text-xs font-black text-slate-100">
-                          {attendanceData.batchName || 'Live Batch'}
-                        </p>
-                        <p className="text-[10px] text-slate-400">
-                          {attendanceData.students.length} Enrolled
-                        </p>
+                    <div className="pb-2.5 border-b border-slate-800 shrink-0 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-black text-slate-100 flex items-center gap-1.5">
+                            <span>{attendanceData.batchName || 'Live Batch'}</span>
+                            {attendanceLoading && (
+                              <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
+                            )}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {attendanceData.students.length} Enrolled
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setIsReportModalOpen(true)}
+                          className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-[11px] font-black flex items-center gap-1.5 transition cursor-pointer"
+                          title="Generate and Download Attendance Report (CSV/PDF)"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>Report</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={handleMarkAllPresent}
-                        className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black"
-                      >
-                        Mark All Present
-                      </button>
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={handleMarkAllPresent}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black cursor-pointer flex items-center gap-1"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>Mark All</span>
+                        </button>
+                        <button
+                          onClick={handleMarkLivePresent}
+                          className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-black cursor-pointer flex items-center gap-1"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                          <span>Mark Live</span>
+                        </button>
+                        <button
+                          onClick={handleMarkUnmarkedAbsent}
+                          className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-medium cursor-pointer"
+                        >
+                          Mark Absent
+                        </button>
+                        <button
+                          onClick={handleResetAttendance}
+                          className="px-1.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-medium cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      </div>
                     </div>
 
-                    {attendanceLoading ? (
+                    {attendanceLoading && attendanceData.students.length === 0 ? (
                       <div className="flex-1 flex items-center justify-center text-slate-400 gap-2">
                         <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
                         <span className="text-xs font-semibold">Loading roster...</span>
                       </div>
                     ) : (
                       <div className="flex-1 overflow-y-auto space-y-2 pr-1 py-2">
-                        {attendanceData.students.map((st) => (
-                          <div
-                            key={st.studentAdmissionId}
-                            className="flex items-center justify-between p-2 bg-slate-800/80 border border-slate-700/80 rounded-xl"
-                          >
-                            <div className="min-w-0 pr-2">
-                              <p className="text-xs font-bold text-slate-100 truncate">
-                                {st.studentName}
-                              </p>
+                        {attendanceData.students.map((st) => {
+                          const liveParticipant = getLiveParticipantForStudent(st);
+                          const isLiveNow = Boolean(liveParticipant);
+
+                          return (
+                            <div
+                              key={st.studentAdmissionId}
+                              className={`p-2.5 rounded-xl border transition-all ${
+                                isLiveNow
+                                  ? 'bg-gradient-to-r from-emerald-950/40 via-slate-800/90 to-slate-800/90 border-emerald-500/50'
+                                  : 'bg-slate-800/80 border-slate-700/80'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-xs font-bold text-slate-100 truncate">
+                                      {st.studentName}
+                                    </p>
+                                    {isLiveNow && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[9px] font-black text-emerald-300">
+                                        LIVE
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                    #{st.admissionNumber || 'ADM'}
+                                  </p>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {[
+                                    { key: 'PRESENT', label: 'P' },
+                                    { key: 'ABSENT', label: 'A' },
+                                    { key: 'LATE', label: 'L' },
+                                  ].map(({ key, label }) => (
+                                    <button
+                                      key={key}
+                                      onClick={() => toggleStudentStatus(st.studentAdmissionId, key)}
+                                      className={`w-7 h-7 rounded-lg text-xs font-black transition cursor-pointer flex items-center justify-center ${
+                                        st.attendanceStatus === key
+                                          ? key === 'PRESENT'
+                                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-400 shadow-md'
+                                            : key === 'ABSENT'
+                                              ? 'bg-rose-600 text-white ring-2 ring-rose-400 shadow-md'
+                                              : 'bg-amber-500 text-white ring-2 ring-amber-300 shadow-md'
+                                          : 'bg-slate-800 border border-slate-700 text-slate-400 hover:text-white'
+                                      }`}
+                                    >
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {['PRESENT', 'ABSENT', 'LATE'].map((status) => (
-                                <button
-                                  key={status}
-                                  onClick={() => toggleStudentStatus(st.studentAdmissionId, status)}
-                                  className={`px-2 py-1 rounded-lg text-[10px] font-black ${
-                                    st.attendanceStatus === status
-                                      ? status === 'PRESENT'
-                                        ? 'bg-emerald-600 text-white'
-                                        : status === 'ABSENT'
-                                          ? 'bg-rose-600 text-white'
-                                          : 'bg-amber-500 text-white'
-                                      : 'bg-slate-800 border border-slate-700 text-slate-400'
-                                  }`}
-                                >
-                                  {status.charAt(0)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
-                    <button
-                      onClick={handleSaveAttendance}
-                      disabled={attendanceSaving}
-                      className="w-full py-2.5 bg-violet-600 text-white rounded-xl text-xs font-black shrink-0 flex items-center justify-center gap-1.5"
-                    >
-                      {attendanceSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                      <span>Save Attendance</span>
-                    </button>
+                    <div className="pt-2 border-t border-slate-800 shrink-0 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] px-1 font-semibold text-slate-400">
+                        <span className="text-emerald-400 font-bold">
+                          P:{' '}
+                          {
+                            attendanceData.students.filter((s) => s.attendanceStatus === 'PRESENT')
+                              .length
+                          }
+                        </span>
+                        <span className="text-rose-400 font-bold">
+                          A:{' '}
+                          {
+                            attendanceData.students.filter((s) => s.attendanceStatus === 'ABSENT')
+                              .length
+                          }
+                        </span>
+                        <span className="text-amber-400 font-bold">
+                          L:{' '}
+                          {
+                            attendanceData.students.filter((s) => s.attendanceStatus === 'LATE')
+                              .length
+                          }
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={handleSaveAttendance}
+                        disabled={attendanceSaving}
+                        className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl text-xs font-black shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {attendanceSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        <span>Save Attendance</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3227,6 +3563,28 @@ function TeacherStudioInner({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Attendance Report Modal ── */}
+      {isReportModalOpen && (
+        <AttendanceReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          sessionDetails={{
+            title: classTitle || 'Live Class Session',
+            subjectName: attendanceData.subjectName || 'Live Subject',
+            batchName: attendanceData.batchName || 'Live Batch',
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            tutorName: tutorName || 'Host Faculty',
+          }}
+          students={attendanceData.students.map((st) => ({
+            id: st.studentAdmissionId,
+            name: st.studentName,
+            rollNo: st.admissionNumber,
+            status: st.attendanceStatus || 'UNMARKED',
+          }))}
+        />
       )}
 
       {/* ── Real-time Development Diagnostic HUD ── */}

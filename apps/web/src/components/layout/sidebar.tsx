@@ -237,6 +237,12 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
       iconColor: 'text-[#0052CC]',
     },
     {
+      name: 'Class Timetable',
+      href: '/dashboard/parent/timetable',
+      icon: Clock,
+      iconColor: 'text-[#0052CC]',
+    },
+    {
       name: 'Student Attendance',
       href: '/dashboard/parent/attendance',
       icon: Calendar,

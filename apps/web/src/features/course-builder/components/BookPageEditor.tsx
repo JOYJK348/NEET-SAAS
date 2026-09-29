@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   GripVertical,
-  MoreHorizontal,
   Edit3,
   Trash2,
   Copy,
@@ -15,6 +14,7 @@ import {
   AlertCircle,
   Plus,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,11 +22,22 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
+  useDraggable,
+  useDroppable,
+  DragOverlay,
+  type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   useTopicItems,
@@ -70,60 +81,177 @@ function getBlockLabelFromType(bType: string): string {
 }
 
 const QUICK_BLOCK_CHIPS = [
-  { type: 'KEY_CONCEPT', label: 'Key Concept', icon: '💡', color: 'bg-amber-500/10 text-amber-800 border-amber-300/80 hover:bg-amber-500/20' },
-  { type: 'FORMULA', label: 'Formula', icon: '📐', color: 'bg-cyan-500/10 text-cyan-800 border-cyan-300/80 hover:bg-cyan-500/20' },
-  { type: 'WORKED_EXAMPLE', label: 'Worked Example', icon: '🎓', color: 'bg-indigo-500/10 text-indigo-800 border-indigo-300/80 hover:bg-indigo-500/20' },
-  { type: 'PRACTICE_QUESTION', label: 'Question', icon: '❓', color: 'bg-emerald-500/10 text-emerald-800 border-emerald-300/80 hover:bg-emerald-500/20' },
-  { type: 'TEXT', label: 'Text Note', icon: '📝', color: 'bg-violet-500/10 text-violet-800 border-violet-300/80 hover:bg-violet-500/20' },
-  { type: 'VIDEO', label: 'Video', icon: '🎬', color: 'bg-rose-500/10 text-rose-800 border-rose-300/80 hover:bg-rose-500/20' },
-  { type: 'PDF', label: 'PDF Doc', icon: '📄', color: 'bg-blue-500/10 text-blue-800 border-blue-300/80 hover:bg-blue-500/20' },
-  { type: 'LINK', label: 'Link', icon: '🔗', color: 'bg-teal-500/10 text-teal-800 border-teal-300/80 hover:bg-teal-500/20' },
+  {
+    type: 'KEY_CONCEPT',
+    label: 'Key Concept',
+    icon: '💡',
+    color: 'bg-amber-500/10 text-amber-800 border-amber-300/80 hover:bg-amber-500/20',
+  },
+  {
+    type: 'FORMULA',
+    label: 'Formula',
+    icon: '📐',
+    color: 'bg-cyan-500/10 text-cyan-800 border-cyan-300/80 hover:bg-cyan-500/20',
+  },
+  {
+    type: 'WORKED_EXAMPLE',
+    label: 'Worked Example',
+    icon: '🎓',
+    color: 'bg-indigo-500/10 text-indigo-800 border-indigo-300/80 hover:bg-indigo-500/20',
+  },
+  {
+    type: 'PRACTICE_QUESTION',
+    label: 'Question',
+    icon: '❓',
+    color: 'bg-emerald-500/10 text-emerald-800 border-emerald-300/80 hover:bg-emerald-500/20',
+  },
+  {
+    type: 'TEXT',
+    label: 'Text Note',
+    icon: '📝',
+    color: 'bg-violet-500/10 text-violet-800 border-violet-300/80 hover:bg-violet-500/20',
+  },
+  {
+    type: 'VIDEO',
+    label: 'Video',
+    icon: '🎬',
+    color: 'bg-rose-500/10 text-rose-800 border-rose-300/80 hover:bg-rose-500/20',
+  },
+  {
+    type: 'PDF',
+    label: 'PDF Doc',
+    icon: '📄',
+    color: 'bg-blue-500/10 text-blue-800 border-blue-300/80 hover:bg-blue-500/20',
+  },
+  {
+    type: 'LINK',
+    label: 'Link',
+    icon: '🔗',
+    color: 'bg-teal-500/10 text-teal-800 border-teal-300/80 hover:bg-teal-500/20',
+  },
 ];
+
+// Draggable Palette Chip Component
+function DraggablePaletteChip({
+  chip,
+  disabled,
+  onClick,
+}: {
+  chip: (typeof QUICK_BLOCK_CHIPS)[0];
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `palette-${chip.type}`,
+    data: {
+      isNew: true,
+      blockType: chip.type,
+      label: chip.label,
+      icon: chip.icon,
+    },
+    disabled,
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-150 shadow-2xs hover:scale-[1.02] cursor-grab active:cursor-grabbing select-none touch-none',
+        chip.color,
+        isDragging && 'opacity-40 ring-2 ring-violet-500 scale-95',
+      )}
+      title="Click to add or drag onto canvas"
+    >
+      <span>{chip.icon}</span>
+      <span>{chip.label}</span>
+      <span className="text-[9px] text-slate-400 opacity-60 ml-0.5 hidden sm:inline">⋮⋮</span>
+    </button>
+  );
+}
+
+// Inline Inserter Zone between items
+function DropZoneDivider({
+  index,
+  onInsert,
+  activeDragType,
+}: {
+  index: number;
+  onInsert: (type: AddableBlockType) => void;
+  activeDragType: string | null;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `dropzone-${index}`,
+    data: { insertIndex: index },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'group relative my-1 transition-all duration-150 flex items-center justify-center',
+        activeDragType || isOver ? 'py-2.5' : 'py-1',
+      )}
+    >
+      <div
+        className={cn(
+          'w-full h-0.5 rounded-full transition-all duration-150',
+          isOver
+            ? 'bg-[#7c3aed] h-1.5 shadow-md shadow-violet-500/30 ring-2 ring-violet-400/40'
+            : activeDragType
+              ? 'bg-violet-200 border-dashed border-t border-violet-400'
+              : 'bg-transparent group-hover:bg-slate-200',
+        )}
+      />
+      {isOver && (
+        <span className="absolute px-2.5 py-0.5 bg-[#7c3aed] text-white text-[10px] font-extrabold rounded-full shadow-md animate-bounce">
+          Drop here to insert
+        </span>
+      )}
+    </div>
+  );
+}
 
 function SortableBlock({
   item,
+  index,
+  totalItems,
   isEditing,
-  editingItemId,
   onStartEdit,
   onSaveEdit,
   onSaveMedia,
   onCancelEdit,
   onDelete,
   onDuplicate,
+  onMoveUp,
+  onMoveDown,
   isSaving,
 }: {
   item: TopicItem;
+  index: number;
+  totalItems: number;
   isEditing: boolean;
-  editingItemId: string | null;
   onStartEdit: (item: TopicItem) => void;
   onSaveEdit: (item: TopicItem, content: BlockContent) => void;
   onSaveMedia: (item: TopicItem, payload: Record<string, unknown>) => void;
   onCancelEdit: () => void;
   onDelete: (item: TopicItem) => void;
   onDuplicate?: (item: TopicItem) => void;
+  onMoveUp?: (item: TopicItem) => void;
+  onMoveDown?: (item: TopicItem) => void;
   isSaving: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
+    data: {
+      item,
+      isNew: false,
+    },
   });
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    const esc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', esc);
-    };
-  }, [menuOpen]);
 
   const blockType = getBlockType(item);
   const isTextItem = item.type === 'TEXT';
@@ -134,7 +262,11 @@ function SortableBlock({
 
   if (isDivider) {
     return (
-      <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <div
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        className={cn(isDragging && 'opacity-40')}
+      >
         <BlockRenderer
           item={item}
           isEditing={false}
@@ -155,8 +287,10 @@ function SortableBlock({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         'group relative bg-white rounded-2xl border transition-all duration-200 shadow-2xs hover:shadow-md p-1.5 sm:p-2.5',
-        isEditing ? 'border-[#7c3aed] ring-2 ring-violet-500/20' : 'border-slate-200/90 hover:border-violet-300',
-        isDragging && 'opacity-50 shadow-xl'
+        isEditing
+          ? 'border-[#7c3aed] ring-2 ring-violet-500/20'
+          : 'border-slate-200/90 hover:border-violet-300',
+        isDragging && 'opacity-30 border-violet-500 scale-[0.98]',
       )}
     >
       {/* Block Header Toolbar */}
@@ -165,7 +299,7 @@ function SortableBlock({
           <div
             {...attributes}
             {...listeners}
-            className="flex items-center justify-center w-5 h-6 rounded cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 transition-colors"
+            className="flex items-center justify-center w-6 h-7 rounded-lg cursor-grab active:cursor-grabbing text-slate-400 hover:text-violet-600 hover:bg-violet-50 transition-colors touch-none"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
@@ -173,20 +307,46 @@ function SortableBlock({
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 truncate">
             {blockLabel}
           </span>
+          <span className="text-[9px] font-mono text-slate-400 hidden sm:inline">#{index + 1}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Mobile & Desktop Quick Reorder Arrows */}
+          {onMoveUp && (
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => onMoveUp(item)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              title="Move Up"
+            >
+              <ChevronUp className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          {onMoveDown && (
+            <button
+              type="button"
+              disabled={index >= totalItems - 1}
+              onClick={() => onMoveDown(item)}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+              title="Move Down"
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           {!isEditing ? (
             <button
               type="button"
               onClick={() => onStartEdit(item)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/60 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200/60 transition-colors cursor-pointer ml-1"
             >
               <Edit3 className="h-3 w-3" />
               <span>Edit</span>
             </button>
           ) : (
-            <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+            <span className="text-[10px] font-extrabold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200 ml-1">
               Editing...
             </span>
           )}
@@ -213,7 +373,10 @@ function SortableBlock({
         </div>
       </div>
 
-      <div onClick={() => !isEditing && onStartEdit(item)} className={cn(!isEditing && 'cursor-pointer')}>
+      <div
+        onClick={() => !isEditing && onStartEdit(item)}
+        className={cn(!isEditing && 'cursor-pointer')}
+      >
         <BlockRenderer
           item={item}
           isEditing={isEditing}
@@ -311,10 +474,25 @@ export function BookPageEditor({
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [activeDragItem, setActiveDragItem] = useState<any | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  // Mobile + Desktop friendly drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150,
+        tolerance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const sortedItems = useMemo(() => {
     if (!items) return [];
@@ -384,7 +562,7 @@ export function BookPageEditor({
   );
 
   const handleAddBlock = useCallback(
-    (blockType: AddableBlockType) => {
+    (blockType: AddableBlockType, targetIndex?: number) => {
       if (!topicId) return;
 
       // Media types (PDF, LINK, VIDEO) use their own TopicItemType
@@ -498,14 +676,75 @@ export function BookPageEditor({
     [topicId, createMutation],
   );
 
+  // Quick 1-tap reordering handlers
+  const handleMoveUp = useCallback(
+    (item: TopicItem) => {
+      if (!topicId || !items) return;
+      const sorted = [...items].sort((a, b) => a.displayOrder - b.displayOrder);
+      const idx = sorted.findIndex((i) => i.id === item.id);
+      if (idx <= 0) return;
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(idx, 1);
+      reordered.splice(idx - 1, 0, moved);
+      const payload = { items: reordered.map((i, idx) => ({ id: i.id, displayOrder: idx + 1 })) };
+      reorderMutation.mutate({ topicId, payload });
+    },
+    [items, topicId, reorderMutation],
+  );
+
+  const handleMoveDown = useCallback(
+    (item: TopicItem) => {
+      if (!topicId || !items) return;
+      const sorted = [...items].sort((a, b) => a.displayOrder - b.displayOrder);
+      const idx = sorted.findIndex((i) => i.id === item.id);
+      if (idx === -1 || idx >= sorted.length - 1) return;
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(idx, 1);
+      reordered.splice(idx + 1, 0, moved);
+      const payload = { items: reordered.map((i, idx) => ({ id: i.id, displayOrder: idx + 1 })) };
+      reorderMutation.mutate({ topicId, payload });
+    },
+    [items, topicId, reorderMutation],
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragItem(event.active);
+  }, []);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!over || active.id === over.id || !topicId || !items) return;
+      setActiveDragItem(null);
+
+      if (!over || !topicId || !items) return;
+
+      // Case 1: Dragging a new block from the Quick Palette
+      if (active.data?.current?.isNew) {
+        const blockType = active.data.current.blockType as AddableBlockType;
+        let targetIndex = sortedItems.length;
+
+        if (typeof over.data?.current?.insertIndex === 'number') {
+          targetIndex = over.data.current.insertIndex;
+        } else {
+          const overIdx = sortedItems.findIndex((i) => i.id === over.id);
+          if (overIdx !== -1) targetIndex = overIdx + 1;
+        }
+
+        handleAddBlock(blockType, targetIndex);
+        return;
+      }
+
+      // Case 2: Reordering existing blocks
+      if (active.id === over.id) return;
 
       const sorted = [...items].sort((a, b) => a.displayOrder - b.displayOrder);
       const oldIdx = sorted.findIndex((i) => i.id === active.id);
-      const newIdx = sorted.findIndex((i) => i.id === over.id);
+      let newIdx = sorted.findIndex((i) => i.id === over.id);
+
+      if (newIdx === -1 && typeof over.data?.current?.insertIndex === 'number') {
+        newIdx = over.data.current.insertIndex;
+      }
+
       if (oldIdx === -1 || newIdx === -1) return;
 
       const reordered = [...sorted];
@@ -515,23 +754,26 @@ export function BookPageEditor({
       const payload = { items: reordered.map((i, idx) => ({ id: i.id, displayOrder: idx + 1 })) };
       reorderMutation.mutate({ topicId, payload });
     },
-    [items, topicId, reorderMutation],
+    [items, sortedItems, topicId, reorderMutation, handleAddBlock],
   );
 
   if (!topicId) return <EmptyState />;
 
   return (
-    <div ref={containerRef} className="relative h-full flex flex-col overflow-hidden bg-slate-50/50">
+    <div
+      ref={containerRef}
+      className="relative h-full flex flex-col overflow-hidden bg-slate-50/50"
+    >
       {isLoading ? (
         <LoadingSkeleton />
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-8 pb-24 space-y-6">
+          <div className="max-w-3xl mx-auto px-3 sm:px-8 py-5 sm:py-8 pb-28 space-y-5">
             {/* Topic Header Hero Card */}
-            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] text-white shadow-xl shadow-violet-900/15 relative overflow-hidden">
+            <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-[#7c3aed] via-[#6d28d9] to-[#5b21b6] text-white shadow-xl shadow-violet-900/15 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
               <div className="relative z-10 space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-xs">
                     Topic Builder Workspace 📚
                   </span>
@@ -578,75 +820,115 @@ export function BookPageEditor({
               </div>
             </div>
 
-            {/* Quick Add Content Block Toolbar */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#7c3aed]" /> Quick Add Content Block ⚡
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">Click any chip to add instantly</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {QUICK_BLOCK_CHIPS.map((chip) => (
-                  <button
-                    key={chip.type}
-                    type="button"
-                    disabled={createMutation.isPending}
-                    onClick={() => handleAddBlock(chip.type as AddableBlockType)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all duration-150 shadow-2xs hover:scale-[1.02] cursor-pointer',
-                      chip.color
-                    )}
-                  >
-                    <span>{chip.icon}</span>
-                    <span>{chip.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Content Blocks */}
-            {sortedItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-violet-200/80 rounded-3xl bg-white shadow-sm p-6">
-                <div className="w-14 h-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3 border border-violet-100 shadow-inner">
-                  <BookOpen className="h-7 w-7" />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              {/* Quick Add Content Block Toolbar & Drag Palette */}
+              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#7c3aed]" /> Quick Add / Drag Block ⚡
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                    Click to add or drag chip onto canvas
+                  </span>
                 </div>
-                <h3 className="text-sm font-extrabold text-slate-900 mb-1">This topic is empty</h3>
-                <p className="text-xs text-slate-400 max-w-sm">
-                  Click any of the colorful chips above to add your first content block!
-                </p>
+                <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
+                  {QUICK_BLOCK_CHIPS.map((chip) => (
+                    <DraggablePaletteChip
+                      key={chip.type}
+                      chip={chip}
+                      disabled={createMutation.isPending}
+                      onClick={() => handleAddBlock(chip.type as AddableBlockType)}
+                    />
+                  ))}
+                </div>
               </div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
+
+              {/* Content Blocks Canvas */}
+              {sortedItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-violet-200/80 rounded-3xl bg-white shadow-sm p-6">
+                  <div className="w-14 h-14 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3 border border-violet-100 shadow-inner">
+                    <BookOpen className="h-7 w-7" />
+                  </div>
+                  <h3 className="text-sm font-extrabold text-slate-900 mb-1">
+                    This topic is empty
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-sm">
+                    Click or drag any of the colorful chips above onto the canvas to add your first
+                    content block!
+                  </p>
+                </div>
+              ) : (
                 <SortableContext
                   items={sortedItems.map((i) => i.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {sortedItems.map((item, idx) => (
                       <div key={item.id} id={`block-${item.id}`}>
+                        {idx > 0 && (
+                          <DropZoneDivider
+                            index={idx}
+                            onInsert={(t) => handleAddBlock(t, idx)}
+                            activeDragType={
+                              activeDragItem?.data?.current?.isNew
+                                ? activeDragItem.data.current.blockType
+                                : null
+                            }
+                          />
+                        )}
                         <SortableBlock
                           item={item}
+                          index={idx}
+                          totalItems={sortedItems.length}
                           isEditing={editingId === item.id}
-                          editingItemId={editingId}
                           onStartEdit={startEditing}
                           onSaveEdit={handleSaveEdit}
                           onSaveMedia={handleSaveMediaEdit}
                           onCancelEdit={cancelEditing}
                           onDelete={handleDeleteItem}
                           onDuplicate={handleDuplicate}
+                          onMoveUp={handleMoveUp}
+                          onMoveDown={handleMoveDown}
                           isSaving={updateMutation.isPending}
                         />
                       </div>
                     ))}
                   </div>
                 </SortableContext>
-              </DndContext>
-            )}
+              )}
+
+              {/* Bottom Inserter Dropdown for adding blocks at end */}
+              {sortedItems.length > 0 && (
+                <div className="pt-2">
+                  <AddBlockDropdown onSelect={handleAddBlock} />
+                </div>
+              )}
+
+              {/* Sleek Floating Drag Overlay Ghost */}
+              <DragOverlay>
+                {activeDragItem ? (
+                  activeDragItem.data?.current?.isNew ? (
+                    <div className="px-4 py-2 rounded-xl bg-violet-600 text-white font-extrabold text-xs shadow-2xl border-2 border-white flex items-center gap-2 scale-105 rotate-2">
+                      <span>{activeDragItem.data.current.icon}</span>
+                      <span>{activeDragItem.data.current.label}</span>
+                      <span className="text-[10px] text-violet-200">Insert Block</span>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white/95 backdrop-blur-md rounded-2xl border-2 border-violet-500 shadow-2xl scale-105 rotate-1 max-w-lg opacity-90">
+                      <div className="flex items-center gap-2 text-xs font-bold text-violet-700">
+                        <GripVertical className="w-4 h-4 text-violet-500" />
+                        <span>Reordering: {activeDragItem.data?.current?.item?.title || 'Block'}</span>
+                      </div>
+                    </div>
+                  )
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           </div>
         </div>
       )}

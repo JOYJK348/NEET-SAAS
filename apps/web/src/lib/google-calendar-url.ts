@@ -5,7 +5,11 @@ export interface GoogleCalendarUrlOptions {
   startTime: string; // "08:00", "8:00 AM", "21:06", "9:06 PM"
   endTime: string;   // "10:00", "10:00 AM", "22:04", "10:04 PM"
   dateStr?: string;  // YYYY-MM-DD or dayOfWeek (e.g. "MONDAY")
+  dayOfWeek?: string;
+  isRecurring?: boolean;
+  untilDate?: string;
   joiningLink?: string;
+  attendeeEmails?: string[];
 }
 
 const DAY_INDEX: Record<string, number> = {
@@ -16,6 +20,16 @@ const DAY_INDEX: Record<string, number> = {
   THURSDAY: 4,
   FRIDAY: 5,
   SATURDAY: 6,
+};
+
+const DAY_CODES: Record<string, string> = {
+  SUNDAY: 'SU',
+  MONDAY: 'MO',
+  TUESDAY: 'TU',
+  WEDNESDAY: 'WE',
+  THURSDAY: 'TH',
+  FRIDAY: 'FR',
+  SATURDAY: 'SA',
 };
 
 function getNextOccurrenceDate(dayOfWeekOrDate?: string): Date {
@@ -70,7 +84,8 @@ function formatLocalCalendarString(date: Date): string {
 }
 
 export function generateGoogleCalendarUrl(options: GoogleCalendarUrlOptions): string {
-  const baseDate = getNextOccurrenceDate(options.dateStr);
+  const baseDayOrDate = options.dateStr || options.dayOfWeek;
+  const baseDate = getNextOccurrenceDate(baseDayOrDate);
 
   const startParsed = parseTimeToHoursMinutes(options.startTime);
   const endParsed = parseTimeToHoursMinutes(options.endTime);
@@ -87,17 +102,41 @@ export function generateGoogleCalendarUrl(options: GoogleCalendarUrlOptions): st
   const detailsParts = [
     options.description || 'NEET Academy Scheduled Class Session',
     options.joiningLink ? `\n🎥 Live Class Join Link: ${options.joiningLink}` : '',
-    '\n📚 NEET Academy Timetable System',
+    '\n📚 NEET Academy Timetable & Calendar Auto-Reminder System',
   ].filter(Boolean);
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: options.title,
     details: detailsParts.join('\n'),
-    location: options.location || options.joiningLink || '',
+    location: options.location || options.joiningLink || 'Academy Live Studio / Classroom',
     dates: `${startStr}/${endStr}`,
     ctz: 'Asia/Kolkata',
   });
+
+  // Weekly recurrence
+  if (options.isRecurring) {
+    const rawDay = (options.dayOfWeek || options.dateStr || '').toUpperCase();
+    const code = DAY_CODES[rawDay] || 'MO';
+    let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${code}`;
+    if (options.untilDate) {
+      const cleanDate = options.untilDate.split('T')[0].replace(/-/g, '');
+      if (cleanDate && cleanDate.length === 8) {
+        rrule += `;UNTIL=${cleanDate}T235959Z`;
+      }
+    }
+    params.set('recur', rrule);
+  }
+
+  // Add guest / attendee emails (tutor + students)
+  if (options.attendeeEmails && options.attendeeEmails.length > 0) {
+    const validEmails = options.attendeeEmails
+      .map((e) => e.trim())
+      .filter((e) => e && e.includes('@'));
+    if (validEmails.length > 0) {
+      params.set('add', validEmails.join(','));
+    }
+  }
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

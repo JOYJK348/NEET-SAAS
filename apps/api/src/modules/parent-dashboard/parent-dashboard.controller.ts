@@ -1,5 +1,5 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TenantGuard } from '../auth/guards/tenant.guard';
@@ -115,6 +115,25 @@ export class ParentDashboardController {
       user.tenantId!,
       user.sub,
       studentId,
+    );
+  }
+
+  @Get('students/:sid/timetable')
+  @ApiOperation({ summary: "Get child's class timetable and schedule" })
+  @ApiQuery({ name: 'dateFrom', required: false, type: String })
+  @ApiQuery({ name: 'dateTo', required: false, type: String })
+  getTimetable(
+    @Param('sid') studentId: string,
+    @CurrentUser() user: AuthenticatedRequestUser,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.parentDashboardService.getTimetable(
+      user.tenantId!,
+      user.sub,
+      studentId,
+      dateFrom,
+      dateTo,
     );
   }
 

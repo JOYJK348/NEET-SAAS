@@ -31,8 +31,10 @@ import {
   AlertCircle,
   BarChart3,
   SlidersHorizontal,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AttendanceReportModal } from '@/components/attendance/attendance-report-modal';
 
 interface AttendanceStudent {
   id: string;
@@ -101,6 +103,7 @@ function TutorAttendanceContent() {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [locallyMarkedSessions, setLocallyMarkedSessions] = useState<Set<string>>(new Set());
+  const [isReportOpen, setIsReportOpen] = useState(false);
 
   const batches = useMemo(() => {
     const list = tutorBatchesData?.batches ?? [];
@@ -870,6 +873,15 @@ function TutorAttendanceContent() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-extrabold border border-cyan-300 transition-colors cursor-pointer"
+                title="Generate and download attendance report (CSV / PDF)"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-cyan-600" />
+                <span>Attendance Report</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleSave}
                 disabled={isSaving}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0052CC] hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-extrabold shadow-2xs transition-all cursor-pointer"
@@ -1046,6 +1058,31 @@ function TutorAttendanceContent() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* Attendance Report Modal */}
+      {isReportOpen && (
+        <AttendanceReportModal
+          isOpen={isReportOpen}
+          onClose={() => setIsReportOpen(false)}
+          sessionDetails={{
+            title: selectedSession
+              ? `${selectedSession.subjectName} (${selectedSession.startTime} - ${selectedSession.endTime})`
+              : 'Class Session',
+            subjectName: selectedSession?.subjectName || 'Subject Session',
+            batchName: selectedSession?.batchName || 'Batch',
+            date: selectedSession?.date || new Date().toISOString().split('T')[0],
+            time: selectedSession
+              ? `${selectedSession.startTime} - ${selectedSession.endTime}`
+              : '',
+          }}
+          students={roster.map((s) => ({
+            id: s.id,
+            name: s.name,
+            rollNo: s.rollNo,
+            status: s.status,
+          }))}
+        />
       )}
     </div>
   );

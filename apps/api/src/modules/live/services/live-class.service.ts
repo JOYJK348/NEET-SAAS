@@ -1733,13 +1733,17 @@ export class LiveClassService {
     liveClassId: string,
     queryOpts?: { sessionType?: string; studentAdmissionId?: string; studentName?: string },
   ) {
-    const liveClass = await this.prisma.liveClasses.findUnique({
+    let liveClass = await this.prisma.liveClasses.findUnique({
       where: { id: liveClassId },
     });
 
-    const tenantId = liveClass?.tenantId || 'review-academy';
-    const batchId = liveClass?.batchId;
-    const subjectId = liveClass?.subjectId;
+    let sched = await this.prisma.schedules.findFirst({
+      where: { id: liveClassId, deletedAt: null },
+    });
+
+    const tenantId = liveClass?.tenantId || sched?.tenantId || 'fa3a02b9-d8d5-4429-b43d-91522878246d';
+    const batchId = liveClass?.batchId || sched?.batchId;
+    const subjectId = liveClass?.subjectId || sched?.subjectId;
 
     let isOneOnOne = queryOpts?.sessionType === 'ONE_TO_ONE' || Boolean(queryOpts?.studentAdmissionId) || Boolean(queryOpts?.studentName);
     let targetStudentAdmissionId: string | null = queryOpts?.studentAdmissionId || null;
@@ -1764,22 +1768,16 @@ export class LiveClassService {
       }
     }
 
-    if (!isOneOnOne) {
-      const sched = await this.prisma.schedules.findFirst({
-        where: { id: liveClassId, deletedAt: null },
-        select: { notes: true },
-      });
-      if (sched?.notes) {
-        try {
-          const meta = JSON.parse(sched.notes) as { sessionType?: string; studentAdmissionId?: string; studentName?: string };
-          if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
-            isOneOnOne = true;
-            if (meta.studentAdmissionId) targetStudentAdmissionId = meta.studentAdmissionId;
-            if (meta.studentName) targetStudentName = meta.studentName;
-          }
-        } catch {
-          /* empty */
+    if (!isOneOnOne && sched?.notes) {
+      try {
+        const meta = JSON.parse(sched.notes) as { sessionType?: string; studentAdmissionId?: string; studentName?: string };
+        if (meta?.sessionType === 'ONE_TO_ONE' || meta?.studentAdmissionId) {
+          isOneOnOne = true;
+          if (meta.studentAdmissionId) targetStudentAdmissionId = meta.studentAdmissionId;
+          if (meta.studentName) targetStudentName = meta.studentName;
         }
+      } catch {
+        /* empty */
       }
     }
 

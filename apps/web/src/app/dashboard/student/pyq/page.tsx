@@ -16,8 +16,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-
 import { useQuery } from '@tanstack/react-query';
+import { SecurePaperViewerModal } from '@/components/pyq/secure-paper-viewer-modal';
 
 declare global {
   interface Window {
@@ -66,6 +66,21 @@ export default function StudentPyqPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>('ALL');
   const [selectedYear, setSelectedYear] = useState<string>('ALL');
   const [unlockingId, setUnlockingId] = useState<string | null>(null);
+  const [activeViewerDoc, setActiveViewerDoc] = useState<{
+    isOpen: boolean;
+    title: string;
+    subjectName: string;
+    year: number;
+    fileUrl: string;
+    isSolution: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    subjectName: '',
+    year: 2024,
+    fileUrl: '',
+    isSolution: false,
+  });
 
   const {
     data: pyqs = [],
@@ -340,27 +355,43 @@ export default function StudentPyqPage() {
                       ) : paper.isUnlocked ? (
                         <div className="flex items-center gap-2 w-full">
                           {paper.paperUrl && (
-                            <a
-                              href={getPermanentFileUrl(paper.paperUrl)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveViewerDoc({
+                                  isOpen: true,
+                                  title: paper.title,
+                                  subjectName: paper.subjectName,
+                                  year: paper.year,
+                                  fileUrl: getPermanentFileUrl(paper.paperUrl),
+                                  isSolution: false,
+                                })
+                              }
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-[#0052CC] hover:bg-blue-700 text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                             >
                               <FileText className="w-4 h-4" />
                               View Paper
-                            </a>
+                            </button>
                           )}
                           {paper.solutionUrl && (
-                            <a
-                              href={getPermanentFileUrl(paper.solutionUrl)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveViewerDoc({
+                                  isOpen: true,
+                                  title: `${paper.title} - Solutions`,
+                                  subjectName: paper.subjectName,
+                                  year: paper.year,
+                                  fileUrl: getPermanentFileUrl(paper.solutionUrl),
+                                  isSolution: true,
+                                })
+                              }
+                              className="py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                               title="View Solutions"
                             >
                               <CheckCircle className="w-4 h-4 text-emerald-600" />
                               Solutions
-                            </a>
+                            </button>
                           )}
                         </div>
                       ) : (
@@ -383,6 +414,19 @@ export default function StudentPyqPage() {
               );
             })}
           </div>
+        )}
+
+        {/* Secure DRM Protected Document Viewer Modal */}
+        {activeViewerDoc.isOpen && (
+          <SecurePaperViewerModal
+            isOpen={activeViewerDoc.isOpen}
+            onClose={() => setActiveViewerDoc((prev) => ({ ...prev, isOpen: false }))}
+            title={activeViewerDoc.title}
+            subjectName={activeViewerDoc.subjectName}
+            year={activeViewerDoc.year}
+            fileUrl={activeViewerDoc.fileUrl}
+            isSolution={activeViewerDoc.isSolution}
+          />
         )}
       </div>
     </DashboardLayout>
