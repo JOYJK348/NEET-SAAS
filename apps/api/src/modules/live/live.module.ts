@@ -7,12 +7,18 @@ import { LiveClassService } from './services/live-class.service';
 import { LiveKitService } from './services/livekit.service';
 import { LiveClassWebhookService } from './services/live-class-webhook.service';
 import { LiveRecordingsService } from './services/live-recordings.service';
+import { RecordedClassAiWorkerService } from './services/recorded-class-ai-worker.service';
+import { RecordedClassNotesService } from './services/recorded-class-notes.service';
 
 import { GoogleCalendarModule } from '../integrations/google-calendar/google-calendar.module';
+import { NotionModule } from '../integrations/notion/notion.module';
+import { LearningModule } from '../learning/learning.module';
 
 @Module({
   imports: [
     GoogleCalendarModule,
+    NotionModule,
+    LearningModule,
     MulterModule.register({
       limits: { fileSize: 500 * 1024 * 1024 }, // 500MB max video file upload
     }),
@@ -27,7 +33,14 @@ import { GoogleCalendarModule } from '../integrations/google-calendar/google-cal
     LiveKitService,
     LiveClassWebhookService,
     LiveRecordingsService,
+    RecordedClassAiWorkerService,
+    RecordedClassNotesService,
   ],
-  exports: [LiveClassService, LiveKitService],
+  exports: [
+    LiveClassService,
+    LiveKitService,
+    RecordedClassAiWorkerService,
+    RecordedClassNotesService,
+  ],
 })
 export class LiveModule {}

@@ -17,9 +17,12 @@ import { validate } from '../../config/env.validation';
     NestConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        resolve(__dirname, '..', '..', '..', '..', '..', '..', '.env'),
-        resolve(__dirname, '..', '..', '..', '..', '..', '.env'),
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), '.env.development'),
+        resolve(process.cwd(), '..', '..', '.env'),
+        resolve(process.cwd(), '..', '..', '.env.development'),
         '.env',
+        '.env.development',
       ],
       load: [
         appConfig,

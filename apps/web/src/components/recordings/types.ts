@@ -46,6 +46,8 @@ export interface Recording {
   egressId: string | null;
   processingStartedAt: string | null;
   processingCompletedAt: string | null;
+  aiSummaryCompletedAt?: string | null;
+  transcriptCompletedAt?: string | null;
   createdAt: string;
   liveClass: RecordingLiveClass | null;
   display: RecordingDisplay | null;

@@ -542,7 +542,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             });
           }
         }
-      } catch {}
+      } catch { }
     }
   };
 
@@ -602,7 +602,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             }),
           staleTime: STALE_TIMES.DEFAULT,
         });
-      } catch {}
+      } catch { }
     } else if (rawRole === 'PARENT') {
       try {
         const childId =
@@ -636,7 +636,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
             staleTime: STALE_TIMES.DEFAULT,
           });
         }
-      } catch {}
+      } catch { }
     }
   }, [user, queryClient]);
 
@@ -726,9 +726,9 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               ? 'py-1.5 px-3 text-xs text-slate-600 hover:text-[#0052CC] hover:bg-white/80 rounded-xl font-bold hover:translate-x-0.5'
               : 'px-3.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 hover:bg-white/90 hover:text-[#0052CC] hover:shadow-2xs hover:translate-x-0.5',
             isActive &&
-              (depth > 0
-                ? 'text-[#0052CC] bg-white font-black rounded-xl border border-blue-200 shadow-2xs'
-                : 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white font-extrabold shadow-md shadow-blue-500/20 hover:translate-x-0'),
+            (depth > 0
+              ? 'text-[#0052CC] bg-white font-black rounded-xl border border-blue-200 shadow-2xs'
+              : 'bg-gradient-to-r from-[#0052CC] via-blue-600 to-indigo-600 text-white font-extrabold shadow-md shadow-blue-500/20 hover:translate-x-0'),
           )}
           aria-current={isActive ? 'page' : undefined}
         >
@@ -988,7 +988,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
                       const isActive =
                         item.href === '/dashboard/parent/overview'
                           ? pathname === '/dashboard/parent/overview' ||
-                            pathname === '/dashboard/parent'
+                          pathname === '/dashboard/parent'
                           : pathname === item.href || pathname.startsWith(item.href + '/');
                       const Icon = item.icon;
                       return (
@@ -1070,8 +1070,8 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               const fullName = `${first} ${last}`.trim();
               const displayName =
                 !fullName ||
-                fullName.toLowerCase().startsWith('tenant_admin') ||
-                fullName.toLowerCase().startsWith('admin_')
+                  fullName.toLowerCase().startsWith('tenant_admin') ||
+                  fullName.toLowerCase().startsWith('admin_')
                   ? 'Review Admin'
                   : fullName;
 
@@ -1079,7 +1079,7 @@ export function Sidebar({ isMobile, isMobileOpen, setIsMobileOpen }: SidebarProp
               const roleLabel = roleCodeUpper.startsWith('TENANT_ADMIN')
                 ? 'Tenant Administrator'
                 : roleCodeUpper.startsWith('SUPER_ADMIN') ||
-                    roleCodeUpper.startsWith('PLATFORM_ADMIN')
+                  roleCodeUpper.startsWith('PLATFORM_ADMIN')
                   ? 'Platform Super Admin'
                   : roleCodeUpper.startsWith('TUTOR') || roleCodeUpper.startsWith('FACULTY')
                     ? 'Faculty Tutor'

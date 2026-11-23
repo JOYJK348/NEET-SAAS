@@ -15,6 +15,7 @@ import { api } from '@/lib/api';
 import type { RecordingDetailResponse } from './types';
 import { RecordingVideoPlayer } from './RecordingVideoPlayer';
 import { RecordingStatusBadge } from './RecordingStatusBadge';
+import { RecordingAiNotesSection } from './RecordingAiNotesSection';
 import { formatDuration, statusKindOf } from './utils';
 
 interface RecordingWatchViewProps {
@@ -186,6 +187,9 @@ export function RecordingWatchView({ recordingId, backHref }: RecordingWatchView
               </p>
             </div>
           )}
+
+          {/* AI Study Notes Analyzer (Tutor / Faculty Review Preview) */}
+          <RecordingAiNotesSection recordingId={recording.id} />
         </div>
       )}
     </div>

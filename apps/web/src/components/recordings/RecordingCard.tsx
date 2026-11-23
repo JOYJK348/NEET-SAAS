@@ -38,7 +38,14 @@ export function RecordingCard({ recording, onDelete, deleting, watchHref }: Reco
       <div className="space-y-4">
         {/* Status + duration */}
         <div className="flex items-center justify-between gap-3">
-          <RecordingStatusBadge status={recording.status} statusLabel={recording.statusLabel} />
+          <div className="flex items-center gap-2">
+            <RecordingStatusBadge status={recording.status} statusLabel={recording.statusLabel} />
+            {recording.aiSummaryCompletedAt && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                <Sparkles className="w-3 h-3 text-emerald-600" /> AI Notes
+              </span>
+            )}
+          </div>
           <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0052CC] bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full font-mono">
             <Clock className="w-3.5 h-3.5 text-[#0052CC]" />
             {formatDuration(recording.durationSeconds)}

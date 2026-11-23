@@ -88,6 +88,10 @@ export class LiveRecordingsService {
       'live-class-recordings';
   }
 
+  getRecordingsBucket(): string {
+    return this.recordingsBucket;
+  }
+
   // ─── List (role-scoped, filtered, paginated) ─────────────────────────────
 
   async list(p: ListRecordingsParams) {
@@ -375,7 +379,7 @@ export class LiveRecordingsService {
   // ─── Scoping helpers ──────────────────────────────────────────────────────
 
   /** Batch ids for a student's ACTIVE batch enrollments. */
-  private async resolveStudentBatchIds(
+  public async resolveStudentBatchIds(
     tenantId: string,
     userId: string,
   ): Promise<string[]> {
@@ -408,7 +412,7 @@ export class LiveRecordingsService {
   }
 
   /** LiveClass ids taught by a tutor. */
-  private async resolveTaughtClassIds(
+  public async resolveTaughtClassIds(
     tenantId: string,
     userId: string,
   ): Promise<string[]> {
@@ -421,7 +425,6 @@ export class LiveRecordingsService {
     const taughtFromDirect = await this.prisma.liveClasses.findMany({
       where: {
         tenantId,
-        deletedAt: null,
         OR: [{ createdBy: userId }, { updatedBy: userId }],
       },
       select: { id: true },
@@ -445,7 +448,7 @@ export class LiveRecordingsService {
   }
 
   /** Student Admission ID for student user profile. */
-  private async resolveStudentAdmissionId(
+  public async resolveStudentAdmissionId(
     tenantId: string,
     userId: string,
   ): Promise<string | null> {
@@ -464,7 +467,7 @@ export class LiveRecordingsService {
     return null;
   }
 
-  private async assertCanView(
+  async assertCanView(
     scope: RoleScope,
     tenantId: string,
     userId: string,
@@ -553,7 +556,7 @@ export class LiveRecordingsService {
    * primary tutor) for a set of live classes. LiveClasses only carries UUID
    * foreign keys, so names are fetched in a few batched queries keyed by id.
    */
-  private async resolveDisplay(
+  public async resolveDisplay(
     liveClasses: Array<{
       id: string;
       courseId: string;
@@ -710,6 +713,7 @@ export class LiveRecordingsService {
       egressId: rec.egressId,
       processingStartedAt: rec.processingStartedAt,
       processingCompletedAt: rec.processingCompletedAt,
+      aiSummaryCompletedAt: rec.aiSummaryCompletedAt,
       createdAt: rec.createdAt,
     };
   }

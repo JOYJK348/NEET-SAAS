@@ -46,6 +46,7 @@ coverage/
 # ── Temp ────────────────────────────────────────────────
 tmp/
 temp/
+staging_*_validation_results.json
 
 # ── pnpm ───────────────────────────────────────────────
 .pnpm-store/

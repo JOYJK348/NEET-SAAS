@@ -1,6 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
+import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import { randomUUID } from 'crypto';
+import {
+  RecordedClassStudyNotes,
+  validateRecordedClassStudyNotes,
+} from '../../live/types/recorded-class-ai.types';
 
 export interface QuestionContext {
   questionText: string;
@@ -56,7 +66,7 @@ export class GeminiProviderService {
     return (
       this.configService.get<string>('GEMINI_MODEL') ||
       process.env.GEMINI_MODEL ||
-      'gemini-2.5-flash'
+      'gemini-3.1-flash-lite'
     );
   }
 
@@ -794,5 +804,379 @@ Simple-ah sonna, RNA cellular protein synthesis-la central role play pannum and 
       optionAnalysis,
       facultyTip: 'Pay close attention to key terms in the question to eliminate distractors easily.',
     };
+  }
+
+  /**
+   * Multimodal Video Analysis for Recorded NEET Classes (Phase 2).
+   * Ingests video from Supabase signed URL using bounded disk streaming,
+   * uploads to Gemini Files API, waits for ACTIVE state, extracts lecture
+   * transcription with verified timestamps, and generates structured NEET study notes.
+   */
+  async analyzeRecordedClassVideo(params: {
+    videoSignedUrl: string;
+    durationSeconds?: number;
+    curriculumContext: {
+      classTitle: string;
+      description?: string | null;
+      teacherNotes?: string | null;
+      courseName?: string | null;
+      subjectName?: string | null;
+      chapterName?: string | null;
+      topicName?: string | null;
+      batchName?: string | null;
+      tutorName?: string | null;
+    };
+    onProgress?: (stage: string, progressPercentage: number) => Promise<void>;
+  }): Promise<RecordedClassStudyNotes> {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured in environment');
+    }
+
+    const modelName = this.getModelName();
+    const ai = new GoogleGenAI({ apiKey });
+
+    let tempFilePath: string | null = null;
+    let uploadedGeminiFile: any = null;
+
+    try {
+      // 1. Stream video from signed URL directly to a temporary file on disk (Zero Node.js RAM buffer)
+      if (params.onProgress) {
+        await params.onProgress('FETCHING_VIDEO', 20);
+      }
+
+      this.logger.log(`[VIDEO-AI-INGEST] Fetching video stream from signed URL for class: ${params.curriculumContext.classTitle}`);
+      const videoRes = await fetch(params.videoSignedUrl);
+      if (!videoRes.ok || !videoRes.body) {
+        throw new Error(`Failed to fetch video stream: HTTP ${videoRes.status} ${videoRes.statusText}`);
+      }
+
+      tempFilePath = path.join(
+        process.env.TEMP_STORAGE_DIR || os.tmpdir(),
+        `neet-lecture-${Date.now()}-${randomUUID()}.mp4`,
+      );
+      const fileWriteStream = fs.createWriteStream(tempFilePath);
+      // @ts-ignore - Readable.fromWeb takes global web stream
+      await pipeline(Readable.fromWeb(videoRes.body as any), fileWriteStream);
+
+      const stats = await fs.promises.stat(tempFilePath);
+      if (stats.size === 0) {
+        throw new Error('Retrieved video file is empty (0 bytes)');
+      }
+      this.logger.log(`[VIDEO-AI-INGEST] Video streamed to disk successfully (${(stats.size / (1024 * 1024)).toFixed(2)} MB)`);
+
+      // 2. Upload to Gemini Files API
+      if (params.onProgress) {
+        await params.onProgress('UPLOADING_TO_GEMINI', 40);
+      }
+
+      this.logger.log(`[VIDEO-AI-INGEST] Uploading to Gemini Files API using model: ${modelName}`);
+      uploadedGeminiFile = await ai.files.upload({
+        file: tempFilePath,
+        config: {
+          mimeType: 'video/mp4',
+        },
+      });
+
+      this.logger.log(`[VIDEO-AI-INGEST] Gemini file uploaded: ${uploadedGeminiFile.name}, initial state: ${uploadedGeminiFile.state}`);
+
+      // 3. Wait until Gemini reports file as ACTIVE
+      if (params.onProgress) {
+        await params.onProgress('WAITING_FOR_GEMINI', 55);
+      }
+
+      let currentFile = uploadedGeminiFile;
+      const pollStart = Date.now();
+      const MAX_WAIT_MS = 600000; // 10 minutes max wait for video processing
+      let lastProgressTick = Date.now();
+
+      while (currentFile.state === 'PROCESSING') {
+        if (Date.now() - pollStart > MAX_WAIT_MS) {
+          throw new Error('Gemini video processing timed out after 10 minutes');
+        }
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        currentFile = await ai.files.get({ name: uploadedGeminiFile.name });
+        this.logger.log(`[VIDEO-AI-INGEST] Polling Gemini file state: ${currentFile.state}`);
+
+        // Periodic heartbeat during WAITING_FOR_GEMINI polling (every 15s)
+        if (params.onProgress && Date.now() - lastProgressTick >= 15000) {
+          lastProgressTick = Date.now();
+          await params.onProgress('WAITING_FOR_GEMINI', 55);
+        }
+      }
+
+      if (currentFile.state !== 'ACTIVE') {
+        throw new Error(`Gemini video processing terminal state is ${currentFile.state}. Expected ACTIVE.`);
+      }
+
+      // 4. Construct Curriculum-Grounded Multimodal Prompt
+      if (params.onProgress) {
+        await params.onProgress('ANALYZING_LECTURE', 70);
+      }
+
+      const prompt = `You are a Senior NEET Academic Director and Master Faculty Member.
+Analyze the provided lecture video and generate comprehensive, highly structured NEET study notes.
+
+CURRICULUM GROUNDING CONTEXT:
+- Course: ${params.curriculumContext.courseName || 'NEET Preparation'}
+- Subject: ${params.curriculumContext.subjectName || 'Science'}
+- Chapter: ${params.curriculumContext.chapterName || 'General'}
+- Topic: ${params.curriculumContext.topicName || params.curriculumContext.classTitle}
+- Class Title: ${params.curriculumContext.classTitle}
+- Instructor: ${params.curriculumContext.tutorName || 'Faculty'}
+${params.curriculumContext.description ? `- Description: ${params.curriculumContext.description}` : ''}
+${params.curriculumContext.teacherNotes ? `- Instructor Notes: ${params.curriculumContext.teacherNotes}` : ''}
+
+CRITICAL RULES:
+1. SCIENTIFIC & MEDICAL ACCURACY: Ground every explanation in official NCERT standards and NEET syllabus guidelines. Never invent formulas or scientific facts.
+2. LANGUAGE PRESERVATION: Preserve the actual lecture spoken language (e.g. English, Tamil, Hindi, or bilingual Hinglish/Tanglish). Do NOT force everything into English if the lecture is delivered in another language.
+3. ACCURATE TIMESTAMPS: Each topic and transcript segment must contain real startSeconds and endSeconds reflecting the video timeline.
+4. NEET HIGH-YIELD EMPHASIS: Highlight frequently tested concepts, common misconceptions, critical formula definitions with SI units, worked step-by-step examples, and potential MCQ angles.
+5. NO EMOJIS: Do not use any emojis in output.
+6. JSON FORMAT: Return STRICT VALID JSON only, conforming exactly to this structure:
+{
+  "lecture": {
+    "title": "${params.curriculumContext.classTitle}",
+    "language": "Primary language of lecture",
+    "durationSeconds": ${params.durationSeconds || 0},
+    "overview": "Detailed overview of what was covered in this lecture",
+    "learningObjectives": ["Objective 1", "Objective 2"]
+  },
+  "transcript": {
+    "segments": [
+      {
+        "startSeconds": 0,
+        "endSeconds": 120,
+        "timestampLabel": "00:00 - 02:00",
+        "speaker": "Instructor",
+        "text": "Detailed transcript excerpt...",
+        "topicReference": "Topic Name"
+      }
+    ]
+  },
+  "topics": [
+    {
+      "title": "Topic Name",
+      "startSeconds": 0,
+      "endSeconds": 120,
+      "timestampLabel": "00:00 - 02:00",
+      "explanation": "In-depth pedagogical explanation...",
+      "subtopics": ["Subtopic 1", "Subtopic 2"],
+      "definitions": [
+        {
+          "term": "Term Name",
+          "definition": "Precise NCERT definition",
+          "explanation": "Further pedagogical clarification"
+        }
+      ],
+      "concepts": [
+        {
+          "title": "Concept Name",
+          "category": "HIGH_YIELD",
+          "explanation": "Clear explanation of the concept",
+          "neetRelevance": "Why this is critical for NEET"
+        }
+      ],
+      "formulas": [
+        {
+          "name": "Formula Name",
+          "expression": "LaTeX or plain text formula",
+          "variableExplanations": "Variables defined",
+          "siUnits": "SI units where relevant",
+          "conditions": "Assumptions or validity limits"
+        }
+      ],
+      "examples": [
+        {
+          "problem": "Question or example solved by teacher",
+          "stepByStepExplanation": ["Step 1...", "Step 2..."],
+          "finalResult": "Final numeric/conceptual answer"
+        }
+      ],
+      "neetExamPoints": [
+        {
+          "point": "Critical exam fact",
+          "relevance": "CRITICAL",
+          "potentialQuestionAngle": "How NTA can frame an MCQ"
+        }
+      ],
+      "confidence": 0.95
+    }
+  ],
+  "definitions": [],
+  "formulaCheatSheet": [],
+  "importantConcepts": [],
+  "workedExamples": [],
+  "neetExamPoints": [],
+  "lectureConclusion": {
+    "summary": "Summary of key takeaways",
+    "revisionChecklist": ["Revise formula X", "Practice diagrams for Y"],
+    "homework": []
+  },
+  "quality": {
+    "completenessScore": 95,
+    "uncertainSections": [],
+    "warnings": []
+  }
+}`;
+
+      this.logger.log(`[VIDEO-AI-INGEST] Initiating generateContent request (primary model: ${modelName})`);
+
+      const candidateModels = Array.from(
+        new Set([
+          modelName,
+          'gemini-3.1-flash-lite',
+          'gemini-3.1-flash-lite-preview',
+          'gemini-3-flash-preview',
+          'gemini-flash-lite-latest',
+          'gemini-3.6-flash',
+          'gemini-3.5-flash-lite',
+          'gemini-3.8-flash',
+        ]),
+      );
+
+      let responseText = '';
+      let lastError: any = null;
+
+      for (const currentModel of candidateModels) {
+        let retries = 0;
+        const MAX_RETRIES = 2;
+
+        while (retries <= MAX_RETRIES) {
+          try {
+            this.logger.log(`[VIDEO-AI-INGEST] Sending generateContent request to Gemini model: ${currentModel} (attempt ${retries + 1})`);
+            const response = await this.withTimeout(
+              ai.models.generateContent({
+                model: currentModel,
+                contents: [
+                  {
+                    fileData: {
+                      fileUri: currentFile.uri,
+                      mimeType: currentFile.mimeType || 'video/mp4',
+                    },
+                  },
+                  prompt,
+                ],
+                config: {
+                  responseMimeType: 'application/json',
+                },
+              }),
+              240000, // 4-minute timeout for comprehensive video inference
+            );
+
+            responseText = response.text || '';
+            if (responseText) break;
+          } catch (apiErr: any) {
+            lastError = apiErr;
+            const msg = apiErr?.message || String(apiErr);
+            if (
+              (msg.includes('429') ||
+                msg.includes('RESOURCE_EXHAUSTED') ||
+                msg.includes('503') ||
+                msg.includes('UNAVAILABLE')) &&
+              retries < MAX_RETRIES
+            ) {
+              retries++;
+              const backoffMs = retries * 3000;
+              this.logger.warn(
+                `Gemini model ${currentModel} returned ${msg.substring(0, 60)}. Retrying in ${backoffMs}ms (attempt ${retries + 1}/${MAX_RETRIES + 1})...`,
+              );
+              await new Promise((r) => setTimeout(r, backoffMs));
+            } else {
+              this.logger.warn(
+                `Gemini model ${currentModel} failed: ${msg.substring(0, 80)}. Falling back to next candidate model...`,
+              );
+              break;
+            }
+          }
+        }
+
+        if (responseText) {
+          this.logger.log(`[VIDEO-AI-INGEST] Successfully generated notes using model: ${currentModel}`);
+          break;
+        }
+      }
+
+      if (!responseText && lastError) {
+        throw lastError;
+      }
+
+      if (!responseText) {
+        throw new Error('Gemini returned an empty response for lecture video analysis');
+      }
+
+      // 5. Validate Structured AI Output
+      if (params.onProgress) {
+        await params.onProgress('VALIDATING_CONTENT', 90);
+      }
+
+      let parsedRaw: any;
+      try {
+        parsedRaw = JSON.parse(responseText);
+      } catch (jsonErr) {
+        throw new Error(`Failed to parse Gemini output as JSON: ${jsonErr instanceof Error ? jsonErr.message : jsonErr}`);
+      }
+
+      // Consolidate global arrays if nested under topics
+      if (!Array.isArray(parsedRaw.definitions) || parsedRaw.definitions.length === 0) {
+        parsedRaw.definitions = (parsedRaw.topics || []).flatMap((t: any) => t.definitions || []);
+      }
+      if (!Array.isArray(parsedRaw.formulaCheatSheet) || parsedRaw.formulaCheatSheet.length === 0) {
+        parsedRaw.formulaCheatSheet = (parsedRaw.topics || []).flatMap((t: any) => t.formulas || []);
+      }
+      if (!Array.isArray(parsedRaw.importantConcepts) || parsedRaw.importantConcepts.length === 0) {
+        parsedRaw.importantConcepts = (parsedRaw.topics || []).flatMap((t: any) => t.concepts || []);
+      }
+      if (!Array.isArray(parsedRaw.workedExamples) || parsedRaw.workedExamples.length === 0) {
+        parsedRaw.workedExamples = (parsedRaw.topics || []).flatMap((t: any) => t.examples || []);
+      }
+      if (!Array.isArray(parsedRaw.neetExamPoints) || parsedRaw.neetExamPoints.length === 0) {
+        parsedRaw.neetExamPoints = (parsedRaw.topics || []).flatMap((t: any) => t.neetExamPoints || []);
+      }
+
+      parsedRaw.metadata = {
+        provider: 'GEMINI',
+        model: modelName,
+        analyzedAt: new Date().toISOString(),
+        courseName: params.curriculumContext.courseName,
+        subjectName: params.curriculumContext.subjectName,
+        chapterName: params.curriculumContext.chapterName,
+        topicName: params.curriculumContext.topicName,
+        batchName: params.curriculumContext.batchName,
+        tutorName: params.curriculumContext.tutorName,
+      };
+
+      const validation = validateRecordedClassStudyNotes(parsedRaw);
+      if (!validation.valid || !validation.data) {
+        this.logger.warn(`Generated study notes validation warnings: ${validation.errors.join(', ')}`);
+        // If data was partially salvaged by validator, use it with warnings
+        if (validation.data) {
+          validation.data.quality.warnings.push(...validation.errors);
+          return validation.data;
+        }
+        throw new Error(`Generated study notes failed validation: ${validation.errors.join('; ')}`);
+      }
+
+      return validation.data;
+    } finally {
+      // 6. Safe Cleanup: disk temporary file and Gemini Files API object
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        try {
+          await fs.promises.unlink(tempFilePath);
+          this.logger.log(`[VIDEO-AI-CLEANUP] Deleted temporary disk file: ${tempFilePath}`);
+        } catch (cleanupErr) {
+          this.logger.warn(`Failed to delete temporary disk file ${tempFilePath}: ${cleanupErr}`);
+        }
+      }
+
+      if (uploadedGeminiFile?.name) {
+        try {
+          await ai.files.delete({ name: uploadedGeminiFile.name });
+          this.logger.log(`[VIDEO-AI-CLEANUP] Deleted Gemini remote file: ${uploadedGeminiFile.name}`);
+        } catch (geminiDeleteErr) {
+          this.logger.warn(`Failed to delete Gemini file ${uploadedGeminiFile.name}: ${geminiDeleteErr}`);
+        }
+      }
+    }
   }
 }

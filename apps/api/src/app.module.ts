@@ -25,6 +25,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { TenantDashboardModule } from './modules/tenant-dashboard/tenant-dashboard.module';
 import { LiveModule } from './modules/live/live.module';
+import { NotionModule } from './modules/integrations/notion/notion.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { PyqModule } from './modules/pyq/pyq.module';
 import { PlatformModule } from './modules/platform/platform.module';
@@ -62,6 +63,7 @@ import { MailModule } from './modules/mail/mail.module';
     StorageModule,
     TenantDashboardModule,
     LiveModule,
+    NotionModule,
     BillingModule,
     PyqModule,
     PlatformModule,
